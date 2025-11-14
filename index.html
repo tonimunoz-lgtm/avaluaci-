@@ -135,19 +135,13 @@ function carregarClasses() {
   const select = document.getElementById("selectClasse");
   select.innerHTML = '<option value="">Selecciona una classe</option>';
 
-  if (!professorUID) { 
-    console.error("UID del professor no existeix!"); 
-    return; 
-  }
+  if (!professorUID) return;
 
   db.collection("professors").doc(professorUID).get()
     .then(doc => {
-      if(!doc.exists) { console.error("Document del professor no existeix!"); return; }
+      if(!doc.exists) return;
       const classesIDs = doc.data().classes || [];
-      console.log("ClassesIDs del professor:", classesIDs);
-
       if(classesIDs.length === 0) return;
-
       const promeses = classesIDs.map(idClasse => db.collection("classes").doc(idClasse).get());
       return Promise.all(promeses);
     })
@@ -155,20 +149,17 @@ function carregarClasses() {
       if(!docs) return;
       docs.forEach(classeDoc => {
         if(classeDoc.exists) {
-          console.log("Afegint classe:", classeDoc.data().nom);
           const opt = document.createElement("option");
           opt.value = classeDoc.id;
           opt.textContent = classeDoc.data().nom;
           select.appendChild(opt);
-        } else {
-          console.warn("Classe no trobada a Firestore:", classeDoc.id);
         }
       });
     })
     .catch(err => console.error("Error carregant classes:", err));
 }
 
-// ---------- AFEGIR ALUMNE I ACTIVITAT UI ----------
+// ---------- AFEGIR ALUMNE ----------
 function afegirAlumneUI() {
   if(!classeActual) { alert("Selecciona primer una classe!"); return; }
   const nom = prompt("Nom de l'alumne:");
@@ -180,6 +171,7 @@ function afegirAlumneUI() {
     .then(() => carregarClasse());
 }
 
+// ---------- AFEGIR ACTIVITAT ----------
 function afegirActivitatUI() {
   if(!classeActual) { alert("Selecciona primer una classe!"); return; }
   const nom = prompt("Nom de l'activitat:");
@@ -199,46 +191,60 @@ function carregarClasse() {
     alumnes = doc.data().alumnes || [];
     activitats = doc.data().activitats || [];
     notes = {};
+
+    // Omplir filtre activitats
     const filtre = document.getElementById("filtreActivitat");
     filtre.innerHTML = '<option value="totes">Totes les activitats</option>';
-    activitats.forEach(idAct => {
-      db.collection("activitats").doc(idAct).get().then(actDoc => {
-        const opt = document.createElement("option");
-        opt.value = idAct;
-        opt.textContent = actDoc.data().nom;
-        filtre.appendChild(opt);
+
+    const promesesActivitats = activitats.map(idAct => db.collection("activitats").doc(idAct).get());
+    Promise.all(promesesActivitats).then(docsActs => {
+      docsActs.forEach(docAct => {
+        if(docAct.exists){
+          const opt = document.createElement("option");
+          opt.value = docAct.id;
+          opt.textContent = docAct.data().nom;
+          filtre.appendChild(opt);
+        }
       });
-    });
-    alumnes.forEach(idAlumne => {
-      db.collection("alumnes").doc(idAlumne).get().then(alumneDoc => {
-        notes[idAlumne] = alumneDoc.data().notes || {};
-        actualitzarTaula();
-      });
+      actualitzarTaula();
     });
   });
 }
 
-// ---------- TAULA DE NOTES ----------
+// ---------- ACTUALITZAR TAULA ----------
 function actualitzarTaula() {
   const cap = document.getElementById("capcalera");
+  const cos = document.getElementById("cosTaula");
   cap.innerHTML = "<th class='border px-2 py-1'>Alumne</th>";
-  activitats.forEach(idAct => {
-    db.collection("activitats").doc(idAct).get().then(doc => {
-      cap.innerHTML += `<th class='border px-2 py-1'>${doc.data().nom}</th>`;
-      const cos = document.getElementById("cosTaula");
-      cos.innerHTML = "";
-      alumnes.forEach(idAlumne => {
-        db.collection("alumnes").doc(idAlumne).get().then(alumneDoc => {
-          const nomAlumne = alumneDoc.data().nom;
-          let fila = `<tr class="md:table-row flex flex-col md:flex-row"><td class='border px-2 py-1'>${nomAlumne}</td>`;
-          activitats.forEach(idAct2 => {
-            const valor = (alumneDoc.data().notes && alumneDoc.data().notes[idAct2]) || "";
-            fila += `<td class='border px-2 py-1'><input type="number" min="0" max="10" value="${valor}" 
-                     class='w-20 md:w-16 text-center p-1 md:p-2' onchange="guardarNota('${idAlumne}','${idAct2}',this.value)"></td>`;
-          });
-          fila += "</tr>";
-          cos.innerHTML += fila;
+  cos.innerHTML = "";
+
+  // Carregar activitats per capçaleres
+  const promesesActivitats = activitats.map(idAct => db.collection("activitats").doc(idAct).get());
+  Promise.all(promesesActivitats).then(docsActs => {
+    const nomsActivitats = [];
+    docsActs.forEach(docAct => {
+      const nomAct = docAct.exists ? docAct.data().nom : "Desconegut";
+      nomsActivitats.push({id: docAct.id, nom: nomAct});
+      cap.innerHTML += `<th class='border px-2 py-1'>${nomAct}</th>`;
+    });
+
+    // Afegir alumnes independentment de si hi ha activitats
+    alumnes.forEach(idAlumne => {
+      db.collection("alumnes").doc(idAlumne).get().then(alumneDoc => {
+        const nomAlumne = alumneDoc.exists ? alumneDoc.data().nom : "Desconegut";
+        let fila = `<tr class="md:table-row flex flex-col md:flex-row"><td class='border px-2 py-1'>${nomAlumne}</td>`;
+
+        nomsActivitats.forEach(act => {
+          const valor = (alumneDoc.data().notes && alumneDoc.data().notes[act.id]) || "";
+          fila += `<td class='border px-2 py-1'>
+                     <input type="number" min="0" max="10" value="${valor}" 
+                     class='w-20 md:w-16 text-center p-1 md:p-2'
+                     onchange="guardarNota('${idAlumne}','${act.id}',this.value)">
+                   </td>`;
         });
+
+        fila += "</tr>";
+        cos.innerHTML += fila;
       });
     });
   });
@@ -258,9 +264,10 @@ function filtrarActivitat() {
   const cos = document.getElementById("cosTaula").querySelectorAll("tr");
   activitats.forEach((idAct, i) => {
     const mostrar = (filtre === "totes" || filtre === idAct);
-    cap[i+1].style.display = mostrar ? "" : "none";
+    if(cap[i+1]) cap[i+1].style.display = mostrar ? "" : "none";
     cos.forEach(fila => {
-      fila.querySelectorAll("td")[i+1].style.display = mostrar ? "" : "none";
+      if(fila.querySelectorAll("td")[i+1])
+        fila.querySelectorAll("td")[i+1].style.display = mostrar ? "" : "none";
     });
   });
 }
