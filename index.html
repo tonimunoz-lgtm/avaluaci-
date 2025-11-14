@@ -8,6 +8,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body class="bg-gray-100 p-4 md:p-6">
 
@@ -42,6 +43,7 @@
     <select id="filtreActivitat" onchange="filtrarActivitat()" class="border p-2 rounded flex-1 text-sm md:text-base">
       <option value="totes">Totes les activitats</option>
     </select>
+    <button onclick="exportExcel()" class="bg-yellow-500 hover:bg-yellow-600 text-white py-2 px-4 rounded text-sm md:text-base">Exportar Excel</button>
   </div>
 
   <div class="overflow-x-auto">
@@ -54,7 +56,7 @@
 </div>
 
 <script>
-// ---------- CONFIGURACIÓ FIREBASE ----------
+// ---------- CONFIGURACIÓ DE FIREBASE ----------
 const firebaseConfig = {
  apiKey: "AIzaSyA0P7TWcEw9y9_13yqRhvsgWN5d3YKH7yo",
  authDomain: "gestornotes-cc6d0.firebaseapp.com",
@@ -63,6 +65,7 @@ const firebaseConfig = {
  messagingSenderId: "324570393360",
  appId: "1:324570393360:web:13a65fcf948813805c5395"
 };
+
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
@@ -97,7 +100,6 @@ function login() {
   auth.signInWithEmailAndPassword(email, password)
     .then((cred) => {
       professorUID = cred.user.uid;
-      console.log("Login correcte, UID:", professorUID);
       mostrarApp();
     })
     .catch(err => alert(err.message));
@@ -114,53 +116,203 @@ function mostrarApp() {
   carregarClasses();
 }
 
-// ---------- CREAR CLASSE ----------
+// ---------- CLASSES ----------
 function crearClasse() {
   const nomClasse = prompt("Nom de la classe:");
   if (!nomClasse) return;
   const classeRef = db.collection("classes").doc();
-
-  classeRef.set({ nom: nomClasse, alumnes: [], activitats: [] })
-    .then(() => {
-      return db.collection("professors").doc(professorUID).update({
-        classes: firebase.firestore.FieldValue.arrayUnion(classeRef.id)
-      });
-    })
-    .then(() => carregarClasses())
-    .catch(err => alert("Error creant la classe: " + err.message));
+  classeRef.set({ nom: nomClasse, alumnes: [], activitats: [] });
+  db.collection("professors").doc(professorUID).update({
+    classes: firebase.firestore.FieldValue.arrayUnion(classeRef.id)
+  }).then(() => carregarClasses());
 }
 
-// ---------- CARREGAR CLASSES ----------
 function carregarClasses() {
   const select = document.getElementById("selectClasse");
   select.innerHTML = '<option value="">Selecciona una classe</option>';
-  
   db.collection("professors").doc(professorUID).get().then(doc => {
-    if(!doc.exists) { console.error("No s'ha trobat el professor a Firestore!"); return; }
-    const classesIDs = doc.data().classes || [];
-    console.log("Classes del professor:", classesIDs);
-
-    const promeses = classesIDs.map(idClasse => db.collection("classes").doc(idClasse).get());
-    
-    Promise.all(promeses).then(docs => {
-      docs.forEach(classeDoc => {
-        if(classeDoc.exists) {
-          const opt = document.createElement("option");
-          opt.value = classeDoc.id;
-          opt.textContent = classeDoc.data().nom;
-          select.appendChild(opt);
-        } else {
-          console.warn("Classe no trobada:", classeDoc.id);
-        }
+    const classes = doc.data().classes || [];
+    classes.forEach(idClasse => {
+      db.collection("classes").doc(idClasse).get().then(classeDoc => {
+        const opt = document.createElement("option");
+        opt.value = classeDoc.id;
+        opt.textContent = classeDoc.data().nom;
+        select.appendChild(opt);
       });
     });
   });
 }
 
-// ---------- ALTRES FUNCIONS (afegir alumnes, activitats, notes...) ----------
-// Aquí pots deixar les funcions que ja tens del teu codi: afegirAlumne(), afegirActivitat(), actualitzarTaula(), guardarNota(), etc.
+// ---------- CARREGAR CLASSE ----------
+function carregarClasse() {
+  classeActual = document.getElementById("selectClasse").value;
+  if (!classeActual) return;
+  db.collection("classes").doc(classeActual).get().then(doc => {
+    alumnes = doc.data().alumnes || [];
+    activitats = doc.data().activitats || [];
+    notes = {};
+    // Omplir filtre activitats
+    const filtre = document.getElementById("filtreActivitat");
+    filtre.innerHTML = '<option value="totes">Totes les activitats</option>';
+    activitats.forEach(idAct => {
+      db.collection("activitats").doc(idAct).get().then(actDoc => {
+        const opt = document.createElement("option");
+        opt.value = idAct;
+        opt.textContent = actDoc.data().nom;
+        filtre.appendChild(opt);
+      });
+    });
+    alumnes.forEach(idAlumne => {
+      db.collection("alumnes").doc(idAlumne).get().then(alumneDoc => {
+        notes[idAlumne] = alumneDoc.data().notes || {};
+        actualitzarTaula();
+      });
+    });
+  });
+}
 
+// ---------- ALUMNES I ACTIVITATS ----------
+function afegirAlumne() {
+  const nom = prompt("Nom de l'alumne:");
+  if (!nom || !classeActual) return;
+  const alumneRef = db.collection("alumnes").doc();
+  alumneRef.set({ nom: nom, notes: {} });
+  db.collection("classes").doc(classeActual).update({
+    alumnes: firebase.firestore.FieldValue.arrayUnion(alumneRef.id)
+  }).then(() => carregarClasse());
+}
+
+function afegirActivitat() {
+  const nom = prompt("Nom de l'activitat:");
+  if (!nom || !classeActual) return;
+  const actRef = db.collection("activitats").doc();
+  actRef.set({ nom: nom, data: new Date().toISOString().split('T')[0] });
+  db.collection("classes").doc(classeActual).update({
+    activitats: firebase.firestore.FieldValue.arrayUnion(actRef.id)
+  }).then(() => carregarClasse());
+}
+
+// ---------- TAULA DE NOTES ----------
+function actualitzarTaula() {
+  const cap = document.getElementById("capcalera");
+  cap.innerHTML = "<th class='border px-2 py-1'>Alumne</th>";
+  activitats.forEach(idAct => {
+    db.collection("activitats").doc(idAct).get().then(doc => {
+      const nomAct = doc.data().nom;
+      cap.innerHTML += `<th class='border px-2 py-1'>${nomAct}</th>`;
+      const cos = document.getElementById("cosTaula");
+      cos.innerHTML = "";
+      alumnes.forEach(idAlumne => {
+        db.collection("alumnes").doc(idAlumne).get().then(alumneDoc => {
+          const nomAlumne = alumneDoc.data().nom;
+          let fila = `<tr class="md:table-row flex flex-col md:flex-row"><td class='border px-2 py-1'>${nomAlumne}</td>`;
+          activitats.forEach(idAct2 => {
+            const valor = (alumneDoc.data().notes && alumneDoc.data().notes[idAct2]) || "";
+            fila += `<td class='border px-2 py-1'><input type="number" min="0" max="10" value="${valor}" 
+                     class='w-20 md:w-16 text-center p-1 md:p-2' onchange="guardarNota('${idAlumne}','${idAct2}',this.value)"></td>`;
+          });
+          fila += "</tr>";
+          cos.innerHTML += fila;
+        });
+      });
+    });
+  });
+  setTimeout(calcularMitjanes, 500);
+}
+
+// ---------- GUARDAR NOTA ----------
+function guardarNota(idAlumne, idAct, valor) {
+  db.collection("alumnes").doc(idAlumne).update({
+    [`notes.${idAct}`]: Number(valor)
+  }).then(() => calcularMitjanes());
+}
+
+// ---------- CALCULAR MITJANES + DESTACAR BAIXES + ALERTA ----------
+function calcularMitjanes() {
+  const cos = document.getElementById("cosTaula");
+  const files = cos.querySelectorAll("tr");
+  const totalActivitats = activitats.length;
+  let sumaGlobal = 0, comptaGlobal = 0;
+  let alumnesBaixos = [];
+
+  files.forEach(fila => {
+    let sum = 0, count = 0;
+    const inputs = fila.querySelectorAll("input");
+    inputs.forEach(input => {
+      const val = Number(input.value);
+      if (!isNaN(val)) { sum += val; count++; }
+    });
+    const mitjana = count > 0 ? (sum / count).toFixed(2) : "";
+    if (fila.querySelector(".mitjana")) {
+      fila.querySelector(".mitjana").textContent = mitjana;
+    } else {
+      fila.innerHTML += `<td class="mitjana border px-2 py-1 font-bold">${mitjana}</td>`;
+    }
+
+    if(mitjana !== "" && mitjana < 5) {
+      fila.classList.add("bg-red-100"); 
+      alumnesBaixos.push(fila.querySelector("td").textContent);
+    } else fila.classList.remove("bg-red-100");
+
+    sumaGlobal += sum;
+    comptaGlobal += count;
+  });
+
+  const mitjanaGlobal = comptaGlobal > 0 ? (sumaGlobal/comptaGlobal).toFixed(2) : "";
+  if(!document.getElementById("mitjanaGlobalDiv")) {
+    const div = document.createElement("div");
+    div.id = "mitjanaGlobalDiv";
+    div.className = "mt-2 font-bold text-lg";
+    document.getElementById("appDiv").appendChild(div);
+  }
+  document.getElementById("mitjanaGlobalDiv").textContent = `Mitjana global de la classe: ${mitjanaGlobal}`;
+
+  // alerta alumnes baixos
+  if(alumnesBaixos.length > 0) {
+    console.log("Alumnes amb nota baixa:", alumnesBaixos.join(", "));
+  }
+
+  // Mitjana per activitat
+  let filaMitjana = document.getElementById("mitjanaFila");
+  if (!filaMitjana) {
+    filaMitjana = document.createElement("tr");
+    filaMitjana.id = "mitjanaFila";
+    document.getElementById("taulaNotes").appendChild(filaMitjana);
+  }
+  filaMitjana.innerHTML = "<td class='border px-2 py-1 font-bold bg-gray-300'>Mitjana</td>";
+  for (let j = 0; j < totalActivitats; j++) {
+    let sum = 0, count = 0;
+    files.forEach(fila => {
+      const val = Number(fila.querySelectorAll("input")[j].value);
+      if (!isNaN(val)) { sum += val; count++; }
+    });
+    filaMitjana.innerHTML += `<td class='border px-2 py-1 font-bold bg-gray-300'>${count>0 ? (sum/count).toFixed(2) : ""}</td>`;
+  }
+}
+
+// ---------- FILTRAR ACTIVITAT ----------
+function filtrarActivitat() {
+  const filtre = document.getElementById("filtreActivitat").value;
+  const cap = document.getElementById("capcalera").querySelectorAll("th");
+  const cos = document.getElementById("cosTaula").querySelectorAll("tr");
+  activitats.forEach((idAct, i) => {
+    const mostrar = (filtre === "totes" || filtre === idAct);
+    cap[i+1].style.display = mostrar ? "" : "none";
+    cos.forEach(fila => {
+      fila.querySelectorAll("td")[i+1].style.display = mostrar ? "" : "none";
+    });
+  });
+}
+
+// ---------- EXPORTAR A EXCEL ----------
+function exportExcel() {
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.table_to_sheet(document.getElementById("taulaNotes"));
+  XLSX.utils.book_append_sheet(wb, ws, "Notes");
+  XLSX.writeFile(wb, `Notes_${classeActual || "classe"}.xlsx`);
+}
 </script>
+
 </div>
 </body>
 </html>
