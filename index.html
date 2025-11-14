@@ -2,84 +2,205 @@
 <html lang="ca">
 <head>
 <meta charset="UTF-8">
-<title>Gestor de Notes</title>
+<title>Mini Gestor de Notes</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <style>
-    body { font-family: Arial; margin: 20px; }
-    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-    th, td {
-        border: 1px solid #ccc;
-        padding: 8px;
-        text-align: center;
-    }
-    input {
-        width: 60px;
-        text-align: center;
-    }
+body { font-family: Arial; margin: 20px; }
+table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+input { width: 60px; text-align: center; }
+button { margin: 5px; }
 </style>
 </head>
 <body>
 
-<h2>Gestor de notes simple</h2>
+<h2>Mini Gestor de Notes</h2>
 
-<button onclick="afegirAlumne()">Afegir alumne</button>
-<button onclick="afegirActivitat()">Afegir activitat</button>
+<div id="loginDiv">
+  <h3>Login Professor</h3>
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Contrasenya">
+  <button onclick="login()">Login</button>
+  <button onclick="registrar()">Registrar</button>
+</div>
 
-<table id="taulaNotes">
-    <thead>
-        <tr id="capcalera">
-            <th>Alumne</th>
-        </tr>
-    </thead>
-    <tbody id="cosTaula">
-    </tbody>
-</table>
+<div id="appDiv" style="display:none;">
+  <h3>Benvingut!</h3>
+  <button onclick="logout()">Logout</button>
+  <button onclick="crearClasse()">Crear Classe</button>
+  <select id="selectClasse" onchange="carregarClasse()">
+    <option value="">Selecciona una classe</option>
+  </select>
+
+  <h4>Alumnes i Activitats</h4>
+  <button onclick="afegirAlumne()">Afegir Alumne</button>
+  <button onclick="afegirActivitat()">Afegir Activitat</button>
+
+  <table id="taulaNotes">
+    <thead id="capcalera"><tr><th>Alumne</th></tr></thead>
+    <tbody id="cosTaula"></tbody>
+  </table>
+</div>
 
 <script>
+// ---------- CONFIGURACIÓ DE FIREBASE ----------
+const firebaseConfig = {
+  apiKey: "API_KEY_AQUI",
+  authDomain: "PROJECT_ID.firebaseapp.com",
+  projectId: "PROJECT_ID",
+  storageBucket: "PROJECT_ID.appspot.com",
+  messagingSenderId: "SENDER_ID",
+  appId: "APP_ID"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// ---------- VARIABLES GLOBALS ----------
+let professorUID = null;
 let alumnes = [];
 let activitats = [];
-
-function actualitzarTaula() {
-    const cap = document.getElementById("capcalera");
-    cap.innerHTML = "<th>Alumne</th>";
-
-    activitats.forEach(a => {
-        cap.innerHTML += `<th>${a}</th>`;
-    });
-
-    const cos = document.getElementById("cosTaula");
-    cos.innerHTML = "";
-
-    alumnes.forEach((alumne, i) => {
-        let fila = `<tr><td>${alumne}</td>`;
-        activitats.forEach((_, j) => {
-            fila += `<td><input type="number" min="0" max="10" onchange="guardarNota(${i},${j},this.value)"></td>`;
-        });
-        fila += "</tr>";
-        cos.innerHTML += fila;
-    });
-}
-
 let notes = {};
+let classeActual = null;
 
-function guardarNota(i, j, valor) {
-    notes[`${i}-${j}`] = valor;
-    localStorage.setItem("notes", JSON.stringify(notes));
+// ---------- AUTENTICACIÓ ----------
+function registrar() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  auth.createUserWithEmailAndPassword(email, password)
+    .then((cred) => {
+      professorUID = cred.user.uid;
+      db.collection("professors").doc(professorUID).set({
+        email: email,
+        classes: []
+      });
+      alert("Usuari registrat!");
+      mostrarApp();
+    })
+    .catch(err => alert(err.message));
 }
 
-function afegirAlumne() {
-    const nom = prompt("Nom de l'alumne:");
-    if (nom) {
-        alumnes.push(nom);
+function login() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  auth.signInWithEmailAndPassword(email, password)
+    .then((cred) => {
+      professorUID = cred.user.uid;
+      mostrarApp();
+    })
+    .catch(err => alert(err.message));
+}
+
+function logout() {
+  auth.signOut().then(() => location.reload());
+}
+
+// ---------- MOSTRAR APP ----------
+function mostrarApp() {
+  document.getElementById("loginDiv").style.display = "none";
+  document.getElementById("appDiv").style.display = "block";
+  carregarClasses();
+}
+
+// ---------- CLASSES ----------
+function crearClasse() {
+  const nomClasse = prompt("Nom de la classe:");
+  if (!nomClasse) return;
+  const classeRef = db.collection("classes").doc();
+  classeRef.set({ nom: nomClasse, alumnes: [], activitats: [] });
+  db.collection("professors").doc(professorUID).update({
+    classes: firebase.firestore.FieldValue.arrayUnion(classeRef.id)
+  }).then(() => carregarClasses());
+}
+
+function carregarClasses() {
+  const select = document.getElementById("selectClasse");
+  select.innerHTML = '<option value="">Selecciona una classe</option>';
+  db.collection("professors").doc(professorUID).get().then(doc => {
+    const classes = doc.data().classes || [];
+    classes.forEach(idClasse => {
+      db.collection("classes").doc(idClasse).get().then(classeDoc => {
+        const opt = document.createElement("option");
+        opt.value = classeDoc.id;
+        opt.textContent = classeDoc.data().nom;
+        select.appendChild(opt);
+      });
+    });
+  });
+}
+
+function carregarClasse() {
+  classeActual = document.getElementById("selectClasse").value;
+  if (!classeActual) return;
+  db.collection("classes").doc(classeActual).get().then(doc => {
+    alumnes = doc.data().alumnes || [];
+    activitats = doc.data().activitats || [];
+    notes = {};
+    // Carregar notes de cada alumne
+    alumnes.forEach(idAlumne => {
+      db.collection("alumnes").doc(idAlumne).get().then(alumneDoc => {
+        notes[idAlumne] = alumneDoc.data().notes || {};
         actualitzarTaula();
-    }
+      });
+    });
+  });
+}
+
+// ---------- ALUMNES I ACTIVITATS ----------
+function afegirAlumne() {
+  const nom = prompt("Nom de l'alumne:");
+  if (!nom || !classeActual) return;
+  const alumneRef = db.collection("alumnes").doc();
+  alumneRef.set({ nom: nom, notes: {} });
+  db.collection("classes").doc(classeActual).update({
+    alumnes: firebase.firestore.FieldValue.arrayUnion(alumneRef.id)
+  }).then(() => carregarClasse());
 }
 
 function afegirActivitat() {
-    const act = prompt("Nom de l'activitat:");
-    if (act) {
-        activitats.push(act);
-        actualitzarTaula();
-    }
+  const nom = prompt("Nom de l'activitat:");
+  if (!nom || !classeActual) return;
+  const actRef = db.collection("activitats").doc();
+  actRef.set({ nom: nom, data: new Date().toISOString().split('T')[0] });
+  db.collection("classes").doc(classeActual).update({
+    activitats: firebase.firestore.FieldValue.arrayUnion(actRef.id)
+  }).then(() => carregarClasse());
+}
+
+// ---------- TAULA DE NOTES ----------
+function actualitzarTaula() {
+  const cap = document.getElementById("capcalera");
+  cap.innerHTML = "<th>Alumne</th>";
+  activitats.forEach(idAct => {
+    db.collection("activitats").doc(idAct).get().then(doc => {
+      const nomAct = doc.data().nom;
+      cap.innerHTML += `<th>${nomAct}</th>`;
+      const cos = document.getElementById("cosTaula");
+      cos.innerHTML = "";
+      alumnes.forEach(idAlumne => {
+        db.collection("alumnes").doc(idAlumne).get().then(alumneDoc => {
+          const nomAlumne = alumneDoc.data().nom;
+          let fila = `<tr><td>${nomAlumne}</td>`;
+          activitats.forEach(idAct2 => {
+            const valor = (alumneDoc.data().notes && alumneDoc.data().notes[idAct2]) || "";
+            fila += `<td><input type="number" min="0" max="10" value="${valor}" 
+                     onchange="guardarNota('${idAlumne}','${idAct2}',this.value)"></td>`;
+          });
+          fila += "</tr>";
+          cos.innerHTML += fila;
+        });
+      });
+    });
+  });
+}
+
+function guardarNota(idAlumne, idAct, valor) {
+  db.collection("alumnes").doc(idAlumne).update({
+    [`notes.${idAct}`]: Number(valor)
+  });
 }
 </script>
 
