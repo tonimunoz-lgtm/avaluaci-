@@ -37,6 +37,7 @@
     <button onclick="logout()" class="bg-red-500 hover:bg-red-700 text-white py-1 px-4 rounded mb-2 md:mb-0 text-sm md:text-base">Logout</button>
   </div>
 
+  <!-- Controls -->
   <div class="flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-2 mb-4">
     <button onclick="crearClasse()" class="bg-blue-500 hover:bg-blue-700 text-white py-2 px-4 rounded text-sm md:text-base">Crear Classe</button>
     <select id="selectClasse" onchange="carregarClasse()" class="border p-2 rounded flex-1 text-sm md:text-base"></select>
@@ -44,6 +45,12 @@
       <option value="totes">Totes les activitats</option>
     </select>
     <button onclick="exportExcel()" class="bg-yellow-500 hover:bg-yellow-600 text-white py-2 px-4 rounded text-sm md:text-base">Exportar Excel</button>
+  </div>
+
+  <!-- Buttons add -->
+  <div class="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 mb-4">
+    <button onclick="afegirAlumneUI()" class="bg-purple-500 hover:bg-purple-700 text-white py-2 px-4 rounded text-sm md:text-base">Afegir Alumne</button>
+    <button onclick="afegirActivitatUI()" class="bg-teal-500 hover:bg-teal-700 text-white py-2 px-4 rounded text-sm md:text-base">Afegir Activitat</button>
   </div>
 
   <div class="overflow-x-auto">
@@ -81,7 +88,7 @@ function registrar() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
   auth.createUserWithEmailAndPassword(email, password)
-    .then((cred) => {
+    .then(cred => {
       professorUID = cred.user.uid;
       console.log("Registrat UID:", professorUID);
       db.collection("professors").doc(professorUID).set({ email: email, classes: [] })
@@ -94,7 +101,7 @@ function login() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
   auth.signInWithEmailAndPassword(email, password)
-    .then((cred) => {
+    .then(cred => {
       professorUID = cred.user.uid;
       console.log("Login correcte UID:", professorUID);
       mostrarApp();
@@ -128,7 +135,7 @@ function crearClasse() {
     .catch(err => alert("Error creant la classe: " + err.message));
 }
 
-// ---------- CARREGAR CLASSES CORREGIDA ----------
+// ---------- CARREGAR CLASSES ----------
 function carregarClasses() {
   const select = document.getElementById("selectClasse");
   select.innerHTML = '<option value="">Selecciona una classe</option>';
@@ -137,9 +144,9 @@ function carregarClasses() {
 
   db.collection("professors").doc(professorUID).get()
     .then(doc => {
-      if (!doc.exists) { console.error("Document del professor no existeix!"); return; }
+      if(!doc.exists) { console.error("Document del professor no existeix!"); return; }
       const classesIDs = doc.data().classes || [];
-      console.log("ClassesIDs:", classesIDs);
+      console.log("ClassesIDs del professor:", classesIDs);
 
       if(classesIDs.length === 0) return;
 
@@ -162,26 +169,27 @@ function carregarClasses() {
     .catch(err => console.error("Error carregant classes:", err));
 }
 
-// ---------- AFEGIR ALUMNE ----------
-function afegirAlumne() {
+// ---------- AFEGIR ALUMNE I ACTIVITAT UI ----------
+function afegirAlumneUI() {
+  if(!classeActual) { alert("Selecciona primer una classe!"); return; }
   const nom = prompt("Nom de l'alumne:");
-  if (!nom || !classeActual) return;
+  if(!nom) return;
   const alumneRef = db.collection("alumnes").doc();
-  alumneRef.set({ nom: nom, notes: {} });
-  db.collection("classes").doc(classeActual).update({
-    alumnes: firebase.firestore.FieldValue.arrayUnion(alumneRef.id)
-  }).then(() => carregarClasse());
+  alumneRef.set({ nom: nom, notes: {} })
+    .then(() => db.collection("classes").doc(classeActual)
+      .update({ alumnes: firebase.firestore.FieldValue.arrayUnion(alumneRef.id) }))
+    .then(() => carregarClasse());
 }
 
-// ---------- AFEGIR ACTIVITAT ----------
-function afegirActivitat() {
+function afegirActivitatUI() {
+  if(!classeActual) { alert("Selecciona primer una classe!"); return; }
   const nom = prompt("Nom de l'activitat:");
-  if (!nom || !classeActual) return;
+  if(!nom) return;
   const actRef = db.collection("activitats").doc();
-  actRef.set({ nom: nom, data: new Date().toISOString().split('T')[0] });
-  db.collection("classes").doc(classeActual).update({
-    activitats: firebase.firestore.FieldValue.arrayUnion(actRef.id)
-  }).then(() => carregarClasse());
+  actRef.set({ nom: nom, data: new Date().toISOString().split('T')[0] })
+    .then(() => db.collection("classes").doc(classeActual)
+      .update({ activitats: firebase.firestore.FieldValue.arrayUnion(actRef.id) }))
+    .then(() => carregarClasse());
 }
 
 // ---------- CARREGAR CLASSE ----------
@@ -213,7 +221,7 @@ function carregarClasse() {
   });
 }
 
-// ---------- TAULA DE NOTES + MITJANES ----------
+// ---------- TAULA DE NOTES ----------
 function actualitzarTaula() {
   const cap = document.getElementById("capcalera");
   cap.innerHTML = "<th class='border px-2 py-1'>Alumne</th>";
