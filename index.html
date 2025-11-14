@@ -56,7 +56,7 @@
 </div>
 
 <script>
-// ---------- CONFIGURACIÓ DE FIREBASE ----------
+// ---------- CONFIGURACIÓ FIREBASE ----------
 const firebaseConfig = {
  apiKey: "AIzaSyA0P7TWcEw9y9_13yqRhvsgWN5d3YKH7yo",
  authDomain: "gestornotes-cc6d0.firebaseapp.com",
@@ -84,11 +84,8 @@ function registrar() {
     .then((cred) => {
       professorUID = cred.user.uid;
       console.log("Registrat UID:", professorUID);
-      // Crear document del professor si no existeix
-      db.collection("professors").doc(professorUID).set({
-        email: email,
-        classes: []
-      }).then(() => mostrarApp());
+      db.collection("professors").doc(professorUID).set({ email: email, classes: [] })
+        .then(() => mostrarApp());
     })
     .catch(err => alert(err.message));
 }
@@ -105,9 +102,7 @@ function login() {
     .catch(err => alert(err.message));
 }
 
-function logout() {
-  auth.signOut().then(() => location.reload());
-}
+function logout() { auth.signOut().then(() => location.reload()); }
 
 // ---------- MOSTRAR APP ----------
 function mostrarApp() {
@@ -121,16 +116,12 @@ function crearClasse() {
   const nomClasse = prompt("Nom de la classe:");
   if (!nomClasse) return;
   const classeRef = db.collection("classes").doc();
-
   classeRef.set({ nom: nomClasse, alumnes: [], activitats: [] })
     .then(() => {
       const profRef = db.collection("professors").doc(professorUID);
       return profRef.get().then(doc => {
-        if (!doc.exists) {
-          return profRef.set({ email: firebase.auth().currentUser.email, classes: [classeRef.id] });
-        } else {
-          return profRef.update({ classes: firebase.firestore.FieldValue.arrayUnion(classeRef.id) });
-        }
+        if (!doc.exists) return profRef.set({ email: firebase.auth().currentUser.email, classes: [classeRef.id] });
+        return profRef.update({ classes: firebase.firestore.FieldValue.arrayUnion(classeRef.id) });
       });
     })
     .then(() => carregarClasses())
@@ -161,7 +152,7 @@ function carregarClasses() {
   });
 }
 
-// ---------- ALUMNES I ACTIVITATS ----------
+// ---------- AFEGIR ALUMNE ----------
 function afegirAlumne() {
   const nom = prompt("Nom de l'alumne:");
   if (!nom || !classeActual) return;
@@ -172,6 +163,7 @@ function afegirAlumne() {
   }).then(() => carregarClasse());
 }
 
+// ---------- AFEGIR ACTIVITAT ----------
 function afegirActivitat() {
   const nom = prompt("Nom de l'activitat:");
   if (!nom || !classeActual) return;
@@ -182,14 +174,42 @@ function afegirActivitat() {
   }).then(() => carregarClasse());
 }
 
-// ---------- TAULA DE NOTES ----------
+// ---------- CARREGAR CLASSE ----------
+function carregarClasse() {
+  classeActual = document.getElementById("selectClasse").value;
+  if (!classeActual) return;
+  db.collection("classes").doc(classeActual).get().then(doc => {
+    alumnes = doc.data().alumnes || [];
+    activitats = doc.data().activitats || [];
+    notes = {};
+
+    const filtre = document.getElementById("filtreActivitat");
+    filtre.innerHTML = '<option value="totes">Totes les activitats</option>';
+    activitats.forEach(idAct => {
+      db.collection("activitats").doc(idAct).get().then(actDoc => {
+        const opt = document.createElement("option");
+        opt.value = idAct;
+        opt.textContent = actDoc.data().nom;
+        filtre.appendChild(opt);
+      });
+    });
+
+    alumnes.forEach(idAlumne => {
+      db.collection("alumnes").doc(idAlumne).get().then(alumneDoc => {
+        notes[idAlumne] = alumneDoc.data().notes || {};
+        actualitzarTaula();
+      });
+    });
+  });
+}
+
+// ---------- TAULA DE NOTES + MITJANES ----------
 function actualitzarTaula() {
   const cap = document.getElementById("capcalera");
   cap.innerHTML = "<th class='border px-2 py-1'>Alumne</th>";
   activitats.forEach(idAct => {
     db.collection("activitats").doc(idAct).get().then(doc => {
-      const nomAct = doc.data().nom;
-      cap.innerHTML += `<th class='border px-2 py-1'>${nomAct}</th>`;
+      cap.innerHTML += `<th class='border px-2 py-1'>${doc.data().nom}</th>`;
       const cos = document.getElementById("cosTaula");
       cos.innerHTML = "";
       alumnes.forEach(idAlumne => {
@@ -207,77 +227,13 @@ function actualitzarTaula() {
       });
     });
   });
-  setTimeout(calcularMitjanes, 500);
 }
 
 // ---------- GUARDAR NOTA ----------
 function guardarNota(idAlumne, idAct, valor) {
   db.collection("alumnes").doc(idAlumne).update({
     [`notes.${idAct}`]: Number(valor)
-  }).then(() => calcularMitjanes());
-}
-
-// ---------- CALCULAR MITJANES + DESTACAR BAIXES + ALERTA ----------
-function calcularMitjanes() {
-  const cos = document.getElementById("cosTaula");
-  const files = cos.querySelectorAll("tr");
-  const totalActivitats = activitats.length;
-  let sumaGlobal = 0, comptaGlobal = 0;
-  let alumnesBaixos = [];
-
-  files.forEach(fila => {
-    let sum = 0, count = 0;
-    const inputs = fila.querySelectorAll("input");
-    inputs.forEach(input => {
-      const val = Number(input.value);
-      if (!isNaN(val)) { sum += val; count++; }
-    });
-    const mitjana = count > 0 ? (sum / count).toFixed(2) : "";
-    if (fila.querySelector(".mitjana")) {
-      fila.querySelector(".mitjana").textContent = mitjana;
-    } else {
-      fila.innerHTML += `<td class="mitjana border px-2 py-1 font-bold">${mitjana}</td>`;
-    }
-
-    if(mitjana !== "" && mitjana < 5) {
-      fila.classList.add("bg-red-100"); 
-      alumnesBaixos.push(fila.querySelector("td").textContent);
-    } else fila.classList.remove("bg-red-100");
-
-    sumaGlobal += sum;
-    comptaGlobal += count;
   });
-
-  const mitjanaGlobal = comptaGlobal > 0 ? (sumaGlobal/comptaGlobal).toFixed(2) : "";
-  if(!document.getElementById("mitjanaGlobalDiv")) {
-    const div = document.createElement("div");
-    div.id = "mitjanaGlobalDiv";
-    div.className = "mt-2 font-bold text-lg";
-    document.getElementById("appDiv").appendChild(div);
-  }
-  document.getElementById("mitjanaGlobalDiv").textContent = `Mitjana global de la classe: ${mitjanaGlobal}`;
-
-  // alerta alumnes baixos
-  if(alumnesBaixos.length > 0) {
-    console.log("Alumnes amb nota baixa:", alumnesBaixos.join(", "));
-  }
-
-  // Mitjana per activitat
-  let filaMitjana = document.getElementById("mitjanaFila");
-  if (!filaMitjana) {
-    filaMitjana = document.createElement("tr");
-    filaMitjana.id = "mitjanaFila";
-    document.getElementById("taulaNotes").appendChild(filaMitjana);
-  }
-  filaMitjana.innerHTML = "<td class='border px-2 py-1 font-bold bg-gray-300'>Mitjana</td>";
-  for (let j = 0; j < totalActivitats; j++) {
-    let sum = 0, count = 0;
-    files.forEach(fila => {
-      const val = Number(fila.querySelectorAll("input")[j].value);
-      if (!isNaN(val)) { sum += val; count++; }
-    });
-    filaMitjana.innerHTML += `<td class='border px-2 py-1 font-bold bg-gray-300'>${count>0 ? (sum/count).toFixed(2) : ""}</td>`;
-  }
 }
 
 // ---------- FILTRAR ACTIVITAT ----------
