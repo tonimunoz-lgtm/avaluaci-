@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="ca">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestor de Classes</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Gestor de Classes (Responsive + Modals)</title>
 
-<!-- Tailwind CSS -->
+<!-- Tailwind CDN -->
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
 .table-input { width:3.5rem; }
@@ -19,79 +19,77 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-<!-- XLSX -->
+<!-- XLSX per export -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-100">
 
-<div class="max-w-6xl mx-auto p-4">
+<!-- ---------- LOGIN SCREEN ---------- -->
+<section id="screen-login" class="flex flex-col justify-center items-center min-h-screen bg-gradient-to-r from-blue-400 to-indigo-600 text-white">
+  <div class="bg-white text-gray-800 p-8 rounded-lg shadow-xl w-80 md:w-96 flex flex-col items-center space-y-4">
+    <img src="https://img.icons8.com/ios-filled/100/000000/school.png" alt="Logo" class="w-24 h-24 mb-2">
+    <h1 class="text-2xl font-bold text-center">Gestor de Classes</h1>
+    <input type="email" id="loginEmail" placeholder="Email" class="border rounded p-2 w-full">
+    <input type="password" id="loginPassword" placeholder="Contrasenya" class="border rounded p-2 w-full">
+    <button id="btnLoginMain" class="bg-blue-500 hover:bg-blue-700 w-full py-2 rounded text-white font-semibold">Login</button>
+    <button id="btnRegisterMain" class="bg-green-500 hover:bg-green-700 w-full py-2 rounded text-white font-semibold">Registrar</button>
+    <button id="btnForgotMain" class="text-blue-700 underline text-sm">He oblidat la contrasenya</button>
+  </div>
+</section>
 
-  <!-- PANTALLA LOGIN -->
-  <section id="screen-login" class="flex flex-col justify-center items-center min-h-screen bg-gradient-to-r from-blue-400 to-indigo-600 text-white">
-    <div class="bg-white text-gray-800 p-8 rounded-lg shadow-xl w-80 md:w-96 flex flex-col items-center space-y-4">
-      <img src="https://img.icons8.com/ios-filled/100/000000/school.png" alt="Logo App" class="w-24 h-24 mb-2">
-      <h1 class="text-2xl font-bold text-center">Gestor de Classes</h1>
-      <input type="email" id="loginEmail" placeholder="Email" class="border rounded p-2 w-full">
-      <input type="password" id="loginPassword" placeholder="Contrasenya" class="border rounded p-2 w-full">
-      <button id="btnLoginMain" class="bg-blue-500 hover:bg-blue-700 w-full py-2 rounded text-white font-semibold">Login</button>
-      <button id="btnRegisterMain" class="bg-green-500 hover:bg-green-700 w-full py-2 rounded text-white font-semibold">Registrar</button>
-      <button id="btnForgotMain" class="text-blue-700 underline text-sm">He oblidat la contrasenya</button>
+<!-- ---------- CLASSES SCREEN ---------- -->
+<section id="screen-classes" class="hidden max-w-6xl mx-auto p-4 space-y-4">
+  <div class="flex items-center justify-between">
+    <h2 class="text-2xl font-bold">Les meves classes</h2>
+    <div class="flex items-center gap-4">
+      <span id="userNameDisplay" class="font-semibold"></span>
+      <button id="btnLogout" class="bg-red-500 hover:bg-red-700 text-white py-1 px-3 rounded">Logout</button>
     </div>
-  </section>
+  </div>
 
-  <!-- SCREEN CLASSES -->
-  <section id="screen-classes" class="hidden space-y-4">
-    <div class="flex items-center justify-between">
-      <h2 class="text-xl font-semibold">Les meves classes</h2>
-      <div class="flex items-center gap-4">
-        <span id="userNameDisplay" class="font-semibold"></span>
-        <button id="btnLogout" class="bg-red-500 hover:bg-red-700 text-white py-1 px-3 rounded">Logout</button>
+  <div class="flex gap-2 mb-4">
+    <button id="btnCreateClass" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded">➕ Crear classe</button>
+    <button id="btnRefreshClasses" class="bg-gray-200 dark:bg-gray-800 px-3 py-2 rounded text-sm">Refrescar</button>
+  </div>
+
+  <div id="classesGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
+</section>
+
+<!-- ---------- CLASS SCREEN ---------- -->
+<section id="screen-class" class="hidden max-w-6xl mx-auto p-4">
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-3">
+    <div>
+      <button id="btnBack" class="text-sm text-gray-600 dark:text-gray-300 mr-3">← Tornar</button>
+      <h2 id="classTitle" class="text-2xl font-bold inline-block"></h2>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <button id="btnSortAlpha" class="bg-yellow-400 text-black px-3 py-1 rounded">Ordenar A-Z</button>
+      <button id="btnExport" class="bg-amber-500 text-white px-3 py-1 rounded">Exportar Excel</button>
+      <button id="btnAddStudent" class="bg-purple-600 text-white px-3 py-1 rounded">➕ Alumne</button>
+      <button id="btnAddActivity" class="bg-teal-600 text-white px-3 py-1 rounded">➕ Activitat</button>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <aside class="col-span-1 bg-white dark:bg-gray-800 rounded shadow p-4">
+      <h3 class="font-semibold mb-2">Alumnes <span id="studentsCount" class="text-sm text-gray-400"></span></h3>
+      <ul id="studentsList" class="space-y-2"></ul>
+      <p class="mt-3 text-xs text-gray-400">Arrossega per ordenar</p>
+    </aside>
+
+    <div class="col-span-1 md:col-span-3 bg-white dark:bg-gray-800 rounded shadow p-3 overflow-x-auto">
+      <div id="gridWrapper" class="w-full">
+        <table id="notesTable" class="min-w-full border-collapse">
+          <thead id="notesThead" class="bg-gray-100 dark:bg-gray-700"></thead>
+          <tbody id="notesTbody"></tbody>
+          <tfoot id="notesTfoot" class="bg-gray-50 dark:bg-gray-900"></tfoot>
+        </table>
       </div>
     </div>
-    <div class="flex gap-4 mb-4">
-      <button id="btnCreateClass" class="bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded">➕ Crear classe</button>
-      <button id="btnRefreshClasses" class="bg-gray-200 dark:bg-gray-800 px-3 py-2 rounded text-sm">Refrescar</button>
-    </div>
-    <div id="classesGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
-  </section>
+  </div>
+</section>
 
-  <!-- SCREEN CLASS -->
-  <section id="screen-class" class="hidden">
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-3">
-      <div>
-        <button id="btnBack" class="text-sm text-gray-600 dark:text-gray-300 mr-3">← Tornar</button>
-        <h2 id="classTitle" class="text-2xl font-bold inline-block"></h2>
-        <p id="classSub" class="text-sm text-gray-500 dark:text-gray-400"></p>
-      </div>
-      <div class="flex flex-wrap gap-2">
-        <button id="btnSortAlpha" class="bg-yellow-400 text-black px-3 py-1 rounded">Ordenar A-Z</button>
-        <button id="btnExport" class="bg-amber-500 text-white px-3 py-1 rounded">Exportar Excel</button>
-        <button id="btnAddStudent" class="bg-purple-600 text-white px-3 py-1 rounded">➕ Alumne</button>
-        <button id="btnAddActivity" class="bg-teal-600 text-white px-3 py-1 rounded">➕ Activitat</button>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <aside class="col-span-1 bg-white dark:bg-gray-800 rounded shadow p-4">
-        <h3 class="font-semibold mb-2">Alumnes <span id="studentsCount" class="text-sm text-gray-400"></span></h3>
-        <ul id="studentsList" class="space-y-2"></ul>
-        <p class="mt-3 text-xs text-gray-400">Arrossega per ordenar</p>
-      </aside>
-      <div class="col-span-1 md:col-span-3 bg-white dark:bg-gray-800 rounded shadow p-3 overflow-x-auto">
-        <div id="gridWrapper" class="w-full">
-          <table id="notesTable" class="min-w-full border-collapse">
-            <thead id="notesThead" class="bg-gray-100 dark:bg-gray-700"></thead>
-            <tbody id="notesTbody"></tbody>
-            <tfoot id="notesTfoot" class="bg-gray-50 dark:bg-gray-900"></tfoot>
-          </table>
-        </div>
-      </div>
-    </div>
-  </section>
-
-</div>
-
-<!-- ---------- MODALS (idèntics als teus) ---------- -->
+<!-- ---------- MODALS (igual que tu HTML) ---------- -->
 <!-- Create Class Modal -->
 <div id="modalCreateClass" class="fixed inset-0 hidden items-center justify-center z-50">
   <div class="modal-backdrop absolute inset-0"></div>
@@ -144,8 +142,9 @@
   </div>
 </div>
 
+<!-- ---------- SCRIPTS ---------- -->
 <script>
-// ---------------- FIREBASE CONFIG ----------------
+// ---------------- Firebase Config ----------------
 const firebaseConfig = {
  apiKey: "AIzaSyA0P7TWcEw9y9_13yqRhvsgWN5d3YKH7yo",
  authDomain: "gestornotes-cc6d0.firebaseapp.com",
@@ -164,113 +163,83 @@ let currentClassId = null;
 let classStudents = [];
 let classActivities = [];
 
-// ---------------- Pantalles ----------------
+// ---------------- UI elements ----------------
 const screenLogin = document.getElementById('screen-login');
 const screenClasses = document.getElementById('screen-classes');
 const screenClass = document.getElementById('screen-class');
-const userNameDisplay = document.getElementById('userNameDisplay');
 const classesGrid = document.getElementById('classesGrid');
+const userNameDisplay = document.getElementById('userNameDisplay');
 
-// ---------------- Login / Register ----------------
-document.getElementById('btnLoginMain').addEventListener('click', ()=> {
+// ---------------- Login/Register ----------------
+document.getElementById('btnLoginMain').addEventListener('click', ()=>{
   const email = document.getElementById('loginEmail').value.trim();
   const pw = document.getElementById('loginPassword').value;
   auth.signInWithEmailAndPassword(email, pw)
     .then(u => {
       professorUID = u.user.uid;
-      userNameDisplay.textContent = email.split('@')[0];
-      screenLogin.classList.add('hidden');
-      screenClasses.classList.remove('hidden');
-      loadClassesScreen();
-    })
-    .catch(e => alert('Error login: '+e.message));
+      showClassesScreen();
+    }).catch(e=> alert('Error login: '+e.message));
 });
 
-document.getElementById('btnRegisterMain').addEventListener('click', ()=> {
+document.getElementById('btnRegisterMain').addEventListener('click', ()=>{
   const email = document.getElementById('loginEmail').value.trim();
   const pw = document.getElementById('loginPassword').value;
-  auth.createUserWithEmailAndPassword(email, pw)
-    .then(u => {
+  auth.createUserWithEmailAndPassword(email,pw)
+    .then(u=>{
       professorUID = u.user.uid;
       db.collection('professors').doc(professorUID).set({ email, classes: [] })
-        .then(()=> {
-          userNameDisplay.textContent = email.split('@')[0];
-          screenLogin.classList.add('hidden');
-          screenClasses.classList.remove('hidden');
-          loadClassesScreen();
-        });
-    })
-    .catch(e => alert('Error registre: '+e.message));
+        .then(()=> showClassesScreen());
+    }).catch(e=> alert('Error registre: '+e.message));
 });
 
-// ---------------- Forgot password ----------------
-document.getElementById('btnForgotMain').addEventListener('click', ()=> {
-  const email = document.getElementById('loginEmail').value.trim();
-  if(!email){ alert('Introdueix el teu email per restablir la contrasenya'); return; }
-  auth.sendPasswordResetEmail(email)
-    .then(()=> alert('S\'ha enviat un email per restablir la contrasenya'))
-    .catch(e=> alert('Error: '+e.message));
-});
-
-// ---------------- Logout ----------------
 document.getElementById('btnLogout').addEventListener('click', ()=>{
-  auth.signOut().then(()=> {
-    professorUID = null;
-    screenLogin.classList.remove('hidden');
+  auth.signOut().then(()=>{
+    professorUID=null;
     screenClasses.classList.add('hidden');
+    screenClass.classList.add('hidden');
+    screenLogin.classList.remove('hidden');
   });
 });
 
-// ---------------- Dark mode ----------------
-document.documentElement.classList.toggle('dark', localStorage.getItem('darkMode')==='1');
+// ---------------- Show classes screen ----------------
+function showClassesScreen(){
+  screenLogin.classList.add('hidden');
+  screenClass.classList.add('hidden');
+  screenClasses.classList.remove('hidden');
+  if(professorUID){
+    const emailPart = auth.currentUser.email.split('@')[0];
+    userNameDisplay.textContent = emailPart;
+  }
+  loadClassesScreen();
+}
 
-// ---------------- Auth state ----------------
+// ---------------- Classes ----------------
+document.getElementById('btnCreateClass').addEventListener('click', ()=> openModal('modalCreateClass'));
+document.getElementById('btnRefreshClasses').addEventListener('click', loadClassesScreen);
+document.getElementById('btnBack').addEventListener('click', ()=> {
+  currentClassId=null;
+  screenClass.classList.add('hidden');
+  screenClasses.classList.remove('hidden');
+  loadClassesScreen();
+});
+document.getElementById('btnAddStudent').addEventListener('click', ()=> openModal('modalAddStudent'));
+document.getElementById('btnAddActivity').addEventListener('click', ()=> openModal('modalAddActivity'));
+document.getElementById('btnSortAlpha').addEventListener('click', sortStudentsAlpha);
+document.getElementById('btnExport').addEventListener('click', exportExcel);
+
+// ---------------- Modal helpers ----------------
+function openModal(id){document.getElementById(id).classList.remove('hidden'); document.getElementById(id).style.display='flex';}
+function closeModal(id){document.getElementById(id).classList.add('hidden'); document.getElementById(id).style.display='none';}
+function confirmAction(title,msg,yesCallback){document.getElementById('confirmTitle').textContent=title; document.getElementById('confirmMsg').textContent=msg; openModal('modalConfirm'); const yesBtn=document.getElementById('confirmYes'); yesBtn.onclick=()=>{closeModal('modalConfirm'); yesCallback();};}
+
+// ---------------- Carga inicial ----------------
 auth.onAuthStateChanged(user=>{
   if(user){
     professorUID = user.uid;
-    userNameDisplay.textContent = user.email.split('@')[0];
-    screenLogin.classList.add('hidden');
-    screenClasses.classList.remove('hidden');
-    loadClassesScreen();
-  } else {
-    screenLogin.classList.remove('hidden');
-    screenClasses.classList.add('hidden');
+    showClassesScreen();
   }
 });
-
-// ---------------- Load classes ----------------
-function loadClassesScreen(){
-  if(!professorUID) return;
-  screenClass.classList.add('hidden');
-  screenClasses.classList.remove('hidden');
-  classesGrid.innerHTML = '<div class="col-span-full text-sm text-gray-500">Carregant...</div>';
-  db.collection('professors').doc(professorUID).get().then(doc=>{
-    if(!doc.exists){ classesGrid.innerHTML = '<div class="text-sm text-red-500">Professor no trobat</div>'; return; }
-    const ids = doc.data().classes || [];
-    if(ids.length===0){
-      classesGrid.innerHTML = `<div class="col-span-full p-6 bg-white dark:bg-gray-800 rounded shadow text-center">No tens cap classe. Crea la primera!</div>`;
-      return;
-    }
-    Promise.all(ids.map(id => db.collection('classes').doc(id).get())).then(docs=>{
-      classesGrid.innerHTML='';
-      docs.forEach(d=>{
-        if(!d.exists) return;
-        const card = document.createElement('div');
-        card.className = 'cursor-pointer p-5 rounded bg-white dark:bg-gray-800 shadow hover:scale-[1.01] transform transition';
-        card.innerHTML = `<h3 class="text-lg font-bold mb-1">${d.data().nom||'Sense nom'}</h3>
-                          <p class="text-sm text-gray-500 dark:text-gray-300">${(d.data().alumnes||[]).length} alumnes · ${(d.data().activitats||[]).length} activitats</p>
-                          <div class="mt-3 text-xs text-indigo-600">Fes clic per obrir</div>`;
-        card.addEventListener('click', ()=> openClass(d.id));
-        classesGrid.appendChild(card);
-      });
-    });
-  }).catch(e=> console.error(e));
-}
-
-// ---------------- Screen class ----------------
-// Manté tots els scripts que tens per notes, alumnes, activitats, export, etc.
-// Inclou: openClass, loadClassData, renderStudentsList, renderNotesGrid, saveNote, etc.
-// Pots reutilitzar exactament tot el que tens del teu script original
 </script>
+
 </body>
 </html>
