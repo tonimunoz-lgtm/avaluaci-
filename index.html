@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<title>Gestor de Notes</title>
+<style>
+    body { font-family: Arial; margin: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td {
+        border: 1px solid #ccc;
+        padding: 8px;
+        text-align: center;
+    }
+    input {
+        width: 60px;
+        text-align: center;
+    }
+</style>
+</head>
+<body>
+
+<h2>Gestor de notes simple</h2>
+
+<button onclick="afegirAlumne()">Afegir alumne</button>
+<button onclick="afegirActivitat()">Afegir activitat</button>
+
+<table id="taulaNotes">
+    <thead>
+        <tr id="capcalera">
+            <th>Alumne</th>
+        </tr>
+    </thead>
+    <tbody id="cosTaula">
+    </tbody>
+</table>
+
+<script>
+let alumnes = [];
+let activitats = [];
+
+function actualitzarTaula() {
+    const cap = document.getElementById("capcalera");
+    cap.innerHTML = "<th>Alumne</th>";
+
+    activitats.forEach(a => {
+        cap.innerHTML += `<th>${a}</th>`;
+    });
+
+    const cos = document.getElementById("cosTaula");
+    cos.innerHTML = "";
+
+    alumnes.forEach((alumne, i) => {
+        let fila = `<tr><td>${alumne}</td>`;
+        activitats.forEach((_, j) => {
+            fila += `<td><input type="number" min="0" max="10" onchange="guardarNota(${i},${j},this.value)"></td>`;
+        });
+        fila += "</tr>";
+        cos.innerHTML += fila;
+    });
+}
+
+let notes = {};
+
+function guardarNota(i, j, valor) {
+    notes[`${i}-${j}`] = valor;
+    localStorage.setItem("notes", JSON.stringify(notes));
+}
+
+function afegirAlumne() {
+    const nom = prompt("Nom de l'alumne:");
+    if (nom) {
+        alumnes.push(nom);
+        actualitzarTaula();
+    }
+}
+
+function afegirActivitat() {
+    const act = prompt("Nom de l'activitat:");
+    if (act) {
+        activitats.push(act);
+        actualitzarTaula();
+    }
+}
+</script>
+
+</body>
+</html>
