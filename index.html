@@ -8,7 +8,6 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body class="bg-gray-100">
 
@@ -224,37 +223,37 @@ function afegirActivitat() {
 // ---------- TAULA DE NOTES ----------
 function actualitzarTaula() {
   const cap = document.getElementById("capcalera");
-  cap.innerHTML = "<th class='border px-2 py-1'>Alumne</th>";
-  activitats.forEach(idAct => {
-    db.collection("activitats").doc(idAct).get().then(doc => {
-      cap.innerHTML += `<th class='border px-2 py-1'>${doc.data().nom}</th>`;
-      const cos = document.getElementById("cosTaula");
-      cos.innerHTML = "";
-      alumnes.forEach(idAlumne => {
-        db.collection("alumnes").doc(idAlumne).get().then(aDoc => {
-          const nomAlumne = aDoc.data().nom;
-          let fila = `<tr class="md:table-row flex flex-col md:flex-row"><td class='border px-2 py-1'>${nomAlumne}</td>`;
-          activitats.forEach(idAct2 => {
-            const valor = (aDoc.data().notes && aDoc.data().notes[idAct2]) || "";
-            fila += `<td class='border px-2 py-1'><input type="number" min="0" max="10" value="${valor}" 
-                     class='w-20 md:w-16 text-center p-1 md:p-2' onchange="guardarNota('${idAlumne}','${idAct2}',this.value)"></td>`;
-          });
-          fila += "</tr>";
-          cos.innerHTML += fila;
+  const cos = document.getElementById("cosTaula");
+  cap.innerHTML = "<tr><th class='border px-2 py-1'>Alumne</th></tr>";
+  cos.innerHTML = "";
+  const promeses = activitats.map(idAct => db.collection("activitats").doc(idAct).get());
+  Promise.all(promeses).then(docsActs => {
+    docsActs.forEach(docAct => {
+      cap.querySelector("tr").innerHTML += `<th class='border px-2 py-1'>${docAct.data().nom}</th>`;
+    });
+    alumnes.forEach(idAlumne => {
+      db.collection("alumnes").doc(idAlumne).get().then(aDoc => {
+        let fila = `<tr><td class='border px-2 py-1 font-semibold'>${aDoc.data().nom}</td>`;
+        docsActs.forEach(act => {
+          const valor = (aDoc.data().notes && aDoc.data().notes[act.id]) || "";
+          fila += `<td class='border px-2 py-1'>
+                     <input type="number" min="0" max="10" value="${valor}" 
+                     class='w-16 text-center p-1' onchange="guardarNota('${idAlumne}','${act.id}',this.value)">
+                  </td>`;
         });
+        fila += "</tr>";
+        cos.innerHTML += fila;
       });
     });
   });
-  setTimeout(calcularMitjanes, 500);
 }
 
 // ---------- GUARDAR NOTA ----------
 function guardarNota(idAlumne,idAct,valor){
-  db.collection("alumnes").doc(idAlumne).update({[`notes.${idAct}`]: Number(valor)}).then(()=>calcularMitjanes());
+  db.collection("alumnes").doc(idAlumne).update({[`notes.${idAct}`]: Number(valor)});
 }
 
-// ---------- MITJANES I EXPORT EXCEL ----------
-function calcularMitjanes(){/*Mantingut de la teva funció anterior*/}
+// ---------- FILTRE / EXPORT ----------
 function filtrarActivitat(){/*Mantingut de la teva funció anterior*/}
 function exportExcel(){/*Mantingut de la teva funció anterior*/}
 </script>
