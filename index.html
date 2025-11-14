@@ -3,56 +3,63 @@
 <head>
 <meta charset="UTF-8">
 <title>Mini Gestor de Notes</title>
+<script src="https://cdn.tailwindcss.com"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<style>
-body { font-family: Arial; margin: 20px; }
-table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
-input { width: 60px; text-align: center; }
-button { margin: 5px; }
-</style>
 </head>
-<body>
+<body class="bg-gray-100 p-6">
 
-<h2>Mini Gestor de Notes</h2>
+<div class="max-w-6xl mx-auto">
 
-<div id="loginDiv">
-  <h3>Login Professor</h3>
-  <input type="email" id="email" placeholder="Email">
-  <input type="password" id="password" placeholder="Contrasenya">
-  <button onclick="login()">Login</button>
-  <button onclick="registrar()">Registrar</button>
+<h2 class="text-2xl font-bold mb-4">Mini Gestor de Notes</h2>
+
+<div id="loginDiv" class="bg-white p-6 rounded shadow">
+  <h3 class="text-xl mb-2">Login Professor</h3>
+  <input type="email" id="email" placeholder="Email" class="border p-2 rounded w-1/2 mb-2">
+  <input type="password" id="password" placeholder="Contrasenya" class="border p-2 rounded w-1/2 mb-2">
+  <div class="space-x-2">
+    <button onclick="login()" class="bg-blue-500 hover:bg-blue-700 text-white py-2 px-4 rounded">Login</button>
+    <button onclick="registrar()" class="bg-green-500 hover:bg-green-700 text-white py-2 px-4 rounded">Registrar</button>
+  </div>
 </div>
 
-<div id="appDiv" style="display:none;">
-  <h3>Benvingut!</h3>
-  <button onclick="logout()">Logout</button>
-  <button onclick="crearClasse()">Crear Classe</button>
-  <select id="selectClasse" onchange="carregarClasse()">
-    <option value="">Selecciona una classe</option>
-  </select>
+<div id="appDiv" style="display:none;" class="mt-6 bg-white p-6 rounded shadow">
 
-  <h4>Alumnes i Activitats</h4>
-  <button onclick="afegirAlumne()">Afegir Alumne</button>
-  <button onclick="afegirActivitat()">Afegir Activitat</button>
+  <div class="flex justify-between items-center mb-4">
+    <h3 class="text-xl">Benvingut!</h3>
+    <button onclick="logout()" class="bg-red-500 hover:bg-red-700 text-white py-1 px-4 rounded">Logout</button>
+  </div>
 
-  <table id="taulaNotes">
-    <thead id="capcalera"><tr><th>Alumne</th></tr></thead>
+  <div class="mb-4 space-x-2">
+    <button onclick="crearClasse()" class="bg-blue-500 hover:bg-blue-700 text-white py-2 px-4 rounded">Crear Classe</button>
+    <select id="selectClasse" onchange="carregarClasse()" class="border p-2 rounded"></select>
+    <select id="filtreActivitat" onchange="filtrarActivitat()" class="border p-2 rounded">
+      <option value="totes">Totes les activitats</option>
+    </select>
+  </div>
+
+  <div class="mb-4 space-x-2">
+    <button onclick="afegirAlumne()" class="bg-green-500 hover:bg-green-700 text-white py-2 px-4 rounded">Afegir Alumne</button>
+    <button onclick="afegirActivitat()" class="bg-purple-500 hover:bg-purple-700 text-white py-2 px-4 rounded">Afegir Activitat</button>
+  </div>
+
+  <table id="taulaNotes" class="min-w-full border border-gray-300">
+    <thead id="capcalera" class="bg-gray-200"><tr><th class="border px-2 py-1">Alumne</th></tr></thead>
     <tbody id="cosTaula"></tbody>
   </table>
+
 </div>
 
 <script>
 // ---------- CONFIGURACIÓ DE FIREBASE ----------
 const firebaseConfig = {
  apiKey: "AIzaSyA0P7TWcEw9y9_13yqRhvsgWN5d3YKH7yo",
-  authDomain: "gestornotes-cc6d0.firebaseapp.com",
-  projectId: "gestornotes-cc6d0",
-  storageBucket: "gestornotes-cc6d0.firebasestorage.app",
-  messagingSenderId: "324570393360",
-  appId: "1:324570393360:web:13a65fcf948813805c5395"
+ authDomain: "gestornotes-cc6d0.firebaseapp.com",
+ projectId: "gestornotes-cc6d0",
+ storageBucket: "gestornotes-cc6d0.firebasestorage.app",
+ messagingSenderId: "324570393360",
+ appId: "1:324570393360:web:13a65fcf948813805c5395"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -132,6 +139,7 @@ function carregarClasses() {
   });
 }
 
+// ---------- CARREGAR CLASSE ----------
 function carregarClasse() {
   classeActual = document.getElementById("selectClasse").value;
   if (!classeActual) return;
@@ -139,7 +147,18 @@ function carregarClasse() {
     alumnes = doc.data().alumnes || [];
     activitats = doc.data().activitats || [];
     notes = {};
-    // Carregar notes de cada alumne
+    // Omplir el select de filtre activitats
+    const filtre = document.getElementById("filtreActivitat");
+    filtre.innerHTML = '<option value="totes">Totes les activitats</option>';
+    activitats.forEach(idAct => {
+      db.collection("activitats").doc(idAct).get().then(actDoc => {
+        const opt = document.createElement("option");
+        opt.value = idAct;
+        opt.textContent = actDoc.data().nom;
+        filtre.appendChild(opt);
+      });
+    });
+    // Carregar notes i actualitzar taula
     alumnes.forEach(idAlumne => {
       db.collection("alumnes").doc(idAlumne).get().then(alumneDoc => {
         notes[idAlumne] = alumneDoc.data().notes || {};
@@ -173,21 +192,21 @@ function afegirActivitat() {
 // ---------- TAULA DE NOTES ----------
 function actualitzarTaula() {
   const cap = document.getElementById("capcalera");
-  cap.innerHTML = "<th>Alumne</th>";
+  cap.innerHTML = "<th class='border px-2 py-1'>Alumne</th>";
   activitats.forEach(idAct => {
     db.collection("activitats").doc(idAct).get().then(doc => {
       const nomAct = doc.data().nom;
-      cap.innerHTML += `<th>${nomAct}</th>`;
+      cap.innerHTML += `<th class='border px-2 py-1'>${nomAct}</th>`;
       const cos = document.getElementById("cosTaula");
       cos.innerHTML = "";
       alumnes.forEach(idAlumne => {
         db.collection("alumnes").doc(idAlumne).get().then(alumneDoc => {
           const nomAlumne = alumneDoc.data().nom;
-          let fila = `<tr><td>${nomAlumne}</td>`;
+          let fila = `<tr><td class='border px-2 py-1'>${nomAlumne}</td>`;
           activitats.forEach(idAct2 => {
             const valor = (alumneDoc.data().notes && alumneDoc.data().notes[idAct2]) || "";
-            fila += `<td><input type="number" min="0" max="10" value="${valor}" 
-                     onchange="guardarNota('${idAlumne}','${idAct2}',this.value)"></td>`;
+            fila += `<td class='border px-2 py-1'><input type="number" min="0" max="10" value="${valor}" 
+                     class='w-16 text-center' onchange="guardarNota('${idAlumne}','${idAct2}',this.value)"></td>`;
           });
           fila += "</tr>";
           cos.innerHTML += fila;
@@ -195,14 +214,72 @@ function actualitzarTaula() {
       });
     });
   });
+  setTimeout(calcularMitjanes, 500); // Petita demora per assegurar que inputs estan carregats
 }
 
+// ---------- GUARDA NOTA ----------
 function guardarNota(idAlumne, idAct, valor) {
   db.collection("alumnes").doc(idAlumne).update({
     [`notes.${idAct}`]: Number(valor)
+  }).then(() => calcularMitjanes());
+}
+
+// ---------- CALCULAR MITJANES ----------
+function calcularMitjanes() {
+  const cos = document.getElementById("cosTaula");
+  const files = cos.querySelectorAll("tr");
+  const totalActivitats = activitats.length;
+
+  // Mitjana per alumne
+  files.forEach(fila => {
+    let sum = 0, count = 0;
+    const inputs = fila.querySelectorAll("input");
+    inputs.forEach(input => {
+      const val = Number(input.value);
+      if (!isNaN(val)) { sum += val; count++; }
+    });
+    const mitjana = count > 0 ? (sum / count).toFixed(2) : "";
+    if (fila.querySelector(".mitjana")) {
+      fila.querySelector(".mitjana").textContent = mitjana;
+    } else {
+      fila.innerHTML += `<td class="mitjana border px-2 py-1 font-bold">${mitjana}</td>`;
+    }
+  });
+
+  // Mitjana per activitat
+  let filaMitjana = document.getElementById("mitjanaFila");
+  if (!filaMitjana) {
+    filaMitjana = document.createElement("tr");
+    filaMitjana.id = "mitjanaFila";
+    document.getElementById("taulaNotes").appendChild(filaMitjana);
+  }
+  filaMitjana.innerHTML = "<td class='border px-2 py-1 font-bold bg-gray-300'>Mitjana</td>";
+  for (let j = 0; j < totalActivitats; j++) {
+    let sum = 0, count = 0;
+    files.forEach(fila => {
+      const val = Number(fila.querySelectorAll("input")[j].value);
+      if (!isNaN(val)) { sum += val; count++; }
+    });
+    filaMitjana.innerHTML += `<td class='border px-2 py-1 font-bold bg-gray-300'>${count>0 ? (sum/count).toFixed(2) : ""}</td>`;
+  }
+}
+
+// ---------- FILTRAR ACTIVITAT ----------
+function filtrarActivitat() {
+  const filtre = document.getElementById("filtreActivitat").value;
+  const cap = document.getElementById("capcalera").querySelectorAll("th");
+  const cos = document.getElementById("cosTaula").querySelectorAll("tr");
+  activitats.forEach((idAct, i) => {
+    const mostrar = (filtre === "totes" || filtre === idAct);
+    cap[i+1].style.display = mostrar ? "" : "none";
+    cos.forEach(fila => {
+      fila.querySelectorAll("td")[i+1].style.display = mostrar ? "" : "none";
+    });
   });
 }
+
 </script>
 
+</div>
 </body>
 </html>
