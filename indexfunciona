@@ -3,67 +3,104 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mini Gestor de Notes</title>
+<title>Gestor de Classes</title>
+
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
 </head>
-<body class="bg-gray-100 p-4 md:p-6">
+<body class="bg-gray-100 p-4">
 
 <div class="max-w-6xl mx-auto">
 
-<h2 class="text-2xl md:text-3xl font-bold mb-4 text-center">Mini Gestor de Notes</h2>
+<!-- ---------- LOGIN SCREEN ---------- -->
+<div id="loginScreen" class="bg-white shadow p-6 rounded max-w-md mx-auto mt-10">
+    <h2 class="text-2xl font-bold text-center mb-4">Login Professor</h2>
 
-<!-- LOGIN -->
-<div id="loginDiv" class="bg-white p-6 rounded shadow md:w-1/2 md:mx-auto">
-  <h3 class="text-xl mb-2 text-center">Login Professor</h3>
-  <div class="flex flex-col space-y-2">
-    <input type="email" id="email" placeholder="Email" class="border p-2 rounded w-full">
-    <input type="password" id="password" placeholder="Contrasenya" class="border p-2 rounded w-full">
-    <div class="flex justify-center space-x-2 mt-2">
-      <button onclick="login()" class="bg-blue-500 hover:bg-blue-700 text-white py-2 px-4 rounded text-sm md:text-base">Login</button>
-      <button onclick="registrar()" class="bg-green-500 hover:bg-green-700 text-white py-2 px-4 rounded text-sm md:text-base">Registrar</button>
+    <input id="email" type="email" placeholder="Email"
+           class="border p-2 rounded w-full mb-2">
+
+    <input id="password" type="password" placeholder="Contrasenya"
+           class="border p-2 rounded w-full mb-4">
+
+    <div class="flex justify-center space-x-2">
+        <button onclick="login()" class="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded">Login</button>
+        <button onclick="registrar()" class="bg-green-500 hover:bg-green-700 text-white px-4 py-2 rounded">Registrar</button>
     </div>
-  </div>
 </div>
 
-<!-- APP -->
-<div id="appDiv" style="display:none;" class="mt-6 bg-white p-4 md:p-6 rounded shadow">
 
-  <div class="flex flex-col md:flex-row justify-between items-center mb-4">
-    <h3 class="text-xl md:text-2xl mb-2 md:mb-0">Benvingut!</h3>
-    <button onclick="logout()" class="bg-red-500 hover:bg-red-700 text-white py-1 px-4 rounded mb-2 md:mb-0 text-sm md:text-base">Logout</button>
-  </div>
 
-  <!-- Controls -->
-  <div class="flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-2 mb-4">
-    <button onclick="crearClasse()" class="bg-blue-500 hover:bg-blue-700 text-white py-2 px-4 rounded text-sm md:text-base">Crear Classe</button>
-    <select id="selectClasse" onchange="carregarClasse()" class="border p-2 rounded flex-1 text-sm md:text-base"></select>
-    <select id="filtreActivitat" onchange="filtrarActivitat()" class="border p-2 rounded flex-1 text-sm md:text-base">
-      <option value="totes">Totes les activitats</option>
-    </select>
-    <button onclick="exportExcel()" class="bg-yellow-500 hover:bg-yellow-600 text-white py-2 px-4 rounded text-sm md:text-base">Exportar Excel</button>
-  </div>
+<!-- ---------- CLASSES SCREEN (STYLE CLASSROOM) ---------- -->
+<div id="classesScreen" class="hidden">
 
-  <!-- Buttons add -->
-  <div class="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 mb-4">
-    <button onclick="afegirAlumneUI()" class="bg-purple-500 hover:bg-purple-700 text-white py-2 px-4 rounded text-sm md:text-base">Afegir Alumne</button>
-    <button onclick="afegirActivitatUI()" class="bg-teal-500 hover:bg-teal-700 text-white py-2 px-4 rounded text-sm md:text-base">Afegir Activitat</button>
-  </div>
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-3xl font-bold">Les meves classes</h2>
+        <button onclick="crearClasse()" class="bg-blue-600 hover:bg-blue-800 text-white px-4 py-2 rounded">
+            ➕ Nova classe
+        </button>
+    </div>
 
-  <div class="overflow-x-auto">
-    <table id="taulaNotes" class="min-w-full border border-gray-300 table-auto">
-      <thead id="capcalera" class="bg-gray-200"><tr><th class="border px-2 py-1">Alumne</th></tr></thead>
-      <tbody id="cosTaula"></tbody>
-    </table>
-  </div>
+    <div id="llistaClasses" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+
+</div>
+
+
+
+<!-- ---------- SINGLE CLASS VIEW ---------- -->
+<div id="classView" class="hidden">
+
+    <button onclick="tornarInici()" class="mb-4 bg-gray-300 hover:bg-gray-400 px-3 py-1 rounded">
+        ← Tornar
+    </button>
+
+    <h2 id="nomClasse" class="text-3xl font-bold mb-4"></h2>
+
+    <div class="flex flex-col md:flex-row gap-4">
+
+        <!-- PANEL ESQUERRA: ALUMNES -->
+        <div class="bg-white shadow rounded p-4 w-full md:w-1/3">
+            <h3 class="text-xl font-semibold mb-2">Alumnes</h3>
+            <button onclick="afegirAlumne()"
+                    class="bg-purple-600 hover:bg-purple-800 text-white px-3 py-1 rounded mb-3">
+                ➕ Afegir alumne
+            </button>
+
+            <ul id="llistaAlumnes" class="list-disc pl-5"></ul>
+        </div>
+
+        <!-- PANEL DRETA: GRAELLA NOTES -->
+        <div class="bg-white shadow rounded p-4 w-full md:w-2/3">
+
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-xl font-semibold">Activitats i Notes</h3>
+
+                <button onclick="afegirActivitat()"
+                        class="bg-teal-600 hover:bg-teal-800 text-white px-3 py-1 rounded">
+                    ➕ Afegir activitat
+                </button>
+            </div>
+
+            <!-- TAULA -->
+            <div class="overflow-x-auto">
+                <table id="taulaNotes" class="min-w-full border border-gray-300">
+                    <thead id="capcalera" class="bg-gray-200"></thead>
+                    <tbody id="cosTaula"></tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
 
 </div>
 
 <script>
-// ---------- CONFIGURACIÓ FIREBASE ----------
+// -------------------- FIREBASE CONFIG --------------------
 const firebaseConfig = {
  apiKey: "AIzaSyA0P7TWcEw9y9_13yqRhvsgWN5d3YKH7yo",
  authDomain: "gestornotes-cc6d0.firebaseapp.com",
@@ -73,214 +110,204 @@ const firebaseConfig = {
  appId: "1:324570393360:web:13a65fcf948813805c5395"
 };
 firebase.initializeApp(firebaseConfig);
+
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// ---------- VARIABLES ----------
 let professorUID = null;
+let classeActual = null;
 let alumnes = [];
 let activitats = [];
-let notes = {};
-let classeActual = null;
 
-// ---------- AUTENTICACIÓ ----------
-function registrar() {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-  auth.createUserWithEmailAndPassword(email, password)
-    .then(cred => {
-      professorUID = cred.user.uid;
-      db.collection("professors").doc(professorUID).set({ email: email, classes: [] })
-        .then(() => mostrarApp());
-    })
-    .catch(err => alert(err.message));
+
+// -------------------- AUTH --------------------
+function login(){
+    auth.signInWithEmailAndPassword(
+        document.getElementById("email").value,
+        document.getElementById("password").value
+    ).then(cred=>{
+        professorUID = cred.user.uid;
+        mostrarPantallaClasses();
+    }).catch(err=>alert(err.message));
 }
 
-function login() {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-  auth.signInWithEmailAndPassword(email, password)
-    .then(cred => {
-      professorUID = cred.user.uid;
-      mostrarApp();
-    })
-    .catch(err => alert(err.message));
-}
-
-function logout() { auth.signOut().then(() => location.reload()); }
-
-// ---------- MOSTRAR APP ----------
-function mostrarApp() {
-  document.getElementById("loginDiv").style.display = "none";
-  document.getElementById("appDiv").style.display = "block";
-  carregarClasses();
-}
-
-// ---------- CREAR CLASSE ----------
-function crearClasse() {
-  const nomClasse = prompt("Nom de la classe:");
-  if (!nomClasse) return;
-  const classeRef = db.collection("classes").doc();
-  classeRef.set({ nom: nomClasse, alumnes: [], activitats: [] })
-    .then(() => {
-      return db.collection("professors").doc(professorUID)
-        .update({ classes: firebase.firestore.FieldValue.arrayUnion(classeRef.id) });
-    })
-    .then(() => carregarClasses())
-    .catch(err => alert("Error creant la classe: " + err.message));
-}
-
-// ---------- CARREGAR CLASSES ----------
-function carregarClasses() {
-  const select = document.getElementById("selectClasse");
-  select.innerHTML = '<option value="">Selecciona una classe</option>';
-
-  if (!professorUID) return;
-
-  db.collection("professors").doc(professorUID).get()
-    .then(doc => {
-      if(!doc.exists) return;
-      const classesIDs = doc.data().classes || [];
-      if(classesIDs.length === 0) return;
-      const promeses = classesIDs.map(idClasse => db.collection("classes").doc(idClasse).get());
-      return Promise.all(promeses);
-    })
-    .then(docs => {
-      if(!docs) return;
-      docs.forEach(classeDoc => {
-        if(classeDoc.exists) {
-          const opt = document.createElement("option");
-          opt.value = classeDoc.id;
-          opt.textContent = classeDoc.data().nom;
-          select.appendChild(opt);
-        }
-      });
-    })
-    .catch(err => console.error("Error carregant classes:", err));
-}
-
-// ---------- AFEGIR ALUMNE ----------
-function afegirAlumneUI() {
-  if(!classeActual) { alert("Selecciona primer una classe!"); return; }
-  const nom = prompt("Nom de l'alumne:");
-  if(!nom) return;
-  const alumneRef = db.collection("alumnes").doc();
-  alumneRef.set({ nom: nom, notes: {} })
-    .then(() => db.collection("classes").doc(classeActual)
-      .update({ alumnes: firebase.firestore.FieldValue.arrayUnion(alumneRef.id) }))
-    .then(() => carregarClasse());
-}
-
-// ---------- AFEGIR ACTIVITAT ----------
-function afegirActivitatUI() {
-  if(!classeActual) { alert("Selecciona primer una classe!"); return; }
-  const nom = prompt("Nom de l'activitat:");
-  if(!nom) return;
-  const actRef = db.collection("activitats").doc();
-  actRef.set({ nom: nom, data: new Date().toISOString().split('T')[0] })
-    .then(() => db.collection("classes").doc(classeActual)
-      .update({ activitats: firebase.firestore.FieldValue.arrayUnion(actRef.id) }))
-    .then(() => carregarClasse());
-}
-
-// ---------- CARREGAR CLASSE ----------
-function carregarClasse() {
-  classeActual = document.getElementById("selectClasse").value;
-  if (!classeActual) return;
-  db.collection("classes").doc(classeActual).get().then(doc => {
-    alumnes = doc.data().alumnes || [];
-    activitats = doc.data().activitats || [];
-    notes = {};
-
-    // Omplir filtre activitats
-    const filtre = document.getElementById("filtreActivitat");
-    filtre.innerHTML = '<option value="totes">Totes les activitats</option>';
-
-    const promesesActivitats = activitats.map(idAct => db.collection("activitats").doc(idAct).get());
-    Promise.all(promesesActivitats).then(docsActs => {
-      docsActs.forEach(docAct => {
-        if(docAct.exists){
-          const opt = document.createElement("option");
-          opt.value = docAct.id;
-          opt.textContent = docAct.data().nom;
-          filtre.appendChild(opt);
-        }
-      });
-      actualitzarTaula();
+function registrar(){
+    auth.createUserWithEmailAndPassword(
+        document.getElementById("email").value,
+        document.getElementById("password").value
+    ).then(cred=>{
+        professorUID = cred.user.uid;
+        db.collection("professors").doc(professorUID).set({classes:[]});
+        mostrarPantallaClasses();
     });
-  });
 }
 
-// ---------- ACTUALITZAR TAULA ----------
-function actualitzarTaula() {
-  const cap = document.getElementById("capcalera");
-  const cos = document.getElementById("cosTaula");
-  cap.innerHTML = "<th class='border px-2 py-1'>Alumne</th>";
-  cos.innerHTML = "";
 
-  // Carregar activitats per capçaleres
-  const promesesActivitats = activitats.map(idAct => db.collection("activitats").doc(idAct).get());
-  Promise.all(promesesActivitats).then(docsActs => {
-    const nomsActivitats = [];
-    docsActs.forEach(docAct => {
-      const nomAct = docAct.exists ? docAct.data().nom : "Desconegut";
-      nomsActivitats.push({id: docAct.id, nom: nomAct});
-      cap.innerHTML += `<th class='border px-2 py-1'>${nomAct}</th>`;
+
+// -------------------- NAVEGACIÓ --------------------
+function mostrarPantallaClasses(){
+    document.getElementById("loginScreen").classList.add("hidden");
+    document.getElementById("classesScreen").classList.remove("hidden");
+    carregarClasses();
+}
+
+function obrirClasse(idClasse){
+    classeActual = idClasse;
+    document.getElementById("classesScreen").classList.add("hidden");
+    document.getElementById("classView").classList.remove("hidden");
+    carregarDadesClasse();
+}
+
+function tornarInici(){
+    document.getElementById("classView").classList.add("hidden");
+    document.getElementById("classesScreen").classList.remove("hidden");
+}
+
+
+
+// -------------------- CLASSES --------------------
+function crearClasse(){
+    const nom = prompt("Nom de la classe:");
+    if(!nom) return;
+
+    const ref = db.collection("classes").doc();
+    ref.set({nom: nom, alumnes: [], activitats: []}).then(()=>{
+        return db.collection("professors").doc(professorUID)
+            .update({ classes: firebase.firestore.FieldValue.arrayUnion(ref.id) });
+    }).then(()=>carregarClasses());
+}
+
+function carregarClasses(){
+    db.collection("professors").doc(professorUID).get().then(doc=>{
+        const classIDs = doc.data().classes || [];
+        const contenidor = document.getElementById("llistaClasses");
+        contenidor.innerHTML = "";
+
+        classIDs.forEach(id=>{
+            db.collection("classes").doc(id).get().then(cDoc=>{
+                const nom = cDoc.data().nom;
+
+                contenidor.innerHTML += `
+                    <div onclick="obrirClasse('${id}')"
+                         class="cursor-pointer bg-white shadow hover:shadow-lg p-5 rounded border-t-4 border-blue-500">
+                        <h3 class="text-xl font-bold mb-2">${nom}</h3>
+                        <p class="text-gray-500">Fes clic per obrir</p>
+                    </div>
+                `;
+            });
+        });
     });
+}
 
-    // Afegir alumnes independentment de si hi ha activitats
-    alumnes.forEach(idAlumne => {
-      db.collection("alumnes").doc(idAlumne).get().then(alumneDoc => {
-        const nomAlumne = alumneDoc.exists ? alumneDoc.data().nom : "Desconegut";
-        let fila = `<tr class="md:table-row flex flex-col md:flex-row"><td class='border px-2 py-1'>${nomAlumne}</td>`;
 
-        nomsActivitats.forEach(act => {
-          const valor = (alumneDoc.data().notes && alumneDoc.data().notes[act.id]) || "";
-          fila += `<td class='border px-2 py-1'>
-                     <input type="number" min="0" max="10" value="${valor}" 
-                     class='w-20 md:w-16 text-center p-1 md:p-2'
-                     onchange="guardarNota('${idAlumne}','${act.id}',this.value)">
-                   </td>`;
+
+// -------------------- VISTA INDIVIDUAL DE CLASSE --------------------
+function carregarDadesClasse(){
+
+    db.collection("classes").doc(classeActual).get().then(doc=>{
+        alumnes = doc.data().alumnes || [];
+        activitats = doc.data().activitats || [];
+
+        document.getElementById("nomClasse").textContent = doc.data().nom;
+
+        carregarLlistaAlumnes();
+        actualitzarTaulaNotes();
+    });
+}
+
+
+
+// -------------------- ALUMNES --------------------
+function afegirAlumne(){
+    const nom = prompt("Nom alumne:");
+    if(!nom) return;
+
+    const ref = db.collection("alumnes").doc();
+    ref.set({ nom: nom, notes: {} }).then(()=>{
+
+        return db.collection("classes").doc(classeActual)
+            .update({ alumnes: firebase.firestore.FieldValue.arrayUnion(ref.id) });
+
+    }).then(()=>carregarDadesClasse());
+}
+
+function carregarLlistaAlumnes(){
+    const ul = document.getElementById("llistaAlumnes");
+    ul.innerHTML = "";
+
+    alumnes.forEach(id=>{
+        db.collection("alumnes").doc(id).get().then(doc=>{
+            ul.innerHTML += `<li>${doc.data().nom}</li>`;
+        });
+    });
+}
+
+
+
+// -------------------- ACTIVITATS --------------------
+function afegirActivitat(){
+    const nom = prompt("Nom activitat:");
+    if(!nom) return;
+
+    const ref = db.collection("activitats").doc();
+    ref.set({nom: nom}).then(()=>{
+
+        return db.collection("classes").doc(classeActual)
+            .update({ activitats: firebase.firestore.FieldValue.arrayUnion(ref.id) });
+
+    }).then(()=>carregarDadesClasse());
+}
+
+
+
+// -------------------- TAULA NOTES --------------------
+function actualitzarTaulaNotes(){
+
+    const cap = document.getElementById("capcalera");
+    const cos = document.getElementById("cosTaula");
+
+    cap.innerHTML = "<tr><th class='border px-2 py-1'>Alumne</th></tr>";
+    cos.innerHTML = "";
+
+    const promesesAct = activitats.map(id => db.collection("activitats").doc(id).get());
+
+    Promise.all(promesesAct).then(activsDocs=>{
+
+        activsDocs.forEach(a=>{
+            cap.querySelector("tr").innerHTML += `<th class='border px-2 py-1'>${a.data().nom}</th>`;
         });
 
-        fila += "</tr>";
-        cos.innerHTML += fila;
-      });
+        alumnes.forEach(idAl=>{
+            db.collection("alumnes").doc(idAl).get().then(aDoc=>{
+
+                let fila = `<tr><td class='border px-2 py-1'>${aDoc.data().nom}</td>`;
+
+                activsDocs.forEach(act=>{
+                    const nota = (aDoc.data().notes || {})[act.id] || "";
+                    fila += `
+                        <td class='border px-2 py-1'>
+                            <input type="number" min="0" max="10"
+                                   value="${nota}"
+                                   class="w-16 text-center"
+                                   onchange="guardarNota('${idAl}', '${act.id}', this.value)">
+                        </td>`;
+                });
+
+                fila += "</tr>";
+                cos.innerHTML += fila;
+            });
+        });
+
     });
-  });
+
 }
 
-// ---------- GUARDAR NOTA ----------
-function guardarNota(idAlumne, idAct, valor) {
-  db.collection("alumnes").doc(idAlumne).update({
-    [`notes.${idAct}`]: Number(valor)
-  });
-}
-
-// ---------- FILTRAR ACTIVITAT ----------
-function filtrarActivitat() {
-  const filtre = document.getElementById("filtreActivitat").value;
-  const cap = document.getElementById("capcalera").querySelectorAll("th");
-  const cos = document.getElementById("cosTaula").querySelectorAll("tr");
-  activitats.forEach((idAct, i) => {
-    const mostrar = (filtre === "totes" || filtre === idAct);
-    if(cap[i+1]) cap[i+1].style.display = mostrar ? "" : "none";
-    cos.forEach(fila => {
-      if(fila.querySelectorAll("td")[i+1])
-        fila.querySelectorAll("td")[i+1].style.display = mostrar ? "" : "none";
+function guardarNota(idAlumne, idAct, valor){
+    db.collection("alumnes").doc(idAlumne).update({
+        [`notes.${idAct}`]: Number(valor)
     });
-  });
 }
 
-// ---------- EXPORTAR A EXCEL ----------
-function exportExcel() {
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.table_to_sheet(document.getElementById("taulaNotes"));
-  XLSX.utils.book_append_sheet(wb, ws, "Notes");
-  XLSX.writeFile(wb, `Notes_${classeActual || "classe"}.xlsx`);
-}
 </script>
-
-</div>
 </body>
 </html>
