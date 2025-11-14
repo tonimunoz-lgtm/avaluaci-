@@ -2,6 +2,7 @@
 <html lang="ca">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mini Gestor de Notes</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -22,8 +23,8 @@
     <input type="email" id="email" placeholder="Email" class="border p-2 rounded w-full">
     <input type="password" id="password" placeholder="Contrasenya" class="border p-2 rounded w-full">
     <div class="flex justify-center space-x-2 mt-2">
-      <button onclick="login()" class="bg-blue-500 hover:bg-blue-700 text-white py-2 px-4 rounded">Login</button>
-      <button onclick="registrar()" class="bg-green-500 hover:bg-green-700 text-white py-2 px-4 rounded">Registrar</button>
+      <button onclick="login()" class="bg-blue-500 hover:bg-blue-700 text-white py-2 px-4 rounded text-sm md:text-base">Login</button>
+      <button onclick="registrar()" class="bg-green-500 hover:bg-green-700 text-white py-2 px-4 rounded text-sm md:text-base">Registrar</button>
     </div>
   </div>
 </div>
@@ -33,19 +34,19 @@
 
   <div class="flex flex-col md:flex-row justify-between items-center mb-4">
     <h3 class="text-xl md:text-2xl mb-2 md:mb-0">Benvingut!</h3>
-    <button onclick="logout()" class="bg-red-500 hover:bg-red-700 text-white py-1 px-4 rounded mb-2 md:mb-0">Logout</button>
+    <button onclick="logout()" class="bg-red-500 hover:bg-red-700 text-white py-1 px-4 rounded mb-2 md:mb-0 text-sm md:text-base">Logout</button>
   </div>
 
   <div class="flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-2 mb-4">
-    <button onclick="crearClasse()" class="bg-blue-500 hover:bg-blue-700 text-white py-2 px-4 rounded">Crear Classe</button>
-    <select id="selectClasse" onchange="carregarClasse()" class="border p-2 rounded flex-1"></select>
-    <select id="filtreActivitat" onchange="filtrarActivitat()" class="border p-2 rounded flex-1">
+    <button onclick="crearClasse()" class="bg-blue-500 hover:bg-blue-700 text-white py-2 px-4 rounded text-sm md:text-base">Crear Classe</button>
+    <select id="selectClasse" onchange="carregarClasse()" class="border p-2 rounded flex-1 text-sm md:text-base"></select>
+    <select id="filtreActivitat" onchange="filtrarActivitat()" class="border p-2 rounded flex-1 text-sm md:text-base">
       <option value="totes">Totes les activitats</option>
     </select>
-    <button onclick="exportExcel()" class="bg-yellow-500 hover:bg-yellow-600 text-white py-2 px-4 rounded">Exportar Excel</button>
+    <button onclick="exportExcel()" class="bg-yellow-500 hover:bg-yellow-600 text-white py-2 px-4 rounded text-sm md:text-base">Exportar Excel</button>
   </div>
 
-  <div class="flex flex-col overflow-x-auto">
+  <div class="overflow-x-auto">
     <table id="taulaNotes" class="min-w-full border border-gray-300 table-auto">
       <thead id="capcalera" class="bg-gray-200"><tr><th class="border px-2 py-1">Alumne</th></tr></thead>
       <tbody id="cosTaula"></tbody>
@@ -204,11 +205,11 @@ function actualitzarTaula() {
       alumnes.forEach(idAlumne => {
         db.collection("alumnes").doc(idAlumne).get().then(alumneDoc => {
           const nomAlumne = alumneDoc.data().nom;
-          let fila = `<tr><td class='border px-2 py-1'>${nomAlumne}</td>`;
+          let fila = `<tr class="md:table-row flex flex-col md:flex-row"><td class='border px-2 py-1'>${nomAlumne}</td>`;
           activitats.forEach(idAct2 => {
             const valor = (alumneDoc.data().notes && alumneDoc.data().notes[idAct2]) || "";
             fila += `<td class='border px-2 py-1'><input type="number" min="0" max="10" value="${valor}" 
-                     class='w-16 text-center' onchange="guardarNota('${idAlumne}','${idAct2}',this.value)"></td>`;
+                     class='w-20 md:w-16 text-center p-1 md:p-2' onchange="guardarNota('${idAlumne}','${idAct2}',this.value)"></td>`;
           });
           fila += "</tr>";
           cos.innerHTML += fila;
@@ -226,12 +227,13 @@ function guardarNota(idAlumne, idAct, valor) {
   }).then(() => calcularMitjanes());
 }
 
-// ---------- CALCULAR MITJANES + DESTACAR BAIXES ----------
+// ---------- CALCULAR MITJANES + DESTACAR BAIXES + ALERTA ----------
 function calcularMitjanes() {
   const cos = document.getElementById("cosTaula");
   const files = cos.querySelectorAll("tr");
   const totalActivitats = activitats.length;
   let sumaGlobal = 0, comptaGlobal = 0;
+  let alumnesBaixos = [];
 
   files.forEach(fila => {
     let sum = 0, count = 0;
@@ -247,16 +249,15 @@ function calcularMitjanes() {
       fila.innerHTML += `<td class="mitjana border px-2 py-1 font-bold">${mitjana}</td>`;
     }
 
-    // Destacar baixes
-    if(mitjana !== "" && mitjana < 5) fila.classList.add("bg-red-100"); 
-    else fila.classList.remove("bg-red-100");
+    if(mitjana !== "" && mitjana < 5) {
+      fila.classList.add("bg-red-100"); 
+      alumnesBaixos.push(fila.querySelector("td").textContent);
+    } else fila.classList.remove("bg-red-100");
 
-    // global
     sumaGlobal += sum;
     comptaGlobal += count;
   });
 
-  // Mitjana global per classe
   const mitjanaGlobal = comptaGlobal > 0 ? (sumaGlobal/comptaGlobal).toFixed(2) : "";
   if(!document.getElementById("mitjanaGlobalDiv")) {
     const div = document.createElement("div");
@@ -265,6 +266,11 @@ function calcularMitjanes() {
     document.getElementById("appDiv").appendChild(div);
   }
   document.getElementById("mitjanaGlobalDiv").textContent = `Mitjana global de la classe: ${mitjanaGlobal}`;
+
+  // alerta alumnes baixos
+  if(alumnesBaixos.length > 0) {
+    console.log("Alumnes amb nota baixa:", alumnesBaixos.join(", "));
+  }
 
   // Mitjana per activitat
   let filaMitjana = document.getElementById("mitjanaFila");
