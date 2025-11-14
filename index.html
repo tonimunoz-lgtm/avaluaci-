@@ -128,28 +128,38 @@ function crearClasse() {
     .catch(err => alert("Error creant la classe: " + err.message));
 }
 
-// ---------- CARREGAR CLASSES ----------
+// ---------- CARREGAR CLASSES CORREGIDA ----------
 function carregarClasses() {
   const select = document.getElementById("selectClasse");
   select.innerHTML = '<option value="">Selecciona una classe</option>';
 
-  db.collection("professors").doc(professorUID).get().then(doc => {
-    if (!doc.exists) { console.error("No existeix document del professor!"); return; }
-    const classesIDs = doc.data().classes || [];
-    console.log("Classes del professor:", classesIDs);
+  if (!professorUID) { console.error("UID del professor no existeix!"); return; }
 
-    const promeses = classesIDs.map(idClasse => db.collection("classes").doc(idClasse).get());
-    Promise.all(promeses).then(docs => {
+  db.collection("professors").doc(professorUID).get()
+    .then(doc => {
+      if (!doc.exists) { console.error("Document del professor no existeix!"); return; }
+      const classesIDs = doc.data().classes || [];
+      console.log("ClassesIDs:", classesIDs);
+
+      if(classesIDs.length === 0) return;
+
+      const promeses = classesIDs.map(idClasse => db.collection("classes").doc(idClasse).get());
+      return Promise.all(promeses);
+    })
+    .then(docs => {
+      if(!docs) return;
       docs.forEach(classeDoc => {
         if(classeDoc.exists) {
           const opt = document.createElement("option");
           opt.value = classeDoc.id;
           opt.textContent = classeDoc.data().nom;
           select.appendChild(opt);
-        } else console.warn("Classe no trobada:", classeDoc.id);
+        } else {
+          console.warn("Classe no trobada a Firestore:", classeDoc.id);
+        }
       });
-    });
-  });
+    })
+    .catch(err => console.error("Error carregant classes:", err));
 }
 
 // ---------- AFEGIR ALUMNE ----------
