@@ -9,7 +9,7 @@ body {
 
 /* ---------------- Contenidor principal ---------------- */
 #appRoot {
-  background: #2f2f44; /* més fosc que abans per destacar sobre fons principal */
+  background: linear-gradient(135deg, #2f2f44 0%, #373759 100%); /* gradient suau de gris fosc a gris-blau */
   padding: 2rem;
   border-radius: 1.5rem;
   box-shadow: 0 8px 20px rgba(0,0,0,0.3);
@@ -63,7 +63,7 @@ h2, h1 {
 
 /* Titol específic "Les meves classes" */
 #screen-classes h2 {
-  color: #ffffff; /* blanc pur per destacar sobre fons principal */
+  color: #ffffff; /* blanc pur per destacar sobre fons gradient */
 }
 
 /* ---------------- Notes Grid ---------------- */
