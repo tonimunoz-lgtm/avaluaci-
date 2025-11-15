@@ -178,9 +178,13 @@ function loadClassesScreen() {
           classesGrid.appendChild(card);
         });
 
-        if(deleteMode){
-          addDeleteSelectedButton();
-        }
+        // eliminar botó si existia abans
+const existingBtn = document.querySelector('#classesGrid + .delete-selected-btn');
+if(existingBtn) existingBtn.remove();
+
+if(deleteMode){
+  addDeleteSelectedButton();
+}
       });
   }).catch(e=> {
     classesGrid.innerHTML = `<div class="text-sm text-red-500">Error carregant classes</div>`;
@@ -197,9 +201,6 @@ btnDeleteMode.addEventListener('click', ()=> {
 
 // afegeix botó “Eliminar seleccionats” sota grid
 function addDeleteSelectedButton(){
-  let existingBtn = document.querySelector('#classesGrid + .delete-selected-btn');
-  if(existingBtn) existingBtn.remove();
-
   const delBtn = document.createElement('button');
   delBtn.textContent = 'Eliminar seleccionats';
   delBtn.className = 'delete-selected-btn mt-3 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded shadow';
