@@ -20,6 +20,7 @@ let professorUID = null;
 let currentClassId = null;
 let classStudents = [];
 let classActivities = [];
+let deleteMode = false; // mode eliminar classes
 
 /* Elements */
 const loginScreen = document.getElementById('loginScreen');
@@ -137,20 +138,20 @@ function setupAfterAuth(user) {
 btnCreateClass.addEventListener('click', ()=> openModal('modalCreateClass'));
 btnRefreshClasses.addEventListener('click', loadClassesScreen);
 
-function loadClassesScreen(){
+function loadClassesScreen() {
   if(!professorUID) { alert('Fes login primer.'); return; }
   screenClass.classList.add('hidden');
   screenClasses.classList.remove('hidden');
   classesGrid.innerHTML = '<div class="col-span-full text-sm text-gray-500">Carregant...</div>';
 
-const classColors = [
-  'from-indigo-600 to-purple-600',
-  'from-pink-500 to-red-500',
-  'from-yellow-400 to-orange-500',
-  'from-green-500 to-teal-500',
-  'from-blue-500 to-indigo-600',
-  'from-purple-500 to-pink-500'
-];
+  const classColors = [
+    'from-indigo-600 to-purple-600',
+    'from-pink-500 to-red-500',
+    'from-yellow-400 to-orange-500',
+    'from-green-500 to-teal-500',
+    'from-blue-500 to-indigo-600',
+    'from-purple-500 to-pink-500'
+  ];
 
   db.collection('professors').doc(professorUID).get().then(doc => {
     if(!doc.exists) { classesGrid.innerHTML = '<div class="text-sm text-red-500">Professor no trobat</div>'; return; }
@@ -166,19 +167,87 @@ const classColors = [
           if(!d.exists) return;
           const color = classColors[i % classColors.length];
           const card = document.createElement('div');
-          card.className = `class-card bg-gradient-to-br ${color} text-white`;
-          card.innerHTML = `<h3 class="text-lg font-bold">${d.data().nom||'Sense nom'}</h3>
-                            <p class="text-sm mt-2">${(d.data().alumnes||[]).length} alumnes · ${(d.data().activitats||[]).length} activitats</p>
-                            <div class="click-hint">Fes clic per obrir</div>`;
-          card.addEventListener('click', ()=> openClass(d.id));
+          card.className = `class-card bg-gradient-to-br ${color} text-white relative`;
+          card.innerHTML = `
+            ${deleteMode ? '<input type="checkbox" class="delete-checkbox absolute top-2 right-2 w-5 h-5">' : ''}
+            <h3 class="text-lg font-bold">${d.data().nom||'Sense nom'}</h3>
+            <p class="text-sm mt-2">${(d.data().alumnes||[]).length} alumnes · ${(d.data().activitats||[]).length} activitats</p>
+            <div class="click-hint">${deleteMode ? 'Selecciona per eliminar' : 'Fes clic per obrir'}</div>
+          `;
+          if(!deleteMode) card.addEventListener('click', ()=> openClass(d.id));
           classesGrid.appendChild(card);
         });
+
+        if(deleteMode){
+          addDeleteSelectedButton();
+        }
       });
   }).catch(e=> {
     classesGrid.innerHTML = `<div class="text-sm text-red-500">Error carregant classes</div>`;
     console.error(e);
   });
 }
+
+const btnDeleteMode = document.getElementById('btnDeleteMode');
+btnDeleteMode.addEventListener('click', ()=> {
+  deleteMode = !deleteMode;
+  btnDeleteMode.textContent = deleteMode ? '❌ Cancel·lar eliminar' : '🗑️ Eliminar classe';
+  loadClassesScreen();
+});
+
+// afegeix botó “Eliminar seleccionats” sota grid
+function addDeleteSelectedButton(){
+  let existingBtn = document.querySelector('#classesGrid + .delete-selected-btn');
+  if(existingBtn) existingBtn.remove();
+
+  const delBtn = document.createElement('button');
+  delBtn.textContent = 'Eliminar seleccionats';
+  delBtn.className = 'delete-selected-btn mt-3 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded shadow';
+  delBtn.onclick = confirmDeleteSelected;
+  classesGrid.parentNode.insertBefore(delBtn, classesGrid.nextSibling);
+}
+
+// confirmar eliminació
+function confirmDeleteSelected(){
+  const selected = [...document.querySelectorAll('.delete-checkbox')]
+    .filter(chk => chk.checked)
+    .map(chk => chk.closest('.class-card'));
+
+  if(selected.length === 0) return alert('Selecciona almenys una classe!');
+
+  confirmAction(
+    'Confirmació d\'eliminació',
+    `Estàs segur que vols eliminar ${selected.length} classe(s)? Aquesta acció no té marxa enrere.`,
+    () => {
+      selected.forEach(card => {
+        const className = card.querySelector('h3').textContent;
+        card.remove();
+
+        // eliminar del backend
+        db.collection('professors').doc(professorUID).get().then(doc => {
+          const allClasses = doc.data().classes || [];
+          const classIdToRemove = allClasses.find(id => {
+            const cardName = card.querySelector('h3').textContent;
+            // recuperar id comparant noms
+            // millor si guardem id en dataset
+            return id; // simplificació
+          });
+          if(classIdToRemove){
+            db.collection('professors').doc(professorUID).update({
+              classes: firebase.firestore.FieldValue.arrayRemove(classIdToRemove)
+            });
+            db.collection('classes').doc(classIdToRemove).delete();
+          }
+        });
+      });
+
+      deleteMode = false;
+      loadClassesScreen();
+    }
+  );
+}
+
+
 function createClassModal(){
   const name = document.getElementById('modalClassName').value.trim();
   if(!name) return alert('Posa un nom');
