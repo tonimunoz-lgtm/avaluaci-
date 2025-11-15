@@ -1,6 +1,4 @@
 /* style.css - estils addicionals */
-
-/* mantenim classes de Tailwind però afegim petits ajustos */
 .table-input { width: 3.5rem; }
 .modal-backdrop { background: rgba(0,0,0,0.45); backdrop-filter: blur(3px); }
 .fade-in { animation: fadeIn .15s ease-out; }
@@ -22,14 +20,16 @@
 
 /* ---------------- Targetes de classe professionals ---------------- */
 .class-card {
-  @apply cursor-pointer p-6 rounded-xl bg-white dark:bg-gray-800 shadow-md hover:shadow-xl transition-transform transform hover:scale-105 flex flex-col justify-between;
+  @apply cursor-pointer p-6 rounded-xl shadow-md hover:shadow-xl transition-transform transform hover:scale-105 flex flex-col justify-between;
 }
-.class-card h3 {
-  @apply text-lg font-bold text-gray-800 dark:text-gray-100;
-}
-.class-card p {
-  @apply text-sm text-gray-500 dark:text-gray-400 mt-2;
+.class-card h3, .class-card p {
+  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 .class-card .click-hint {
-  @apply mt-3 text-xs text-indigo-600 dark:text-indigo-400;
+  @apply mt-3 text-xs text-white/80;
+}
+
+/* ---------------- Fons de pantalla complementari ---------------- */
+body {
+  background: linear-gradient(135deg, #f0f4ff 0%, #fdf2f8 50%, #f0fdf4 100%);
 }
