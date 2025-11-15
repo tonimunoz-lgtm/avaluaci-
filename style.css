@@ -9,7 +9,7 @@ body {
 
 /* ---------------- Contenidor principal ---------------- */
 #appRoot {
-  background: #3b3b55; /* gris fosc més clar que el fons */
+  background: #3c3c55; /* gris fosc suau, harmoniós amb el fons negre clar */
   padding: 2rem;
   border-radius: 1.5rem;
   box-shadow: 0 8px 20px rgba(0,0,0,0.3);
