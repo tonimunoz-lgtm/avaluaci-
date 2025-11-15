@@ -24,19 +24,19 @@
   <div class="min-h-screen flex items-center justify-center">
     <!-- LOGIN / SPLASH (visible per defecte si no hi ha auth) -->
     <section id="loginScreen" class="w-full max-w-md p-6">
-      <div class="bg-gradient-to-r from-blue-400 to-indigo-600 text-white rounded-xl shadow-xl p-6 flex flex-col items-center">
-        <img src="https://img.icons8.com/ios-filled/100/ffffff/school.png" alt="Logo" class="w-24 h-24 mb-4">
-        <h1 class="text-2xl font-bold mb-2">Mini Gestor de Notes</h1>
-        <p class="mb-4 text-sm text-blue-100/80 text-center">Gestiona classes, alumnes i activitats — responsive i modern</p>
+  <div class="bg-white dark:bg-gray-900 rounded-xl shadow-xl p-6 flex flex-col items-center">
+    <img src="https://img.icons8.com/ios-filled/100/6366f1/school.png" alt="Logo" class="w-24 h-24 mb-4">
+    <h1 class="text-2xl font-bold mb-2 text-gray-900 dark:text-gray-100">Mini Gestor de Notes</h1>
+    <p class="mb-4 text-sm text-gray-500 dark:text-gray-300 text-center">Gestiona classes, alumnes i activitats — responsive i modern</p>
 
-        <input id="loginEmail" type="email" placeholder="Email" class="w-full rounded p-2 mb-2 text-gray-800">
-        <input id="loginPassword" type="password" placeholder="Contrasenya" class="w-full rounded p-2 mb-3 text-gray-800">
+    <input id="loginEmail" type="email" placeholder="Email" class="w-full rounded-lg p-3 mb-2 border border-gray-300 focus:ring-2 focus:ring-indigo-400 focus:outline-none text-gray-900 dark:text-gray-100 dark:bg-gray-800">
+    <input id="loginPassword" type="password" placeholder="Contrasenya" class="w-full rounded-lg p-3 mb-3 border border-gray-300 focus:ring-2 focus:ring-indigo-400 focus:outline-none text-gray-900 dark:text-gray-100 dark:bg-gray-800">
 
-        <button id="btnLogin" class="w-full bg-white text-indigo-700 font-semibold py-2 rounded mb-2">Login</button>
-        <button id="btnRegister" class="w-full bg-white/90 text-indigo-800 font-semibold py-2 rounded mb-2">Registrar</button>
-        <button id="btnRecover" class="text-white underline text-sm">He oblidat la contrasenya</button>
-      </div>
-    </section>
+    <button id="btnLogin" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-3 rounded-lg mb-2 transition-all duration-200">Login</button>
+    <button id="btnRegister" class="w-full bg-indigo-100 hover:bg-indigo-200 text-indigo-800 font-semibold py-3 rounded-lg mb-2 transition-all duration-200">Registrar</button>
+    <button id="btnRecover" class="text-indigo-500 dark:text-indigo-400 underline text-sm hover:text-indigo-700 dark:hover:text-indigo-300 transition-all duration-200">He oblidat la contrasenya</button>
+  </div>
+</section>
 
     <!-- MAIN APP CONTAINER (amaga/mostra segons auth) -->
     <div id="appRoot" class="hidden w-full max-w-6xl mx-auto p-4">
