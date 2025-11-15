@@ -1,5 +1,4 @@
 // app.js - lògica principal (modules)
-// importar helpers de modals
 import { openModal, closeModal, confirmAction } from './modals.js';
 
 /* ---------------- FIREBASE CONFIG ---------------- */
@@ -20,7 +19,7 @@ let professorUID = null;
 let currentClassId = null;
 let classStudents = [];
 let classActivities = [];
-let deleteMode = false; // mode eliminar classes
+let deleteMode = false;
 
 /* Elements */
 const loginScreen = document.getElementById('loginScreen');
@@ -51,7 +50,6 @@ const notesThead = document.getElementById('notesThead');
 const notesTbody = document.getElementById('notesTbody');
 const notesTfoot = document.getElementById('notesTfoot');
 
-/* modal buttons */
 const modalCreateClassBtn = document.getElementById('modalCreateClassBtn');
 const modalAddStudentBtn = document.getElementById('modalAddStudentBtn');
 const modalAddActivityBtn = document.getElementById('modalAddActivityBtn');
@@ -76,7 +74,6 @@ btnLogin.addEventListener('click', () => {
   auth.signInWithEmailAndPassword(email, pw)
     .then(u => {
       professorUID = u.user.uid;
-      // show app
       setupAfterAuth(u.user);
     }).catch(e => alert('Error login: ' + e.message));
 });
@@ -88,11 +85,8 @@ btnRegister.addEventListener('click', () => {
   auth.createUserWithEmailAndPassword(email, pw)
     .then(u => {
       professorUID = u.user.uid;
-      // create professor doc
       db.collection('professors').doc(professorUID).set({ email, classes: [] })
-        .then(()=> {
-          setupAfterAuth(u.user);
-        });
+        .then(()=> { setupAfterAuth(u.user); });
     }).catch(e => alert('Error registre: ' + e.message));
 });
 
@@ -112,7 +106,6 @@ btnLogout.addEventListener('click', ()=> {
   });
 });
 
-/* On load auth state */
 auth.onAuthStateChanged(user => {
   if (user) {
     professorUID = user.uid;
@@ -123,14 +116,10 @@ auth.onAuthStateChanged(user => {
   }
 });
 
-/* ---------- After login setup ---------- */
 function setupAfterAuth(user) {
-  // show initial app area
   showApp();
-  // show email username (upto @)
   const email = user.email || '';
   usuariNom.textContent = email.split('@')[0] || email;
-  // load classes
   loadClassesScreen();
 }
 
@@ -168,6 +157,7 @@ function loadClassesScreen() {
           const color = classColors[i % classColors.length];
           const card = document.createElement('div');
           card.className = `class-card bg-gradient-to-br ${color} text-white relative`;
+          card.dataset.id = d.id;
           card.innerHTML = `
             ${deleteMode ? '<input type="checkbox" class="delete-checkbox absolute top-2 right-2 w-5 h-5">' : ''}
             <h3 class="text-lg font-bold">${d.data().nom||'Sense nom'}</h3>
@@ -178,13 +168,12 @@ function loadClassesScreen() {
           classesGrid.appendChild(card);
         });
 
-        // eliminar botó si existia abans
-const existingBtn = document.querySelector('#classesGrid + .delete-selected-btn');
-if(existingBtn) existingBtn.remove();
+        const existingBtn = document.querySelector('#classesGrid + .delete-selected-btn');
+        if(existingBtn) existingBtn.remove();
 
-if(deleteMode){
-  addDeleteSelectedButton();
-}
+        if(deleteMode){
+          addDeleteSelectedButton();
+        }
       });
   }).catch(e=> {
     classesGrid.innerHTML = `<div class="text-sm text-red-500">Error carregant classes</div>`;
@@ -199,7 +188,6 @@ btnDeleteMode.addEventListener('click', ()=> {
   loadClassesScreen();
 });
 
-// afegeix botó “Eliminar seleccionats” sota grid
 function addDeleteSelectedButton(){
   const delBtn = document.createElement('button');
   delBtn.textContent = 'Eliminar seleccionats';
@@ -208,7 +196,6 @@ function addDeleteSelectedButton(){
   classesGrid.parentNode.insertBefore(delBtn, classesGrid.nextSibling);
 }
 
-// confirmar eliminació
 function confirmDeleteSelected(){
   const selected = [...document.querySelectorAll('.delete-checkbox')]
     .filter(chk => chk.checked)
@@ -221,34 +208,21 @@ function confirmDeleteSelected(){
     `Estàs segur que vols eliminar ${selected.length} classe(s)? Aquesta acció no té marxa enrere.`,
     () => {
       selected.forEach(card => {
-        const className = card.querySelector('h3').textContent;
+        const classIdToRemove = card.dataset.id;
         card.remove();
-
-        // eliminar del backend
-        db.collection('professors').doc(professorUID).get().then(doc => {
-          const allClasses = doc.data().classes || [];
-          const classIdToRemove = allClasses.find(id => {
-            const cardName = card.querySelector('h3').textContent;
-            // recuperar id comparant noms
-            // millor si guardem id en dataset
-            return id; // simplificació
+        if(classIdToRemove){
+          db.collection('professors').doc(professorUID).update({
+            classes: firebase.firestore.FieldValue.arrayRemove(classIdToRemove)
           });
-          if(classIdToRemove){
-            db.collection('professors').doc(professorUID).update({
-              classes: firebase.firestore.FieldValue.arrayRemove(classIdToRemove)
-            });
-            db.collection('classes').doc(classIdToRemove).delete();
-          }
-        });
+          db.collection('classes').doc(classIdToRemove).delete();
+        }
       });
-
       deleteMode = false;
       btnDeleteMode.textContent = '🗑️ Eliminar classe';
       loadClassesScreen();
     }
   );
 }
-
 
 function createClassModal(){
   const name = document.getElementById('modalClassName').value.trim();
@@ -307,19 +281,58 @@ function renderStudentsList(){
       const name = doc.exists ? doc.data().nom : 'Desconegut';
       const li = document.createElement('li');
       li.className = 'flex items-center justify-between bg-gray-50 dark:bg-gray-900 p-2 rounded';
-      li.innerHTML = `<div class="flex items-center gap-3">
-                        <span draggable="true" title="Arrossega per reordenar" class="cursor-move text-sm text-gray-500">☰</span>
-                        <span class="font-medium">${name}</span>
-                      </div>
-                      <div class="flex gap-2">
-                        <button class="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-white" title="Eliminar">🗑</button>
-                      </div>`;
-      // delete handler
-      li.querySelector('button').addEventListener('click', ()=> {
+      li.innerHTML = `
+        <div class="flex items-center gap-3">
+          <span draggable="true" title="Arrossega per reordenar" class="cursor-move text-sm text-gray-500">☰</span>
+          <span class="stu-name font-medium">${name}</span>
+        </div>
+        <div class="relative">
+          <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white">⋮</button>
+          <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10">
+            <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
+            <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>
+          </div>
+        </div>
+      `;
+
+      const menuBtn = li.querySelector('.menu-btn');
+      const menu = li.querySelector('.menu');
+      menuBtn.addEventListener('click', e=>{
+        e.stopPropagation();
+        menu.classList.toggle('hidden');
+      });
+      document.addEventListener('click', ()=> menu.classList.add('hidden'));
+
+      li.querySelector('.edit-btn').addEventListener('click', ()=>{
+        const span = li.querySelector('.stu-name');
+        const currentName = span.textContent;
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = currentName;
+        input.className = 'border-b border-gray-500 bg-transparent focus:outline-none w-36';
+        span.replaceWith(input);
+        input.focus();
+
+        input.addEventListener('blur', ()=>{
+          const newName = input.value.trim() || 'Desconegut';
+          db.collection('alumnes').doc(stuId).update({ nom: newName })
+            .then(()=> {
+              input.replaceWith(span);
+              span.textContent = newName;
+              renderNotesGrid();
+            })
+            .catch(e=> alert('Error actualitzant nom: '+e.message));
+        });
+        input.addEventListener('keydown', ev=>{
+          if(ev.key==='Enter') input.blur();
+        });
+        menu.classList.add('hidden');
+      });
+
+      li.querySelector('.delete-btn').addEventListener('click', ()=> {
         confirmAction('Eliminar alumne', `Segur que vols eliminar ${name}?`, ()=> removeStudent(stuId));
       });
 
-      // drag handlers
       const dragHandle = li.querySelector('[draggable]');
       dragHandle.addEventListener('dragstart', e=>{
         e.dataTransfer.setData('text/plain', idx.toString());
@@ -338,7 +351,7 @@ function renderStudentsList(){
 }
 
 btnAddStudent.addEventListener('click', ()=> openModal('modalAddStudent'));
-document.getElementById('modalAddStudentBtn').addEventListener('click', createStudentModal);
+modalAddStudentBtn.addEventListener('click', createStudentModal);
 
 function createStudentModal(){
   const name = document.getElementById('modalStudentName').value.trim();
@@ -384,7 +397,7 @@ function sortStudentsAlpha(){
 
 /* ---------------- Activities ---------------- */
 btnAddActivity.addEventListener('click', ()=> openModal('modalAddActivity'));
-document.getElementById('modalAddActivityBtn').addEventListener('click', createActivityModal);
+modalAddActivityBtn.addEventListener('click', createActivityModal);
 
 function createActivityModal(){
   const name = document.getElementById('modalActivityName').value.trim();
@@ -422,19 +435,68 @@ function renderNotesGrid(){
 
   const headRow = document.createElement('tr');
   headRow.appendChild(th('Alumne'));
+
   Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()))
     .then(actDocs=>{
       actDocs.forEach(adoc=>{
         const id = adoc.id;
         const name = adoc.exists ? (adoc.data().nom||'Sense nom') : 'Desconegut';
-        const thEl = th(name);
-        const delBtn = document.createElement('button');
-        delBtn.className = 'text-sm text-red-600 ml-2';
-        delBtn.textContent = '🗑';
-        delBtn.onclick = ()=> removeActivity(id);
-        thEl.appendChild(delBtn);
+
+        const thEl = th('');
+        thEl.className += ' relative';
+        const spanName = document.createElement('span');
+        spanName.textContent = name;
+        thEl.appendChild(spanName);
+
+        const menuContainer = document.createElement('div');
+        menuContainer.className = 'relative inline-block ml-1';
+        menuContainer.innerHTML = `
+          <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white text-sm">⋮</button>
+          <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10">
+            <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
+            <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>
+          </div>
+        `;
+        thEl.appendChild(menuContainer);
+
+        const menuBtn = menuContainer.querySelector('.menu-btn');
+        const menu = menuContainer.querySelector('.menu');
+        menuBtn.addEventListener('click', e=>{
+          e.stopPropagation();
+          menu.classList.toggle('hidden');
+        });
+        document.addEventListener('click', ()=> menu.classList.add('hidden'));
+
+        // Edit activitat
+        menu.querySelector('.edit-btn').addEventListener('click', ()=>{
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.value = name;
+          input.className = 'border-b border-gray-500 bg-transparent focus:outline-none w-24';
+          spanName.replaceWith(input);
+          input.focus();
+
+          input.addEventListener('blur', ()=>{
+            const newName = input.value.trim() || 'Sense nom';
+            db.collection('activitats').doc(id).update({ nom: newName })
+              .then(()=> {
+                input.replaceWith(spanName);
+                spanName.textContent = newName;
+                renderNotesGrid();
+              }).catch(e=> alert('Error actualitzant activitat: '+e.message));
+          });
+          input.addEventListener('keydown', ev=>{
+            if(ev.key==='Enter') input.blur();
+          });
+          menu.classList.add('hidden');
+        });
+
+        // Delete activitat
+        menu.querySelector('.delete-btn').addEventListener('click', ()=> removeActivity(id));
+
         headRow.appendChild(thEl);
       });
+
       headRow.appendChild(th('Mitjana', 'text-right'));
       notesThead.appendChild(headRow);
 
@@ -456,7 +518,7 @@ function renderNotesGrid(){
             const tdName = document.createElement('td');
             tdName.className = 'border px-2 py-1';
             tdName.innerHTML = `<div class="flex items-center justify-between"><span class="font-medium">${sdata.nom}</span>
-                                <div class="flex gap-2"><button class="text-xs text-gray-500" onclick="(function(){ confirmAction('Eliminar alumne','Eliminar aquest alumne?', ()=> removeStudent('${sid}') ) })()">🗑</button></div></div>`;
+                                <div class="flex gap-2"></div></div>`;
             tr.appendChild(tdName);
 
             // activity cells
@@ -476,7 +538,6 @@ function renderNotesGrid(){
               tr.appendChild(td);
             });
 
-            // student average
             const avgTd = document.createElement('td');
             avgTd.className = 'border px-2 py-1 text-right font-semibold';
             avgTd.textContent = computeStudentAverageText(sdata);
@@ -523,14 +584,12 @@ function computeStudentAverageText(studentData){
 }
 
 function renderAverages(){
-  // recompute student averages
   Array.from(notesTbody.children).forEach(tr=>{
     const inputs = Array.from(tr.querySelectorAll('input')).map(i=> Number(i.value)).filter(v=> !isNaN(v));
     const lastTd = tr.querySelectorAll('td')[tr.querySelectorAll('td').length - 1];
     lastTd.textContent = inputs.length ? (inputs.reduce((a,b)=>a+b,0)/inputs.length).toFixed(2) : '';
   });
 
-  // activity averages
   const actCount = classActivities.length;
   notesTfoot.innerHTML = '';
   const tr = document.createElement('tr');
