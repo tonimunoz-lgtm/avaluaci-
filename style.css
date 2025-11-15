@@ -1,8 +1,8 @@
-/* ==================== CSS COMPLET ==================== */
+/* ==================== CSS FINAL COMPLET ==================== */
 
 /* ---------------- Body general ---------------- */
 body {
-  background: #383850; /* fons principal més clar que abans, negre clar grisós */
+  background: #3c3c58; /* fons general gris fosc, més clar que negre pur */
   font-family: 'Inter', sans-serif;
   margin: 0;
   padding: 0;
@@ -19,27 +19,50 @@ body {
   transition: background 0.3s ease;
 }
 
-/* ---------------- Header superior ---------------- */
+/* ---------------- Header principal ---------------- */
 #mainHeader {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between; /* títol esquerra, usuari/logout dreta */
   gap: 1rem;
   margin-bottom: 2rem;
 }
 
 #mainHeader h1, #mainHeader p {
-  color: #f3f4f6; /* text clar */
+  color: #f3f4f6;
+  margin: 0;
 }
 
-/* Usuari i Logout a la dreta */
 #mainHeader div.flex.items-center {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   justify-content: flex-end;
+}
+
+#usuariNom {
+  font-weight: 600;
+  color: #ffffff;
+}
+
+#btnLogout {
+  background-color: #ef4444;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+#btnLogout:hover {
+  background-color: #dc2626;
 }
 
 /* ---------------- Targetes de classes ---------------- */
 .class-card {
   cursor: pointer;
-  padding: 0.8rem; /* una mica més compacte */
+  padding: 0.6rem;
   border-radius: 1.25rem;
   box-shadow: 0 4px 12px rgba(0,0,0,0.25);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -82,7 +105,7 @@ h2, h1 {
 
 /* Titol específic "Les meves classes" */
 #screen-classes h2 {
-  color: #ffffff; /* blanc pur per destacar sobre fons gradient */
+  color: #ffffff;
 }
 
 /* ---------------- Notes Grid ---------------- */
