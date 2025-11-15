@@ -1,68 +1,26 @@
-/* ==================== CSS FINAL COMPLET ==================== */
-
 /* ---------------- Body general ---------------- */
 body {
-  background: #3c3c58; /* fons general gris fosc, més clar que negre pur */
+  background: #383850; /* fons principal més clar que abans, negre clar grisós */
   font-family: 'Inter', sans-serif;
   margin: 0;
   padding: 0;
   color: #f3f4f6; /* text general clar */
 }
 
-/* ---------------- Contenidor principal (appRoot) ---------------- */
+/* ---------------- Contenidor principal ---------------- */
 #appRoot {
-  background: linear-gradient(135deg, #2c2c44 0%, #3a3a60 100%); /* gradient gris fosc → gris-blau */
+  background: linear-gradient(135deg, #2f2f44 0%, #373759 100%); /* gradient suau de gris fosc a gris-blau */
   padding: 2rem;
   border-radius: 1.5rem;
-  box-shadow: 0 12px 25px rgba(0,0,0,0.35);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.3);
   position: relative;
   transition: background 0.3s ease;
-}
-
-/* ---------------- Header principal ---------------- */
-#mainHeader {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between; /* títol esquerra, usuari/logout dreta */
-  gap: 1rem;
-  margin-bottom: 2rem;
-}
-
-#mainHeader h1, #mainHeader p {
-  color: #f3f4f6;
-  margin: 0;
-}
-
-#mainHeader div.flex.items-center {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  justify-content: flex-end;
-}
-
-#usuariNom {
-  font-weight: 600;
-  color: #ffffff;
-}
-
-#btnLogout {
-  background-color: #ef4444;
-  color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  font-weight: 600;
-  transition: background 0.2s;
-}
-
-#btnLogout:hover {
-  background-color: #dc2626;
 }
 
 /* ---------------- Targetes de classes ---------------- */
 .class-card {
   cursor: pointer;
-  padding: 0.6rem;
+  padding: 0.9rem; /* una mica més compacte */
   border-radius: 1.25rem;
   box-shadow: 0 4px 12px rgba(0,0,0,0.25);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -73,13 +31,11 @@ body {
   text-shadow: 0 2px 4px rgba(0,0,0,0.7);
 }
 
-/* Hover efecte targeta */
 .class-card:hover {
   transform: translateY(-4px) scale(1.03);
   box-shadow: 0 10px 20px rgba(0,0,0,0.4);
 }
 
-/* Text dins targeta */
 .class-card h3, .class-card p, .class-card .click-hint {
   margin: 0;
   padding-left: 0.25rem;
@@ -90,12 +46,14 @@ body {
 .class-card .click-hint { font-size: 0.75rem; margin-top: 0.8rem; opacity: 0.9; }
 
 /* Colors vius de targetes */
-.class-card:nth-child(1) { background: linear-gradient(135deg, #4f46e5, #9333ea); } /* violeta viu */
-.class-card:nth-child(2) { background: linear-gradient(135deg, #ec4899, #ef4444); } /* rosa → vermell */
-.class-card:nth-child(3) { background: linear-gradient(135deg, #facc15, #f97316); } /* groc → taronja */
-.class-card:nth-child(4) { background: linear-gradient(135deg, #22c55e, #14b8a6); } /* verd → teal */
-.class-card:nth-child(5) { background: linear-gradient(135deg, #3b82f6, #6366f1); } /* blau → indigo */
-.class-card:nth-child(6) { background: linear-gradient(135deg, #8b5cf6, #ec4899); } /* purple → rosa */
+const classColors = [
+  'from-indigo-600 to-purple-600',
+  'from-pink-500 to-red-500',
+  'from-yellow-400 to-orange-400',
+  'from-green-500 to-teal-500',
+  'from-blue-500 to-indigo-600',
+  'from-purple-500 to-pink-500'
+];
 
 /* ---------------- Titols i textos ---------------- */
 h2, h1 {
@@ -105,33 +63,15 @@ h2, h1 {
 
 /* Titol específic "Les meves classes" */
 #screen-classes h2 {
-  color: #ffffff;
+  color: #ffffff; /* blanc pur per destacar sobre fons gradient */
 }
 
 /* ---------------- Notes Grid ---------------- */
-#notesTable th, #notesTable td { 
-  border: 1px solid #4b4b6b; 
-  padding: 0.45rem 0.6rem; 
-}
-
-.table-input { width: 3.5rem; }
+#notesTable th, #notesTable td { border: 1px solid #4b4b6b; padding: 0.45rem 0.6rem; }
 
 .bg-red-100 { background-color: #f87171 !important; }
 .bg-yellow-100 { background-color: #facc15 !important; }
 .bg-green-100 { background-color: #4ade80 !important; }
-
-/* ---------------- Modals ---------------- */
-.modal-backdrop { 
-  background: rgba(0,0,0,0.45); 
-  backdrop-filter: blur(3px); 
-}
-.fade-in { 
-  animation: fadeIn .15s ease-out; 
-}
-@keyframes fadeIn { 
-  from {opacity:0; transform: translateY(-6px);} 
-  to {opacity:1; transform: translateY(0);} 
-}
 
 /* ---------------- Responsive ---------------- */
 @media (max-width: 640px) {
