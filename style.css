@@ -1,20 +1,20 @@
 /* Targetes de classe professionals */
 .class-card {
   cursor: pointer;
-  padding: 1.5rem;
-  border-radius: 1.5rem; /* rodó suau */
+  padding: 1.25rem; /* menys padding per reduir la mida de la targeta */
+  border-radius: 1.25rem; /* rodó suau */
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   color: white;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5); /* text blanc més llegible */
 }
 
 .class-card:hover {
-  transform: translateY(-8px) scale(1.04);
-  box-shadow: 0 12px 24px rgba(0,0,0,0.35);
+  transform: translateY(-6px) scale(1.03);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.35);
 }
 
 .class-card h3, .class-card p, .class-card .click-hint {
@@ -29,13 +29,13 @@
 
 .class-card p {
   font-size: 0.875rem;
-  margin-top: 0.5rem;
+  margin-top: 0.4rem;
 }
 
 .class-card .click-hint {
   font-size: 0.75rem;
-  margin-top: 1rem;
-  opacity: 0.85;
+  margin-top: 0.8rem;
+  opacity: 0.9;
 }
 
 /* No hi ha bordes */
@@ -43,12 +43,20 @@
   border: none;
 }
 
-/* Fons de la web professional amb gradient suau i textura */
+/* Fons de la web professional i modern */
 body {
-  background: linear-gradient(135deg, #e0f7fa 0%, #f3e5f5 50%, #ffebee 100%);
-  background-image: radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1px);
-  background-size: 40px 40px;
+  background: #1e1e2f; /* fosc modern, elegant i neutre que destaca els colors de les targetes */
 }
+
+/* Colors més vius per targetes - app.js */
+const classColors = [
+  'from-indigo-700 to-purple-700',   /* més saturat i viu */
+  'from-pink-600 to-red-600',
+  'from-yellow-500 to-orange-500',
+  'from-green-600 to-teal-600',
+  'from-blue-600 to-indigo-700',
+  'from-purple-600 to-pink-600'
+];
 
 /* millora responsive taules */
 #notesTable th, #notesTable td { border: 1px solid #e5e7eb; padding: 0.45rem 0.6rem; }
