@@ -146,7 +146,7 @@ function loadClassesScreen() {
     if(!doc.exists) { classesGrid.innerHTML = '<div class="text-sm text-red-500">Professor no trobat</div>'; return; }
     const ids = doc.data().classes || [];
     if(ids.length === 0) {
-      classesGrid.innerHTML = `<div class="col-span-full p-6 bg-white rounded shadow text-center">No tens cap classe. Crea la primera!</div>`;
+      classesGrid.innerHTML = `<div class="col-span-full p-6 bg-white dark:bg-gray-800 rounded shadow text-center">No tens cap classe. Crea la primera!</div>`;
       return;
     }
 
@@ -165,47 +165,46 @@ function loadClassesScreen() {
             <h3 class="text-lg font-bold">${d.data().nom||'Sense nom'}</h3>
             <p class="text-sm mt-2">${(d.data().alumnes||[]).length} alumnes · ${(d.data().activitats||[]).length} activitats</p>
             <div class="click-hint">${deleteMode ? 'Selecciona per eliminar' : 'Fes clic per obrir'}</div>
-            ${!deleteMode ? `
-              <div class="relative absolute top-2 right-2">
-                <button class="menu-btn text-white font-bold text-xl">⋮</button>
-                <div class="menu hidden absolute right-0 mt-1 bg-white text-black border rounded shadow z-10 transition-opacity duration-200 opacity-0">
-                  <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100">Editar</button>
-                </div>
-              </div>
-            ` : ''}
           `;
 
-          if(!deleteMode) card.addEventListener('click', ()=> openClass(d.id));
-
-          classesGrid.appendChild(card);
-
-          // Menu logic for class
+          // Afegim el menú amb els tres punts si NO estem en mode eliminar
           if(!deleteMode){
-            const menuBtn = card.querySelector('.menu-btn');
-            const menu = card.querySelector('.menu');
+            const menuDiv = document.createElement('div');
+            menuDiv.className = 'absolute top-2 right-2';
+            menuDiv.innerHTML = `
+              <button class="menu-btn text-white font-bold text-xl">⋮</button>
+              <div class="menu hidden absolute right-0 mt-1 bg-white text-black border rounded shadow z-10 transition-opacity duration-200 opacity-0">
+                <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100">Editar</button>
+              </div>
+            `;
+            card.appendChild(menuDiv);
 
-            menuBtn.addEventListener('click', e=>{
+            const menuBtn = menuDiv.querySelector('.menu-btn');
+            const menu = menuDiv.querySelector('.menu');
+
+            menuBtn.addEventListener('click', e => {
               e.stopPropagation();
-              document.querySelectorAll('.menu').forEach(m=> m.classList.add('hidden'));
+              document.querySelectorAll('.menu').forEach(m => m.classList.add('hidden'));
               menu.classList.toggle('hidden');
             });
 
-            card.querySelector('.edit-btn').addEventListener('click', ()=>{
+            menuDiv.querySelector('.edit-btn').addEventListener('click', () => {
               const newName = prompt('Introdueix el nou nom de la classe:', d.data().nom || '');
               if(!newName || newName.trim() === d.data().nom) return;
               db.collection('classes').doc(d.id).update({ nom: newName.trim() })
-                .then(()=> loadClassesScreen())
-                .catch(e=> alert('Error editant classe: ' + e.message));
+                .then(() => loadClassesScreen())
+                .catch(e => alert('Error editant classe: ' + e.message));
             });
+
+            card.addEventListener('click', () => openClass(d.id));
           }
+
+          classesGrid.appendChild(card);
         });
 
         const existingBtn = document.querySelector('#classesGrid + .delete-selected-btn');
         if(existingBtn) existingBtn.remove();
-
-        if(deleteMode){
-          addDeleteSelectedButton();
-        }
+        if(deleteMode) addDeleteSelectedButton();
       });
   }).catch(e=> {
     classesGrid.innerHTML = `<div class="text-sm text-red-500">Error carregant classes</div>`;
