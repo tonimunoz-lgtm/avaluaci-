@@ -55,64 +55,6 @@ const modalCreateClassBtn = document.getElementById('modalCreateClassBtn');
 const modalAddStudentBtn = document.getElementById('modalAddStudentBtn');
 const modalAddActivityBtn = document.getElementById('modalAddActivityBtn');
 
-/* ---------------- GOOGLE CLASSROOM ---------------- */
-const CLIENT_ID = "EL_TUO_CLIENT_ID.apps.googleusercontent.com"; // substituir pel teu
-const API_KEY = "EL_TUO_API_KEY";
-const DISCOVERY_DOCS = ["https://classroom.googleapis.com/$discovery/rest?version=v1"];
-const SCOPES = "https://www.googleapis.com/auth/classroom.rosters.readonly";
-
-// inicialitzar Google API
-function gapiInit() {
-  return new Promise((resolve, reject) => {
-    gapi.load('client:auth2', async () => {
-      try {
-        await gapi.client.init({ apiKey: API_KEY, clientId: CLIENT_ID, discoveryDocs: DISCOVERY_DOCS, scope: SCOPES });
-        resolve();
-      } catch(e) { reject(e); }
-    });
-  });
-}
-
-// autenticar usuari
-async function gapiSignIn() {
-  if(!gapi.auth2) await gapiInit();
-  const GoogleAuth = gapi.auth2.getAuthInstance();
-  if(!GoogleAuth.isSignedIn.get()) await GoogleAuth.signIn();
-  return GoogleAuth.currentUser.get();
-}
-
-// obtenir llistat alumnes d'una classe Google Classroom
-async function importGoogleClassroomStudents(classIdGC) {
-  try {
-    await gapiSignIn();
-    const resp = await gapi.client.classroom.courses.students.list({ courseId: classIdGC });
-    return resp.result.students || [];
-  } catch(e) { console.error(e); alert("Error import Google Classroom: "+e.message); return []; }
-}
-
-// botó importar
-const btnImportClassroom = document.getElementById('btnImportClassroom');
-btnImportClassroom.addEventListener('click', async () => {
-  const gcClassId = prompt("Introdueix l'ID de la classe de Google Classroom:");
-  if(!gcClassId) return;
-
-  const studentsGC = await importGoogleClassroomStudents(gcClassId);
-  if(studentsGC.length === 0) return alert("No s'han trobat alumnes.");
-
-  // confirmar i importar
-  if(confirm(`S'importaran ${studentsGC.length} alumnes a la classe actual. Continuar?`)) {
-    for(const s of studentsGC) {
-      const ref = db.collection('alumnes').doc();
-      await ref.set({ nom: s.profile.name.fullName, notes: {} });
-      await db.collection('classes').doc(currentClassId)
-              .update({ alumnes: firebase.firestore.FieldValue.arrayUnion(ref.id) });
-    }
-    alert(`${studentsGC.length} alumnes importats correctament!`);
-    loadClassData(); // refresca pantalla
-  }
-});
-
-
 /* ---------- UTILS ---------- */
 function showLogin() {
   loginScreen.style.display = 'block';
