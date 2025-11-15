@@ -1,7 +1,37 @@
-/* Targetes de classe professionals */
+/* ---------------- Body general ---------------- */
+body {
+  background: #1e1e2f; /* fons fosc elegant */
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+  padding: 0;
+  color: #fff;
+}
+
+/* ---------------- Contenidor principal ---------------- */
+#appRoot {
+  background: linear-gradient(145deg, #2b2b3a 0%, #3a3a5a 100%);
+  padding: 2rem;
+  border-radius: 1.5rem;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+  position: relative;
+  transition: background 0.3s ease;
+}
+
+/* Texture subtil per profunditat */
+#appRoot::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 1.5rem;
+  background-image: radial-gradient(rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+
+/* ---------------- Targetes de classes ---------------- */
 .class-card {
   cursor: pointer;
-  padding: 1.25rem; /* menys padding per reduir la mida de la targeta */
+  padding: 1.25rem; /* marge intern més petit */
   border-radius: 1.25rem; /* rodó suau */
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -9,7 +39,7 @@
   flex-direction: column;
   justify-content: space-between;
   color: white;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.5); /* text blanc més llegible */
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5); /* text més llegible */
 }
 
 .class-card:hover {
@@ -43,14 +73,9 @@
   border: none;
 }
 
-/* Fons de la web professional i modern */
-body {
-  background: #1e1e2f; /* fosc modern, elegant i neutre que destaca els colors de les targetes */
-}
-
-/* Colors més vius per targetes - app.js */
+/* ---------------- Colors més vius per targetes ---------------- */
 const classColors = [
-  'from-indigo-700 to-purple-700',   /* més saturat i viu */
+  'from-indigo-700 to-purple-700',
   'from-pink-600 to-red-600',
   'from-yellow-500 to-orange-500',
   'from-green-600 to-teal-600',
@@ -58,15 +83,14 @@ const classColors = [
   'from-purple-600 to-pink-600'
 ];
 
-/* millora responsive taules */
+/* ---------------- Notes Grid ---------------- */
 #notesTable th, #notesTable td { border: 1px solid #e5e7eb; padding: 0.45rem 0.6rem; }
 
-/* colors per status de nota (dinàmic) */
 .bg-red-100 { background-color: #fee2e2 !important; }
 .bg-yellow-100 { background-color: #fef3c7 !important; }
 .bg-green-100 { background-color: #dcfce7 !important; }
 
-/* ajust per pantalles petites */
+/* ---------------- Responsive ---------------- */
 @media (max-width: 640px) {
   #loginScreen { padding: 1rem; }
   .table-input { width: 2.8rem; }
