@@ -294,71 +294,38 @@ function loadClassData(){
 }
 
 /* ---------------- Students ---------------- */
-function renderStudentsList() {
+function renderStudentsList(){
   studentsList.innerHTML = '';
   studentsCount.textContent = `(${classStudents.length})`;
-
-  if (classStudents.length === 0) {
+  if(classStudents.length === 0) {
     studentsList.innerHTML = '<li class="text-sm text-gray-400">No hi ha alumnes</li>';
     return;
   }
 
   classStudents.forEach((stuId, idx) => {
-    db.collection('alumnes').doc(stuId).get().then(doc => {
+    db.collection('alumnes').doc(stuId).get().then(doc=>{
       const name = doc.exists ? doc.data().nom : 'Desconegut';
       const li = document.createElement('li');
       li.className = 'flex items-center justify-between bg-gray-50 dark:bg-gray-900 p-2 rounded';
-
-      li.innerHTML = `
-        <div class="flex items-center gap-3">
-          <span draggable="true" title="Arrossega per reordenar" class="cursor-move text-sm text-gray-500">☰</span>
-          <input class="stu-name-input bg-transparent border-b border-gray-500 focus:outline-none w-40"
-                 value="${name}" title="Fes clic per editar el nom">
-        </div>
-
-        <div class="flex gap-2">
-          <button class="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-white" title="Eliminar">🗑</button>
-        </div>
-      `;
-
-
-      /* ---------- UPDATE NOM ALUMNE (NOU) ---------- */
-      const nameInput = li.querySelector('.stu-name-input');
-      nameInput.addEventListener('change', () => {
-        const newName = nameInput.value.trim();
-
-        if (!newName) {
-          alert("El nom no pot estar buit");
-          nameInput.value = name; // restaurar antic
-          return;
-        }
-
-        db.collection('alumnes')
-          .doc(stuId)
-          .update({ nom: newName })
-          .catch(err => {
-            alert("Error actualitzant el nom: " + err.message);
-            nameInput.value = name; // restaurar en cas d’error
-          });
-      });
-      /* ---------------------------------------------- */
-
-
-      /* ---------- DELETE ALUMNE ---------- */
-      li.querySelector('button').addEventListener('click', () => {
-        confirmAction('Eliminar alumne', `Segur que vols eliminar ${name}?`, () => removeStudent(stuId));
+      li.innerHTML = `<div class="flex items-center gap-3">
+                        <span draggable="true" title="Arrossega per reordenar" class="cursor-move text-sm text-gray-500">☰</span>
+                        <span class="font-medium">${name}</span>
+                      </div>
+                      <div class="flex gap-2">
+                        <button class="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-white" title="Eliminar">🗑</button>
+                      </div>`;
+      // delete handler
+      li.querySelector('button').addEventListener('click', ()=> {
+        confirmAction('Eliminar alumne', `Segur que vols eliminar ${name}?`, ()=> removeStudent(stuId));
       });
 
-
-      /* ---------- DRAG & DROP ---------- */
+      // drag handlers
       const dragHandle = li.querySelector('[draggable]');
-      dragHandle.addEventListener('dragstart', e => {
+      dragHandle.addEventListener('dragstart', e=>{
         e.dataTransfer.setData('text/plain', idx.toString());
       });
-
-      li.addEventListener('dragover', e => e.preventDefault());
-
-      li.addEventListener('drop', e => {
+      li.addEventListener('dragover', e=> e.preventDefault());
+      li.addEventListener('drop', e=>{
         e.preventDefault();
         const fromIdx = Number(e.dataTransfer.getData('text/plain'));
         const toIdx = idx;
@@ -369,7 +336,6 @@ function renderStudentsList() {
     });
   });
 }
-
 
 btnAddStudent.addEventListener('click', ()=> openModal('modalAddStudent'));
 document.getElementById('modalAddStudentBtn').addEventListener('click', createStudentModal);
