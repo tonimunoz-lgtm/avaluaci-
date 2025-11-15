@@ -7,7 +7,7 @@ body {
   color: #f3f4f6; /* text general clar */
 }
 
-/* ---------------- Contenidor principal ---------------- */
+/* ---------------- Contenidor principal (pantalla classes) ---------------- */
 #appRoot {
   background: linear-gradient(135deg, #2f2f44 0%, #373759 100%); /* gradient suau de gris fosc a gris-blau */
   padding: 2rem;
@@ -45,7 +45,7 @@ body {
 .class-card p { font-size: 0.875rem; margin-top: 0.4rem; }
 .class-card .click-hint { font-size: 0.75rem; margin-top: 0.8rem; opacity: 0.9; }
 
-/* Colors vius de targetes */
+/* Colors vius de targetes (gradient via Tailwind) */
 const classColors = [
   'from-indigo-600 to-purple-600',
   'from-pink-500 to-red-500',
@@ -66,22 +66,6 @@ h2, h1 {
   color: #ffffff; /* blanc pur per destacar sobre fons gradient */
 }
 
-/* ---------------- Notes Grid ---------------- */
-#notesTable th, #notesTable td {
-  border: 1px solid #4b4b6b;
-  padding: 0.45rem 0.6rem;
-}
-
-.bg-red-100 { background-color: #f87171 !important; }
-.bg-yellow-100 { background-color: #facc15 !important; }
-.bg-green-100 { background-color: #4ade80 !important; }
-
-/* ---------------- Responsive ---------------- */
-@media (max-width: 640px) {
-  #loginScreen { padding: 1rem; }
-  .table-input { width: 2.8rem; }
-}
-
 /* ---------------- Pantalla classe oberta ---------------- */
 #screen-class {
   background: linear-gradient(135deg, #4b4b60 0%, #5c5c75 100%); /* gris fosc suau amb gradient */
@@ -91,11 +75,12 @@ h2, h1 {
   color: #ffffff; /* text clar dins del contenidor */
 }
 
-/* Botó tornar */
-#btnBack {
-  color: #ffffff; /* blanc */
-  background: none;
-  border: none;
+/* Botó tornar amb fletxa */
+#btnBack, #btnBack svg {
+  color: #ffffff !important; /* blanc assegurat */
+  fill: #ffffff !important; /* si la fletxa és SVG */
+  background: none !important;
+  border: none !important;
   font-weight: 600;
   cursor: pointer;
   display: inline-flex;
@@ -105,18 +90,31 @@ h2, h1 {
 }
 
 #btnBack:hover {
-  color: #d1d1ff; /* lleuger clar per hover */
+  color: #d1d1ff !important; /* lleuger clar per hover */
 }
 
 /* Amagar ID de classe */
 #classSub {
-  display: none;
+  display: none !important;
 }
 
 /* Títol de la classe */
 #classTitle {
-  color: #ffffff; /* blanc */
+  color: #ffffff !important; /* blanc */
   font-size: 1.5rem;
   font-weight: 700;
   margin-bottom: 1rem;
+}
+
+/* ---------------- Notes Grid ---------------- */
+#notesTable th, #notesTable td { border: 1px solid #4b4b6b; padding: 0.45rem 0.6rem; }
+
+.bg-red-100 { background-color: #f87171 !important; }
+.bg-yellow-100 { background-color: #facc15 !important; }
+.bg-green-100 { background-color: #4ade80 !important; }
+
+/* ---------------- Responsive ---------------- */
+@media (max-width: 640px) {
+  #loginScreen { padding: 1rem; }
+  .table-input { width: 2.8rem; }
 }
