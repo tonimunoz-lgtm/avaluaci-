@@ -179,7 +179,11 @@ function loadClassesScreen() {
                     if (!deleteMode) card.addEventListener('click', () => openClass(d.id));
                     classesGrid.appendChild(card);
                 });
-                if (deleteMode) addDeleteSelectedButton();
+                const existingBtn = document.querySelector('#classesGrid + .delete-selected-btn');
+if(existingBtn) existingBtn.remove();
+
+if(deleteMode){
+  addDeleteSelectedButton();;
             });
     }).catch(e => {
         classesGrid.innerHTML = `<div class="text-sm text-red-500">Error carregant classes</div>`;
