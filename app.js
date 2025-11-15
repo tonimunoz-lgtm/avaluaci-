@@ -222,6 +222,60 @@ function loadClassData(){
   }).catch(e=> console.error(e));
 }
 
+/* ---------- GOOGLE CLASSROOM IMPORT ---------- */
+btnImport.addEventListener('click', () => {
+  importFromClassroom();
+});
+
+function initGoogleAPI() {
+  return new Promise((resolve) => {
+    gapi.load('client:auth2', async () => {
+      await gapi.client.init({
+        apiKey: 'TEU_API_KEY',
+        clientId: 'TEU_CLIENT_ID',
+        discoveryDocs: ["https://classroom.googleapis.com/$discovery/rest?version=v1"],
+        scope: "https://www.googleapis.com/auth/classroom.courses.readonly https://www.googleapis.com/auth/classroom.rosters.readonly"
+      });
+      resolve();
+    });
+  });
+}
+
+async function importFromClassroom() {
+  await initGoogleAPI();
+
+  const authInstance = gapi.auth2.getAuthInstance();
+  if (!authInstance.isSignedIn.get()) {
+    await authInstance.signIn();
+  }
+
+  // Llista cursos
+  const coursesRes = await gapi.client.classroom.courses.list({ pageSize: 50 });
+  const courses = coursesRes.result.courses || [];
+  if (courses.length === 0) return alert('No hi ha cursos a Google Classroom');
+
+  // Selecciona curs (primer curs per simplificar, o pots mostrar un selector)
+  const courseId = courses[0].id;
+
+  const studentsRes = await gapi.client.classroom.courses.students.list({ courseId });
+  const students = studentsRes.result.students || [];
+
+  if (students.length === 0) return alert('Aquest curs no té alumnes');
+
+  const batch = db.batch();
+  students.forEach(s => {
+    const ref = db.collection('alumnes').doc();
+    batch.set(ref, { nom: s.profile.name.fullName, notes: {} });
+    batch.update(db.collection('classes').doc(currentClassId), { alumnes: firebase.firestore.FieldValue.arrayUnion(ref.id) });
+  });
+
+  batch.commit().then(() => {
+    alert(`Importats ${students.length} alumnes de Classroom`);
+    loadClassData();
+  }).catch(e => console.error(e));
+}
+
+
 /* ---------------- Students ---------------- */
 function renderStudentsList(){
   studentsList.innerHTML = '';
