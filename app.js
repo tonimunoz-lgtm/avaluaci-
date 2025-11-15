@@ -128,8 +128,7 @@ btnCreateClass.addEventListener('click', ()=> openModal('modalCreateClass'));
 btnRefreshClasses.addEventListener('click', loadClassesScreen);
 
 function loadClassesScreen() {
-  if (!professorUID) { alert('Fes login primer.'); return; }
-
+  if(!professorUID) { alert('Fes login primer.'); return; }
   screenClass.classList.add('hidden');
   screenClasses.classList.remove('hidden');
   classesGrid.innerHTML = '<div class="col-span-full text-sm text-gray-500">Carregant...</div>';
@@ -144,86 +143,76 @@ function loadClassesScreen() {
   ];
 
   db.collection('professors').doc(professorUID).get().then(doc => {
-    if (!doc.exists) { 
-      classesGrid.innerHTML = '<div class="text-sm text-red-500">Professor no trobat</div>'; 
-      return; 
-    }
-
+    if(!doc.exists) { classesGrid.innerHTML = '<div class="text-sm text-red-500">Professor no trobat</div>'; return; }
     const ids = doc.data().classes || [];
-    if (ids.length === 0) {
-      classesGrid.innerHTML = `<div class="col-span-full p-6 bg-white dark:bg-gray-800 rounded shadow text-center">No tens cap classe. Crea la primera!</div>`;
+    if(ids.length === 0) {
+      classesGrid.innerHTML = `<div class="col-span-full p-6 bg-white rounded shadow text-center">No tens cap classe. Crea la primera!</div>`;
       return;
     }
 
     Promise.all(ids.map(id => db.collection('classes').doc(id).get()))
       .then(docs => {
         classesGrid.innerHTML = '';
-
         docs.forEach((d, i) => {
-          if (!d.exists) return;
-
+          if(!d.exists) return;
           const color = classColors[i % classColors.length];
           const card = document.createElement('div');
-          card.className = `class-card bg-gradient-to-br ${color} text-white relative`;
+          card.className = `class-card bg-gradient-to-br ${color} text-white relative p-4 rounded-lg`;
           card.dataset.id = d.id;
 
-          // Menu només si no estem en deleteMode
-          let menuHTML = '';
-          if (!deleteMode) {
-            menuHTML = `
-              <div class="absolute top-2 right-2">
-                <button class="menu-btn text-white text-xl font-bold">⋮</button>
+          card.innerHTML = `
+            ${deleteMode ? '<input type="checkbox" class="delete-checkbox absolute top-2 right-2 w-5 h-5">' : ''}
+            <h3 class="text-lg font-bold">${d.data().nom||'Sense nom'}</h3>
+            <p class="text-sm mt-2">${(d.data().alumnes||[]).length} alumnes · ${(d.data().activitats||[]).length} activitats</p>
+            <div class="click-hint">${deleteMode ? 'Selecciona per eliminar' : 'Fes clic per obrir'}</div>
+            ${!deleteMode ? `
+              <div class="relative absolute top-2 right-2">
+                <button class="menu-btn text-white font-bold text-xl">⋮</button>
                 <div class="menu hidden absolute right-0 mt-1 bg-white text-black border rounded shadow z-10 transition-opacity duration-200 opacity-0">
                   <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100">Editar</button>
                 </div>
               </div>
-            `;
-          }
-
-          card.innerHTML = `
-            ${deleteMode ? '<input type="checkbox" class="delete-checkbox absolute top-2 right-2 w-5 h-5">' : menuHTML}
-            <h3 class="text-lg font-bold">${d.data().nom || 'Sense nom'}</h3>
-            <p class="text-sm mt-2">${(d.data().alumnes || []).length} alumnes · ${(d.data().activitats || []).length} activitats</p>
-            <div class="click-hint">${deleteMode ? 'Selecciona per eliminar' : 'Fes clic per obrir'}</div>
+            ` : ''}
           `;
 
-          if (!deleteMode) {
+          if(!deleteMode) card.addEventListener('click', ()=> openClass(d.id));
+
+          classesGrid.appendChild(card);
+
+          // Menu logic for class
+          if(!deleteMode){
             const menuBtn = card.querySelector('.menu-btn');
             const menu = card.querySelector('.menu');
 
-            menuBtn.addEventListener('click', e => {
+            menuBtn.addEventListener('click', e=>{
               e.stopPropagation();
-              document.querySelectorAll('.menu').forEach(m => m.classList.add('hidden'));
+              document.querySelectorAll('.menu').forEach(m=> m.classList.add('hidden'));
               menu.classList.toggle('hidden');
             });
 
-            card.querySelector('.edit-btn').addEventListener('click', () => {
+            card.querySelector('.edit-btn').addEventListener('click', ()=>{
               const newName = prompt('Introdueix el nou nom de la classe:', d.data().nom || '');
-              if (!newName || newName.trim() === d.data().nom) return;
+              if(!newName || newName.trim() === d.data().nom) return;
               db.collection('classes').doc(d.id).update({ nom: newName.trim() })
-                .then(() => loadClassesScreen())
-                .catch(e => alert('Error editant classe: ' + e.message));
+                .then(()=> loadClassesScreen())
+                .catch(e=> alert('Error editant classe: ' + e.message));
             });
-
-            // Només obrir la classe si fem clic fora del menú
-            card.addEventListener('click', () => openClass(d.id));
           }
-
-          classesGrid.appendChild(card);
         });
 
         const existingBtn = document.querySelector('#classesGrid + .delete-selected-btn');
-        if (existingBtn) existingBtn.remove();
+        if(existingBtn) existingBtn.remove();
 
-        if (deleteMode) {
+        if(deleteMode){
           addDeleteSelectedButton();
         }
       });
-  }).catch(e => {
+  }).catch(e=> {
     classesGrid.innerHTML = `<div class="text-sm text-red-500">Error carregant classes</div>`;
     console.error(e);
   });
 }
+
 
 const btnDeleteMode = document.getElementById('btnDeleteMode');
 btnDeleteMode.addEventListener('click', ()=> {
