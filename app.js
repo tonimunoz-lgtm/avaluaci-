@@ -1,18 +1,20 @@
 // app.js - lògica principal (modules)
 import { openModal, closeModal, confirmAction } from './modals.js';
 
+
 /* ---------------- FIREBASE CONFIG ---------------- */
 const firebaseConfig = {
-  apiKey: "AIzaSyA0P7TWcEw9y9_13yqRhvsgWN5d3YKH7yo",
-  authDomain: "gestornotes-cc6d0.firebaseapp.com",
-  projectId: "gestornotes-cc6d0",
-  storageBucket: "gestornotes-cc6d0.firebasestorage.app",
-  messagingSenderId: "324570393360",
-  appId: "1:324570393360:web:13a65fcf948813805c5395"
+apiKey: "AIzaSyA0P7TWcEw9y9_13yqRhvsgWN5d3YKH7yo",
+authDomain: "gestornotes-cc6d0.firebaseapp.com",
+projectId: "gestornotes-cc6d0",
+storageBucket: "gestornotes-cc6d0.firebasestorage.app",
+messagingSenderId: "324570393360",
+appId: "1:324570393360:web:13a65fcf948813805c5395"
 };
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+
 
 /* ---------------- Globals ---------------- */
 let professorUID = null;
@@ -21,10 +23,12 @@ let classStudents = [];
 let classActivities = [];
 let deleteMode = false;
 
+
 /* Elements */
 const loginScreen = document.getElementById('loginScreen');
 const appRoot = document.getElementById('appRoot');
 const usuariNom = document.getElementById('usuariNom');
+
 
 const btnLogin = document.getElementById('btnLogin');
 const btnRegister = document.getElementById('btnRegister');
@@ -33,9 +37,11 @@ const btnLogout = document.getElementById('btnLogout');
 const btnCreateClass = document.getElementById('btnCreateClass');
 const btnRefreshClasses = document.getElementById('btnRefreshClasses');
 
+
 const screenClasses = document.getElementById('screen-classes');
 const screenClass = document.getElementById('screen-class');
 const classesGrid = document.getElementById('classesGrid');
+
 
 const btnBack = document.getElementById('btnBack');
 const btnAddStudent = document.getElementById('btnAddStudent');
@@ -43,261 +49,61 @@ const btnAddActivity = document.getElementById('btnAddActivity');
 const btnSortAlpha = document.getElementById('btnSortAlpha');
 const btnExport = document.getElementById('btnExport');
 
+
 const studentsList = document.getElementById('studentsList');
 const studentsCount = document.getElementById('studentsCount');
+
 
 const notesThead = document.getElementById('notesThead');
 const notesTbody = document.getElementById('notesTbody');
 const notesTfoot = document.getElementById('notesTfoot');
 
+
 const modalCreateClassBtn = document.getElementById('modalCreateClassBtn');
 const modalAddStudentBtn = document.getElementById('modalAddStudentBtn');
 const modalAddActivityBtn = document.getElementById('modalAddActivityBtn');
 
+
 /* ---------- UTILS ---------- */
 function showLogin() {
-  loginScreen.style.display = 'block';
-  loginScreen.classList.remove('hidden');
-  appRoot.classList.add('hidden');
+loginScreen.style.display = 'block';
+loginScreen.classList.remove('hidden');
+appRoot.classList.add('hidden');
 }
 function showApp() {
-  loginScreen.style.display = 'none';
-  loginScreen.classList.add('hidden');
-  appRoot.classList.remove('hidden');
+loginScreen.style.display = 'none';
+loginScreen.classList.add('hidden');
+appRoot.classList.remove('hidden');
 }
+
 
 /* ---------- AUTH ---------- */
 btnLogin.addEventListener('click', () => {
-  const email = document.getElementById('loginEmail').value.trim();
-  const pw = document.getElementById('loginPassword').value;
-  if (!email || !pw) return alert('Introdueix email i contrasenya');
-  auth.signInWithEmailAndPassword(email, pw)
-    .then(u => {
-      professorUID = u.user.uid;
-      setupAfterAuth(u.user);
-    }).catch(e => alert('Error login: ' + e.message));
+const email = document.getElementById('loginEmail').value.trim();
+const pw = document.getElementById('loginPassword').value;
+if (!email || !pw) return alert('Introdueix email i contrasenya');
+auth.signInWithEmailAndPassword(email, pw)
+.then(u => {
+professorUID = u.user.uid;
+setupAfterAuth(u.user);
+}).catch(e => alert('Error login: ' + e.message));
 });
+
 
 btnRegister.addEventListener('click', () => {
-  const email = document.getElementById('loginEmail').value.trim();
-  const pw = document.getElementById('loginPassword').value;
-  if (!email || !pw) return alert('Introdueix email i contrasenya');
-  auth.createUserWithEmailAndPassword(email, pw)
-    .then(u => {
-      professorUID = u.user.uid;
-      db.collection('professors').doc(professorUID).set({ email, classes: [] })
-        .then(()=> { setupAfterAuth(u.user); });
-    }).catch(e => alert('Error registre: ' + e.message));
+const email = document.getElementById('loginEmail').value.trim();
+const pw = document.getElementById('loginPassword').value;
+if (!email || !pw) return alert('Introdueix email i contrasenya');
+auth.createUserWithEmailAndPassword(email, pw)
+.then(u => {
+professorUID = u.user.uid;
+db.collection('professors').doc(professorUID).set({ email, classes: [] })
+.then(()=> { setupAfterAuth(u.user); });
+}).catch(e => alert('Error registre: ' + e.message));
 });
 
-btnRecover.addEventListener('click', () => {
-  const email = document.getElementById('loginEmail').value.trim();
-  if(!email) return alert('Introdueix el teu email per recuperar la contrasenya');
-  auth.sendPasswordResetEmail(email)
-    .then(()=> alert('Email de recuperació enviat!'))
-    .catch(e=> alert('Error: ' + e.message));
+
 });
-
-btnLogout.addEventListener('click', ()=> {
-  auth.signOut().then(()=> {
-    professorUID = null;
-    currentClassId = null;
-    showLogin();
-  });
-});
-
-auth.onAuthStateChanged(user => {
-  if (user) {
-    professorUID = user.uid;
-    setupAfterAuth(user);
-  } else {
-    professorUID = null;
-    showLogin();
-  }
-});
-
-function setupAfterAuth(user) {
-  showApp();
-  const email = user.email || '';
-  usuariNom.textContent = email.split('@')[0] || email;
-  loadClassesScreen();
-}
-
-/* ---------------- Classes screen ---------------- */
-btnCreateClass.addEventListener('click', ()=> openModal('modalCreateClass'));
-btnRefreshClasses.addEventListener('click', loadClassesScreen);
-
-function loadClassesScreen() {
-  if(!professorUID) { alert('Fes login primer.'); return; }
-  screenClass.classList.add('hidden');
-  screenClasses.classList.remove('hidden');
-  classesGrid.innerHTML = '<div class="col-span-full text-sm text-gray-500">Carregant...</div>';
-
-  const classColors = [
-    'from-indigo-600 to-purple-600',
-    'from-pink-500 to-red-500',
-    'from-yellow-400 to-orange-500',
-    'from-green-500 to-teal-500',
-    'from-blue-500 to-indigo-600',
-    'from-purple-500 to-pink-500'
-  ];
-
-  db.collection('professors').doc(professorUID).get().then(doc => {
-    if(!doc.exists) { classesGrid.innerHTML = '<div class="text-sm text-red-500">Professor no trobat</div>'; return; }
-    const ids = doc.data().classes || [];
-    if(ids.length === 0) {
-      classesGrid.innerHTML = `<div class="col-span-full p-6 bg-white dark:bg-gray-800 rounded shadow text-center">No tens cap classe. Crea la primera!</div>`;
-      return;
-    }
-
-    Promise.all(ids.map(id => db.collection('classes').doc(id).get()))
-      .then(docs => {
-        classesGrid.innerHTML = '';
-        docs.forEach((d, i) => {
-          if(!d.exists) return;
-          const color = classColors[i % classColors.length];
-          const card = document.createElement('div');
-          card.className = `class-card bg-gradient-to-br ${color} text-white relative p-4 rounded-lg`;
-          card.dataset.id = d.id;
-
-          card.innerHTML = `
-            ${deleteMode ? '<input type="checkbox" class="delete-checkbox absolute top-2 right-2 w-5 h-5">' : ''}
-            <h3 class="text-lg font-bold">${d.data().nom||'Sense nom'}</h3>
-            <p class="text-sm mt-2">${(d.data().alumnes||[]).length} alumnes · ${(d.data().activitats||[]).length} activitats</p>
-            <div class="click-hint">${deleteMode ? 'Selecciona per eliminar' : 'Fes clic per obrir'}</div>
-          `;
-
-          // Afegim el menú amb els tres punts si NO estem en mode eliminar
-          if(!deleteMode){
-            const menuDiv = document.createElement('div');
-            menuDiv.className = 'absolute top-2 right-2';
-            menuDiv.innerHTML = `
-              <button class="menu-btn text-white font-bold text-xl">⋮</button>
-              <div class="menu hidden absolute right-0 mt-1 bg-white text-black border rounded shadow z-10 transition-opacity duration-200 opacity-0">
-                <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100">Editar</button>
-              </div>
-            `;
-            card.appendChild(menuDiv);
-
-            const menuBtn = menuDiv.querySelector('.menu-btn');
-            const menu = menuDiv.querySelector('.menu');
-
-            menuBtn.addEventListener('click', e => {
-              e.stopPropagation();
-              document.querySelectorAll('.menu').forEach(m => m.classList.add('hidden'));
-              menu.classList.toggle('hidden');
-            });
-
-            menuDiv.querySelector('.edit-btn').addEventListener('click', () => {
-              const newName = prompt('Introdueix el nou nom de la classe:', d.data().nom || '');
-              if(!newName || newName.trim() === d.data().nom) return;
-              db.collection('classes').doc(d.id).update({ nom: newName.trim() })
-                .then(() => loadClassesScreen())
-                .catch(e => alert('Error editant classe: ' + e.message));
-            });
-
-            card.addEventListener('click', () => openClass(d.id));
-          }
-
-          classesGrid.appendChild(card);
-        });
-
-        const existingBtn = document.querySelector('#classesGrid + .delete-selected-btn');
-        if(existingBtn) existingBtn.remove();
-        if(deleteMode) addDeleteSelectedButton();
-      });
-  }).catch(e=> {
-    classesGrid.innerHTML = `<div class="text-sm text-red-500">Error carregant classes</div>`;
-    console.error(e);
-  });
-}
-
-
-const btnDeleteMode = document.getElementById('btnDeleteMode');
-btnDeleteMode.addEventListener('click', ()=> {
-  deleteMode = !deleteMode;
-  btnDeleteMode.textContent = deleteMode ? '❌ Cancel·lar eliminar' : '🗑️ Eliminar classe';
-  loadClassesScreen();
-});
-
-function addDeleteSelectedButton(){
-  const delBtn = document.createElement('button');
-  delBtn.textContent = 'Eliminar seleccionats';
-  delBtn.className = 'delete-selected-btn mt-3 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded shadow';
-  delBtn.onclick = confirmDeleteSelected;
-  classesGrid.parentNode.insertBefore(delBtn, classesGrid.nextSibling);
-}
-
-function confirmDeleteSelected(){
-  const selected = [...document.querySelectorAll('.delete-checkbox')]
-    .filter(chk => chk.checked)
-    .map(chk => chk.closest('.class-card'));
-
-  if(selected.length === 0) return alert('Selecciona almenys una classe!');
-
-  confirmAction(
-    'Confirmació d\'eliminació',
-    `Estàs segur que vols eliminar ${selected.length} classe(s)? Aquesta acció no té marxa enrere.`,
-    () => {
-      selected.forEach(card => {
-        const classIdToRemove = card.dataset.id;
-        card.remove();
-        if(classIdToRemove){
-          db.collection('professors').doc(professorUID).update({
-            classes: firebase.firestore.FieldValue.arrayRemove(classIdToRemove)
-          });
-          db.collection('classes').doc(classIdToRemove).delete();
-        }
-      });
-      deleteMode = false;
-      btnDeleteMode.textContent = '🗑️ Eliminar classe';
-      loadClassesScreen();
-    }
-  );
-}
-
-function createClassModal(){
-  const name = document.getElementById('modalClassName').value.trim();
-  if(!name) return alert('Posa un nom');
-  const ref = db.collection('classes').doc();
-  ref.set({ nom: name, alumnes: [], activitats: [] })
-    .then(()=> db.collection('professors').doc(professorUID).update({ classes: firebase.firestore.FieldValue.arrayUnion(ref.id) }))
-    .then(()=> {
-      closeModal('modalCreateClass');
-      document.getElementById('modalClassName').value = '';
-      loadClassesScreen();
-    }).catch(e=> alert('Error: ' + e.message));
-}
-modalCreateClassBtn.addEventListener('click', createClassModal);
-
-/* ---------------- Open class ---------------- */
-function openClass(id){
-  currentClassId = id;
-  screenClasses.classList.add('hidden');
-  screenClass.classList.remove('hidden');
-  loadClassData();
-}
-
-btnBack.addEventListener('click', ()=> {
-  currentClassId = null;
-  screenClass.classList.add('hidden');
-  screenClasses.classList.remove('hidden');
-  loadClassesScreen();
-});
-
-function loadClassData(){
-  if(!currentClassId) return;
-  db.collection('classes').doc(currentClassId).get().then(doc=>{
-    if(!doc.exists) { alert('Classe no trobada'); return; }
-    const data = doc.data();
-    classStudents = data.alumnes || [];
-    classActivities = data.activitats || [];
-    document.getElementById('classTitle').textContent = data.nom || 'Sense nom';
-    document.getElementById('classSub').textContent = `ID: ${doc.id}`;
-    renderStudentsList();
-    renderNotesGrid();
-  }).catch(e=> console.error(e));
-}
 
 /* ---------------- Students ---------------- */
 btnAddStudent.addEventListener('click', ()=> openModal('modalAddStudent'));
