@@ -108,3 +108,16 @@ button:hover { transform: scale(1.03); }
   #loginScreen { padding: 1rem; }
   .table-input { width: 2.8rem; }
 }
+
+/* Forçar que els menús es comportin bé quan es mostren */
+.menu {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  z-index: 9999 !important;
+}
+
+.menu.hidden {
+  display: none !important;
+}
