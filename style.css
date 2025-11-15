@@ -7,7 +7,7 @@ body {
   color: #f3f4f6; /* text general clar */
 }
 
-/* ---------------- Contenidor principal ---------------- */
+/* ---------------- Contenidor principal (pantalla classes) ---------------- */
 #appRoot {
   background: linear-gradient(135deg, #2f2f44 0%, #373759 100%); /* gradient suau de gris fosc a gris-blau */
   padding: 2rem;
@@ -17,26 +17,19 @@ body {
   transition: background 0.3s ease;
 }
 
-/* ---------------- Targetes de classes (colors vius amb gradient) ---------------- */
+/* ---------------- Targetes de classes ---------------- */
 .class-card {
   cursor: pointer;
-  padding: 0.9rem;
+  padding: 0.9rem; /* una mica més compacte */
   border-radius: 1.25rem;
   box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-  transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   color: white;
   text-shadow: 0 2px 4px rgba(0,0,0,0.7);
-  background: linear-gradient(135deg, #6366f1, #8b5cf6); /* valor per defecte */
 }
-
-.class-card:nth-child(2) { background: linear-gradient(135deg, #ec4899, #ef4444); }
-.class-card:nth-child(3) { background: linear-gradient(135deg, #facc15, #fb923c); }
-.class-card:nth-child(4) { background: linear-gradient(135deg, #22c55e, #14b8a6); }
-.class-card:nth-child(5) { background: linear-gradient(135deg, #3b82f6, #6366f1); }
-.class-card:nth-child(6) { background: linear-gradient(135deg, #8b5cf6, #ec4899); }
 
 .class-card:hover {
   transform: translateY(-4px) scale(1.03);
@@ -52,6 +45,16 @@ body {
 .class-card p { font-size: 0.875rem; margin-top: 0.4rem; }
 .class-card .click-hint { font-size: 0.75rem; margin-top: 0.8rem; opacity: 0.9; }
 
+/* Colors vius de targetes (gradient via Tailwind) */
+const classColors = [
+  'from-indigo-600 to-purple-600',
+  'from-pink-500 to-red-500',
+  'from-yellow-400 to-orange-400',
+  'from-green-500 to-teal-500',
+  'from-blue-500 to-indigo-600',
+  'from-purple-500 to-pink-500'
+];
+
 /* ---------------- Titols i textos ---------------- */
 h2, h1 {
   color: #f3f4f6; /* text clar */
@@ -63,11 +66,48 @@ h2, h1 {
   color: #ffffff; /* blanc pur per destacar sobre fons gradient */
 }
 
-/* ---------------- Notes Grid ---------------- */
-#notesTable th, #notesTable td {
-  border: 1px solid #4b4b6b;
-  padding: 0.45rem 0.6rem;
+/* ---------------- Pantalla classe oberta ---------------- */
+#screen-class {
+  background: linear-gradient(135deg, #4b4b60 0%, #5c5c75 100%); /* gris fosc suau amb gradient */
+  padding: 2rem;
+  border-radius: 1.5rem;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+  color: #ffffff; /* text clar dins del contenidor */
 }
+
+/* Botó tornar amb fletxa */
+#btnBack, #btnBack svg {
+  color: #ffffff !important; /* blanc assegurat */
+  fill: #ffffff !important; /* si la fletxa és SVG */
+  background: none !important;
+  border: none !important;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: color 0.2s ease;
+}
+
+#btnBack:hover {
+  color: #d1d1ff !important; /* lleuger clar per hover */
+}
+
+/* Amagar ID de classe */
+#classSub {
+  display: none !important;
+}
+
+/* Títol de la classe */
+#classTitle {
+  color: #ffffff !important; /* blanc */
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+/* ---------------- Notes Grid ---------------- */
+#notesTable th, #notesTable td { border: 1px solid #4b4b6b; padding: 0.45rem 0.6rem; }
 
 .bg-red-100 { background-color: #f87171 !important; }
 .bg-yellow-100 { background-color: #facc15 !important; }
