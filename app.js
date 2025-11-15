@@ -143,6 +143,15 @@ function loadClassesScreen(){
   screenClasses.classList.remove('hidden');
   classesGrid.innerHTML = '<div class="col-span-full text-sm text-gray-500">Carregant...</div>';
 
+  const classColors = [
+    'from-indigo-400 to-purple-500',
+    'from-pink-400 to-red-500',
+    'from-yellow-400 to-orange-500',
+    'from-green-400 to-teal-500',
+    'from-blue-400 to-indigo-500',
+    'from-purple-400 to-pink-500'
+  ];
+
   db.collection('professors').doc(professorUID).get().then(doc => {
     if(!doc.exists) { classesGrid.innerHTML = '<div class="text-sm text-red-500">Professor no trobat</div>'; return; }
     const ids = doc.data().classes || [];
@@ -153,13 +162,14 @@ function loadClassesScreen(){
     Promise.all(ids.map(id => db.collection('classes').doc(id).get()))
       .then(docs => {
         classesGrid.innerHTML = '';
-        docs.forEach(d => {
+        docs.forEach((d, i) => {
           if(!d.exists) return;
+          const color = classColors[i % classColors.length];
           const card = document.createElement('div');
-          card.className = 'cursor-pointer p-5 rounded bg-white dark:bg-gray-800 shadow hover:scale-[1.01] transform transition';
-          card.innerHTML = `<h3 class="text-lg font-bold mb-1">${d.data().nom||'Sense nom'}</h3>
-                            <p class="text-sm text-gray-500 dark:text-gray-300">${(d.data().alumnes||[]).length} alumnes · ${(d.data().activitats||[]).length} activitats</p>
-                            <div class="mt-3 text-xs text-indigo-600">Fes clic per obrir</div>`;
+          card.className = `class-card bg-gradient-to-br ${color} text-white`;
+          card.innerHTML = `<h3 class="text-lg font-bold">${d.data().nom||'Sense nom'}</h3>
+                            <p class="text-sm mt-2">${(d.data().alumnes||[]).length} alumnes · ${(d.data().activitats||[]).length} activitats</p>
+                            <div class="click-hint">Fes clic per obrir</div>`;
           card.addEventListener('click', ()=> openClass(d.id));
           classesGrid.appendChild(card);
         });
@@ -169,7 +179,6 @@ function loadClassesScreen(){
     console.error(e);
   });
 }
-
 function createClassModal(){
   const name = document.getElementById('modalClassName').value.trim();
   if(!name) return alert('Posa un nom');
