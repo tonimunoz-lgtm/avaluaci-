@@ -1,0 +1,21 @@
+/* style.css - estils addicionals */
+/* mantenim classes de Tailwind però afegim petits ajustos */
+
+.table-input { width: 3.5rem; }
+.modal-backdrop { background: rgba(0,0,0,0.45); backdrop-filter: blur(3px); }
+.fade-in { animation: fadeIn .15s ease-out; }
+@keyframes fadeIn { from {opacity:0; transform: translateY(-6px)} to {opacity:1; transform: translateY(0)} }
+
+/* millora responsive taules */
+#notesTable th, #notesTable td { border: 1px solid #e5e7eb; padding: 0.45rem 0.6rem; }
+
+/* colors per status de nota (classes utilitzades dinàmicament) */
+.bg-red-100 { background-color: #fee2e2 !important; }
+.bg-yellow-100 { background-color: #fef3c7 !important; }
+.bg-green-100 { background-color: #dcfce7 !important; }
+
+/* ajust per pantalles petites: fer el login centrat i còmode */
+@media (max-width: 640px) {
+  #loginScreen { padding: 1rem; }
+  .table-input { width: 2.8rem; }
+}
