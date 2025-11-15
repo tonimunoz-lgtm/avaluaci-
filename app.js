@@ -378,13 +378,13 @@ function renderStudentsList(){
       `;
 
       const menuBtn = li.querySelector('.menu-btn');
-      const menu = li.querySelector('.menu');
-      menuBtn.addEventListener('click', e=>{
-        e.stopPropagation();
-        document.querySelectorAll('.menu').forEach(m=> m.classList.add('hidden'));
-        menu.classList.toggle('hidden');
-      });
-      document.addEventListener('click', ()=> menu.classList.add('hidden'));
+const menu = li.querySelector('.menu');
+
+menuBtn.addEventListener('click', e=>{
+  e.stopPropagation();
+  document.querySelectorAll('.menu').forEach(m=> m.classList.add('hidden'));
+  menu.classList.toggle('hidden');
+});
 
       li.querySelector('.edit-btn').addEventListener('click', ()=>{
         const newName = prompt('Introdueix el nou nom:', name);
@@ -457,7 +457,6 @@ function renderNotesGrid(){
           document.querySelectorAll('.menu').forEach(m=> m.classList.add('hidden'));
           menu.classList.toggle('hidden');
         });
-        document.addEventListener('click', ()=> menu.classList.add('hidden'));
 
         menuDiv.querySelector('.edit-btn').addEventListener('click', ()=>{
           const newName = prompt('Introdueix el nou nom de l\'activitat:', name);
@@ -592,3 +591,11 @@ function exportExcel(){
   const fname = (document.getElementById('classTitle').textContent || 'classe') + '.xlsx';
   XLSX.writeFile(wb, fname);
 }
+// Tancar menús si fas clic fora
+document.addEventListener('click', function(e) {
+  document.querySelectorAll('.menu').forEach(menu => {
+    if (!menu.contains(e.target) && !e.target.classList.contains('menu-btn')) {
+      menu.classList.add('hidden');
+    }
+  });
+});
