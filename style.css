@@ -73,6 +73,38 @@ h2, h1 {
 .bg-yellow-100 { background-color: #facc15 !important; }
 .bg-green-100 { background-color: #4ade80 !important; }
 
+/* ---------------- Pantalla d'una classe ---------------- */
+#screen-class {
+  background: linear-gradient(135deg, #2c2c3a 0%, #35354f 100%); /* gradient gris fosc */
+  padding: 2rem;
+  border-radius: 1.5rem;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+  transition: background 0.3s ease;
+}
+
+/* Títol de la classe */
+#classTitle {
+  color: #ffffff; /* text blanc */
+  font-weight: 700;
+  font-size: 1.75rem;
+}
+
+/* Botó tornar */
+#btnBack {
+  color: #ffffff;
+  background: transparent;
+  border: 1px solid #ffffff;
+  padding: 0.3rem 0.6rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background 0.2s, color 0.2s;
+}
+
+#btnBack:hover {
+  background: rgba(255,255,255,0.1);
+}
+
 /* ---------------- Responsive ---------------- */
 @media (max-width: 640px) {
   #loginScreen { padding: 1rem; }
