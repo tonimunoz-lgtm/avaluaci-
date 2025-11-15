@@ -115,50 +115,53 @@ btnCreateClass.addEventListener('click', () => openModal('modalCreateClass'));
 btnRefreshClasses.addEventListener('click', loadClassesScreen);
 
 function loadClassesScreen() {
-    if (!professorUID) return alert('Fes login primer.');
-    screenClass.classList.add('hidden');
-    screenClasses.classList.remove('hidden');
-    classesGrid.innerHTML = '<div class="text-sm text-gray-500">Carregant...</div>';
-    const classColors = [
-        'from-indigo-600 to-purple-600',
-        'from-pink-500 to-red-500',
-        'from-yellow-400 to-orange-500',
-        'from-green-500 to-teal-500',
-        'from-blue-500 to-indigo-600',
-        'from-purple-500 to-pink-500'
-    ];
+  if(!professorUID) { alert('Fes login primer.'); return; }
+  screenClass.classList.add('hidden');
+  screenClasses.classList.remove('hidden');
+  classesGrid.innerHTML = '<div class="col-span-full text-sm text-gray-500">Carregant...</div>';
 
-    db.collection('professors').doc(professorUID).get().then(doc => {
-        if (!doc.exists) {
-            classesGrid.innerHTML = '<div class="text-sm text-red-500">Professor no trobat</div>';
-            return;
+  const classColors = [
+    'from-indigo-600 to-purple-600',
+    'from-pink-500 to-red-500',
+    'from-yellow-400 to-orange-500',
+    'from-green-500 to-teal-500',
+    'from-blue-500 to-indigo-600',
+    'from-purple-500 to-pink-500'
+  ];
+
+  db.collection('professors').doc(professorUID).get().then(doc => {
+    if(!doc.exists) { classesGrid.innerHTML = '<div class="text-sm text-red-500">Professor no trobat</div>'; return; }
+    const ids = doc.data().classes || [];
+    if(ids.length === 0) {
+      classesGrid.innerHTML = `<div class="col-span-full p-6 bg-white dark:bg-gray-800 rounded shadow text-center">No tens cap classe. Crea la primera!</div>`;
+      return;
+    }
+    Promise.all(ids.map(id => db.collection('classes').doc(id).get()))
+      .then(docs => {
+        classesGrid.innerHTML = '';
+        docs.forEach((d, i) => {
+          if(!d.exists) return;
+          const color = classColors[i % classColors.length];
+          const card = document.createElement('div');
+          card.className = `class-card bg-gradient-to-br ${color} text-white relative`;
+          card.innerHTML = `
+            ${deleteMode ? '<input type="checkbox" class="delete-checkbox absolute top-2 right-2 w-5 h-5">' : ''}
+            <h3 class="text-lg font-bold">${d.data().nom||'Sense nom'}</h3>
+            <p class="text-sm mt-2">${(d.data().alumnes||[]).length} alumnes · ${(d.data().activitats||[]).length} activitats</p>
+            <div class="click-hint">${deleteMode ? 'Selecciona per eliminar' : 'Fes clic per obrir'}</div>
+          `;
+          if(!deleteMode) card.addEventListener('click', ()=> openClass(d.id));
+          classesGrid.appendChild(card);
+        });
+
+        if(deleteMode){
+          addDeleteSelectedButton();
         }
-        const ids = doc.data().classes || [];
-        if (ids.length === 0) {
-            classesGrid.innerHTML = `<div class="p-6 bg-white rounded shadow text-center">No tens cap classe. Crea la primera!</div>`;
-            return;
-        }
-        Promise.all(ids.map(id => db.collection('classes').doc(id).get()))
-            .then(docs => {
-                classesGrid.innerHTML = '';
-                docs.forEach((d, i) => {
-                    if (!d.exists) return;
-                    const color = classColors[i % classColors.length];
-                    const card = document.createElement('div');
-                    card.className = `class-card bg-gradient-to-br ${color} text-white`;
-                    card.innerHTML = `
-                        <h3 class="text-lg font-bold">${d.data().nom || 'Sense nom'}</h3>
-                        <p class="text-sm mt-2">${(d.data().alumnes||[]).length} alumnes · ${(d.data().activitats||[]).length} activitats</p>
-                        <div class="click-hint">Fes clic per obrir</div>
-                    `;
-                    card.addEventListener('click', () => openClass(d.id));
-                    classesGrid.appendChild(card);
-                });
-            });
-    }).catch(e => {
-        classesGrid.innerHTML = '<div class="text-sm text-red-500">Error carregant classes</div>';
-        console.error(e);
-    });
+      });
+  }).catch(e=> {
+    classesGrid.innerHTML = `<div class="text-sm text-red-500">Error carregant classes</div>`;
+    console.error(e);
+  });
 }
 /* ---------------- Create Class Modal ---------------- */
 function createClassModal() {
