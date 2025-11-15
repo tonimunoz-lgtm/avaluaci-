@@ -318,6 +318,27 @@ function renderStudentsList(){
     <button class="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-white" title="Eliminar">🗑</button>
   </div>
 `;
+
+      // update name handler
+const nameInput = li.querySelector('.stu-name-input');
+nameInput.addEventListener('change', () => {
+  const newName = nameInput.value.trim();
+  if (!newName) {
+    alert("El nom no pot estar buit");
+    nameInput.value = name; // restaurar l’antic
+    return;
+  }
+
+  db.collection('alumnes')
+    .doc(stuId)
+    .update({ nom: newName })
+    .catch(err => {
+      alert("Error actualitzant el nom: " + err.message);
+      nameInput.value = name; // restaurar si falla
+    });
+});
+
+      
       // delete handler
       li.querySelector('button').addEventListener('click', ()=> {
         confirmAction('Eliminar alumne', `Segur que vols eliminar ${name}?`, ()=> removeStudent(stuId));
