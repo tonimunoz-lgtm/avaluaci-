@@ -243,6 +243,7 @@ function confirmDeleteSelected(){
       });
 
       deleteMode = false;
+      btnDeleteMode.textContent = '🗑️ Eliminar classe';
       loadClassesScreen();
     }
   );
