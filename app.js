@@ -49,6 +49,8 @@ const studentsCount = document.getElementById('studentsCount');
 const notesThead = document.getElementById('notesThead');
 const notesTbody = document.getElementById('notesTbody');
 const notesTfoot = document.getElementById('notesTfoot');
+const btnImport = document.getElementById('btnImport');
+
 
 /* modal buttons */
 const modalCreateClassBtn = document.getElementById('modalCreateClassBtn');
