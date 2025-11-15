@@ -19,6 +19,7 @@ let professorUID = null;
 let currentClassId = null;
 let classStudents = [];
 let classActivities = [];
+let deleteMode = false; // mode eliminar classes
 
 /* ---------------- Elements ---------------- */
 const loginScreen = document.getElementById('loginScreen');
