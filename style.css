@@ -1,15 +1,15 @@
 /* ---------------- Body general ---------------- */
 body {
-  background: #2a2a3d; /* negre clar, gris fosc elegant */
+  background: #383850; /* fons principal més clar que abans, negre clar grisós */
   font-family: 'Inter', sans-serif;
   margin: 0;
   padding: 0;
-  color: #f3f4f6; /* text clar per llegibilitat */
+  color: #f3f4f6; /* text general clar */
 }
 
 /* ---------------- Contenidor principal ---------------- */
 #appRoot {
-  background: #3c3c55; /* gris fosc suau, harmoniós amb el fons negre clar */
+  background: #2f2f44; /* més fosc que abans per destacar sobre fons principal */
   padding: 2rem;
   border-radius: 1.5rem;
   box-shadow: 0 8px 20px rgba(0,0,0,0.3);
@@ -20,7 +20,7 @@ body {
 /* ---------------- Targetes de classes ---------------- */
 .class-card {
   cursor: pointer;
-  padding: 1rem;
+  padding: 0.9rem; /* una mica més compacte */
   border-radius: 1.25rem;
   box-shadow: 0 4px 12px rgba(0,0,0,0.25);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -57,8 +57,13 @@ const classColors = [
 
 /* ---------------- Titols i textos ---------------- */
 h2, h1 {
-  color: #f3f4f6; /* text clar sobre fons negre clar */
+  color: #f3f4f6; /* text clar */
   font-weight: 700;
+}
+
+/* Titol específic "Les meves classes" */
+#screen-classes h2 {
+  color: #ffffff; /* blanc pur per destacar sobre fons principal */
 }
 
 /* ---------------- Notes Grid ---------------- */
