@@ -1,6 +1,6 @@
 /* style.css - estils addicionals */
-/* mantenim classes de Tailwind però afegim petits ajustos */
 
+/* mantenim classes de Tailwind però afegim petits ajustos */
 .table-input { width: 3.5rem; }
 .modal-backdrop { background: rgba(0,0,0,0.45); backdrop-filter: blur(3px); }
 .fade-in { animation: fadeIn .15s ease-out; }
@@ -9,13 +9,27 @@
 /* millora responsive taules */
 #notesTable th, #notesTable td { border: 1px solid #e5e7eb; padding: 0.45rem 0.6rem; }
 
-/* colors per status de nota (classes utilitzades dinàmicament) */
+/* colors per status de nota (dinàmic) */
 .bg-red-100 { background-color: #fee2e2 !important; }
 .bg-yellow-100 { background-color: #fef3c7 !important; }
 .bg-green-100 { background-color: #dcfce7 !important; }
 
-/* ajust per pantalles petites: fer el login centrat i còmode */
+/* ajust per pantalles petites */
 @media (max-width: 640px) {
   #loginScreen { padding: 1rem; }
   .table-input { width: 2.8rem; }
+}
+
+/* ---------------- Targetes de classe professionals ---------------- */
+.class-card {
+  @apply cursor-pointer p-6 rounded-xl bg-white dark:bg-gray-800 shadow-md hover:shadow-xl transition-transform transform hover:scale-105 flex flex-col justify-between;
+}
+.class-card h3 {
+  @apply text-lg font-bold text-gray-800 dark:text-gray-100;
+}
+.class-card p {
+  @apply text-sm text-gray-500 dark:text-gray-400 mt-2;
+}
+.class-card .click-hint {
+  @apply mt-3 text-xs text-indigo-600 dark:text-indigo-400;
 }
