@@ -20,6 +20,8 @@ let currentClassId = null;
 let classStudents = [];
 let classActivities = [];
 let deleteMode = false;
+let currentCalcActivityId = null; // Activitat actual per fer càlculs
+
 
 /* Elements */
 const loginScreen = document.getElementById('loginScreen');
@@ -615,6 +617,19 @@ function renderAverages(){
   }
   tr.appendChild(th('',''));
   notesTfoot.appendChild(tr);
+}
+
+function openCalcModal(activityId){
+  // Guardarem l'activitat que estem editant
+  currentCalcActivityId = activityId; // variable global nova que afegirem
+  // Obrir el modal
+  openModal('modalCalc');
+  // Reset inputs del modal
+  document.getElementById('calcType').value = 'numeric';
+  document.getElementById('formulaInputs').classList.add('hidden');
+  document.getElementById('numericInput').classList.remove('hidden');
+  document.getElementById('numericField').value = '';
+  document.getElementById('formulaField').value = '';
 }
 
 /* ---------------- Export Excel ---------------- */
