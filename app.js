@@ -564,44 +564,15 @@ function th(txt, cls=''){
   return el;
 }
 
-// Guardar nota i recalcular automàticament totes les fórmules
-async function saveNoteReactive(studentId, activityId, value) {
+function saveNote(studentId, activityId, value){
   const num = value === '' ? null : Number(value);
   const updateObj = {};
-  if (num === null || isNaN(num)) updateObj[`notes.${activityId}`] = firebase.firestore.FieldValue.delete();
+  if(num === null || isNaN(num)) updateObj[`notes.${activityId}`] = firebase.firestore.FieldValue.delete();
   else updateObj[`notes.${activityId}`] = num;
-
-  try {
-    // Guardar nota inicial
-    await db.collection('alumnes').doc(studentId).update(updateObj);
-
-    // Recalcular totes les fórmules per aquest alumne
-    const formulaActivities = classActivities.filter(aid => {
-      return true; // si vols només les fórmules, pots filtrar per tipus 'formula'
-    });
-
-    for (const aid of formulaActivities) {
-      const actDoc = await db.collection('activitats').doc(aid).get();
-      if (!actDoc.exists) continue;
-      const data = actDoc.data();
-      if (data.calcType === 'formula' && data.formula) {
-        const result = await evalFormulaAsync(data.formula, studentId);
-        await db.collection('alumnes').doc(studentId).update({
-          [`notes.${aid}`]: result
-        });
-      }
-    }
-
-    // Renderitzar taula un cop després de tots els càlculs
-    renderNotesGrid();
-
-  } catch (e) {
-    console.error('Error saving note:', e);
-  }
+  db.collection('alumnes').doc(studentId).update(updateObj)
+    .then(()=> renderNotesGrid())
+    .catch(e=> console.error('Error saving note', e));
 }
-
-
-
 
 function applyCellColor(inputEl){
   const v = Number(inputEl.value);
