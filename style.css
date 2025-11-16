@@ -103,6 +103,31 @@ button:hover { transform: scale(1.03); }
   font-weight: 600;
 }
 
+/* ---------------- Modal Calcul ---------------- */
+#modalCalc {
+  display: none; /* hidden inicial */
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.2);
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+#modalCalc .modal-close {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+#formulaButtons button {
+  cursor: pointer;
+  transition: 0.2s;
+}
+#formulaButtons button:hover {
+  transform: scale(1.05);
+}
+
+
 /* ---------------- Responsive ---------------- */
 @media (max-width: 640px) {
   #loginScreen { padding: 1rem; }
