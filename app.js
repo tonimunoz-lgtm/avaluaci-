@@ -346,7 +346,6 @@ function sortStudentsAlpha(){
     }).then(()=> loadClassData())
     .catch(e=> console.error(e));
 }
-
 /* ---------------- Activities ---------------- */
 btnAddActivity.addEventListener('click', ()=> openModal('modalAddActivity'));
 modalAddActivityBtn.addEventListener('click', createActivityModal);
