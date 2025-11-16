@@ -621,7 +621,7 @@ calcTypeSelect.addEventListener('change', ()=>{
 });
 
 // Aplicar càlcul
-modalApplyCalcBtn.addEventListener('click', ()=>{
+modalApplyCalcBtn.addEventListener('click', async ()=>{
   if(!currentCalcActivityId) return;
   if(calcTypeSelect.value==='numeric'){
     const val = Number(numericField.value);
@@ -634,16 +634,10 @@ modalApplyCalcBtn.addEventListener('click', ()=>{
     const formula = formulaField.value.trim();
     if(!formula) return alert('Formula buida');
     try{
-      classStudents.forEach(sid=>{
-        const notesMap = {}; 
-        classActivities.forEach(aid=>{
-          const input = document.querySelector(`tr td input`);
-          // Opcional: pots carregar notes si vols usar-les en fórmula
-        });
-        // Calcula la fórmula
-        const result = evalFormula(formula);
+      for(const sid of classStudents){
+        const result = await evalFormulaAsync(formula, sid);
         saveNote(sid, currentCalcActivityId, result);
-      });
+      }
       closeModal('modalCalc');
     } catch(e){
       console.error(e);
@@ -651,6 +645,7 @@ modalApplyCalcBtn.addEventListener('click', ()=>{
     }
   }
 });
+
 
 // ---------------- Construir botons de fórmules ----------------
 function buildFormulaButtons(){
@@ -692,29 +687,37 @@ function addToFormula(str){
 }
 
 // ---------------- Evaluar fórmula ----------------
-function evalFormula(formula){
-  // Substituir noms activitats per valors
+async function evalFormulaAsync(formula, studentId){
   let evalStr = formula;
-  classActivities.forEach(aid=>{
-    db.collection('activitats').doc(aid).get().then(doc=>{
-      const name = doc.exists ? doc.data().nom : '';
-      if(!name) return;
-      classStudents.forEach(sid=>{
-        const tr = Array.from(notesTbody.children).find(tr=> tr.firstChild.textContent === getStudentNameById(sid));
-        const inputs = Array.from(tr.querySelectorAll('input'));
-        const idx = classActivities.findIndex(a=>a===aid);
-        const val = Number(inputs[idx].value) || 0;
-        evalStr = evalStr.replaceAll(name, val);
-      });
-    });
-  });
-  try{
+
+  // Map de noms d'activitats a valors de l'alumne
+  for(const aid of classActivities){
+    const doc = await db.collection('activitats').doc(aid).get();
+    const name = doc.exists ? doc.data().nom : '';
+    if(!name) continue;
+
+    // Trobar valor de l'activitat per a aquest alumne
+    const tr = Array.from(notesTbody.children)
+      .find(tr => tr.firstChild.textContent === getStudentNameById(studentId));
+    if(!tr) continue;
+
+    const idx = classActivities.findIndex(a => a===aid);
+    const inputs = Array.from(tr.querySelectorAll('input'));
+    const val = Number(inputs[idx]?.value) || 0;
+
+    // Substituir totes les aparicions del nom per el valor
+    const regex = new RegExp(name, 'g'); // global
+    evalStr = evalStr.replace(regex, val);
+  }
+
+  try {
     return Function('"use strict"; return (' + evalStr + ')')();
-  }catch(e){
+  } catch(e){
     console.error('Error evaluating formula:', formula, e);
     return 0;
   }
 }
+
 
 // ---------------- Helper per trobar nom alumne per ID ----------------
 function getStudentNameById(sid){
