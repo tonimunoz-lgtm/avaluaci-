@@ -20,6 +20,7 @@ let currentClassId = null;
 let classStudents = [];
 let classActivities = [];
 let deleteMode = false;
+let currentCalcActId = null; // per calcul columna
 
 /* Elements */
 const loginScreen = document.getElementById('loginScreen');
@@ -52,6 +53,7 @@ const notesTfoot = document.getElementById('notesTfoot');
 const modalCreateClassBtn = document.getElementById('modalCreateClassBtn');
 const modalAddStudentBtn = document.getElementById('modalAddStudentBtn');
 const modalAddActivityBtn = document.getElementById('modalAddActivityBtn');
+const applyCalcBtn = document.getElementById('applyCalcBtn');
 
 /* ---------- UTILS ---------- */
 function showLogin() {
@@ -119,14 +121,11 @@ function setupAfterAuth(user) {
   showApp();
   const email = user.email || '';
   usuariNom.textContent = email.split('@')[0] || email;
-
-  // Crida automàtica per carregar la graella de classes
   loadClassesScreen();
 }
-
 /* ---------------- Classes screen ---------------- */
 btnCreateClass.addEventListener('click', ()=> openModal('modalCreateClass'));
-/* ---------------- Classes Screen (cont.) ---------------- */
+
 function loadClassesScreen() {
   if(!professorUID) { alert('Fes login primer.'); return; }
   screenClass.classList.add('hidden');
@@ -296,7 +295,7 @@ function loadClassData(){
     document.getElementById('classTitle').textContent = data.nom || 'Sense nom';
     document.getElementById('classSub').textContent = `ID: ${doc.id}`;
     renderStudentsList();
-    renderNotesGrid();
+    renderNotesGrid(); // <- aquí es genera la graella i els menús "Calcul"
   }).catch(e=> console.error(e));
 }
 
@@ -345,6 +344,7 @@ function sortStudentsAlpha(){
     }).then(()=> loadClassData())
     .catch(e=> console.error(e));
 }
+
 /* ---------------- Activities ---------------- */
 btnAddActivity.addEventListener('click', ()=> openModal('modalAddActivity'));
 modalAddActivityBtn.addEventListener('click', createActivityModal);
@@ -353,7 +353,7 @@ function createActivityModal(){
   const name = document.getElementById('modalActivityName').value.trim();
   if(!name) return alert('Posa un nom');
   const ref = db.collection('activitats').doc();
-  ref.set({ nom: name, data: new Date().toISOString().split('T')[0] })
+  ref.set({ nom: name, data: new Date().toISOString().split('T')[0], calcType:'numeric', formula:'' })
     .then(()=> db.collection('classes').doc(currentClassId).update({ activitats: firebase.firestore.FieldValue.arrayUnion(ref.id) }))
     .then(()=> {
       closeModal('modalAddActivity');
@@ -376,7 +376,6 @@ function removeActivity(actId){
       .catch(e=> alert('Error esborrant activitat: '+e.message));
   });
 }
-
 /* ---------------- Render Students List amb menú ---------------- */
 function renderStudentsList(){
   studentsList.innerHTML = '';
@@ -443,7 +442,7 @@ function renderStudentsList(){
   });
 }
 
-/* ---------------- Notes Grid amb menú activitats ---------------- */
+/* ---------------- Notes Grid amb menú activitats i "Calcul" ---------------- */
 function renderNotesGrid(){
   notesThead.innerHTML = '';
   notesTbody.innerHTML = '';
@@ -469,16 +468,18 @@ function renderNotesGrid(){
         menuDiv.innerHTML = `
           <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white tooltip">⋮</button>
           <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10 transition-opacity duration-200 opacity-0">
-             <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
+            <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
             <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>
             <button class="calc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Calcul</button>
           </div>
         `;
+
         container.appendChild(spanName);
         container.appendChild(menuDiv);
         thEl.appendChild(container);
         headRow.appendChild(thEl);
 
+        // Menú funcionalitat
         const menuBtn = menuDiv.querySelector('.menu-btn');
         const menu = menuDiv.querySelector('.menu');
         menuBtn.addEventListener('click', e=>{
@@ -487,11 +488,6 @@ function renderNotesGrid(){
           menu.classList.toggle('hidden');
         });
 
-        menuDiv.querySelector('.calc-btn').addEventListener('click', () => {
-          e.stopPropagation();
-          openCalcModal(id); // id és l'ID de l'activitat
-        });
-        
         menuDiv.querySelector('.edit-btn').addEventListener('click', ()=>{
           const newName = prompt('Introdueix el nou nom de l\'activitat:', name);
           if(!newName || newName.trim()===name) return;
@@ -501,6 +497,8 @@ function renderNotesGrid(){
         });
 
         menuDiv.querySelector('.delete-btn').addEventListener('click', ()=> removeActivity(id));
+
+        menuDiv.querySelector('.calc-btn').addEventListener('click', ()=> openCalcModal(id)); // <-- Calcul
       });
 
       headRow.appendChild(th('Mitjana', 'text-right'));
@@ -553,6 +551,42 @@ function renderNotesGrid(){
     });
 }
 
+/* -------------------------- Càlcul Automàtic -------------------------- */
+function openCalcModal(activityId){
+  const type = prompt('Selecciona tipus: "numeric" o "formula"');
+  if(!type) return;
+  if(type === 'numeric') return; // no canviem res
+  if(type === 'formula'){
+    // Crear una finestra prompt amb fórmula
+    const formula = prompt('Introdueix la fórmula matemàtica. Pots usar noms d’activitats entre parèntesis, p.ex.: ((activitat1+activitat2)/2)*0.4 + (activitat3*0.6)');
+    if(!formula) return;
+    applyFormulaToColumn(activityId, formula);
+  }
+}
+
+function applyFormulaToColumn(activityId, formula){
+  // Primer recollim totes les notes dels alumnes
+  Promise.all(classStudents.map(sid => db.collection('alumnes').doc(sid).get()))
+    .then(studentDocs=>{
+      const batch = db.batch();
+      studentDocs.forEach(sdoc=>{
+        const notes = sdoc.exists? sdoc.data().notes || {} : {};
+        // Substituïm noms d’activitats pel seu valor
+        let formulaToEval = formula;
+        classActivities.forEach(aid=>{
+          const val = (notes[aid]!==undefined)? notes[aid]:0;
+          formulaToEval = formulaToEval.replace(new RegExp(`\\b${aid}\\b`,'g'), val);
+        });
+        // Calculem el resultat
+        let result = 0;
+        try{ result = eval(formulaToEval); }catch(e){ result=0; }
+        batch.update(db.collection('alumnes').doc(sdoc.id), { [`notes.${activityId}`]: Number(result.toFixed(2)) });
+      });
+      return batch.commit();
+    })
+    .then(()=> loadClassData())
+    .catch(e=> alert('Error aplicant fórmula: '+e.message));
+}
 /* ---------------- Helpers Notes & Excel ---------------- */
 function th(txt, cls=''){
   const el = document.createElement('th');
@@ -626,7 +660,7 @@ function exportExcel(){
   XLSX.writeFile(wb, fname);
 }
 
-// Tancar menús si fas clic fora
+/* ---------------- Tancar menús si fas clic fora ---------------- */
 document.addEventListener('click', function(e) {
   document.querySelectorAll('.menu').forEach(menu => {
     if (!menu.contains(e.target) && !e.target.classList.contains('menu-btn')) {
