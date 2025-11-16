@@ -1,5 +1,4 @@
-// app.js - lògica principal (modules)
-// importar helpers de modals
+// Importar helpers de modals
 import { openModal, closeModal, confirmAction } from './modals.js';
 
 /* ---------------- FIREBASE CONFIG ---------------- */
@@ -20,9 +19,8 @@ let professorUID = null;
 let currentClassId = null;
 let classStudents = [];
 let classActivities = [];
-let deleteMode = false; // mode eliminar classes
 
-/* Elements */
+/* ---------------- Elements ---------------- */
 const loginScreen = document.getElementById('loginScreen');
 const appRoot = document.getElementById('appRoot');
 const usuariNom = document.getElementById('usuariNom');
@@ -37,33 +35,16 @@ const btnRefreshClasses = document.getElementById('btnRefreshClasses');
 const screenClasses = document.getElementById('screen-classes');
 const screenClass = document.getElementById('screen-class');
 const classesGrid = document.getElementById('classesGrid');
-
 const btnBack = document.getElementById('btnBack');
-const btnAddStudent = document.getElementById('btnAddStudent');
-const btnAddActivity = document.getElementById('btnAddActivity');
-const btnSortAlpha = document.getElementById('btnSortAlpha');
-const btnExport = document.getElementById('btnExport');
-
-const studentsList = document.getElementById('studentsList');
-const studentsCount = document.getElementById('studentsCount');
-const notesThead = document.getElementById('notesThead');
-const notesTbody = document.getElementById('notesTbody');
-const notesTfoot = document.getElementById('notesTfoot');
-
-/* modal buttons */
-const modalCreateClassBtn = document.getElementById('modalCreateClassBtn');
-const modalAddStudentBtn = document.getElementById('modalAddStudentBtn');
-const modalAddActivityBtn = document.getElementById('modalAddActivityBtn');
 
 /* ---------- UTILS ---------- */
 function showLogin() {
     loginScreen.style.display = 'block';
-    loginScreen.classList.remove('hidden');
     appRoot.classList.add('hidden');
 }
+
 function showApp() {
     loginScreen.style.display = 'none';
-    loginScreen.classList.add('hidden');
     appRoot.classList.remove('hidden');
 }
 
@@ -72,7 +53,6 @@ btnLogin.addEventListener('click', () => {
     const email = document.getElementById('loginEmail').value.trim();
     const pw = document.getElementById('loginPassword').value;
     if (!email || !pw) return alert('Introdueix email i contrasenya');
-
     auth.signInWithEmailAndPassword(email, pw)
         .then(u => {
             professorUID = u.user.uid;
@@ -85,11 +65,9 @@ btnRegister.addEventListener('click', () => {
     const email = document.getElementById('loginEmail').value.trim();
     const pw = document.getElementById('loginPassword').value;
     if (!email || !pw) return alert('Introdueix email i contrasenya');
-
     auth.createUserWithEmailAndPassword(email, pw)
         .then(u => {
             professorUID = u.user.uid;
-            // create professor doc
             db.collection('professors').doc(professorUID).set({ email, classes: [] })
                 .then(() => setupAfterAuth(u.user));
         })
@@ -99,7 +77,6 @@ btnRegister.addEventListener('click', () => {
 btnRecover.addEventListener('click', () => {
     const email = document.getElementById('loginEmail').value.trim();
     if (!email) return alert('Introdueix el teu email per recuperar la contrasenya');
-
     auth.sendPasswordResetEmail(email)
         .then(() => alert('Email de recuperació enviat!'))
         .catch(e => alert('Error: ' + e.message));
@@ -131,17 +108,16 @@ function setupAfterAuth(user) {
     usuariNom.textContent = email.split('@')[0] || email;
     loadClassesScreen();
 }
+
 /* ---------------- Classes screen ---------------- */
 btnCreateClass.addEventListener('click', () => openModal('modalCreateClass'));
 btnRefreshClasses.addEventListener('click', loadClassesScreen);
 
 function loadClassesScreen() {
-    if (!professorUID) { alert('Fes login primer.'); return; }
-
+    if (!professorUID) return alert('Fes login primer.');
     screenClass.classList.add('hidden');
     screenClasses.classList.remove('hidden');
-    classesGrid.innerHTML = '<div class="col-span-full text-sm text-gray-500">Carregant...</div>';
-
+    classesGrid.innerHTML = '<div class="text-sm text-gray-500">Carregant...</div>';
     const classColors = [
         'from-indigo-600 to-purple-600',
         'from-pink-500 to-red-500',
@@ -158,10 +134,9 @@ function loadClassesScreen() {
         }
         const ids = doc.data().classes || [];
         if (ids.length === 0) {
-            classesGrid.innerHTML = `<div class="col-span-full p-6 bg-white dark:bg-gray-800 rounded shadow text-center">No tens cap classe. Crea la primera!</div>`;
+            classesGrid.innerHTML = `<div class="p-6 bg-white rounded shadow text-center">No tens cap classe. Crea la primera!</div>`;
             return;
         }
-
         Promise.all(ids.map(id => db.collection('classes').doc(id).get()))
             .then(docs => {
                 classesGrid.innerHTML = '';
@@ -169,92 +144,29 @@ function loadClassesScreen() {
                     if (!d.exists) return;
                     const color = classColors[i % classColors.length];
                     const card = document.createElement('div');
-                    card.className = `class-card bg-gradient-to-br ${color} text-white relative`;
+                    card.className = `class-card bg-gradient-to-br ${color} text-white`;
                     card.innerHTML = `
-                        ${deleteMode ? '<input type="checkbox" class="delete-checkbox absolute top-2 right-2 w-5 h-5">' : ''}
                         <h3 class="text-lg font-bold">${d.data().nom || 'Sense nom'}</h3>
-                        <p class="text-sm mt-2">${(d.data().alumnes || []).length} alumnes · ${(d.data().activitats || []).length} activitats</p>
-                        <div class="click-hint">${deleteMode ? 'Selecciona per eliminar' : 'Fes clic per obrir'}</div>
+                        <p class="text-sm mt-2">${(d.data().alumnes||[]).length} alumnes · ${(d.data().activitats||[]).length} activitats</p>
+                        <div class="click-hint">Fes clic per obrir</div>
                     `;
-                    if (!deleteMode) card.addEventListener('click', () => openClass(d.id));
+                    card.addEventListener('click', () => openClass(d.id));
                     classesGrid.appendChild(card);
                 });
-                const existingBtn = document.querySelector('#classesGrid + .delete-selected-btn');
-if(existingBtn) existingBtn.remove();
-
-if(deleteMode){
-  addDeleteSelectedButton();;
             });
     }).catch(e => {
-        classesGrid.innerHTML = `<div class="text-sm text-red-500">Error carregant classes</div>`;
+        classesGrid.innerHTML = '<div class="text-sm text-red-500">Error carregant classes</div>';
         console.error(e);
     });
 }
-
-/* ---------------- Mode eliminar classes ---------------- */
-const btnDeleteMode = document.getElementById('btnDeleteMode');
-btnDeleteMode.addEventListener('click', () => {
-    deleteMode = !deleteMode;
-    btnDeleteMode.textContent = deleteMode ? '❌ Cancel·lar eliminar' : '🗑️ Eliminar classe';
-    loadClassesScreen();
-});
-
-// afegeix botó “Eliminar seleccionats” sota grid
-function addDeleteSelectedButton() {
-    let existingBtn = document.querySelector('#classesGrid + .delete-selected-btn');
-    if (existingBtn) existingBtn.remove();
-
-    const delBtn = document.createElement('button');
-    delBtn.textContent = 'Eliminar seleccionats';
-    delBtn.className = 'delete-selected-btn mt-3 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded shadow';
-    delBtn.onclick = confirmDeleteSelected;
-    classesGrid.parentNode.insertBefore(delBtn, classesGrid.nextSibling);
-}
-
-// confirmar eliminació
-function confirmDeleteSelected() {
-    const selected = [...document.querySelectorAll('.delete-checkbox')]
-        .filter(chk => chk.checked)
-        .map(chk => chk.closest('.class-card'));
-    if (selected.length === 0) return alert('Selecciona almenys una classe!');
-
-    confirmAction(
-        'Confirmació d\'eliminació',
-        `Estàs segur que vols eliminar ${selected.length} classe(s)? Aquesta acció no té marxa enrere.`,
-        () => {
-            selected.forEach(card => {
-                const className = card.querySelector('h3').textContent;
-                card.remove();
-
-                // eliminar del backend
-                db.collection('professors').doc(professorUID).get().then(doc => {
-                    const allClasses = doc.data().classes || [];
-                    const classIdToRemove = allClasses.find(id => {
-                        // simplificació: id directe
-                        return id;
-                    });
-                    if (classIdToRemove) {
-                        db.collection('professors').doc(professorUID).update({ classes: firebase.firestore.FieldValue.arrayRemove(classIdToRemove) });
-                        db.collection('classes').doc(classIdToRemove).delete();
-                    }
-                });
-            });
-            deleteMode = false;
-            loadClassesScreen();
-        }
-    );
-}
-
-/* ---------------- Crear classe ---------------- */
+/* ---------------- Create Class Modal ---------------- */
 function createClassModal() {
     const name = document.getElementById('modalClassName').value.trim();
     if (!name) return alert('Posa un nom');
-
     const ref = db.collection('classes').doc();
     ref.set({ nom: name, alumnes: [], activitats: [] })
-        .then(() => db.collection('professors').doc(professorUID).update({
-            classes: firebase.firestore.FieldValue.arrayUnion(ref.id)
-        }))
+        .then(() => db.collection('professors').doc(professorUID)
+            .update({ classes: firebase.firestore.FieldValue.arrayUnion(ref.id) }))
         .then(() => {
             closeModal('modalCreateClass');
             document.getElementById('modalClassName').value = '';
@@ -264,7 +176,7 @@ function createClassModal() {
 }
 modalCreateClassBtn.addEventListener('click', createClassModal);
 
-/* ---------------- Obre classe ---------------- */
+/* ---------------- Open Class ---------------- */
 function openClass(id) {
     currentClassId = id;
     screenClasses.classList.add('hidden');
@@ -278,26 +190,24 @@ btnBack.addEventListener('click', () => {
     screenClasses.classList.remove('hidden');
     loadClassesScreen();
 });
-/* ---------------- Carrega dades de la classe ---------------- */
+
 function loadClassData() {
     if (!currentClassId) return;
-
-    db.collection('classes').doc(currentClassId).get().then(doc => {
-        if (!doc.exists) { alert('Classe no trobada'); return; }
-
-        const data = doc.data();
-        classStudents = data.alumnes || [];
-        classActivities = data.activitats || [];
-
-        document.getElementById('classTitle').textContent = data.nom || 'Sense nom';
-        document.getElementById('classSub').textContent = `ID: ${doc.id}`;
-
-        renderStudentsList();
-        renderNotesGrid();
-    }).catch(e => console.error(e));
+    db.collection('classes').doc(currentClassId).get()
+        .then(doc => {
+            if (!doc.exists) return alert('Classe no trobada');
+            const data = doc.data();
+            classStudents = data.alumnes || [];
+            classActivities = data.activitats || [];
+            document.getElementById('classTitle').textContent = data.nom || 'Sense nom';
+            document.getElementById('classSub').textContent = `ID: ${doc.id}`;
+            renderStudentsList();
+            renderNotesGrid();
+        })
+        .catch(e => console.error(e));
 }
 
-/* ---------------- Alumnes ---------------- */
+/* ---------------- Students ---------------- */
 function renderStudentsList() {
     studentsList.innerHTML = '';
     studentsCount.textContent = `(${classStudents.length})`;
@@ -310,25 +220,31 @@ function renderStudentsList() {
         db.collection('alumnes').doc(stuId).get().then(doc => {
             const name = doc.exists ? doc.data().nom : 'Desconegut';
             const li = document.createElement('li');
-            li.className = 'flex items-center justify-between bg-gray-50 dark:bg-gray-900 p-2 rounded';
+            li.className = 'flex items-center justify-between bg-gray-50 p-2 rounded';
             li.innerHTML = `
                 <div class="flex items-center gap-3">
                     <span draggable="true" title="Arrossega per reordenar" class="cursor-move text-sm text-gray-500">☰</span>
                     <span class="font-medium">${name}</span>
                 </div>
                 <div class="flex gap-2">
-                    <button class="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-white" title="Eliminar">🗑</button>
+                    <button class="text-sm text-gray-500 hover:text-gray-700" title="Eliminar">🗑</button>
                 </div>
             `;
 
-            // eliminar alumne
+            // Delete handler
             li.querySelector('button').addEventListener('click', () => {
-                confirmAction('Eliminar alumne', `Segur que vols eliminar ${name}?`, () => removeStudent(stuId));
+                confirmAction(
+                    'Eliminar alumne',
+                    `Segur que vols eliminar ${name}?`,
+                    () => removeStudent(stuId)
+                );
             });
 
-            // drag & drop reordenació
+            // Drag & drop handlers
             const dragHandle = li.querySelector('[draggable]');
-            dragHandle.addEventListener('dragstart', e => e.dataTransfer.setData('text/plain', idx.toString()));
+            dragHandle.addEventListener('dragstart', e => {
+                e.dataTransfer.setData('text/plain', idx.toString());
+            });
             li.addEventListener('dragover', e => e.preventDefault());
             li.addEventListener('drop', e => {
                 e.preventDefault();
@@ -342,18 +258,17 @@ function renderStudentsList() {
     });
 }
 
+// Add Student Modal
 btnAddStudent.addEventListener('click', () => openModal('modalAddStudent'));
 modalAddStudentBtn.addEventListener('click', createStudentModal);
 
 function createStudentModal() {
     const name = document.getElementById('modalStudentName').value.trim();
     if (!name) return alert('Posa un nom');
-
     const ref = db.collection('alumnes').doc();
     ref.set({ nom: name, notes: {} })
         .then(() => db.collection('classes').doc(currentClassId)
-            .update({ alumnes: firebase.firestore.FieldValue.arrayUnion(ref.id) })
-        )
+            .update({ alumnes: firebase.firestore.FieldValue.arrayUnion(ref.id) }))
         .then(() => {
             closeModal('modalAddStudent');
             document.getElementById('modalStudentName').value = '';
@@ -375,8 +290,7 @@ function reorderStudents(fromIdx, toIdx) {
     const arr = Array.from(classStudents);
     const item = arr.splice(fromIdx, 1)[0];
     arr.splice(toIdx, 0, item);
-    db.collection('classes').doc(currentClassId)
-        .update({ alumnes: arr })
+    db.collection('classes').doc(currentClassId).update({ alumnes: arr })
         .then(() => loadClassData())
         .catch(e => console.error('Error reordenant', e));
 }
@@ -394,20 +308,17 @@ function sortStudentsAlpha() {
         .then(() => loadClassData())
         .catch(e => console.error(e));
 }
-
-/* ---------------- Activitats ---------------- */
+/* ---------------- Activities ---------------- */
 btnAddActivity.addEventListener('click', () => openModal('modalAddActivity'));
 modalAddActivityBtn.addEventListener('click', createActivityModal);
 
 function createActivityModal() {
     const name = document.getElementById('modalActivityName').value.trim();
     if (!name) return alert('Posa un nom');
-
     const ref = db.collection('activitats').doc();
     ref.set({ nom: name, data: new Date().toISOString().split('T')[0] })
         .then(() => db.collection('classes').doc(currentClassId)
-            .update({ activitats: firebase.firestore.FieldValue.arrayUnion(ref.id) })
-        )
+            .update({ activitats: firebase.firestore.FieldValue.arrayUnion(ref.id) }))
         .then(() => {
             closeModal('modalAddActivity');
             document.getElementById('modalActivityName').value = '';
@@ -448,12 +359,10 @@ function renderNotesGrid() {
                 const id = adoc.id;
                 const name = adoc.exists ? (adoc.data().nom || 'Sense nom') : 'Desconegut';
                 const thEl = th(name);
-
                 const delBtn = document.createElement('button');
                 delBtn.className = 'text-sm text-red-600 ml-2';
                 delBtn.textContent = '🗑';
                 delBtn.onclick = () => removeActivity(id);
-
                 thEl.appendChild(delBtn);
                 headRow.appendChild(thEl);
             });
@@ -474,20 +383,20 @@ function renderNotesGrid() {
                         const tr = document.createElement('tr');
                         tr.className = 'align-top';
 
-                        // Nom alumne
+                        // Student name cell
                         const tdName = document.createElement('td');
                         tdName.className = 'border px-2 py-1';
                         tdName.innerHTML = `
                             <div class="flex items-center justify-between">
                                 <span class="font-medium">${sdata.nom}</span>
                                 <div class="flex gap-2">
-                                    <button class="text-xs text-gray-500" onclick="(function(){ confirmAction('Eliminar alumne','Eliminar aquest alumne?', ()=> removeStudent('${sid}') ) })()">🗑</button>
+                                    <button class="text-xs text-gray-500" onclick="(function(){ confirmAction('Eliminar alumne','Eliminar aquest alumne?', ()=> removeStudent('${sid}')) })()">🗑</button>
                                 </div>
                             </div>
                         `;
                         tr.appendChild(tdName);
 
-                        // Notes per activitat
+                        // Activity cells
                         actDocs.forEach(actDoc => {
                             const aid = actDoc.id;
                             const val = (sdata.notes && sdata.notes[aid] !== undefined) ? sdata.notes[aid] : '';
@@ -506,7 +415,7 @@ function renderNotesGrid() {
                             tr.appendChild(td);
                         });
 
-                        // Mitjana alumne
+                        // Student average
                         const avgTd = document.createElement('td');
                         avgTd.className = 'border px-2 py-1 text-right font-semibold';
                         avgTd.textContent = computeStudentAverageText(sdata);
@@ -516,18 +425,23 @@ function renderNotesGrid() {
                     });
                     renderAverages();
                 });
-        }).catch(e => console.error('Error renderNotesGrid', e));
+        })
+        .catch(e => console.error('Error renderNotesGrid', e));
 }
 
-/* ---------------- Helpers Notes & Averages ---------------- */
-function th(txt, cls = '') { const el = document.createElement('th'); el.className = 'border px-2 py-1 ' + cls; el.textContent = txt; return el; }
+function th(txt, cls = '') {
+    const el = document.createElement('th');
+    el.className = 'border px-2 py-1 ' + cls;
+    el.textContent = txt;
+    return el;
+}
 
+/* ---------------- Notes Utilities ---------------- */
 function saveNote(studentId, activityId, value) {
     const num = value === '' ? null : Number(value);
     const updateObj = {};
     if (num === null || isNaN(num)) updateObj[`notes.${activityId}`] = firebase.firestore.FieldValue.delete();
     else updateObj[`notes.${activityId}`] = num;
-
     db.collection('alumnes').doc(studentId).update(updateObj)
         .then(() => renderNotesGrid())
         .catch(e => console.error('Error saving note', e));
@@ -551,26 +465,28 @@ function computeStudentAverageText(studentData) {
 }
 
 function renderAverages() {
-    // Mitjana per alumne
+    // Student averages
     Array.from(notesTbody.children).forEach(tr => {
         const inputs = Array.from(tr.querySelectorAll('input')).map(i => Number(i.value)).filter(v => !isNaN(v));
         const lastTd = tr.querySelectorAll('td')[tr.querySelectorAll('td').length - 1];
         lastTd.textContent = inputs.length ? (inputs.reduce((a, b) => a + b, 0) / inputs.length).toFixed(2) : '';
     });
 
-    // Mitjana per activitat
+    // Activity averages
     const actCount = classActivities.length;
     notesTfoot.innerHTML = '';
     const tr = document.createElement('tr');
     tr.className = 'text-sm';
     tr.appendChild(th('Mitjana activitat'));
 
-    if (actCount === 0) { tr.appendChild(th('', '')); notesTfoot.appendChild(tr); return; }
+    if (actCount === 0) {
+        tr.appendChild(th('', ''));
+        notesTfoot.appendChild(tr);
+        return;
+    }
 
     for (let i = 0; i < actCount; i++) {
-        const inputs = Array.from(notesTbody.querySelectorAll('tr'))
-            .map(r => r.querySelectorAll('input')[i])
-            .filter(Boolean);
+        const inputs = Array.from(notesTbody.querySelectorAll('tr')).map(r => r.querySelectorAll('input')[i]).filter(Boolean);
         const vals = inputs.map(inp => Number(inp.value)).filter(v => !isNaN(v));
         const avg = vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2) : '';
         const td = document.createElement('td');
@@ -584,7 +500,6 @@ function renderAverages() {
 
 /* ---------------- Export Excel ---------------- */
 btnExport.addEventListener('click', exportExcel);
-
 function exportExcel() {
     const table = document.getElementById('notesTable');
     const wb = XLSX.utils.table_to_book(table, { sheet: "Notes" });
