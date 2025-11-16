@@ -164,23 +164,32 @@
     </div>
   </div>
 
-  <div id="modalCalc" class="fixed inset-0 hidden items-center justify-center z-50">
+ <!-- Formula Modal -->
+<div id="modalFormula" class="fixed inset-0 hidden items-center justify-center z-50">
   <div class="modal-backdrop absolute inset-0"></div>
   <div class="bg-white rounded shadow-lg z-10 w-full max-w-lg p-4">
-    <h3 class="text-lg font-semibold mb-2">Càlcul columna</h3>
-    <div class="mb-3">
-      <label><input type="radio" name="calcType" value="numeric" checked> Numeric</label>
-      <label class="ml-4"><input type="radio" name="calcType" value="formula"> Fórmula</label>
-    </div>
-    <div id="formulaBuilderContainer" class="hidden border rounded p-2 mb-3 max-h-60 overflow-y-auto">
-      <!-- Aquí anirà el mini-editor de fórmula -->
+    <h3 class="text-lg font-semibold mb-2">Configura Fórmula</h3>
+    <p class="text-sm text-gray-600 mb-2">Crea una fórmula per aplicar a tota la columna de l'activitat:</p>
+    <div id="formulaBuilder" class="flex flex-wrap gap-1 mb-3 border p-2 rounded min-h-[40px]"></div>
+    <select id="activitySelect" class="border rounded px-2 py-1 mb-3 w-full">
+      <option value="">Selecciona activitat</option>
+    </select>
+    <div class="flex gap-2 flex-wrap mb-3">
+      <button class="formula-btn px-2 py-1 bg-gray-200 rounded" data-op="+">+</button>
+      <button class="formula-btn px-2 py-1 bg-gray-200 rounded" data-op="-">-</button>
+      <button class="formula-btn px-2 py-1 bg-gray-200 rounded" data-op="*">×</button>
+      <button class="formula-btn px-2 py-1 bg-gray-200 rounded" data-op="/">÷</button>
+      <button class="formula-btn px-2 py-1 bg-gray-200 rounded" data-op="(">(</button>
+      <button class="formula-btn px-2 py-1 bg-gray-200 rounded" data-op=")">)</button>
+      <button id="formulaClearBtn" class="px-2 py-1 bg-red-200 rounded">Borrar</button>
     </div>
     <div class="flex justify-end gap-2">
-      <button data-modal-close="modalCalc" class="modal-close px-3 py-1 rounded bg-gray-200">Cancel·lar</button>
-      <button id="modalCalcApply" class="px-3 py-1 rounded bg-indigo-500 text-white">Aplicar</button>
+      <button data-modal-close="modalFormula" class="modal-close px-3 py-1 rounded bg-gray-200">Cancel·lar</button>
+      <button id="formulaApplyBtn" class="px-3 py-1 rounded bg-teal-600 text-white">Aplica fórmula</button>
     </div>
   </div>
 </div>
+
 
 
 
