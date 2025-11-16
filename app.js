@@ -488,10 +488,16 @@ function renderNotesGrid(){
         });
 
         // --- Calcul button ---
-        menuDiv.querySelector('.calc-btn').addEventListener('click', e => {
-          e.stopPropagation(); 
-          openCalcModal(adoc.id); 
-        });
+       menuDiv.querySelector('.calc-btn').addEventListener('click', e => {
+        e.stopPropagation(); 
+        const choice = prompt('Tipus de càlcul:\n1: Numeric\n2: Formula\n3: Redondeig', '1');
+        if(choice === '3'){
+          openRoundModal(adoc.id);
+        } else {
+          openCalcModal(adoc.id);
+        }
+      });
+
 
         // Edit / Delete
         menuDiv.querySelector('.edit-btn').addEventListener('click', ()=>{
@@ -678,6 +684,77 @@ modalApplyCalcBtn.addEventListener('click', async ()=>{
     }
   }
 });
+
+function openRoundModal(activityId){
+  currentCalcActivityId = activityId; 
+  openModal('modalCalc');
+  
+  // Amaguem seccions que no calen
+  numericDiv.classList.add('hidden');
+  formulaDiv.classList.remove('hidden'); // reutilitzem aquesta secció
+  formulaField.value = ''; 
+  formulaButtonsDiv.innerHTML = '';
+
+  // Botons activitats
+  classActivities.forEach(aid=>{
+    db.collection('activitats').doc(aid).get().then(doc=>{
+      const name = doc.exists ? doc.data().nom : '???';
+      const btn = document.createElement('button');
+      btn.type='button';
+      btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
+      btn.textContent = name;
+      btn.addEventListener('click', ()=> addToFormula(name));
+      formulaButtonsDiv.appendChild(btn);
+    });
+  });
+
+  // Botons redondeig 0.25 / 0.5 / 1
+  [0.25, 0.5, 1].forEach(step=>{
+    const btn = document.createElement('button');
+    btn.type='button';
+    btn.className='px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
+    btn.textContent = step;
+    btn.addEventListener('click', ()=> applyRound(step));
+    formulaButtonsDiv.appendChild(btn);
+  });
+
+  // Botó esborrar
+  const clearBtn = document.createElement('button');
+  clearBtn.type='button';
+  clearBtn.className='px-2 py-1 m-1 bg-red-300 rounded hover:bg-red-400';
+  clearBtn.textContent = 'Esborrar';
+  clearBtn.addEventListener('click', ()=> formulaField.value='');
+  formulaButtonsDiv.appendChild(clearBtn);
+}
+
+function applyRound(step){
+  if(!currentCalcActivityId) return;
+  const formulaText = formulaField.value.trim();
+  if(!formulaText) return alert('Selecciona una activitat!');
+  
+  // Trobar ID de l'activitat seleccionada pel nom
+  const act = classActivities.find(aid=>{
+    const doc = db.collection('activitats').doc(aid);
+    return true; // comprovar nom després amb promesa
+  });
+
+  classStudents.forEach(async sid=>{
+    for(const aid of classActivities){
+      const adoc = await db.collection('activitats').doc(aid).get();
+      const actName = adoc.exists ? adoc.data().nom : '';
+      if(actName === formulaText){
+        const sdoc = await db.collection('alumnes').doc(sid).get();
+        let val = sdoc.exists && sdoc.data().notes ? sdoc.data().notes[aid] : 0;
+        val = Number(val) || 0;
+        // Redondeig
+        val = Math.round(val / step) * step;
+        saveNote(sid, aid, val);
+      }
+    }
+  });
+
+  closeModal('modalCalc');
+}
 
 
 // ---------------- Construir botons de fórmules ----------------
