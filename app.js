@@ -754,10 +754,14 @@ async function evalFormulaAsync(formula, studentId){
 
 // ---------------- Helper per trobar nom alumne per ID ----------------
 function getStudentNameById(sid){
-  const tr = Array.from(notesTbody.children).find(tr=> tr.firstChild.textContent !== '');
+  // Cerca real del nom
+  const stu = classStudents.indexOf(sid);
+  if(stu === -1) return '';
+  const tr = notesTbody.children[stu];
   if(!tr) return '';
-  return tr.firstChild.textContent;
+  return tr.firstChild.textContent.trim();
 }
+
 
 /* ---------------- Export Excel ---------------- */
 btnExport.addEventListener('click', exportExcel);
