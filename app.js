@@ -489,14 +489,46 @@ function renderNotesGrid(){
 
         // --- Calcul button ---
        menuDiv.querySelector('.calc-btn').addEventListener('click', e => {
-        e.stopPropagation(); 
-        const choice = prompt('Tipus de càlcul:\n1: Numeric\n2: Formula\n3: Redondeig', '1');
-        if(choice === '3'){
-          openRoundModal(adoc.id);
-        } else {
-          openCalcModal(adoc.id);
-        }
-      });
+  e.stopPropagation();
+  const menu = document.createElement('div');
+  menu.className = 'absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10';
+  menu.style.minWidth = '150px';
+  
+  // Opcions del desplegable
+  const options = [
+    { name: 'Numeric', action: () => openCalcModal(adoc.id, 'numeric') },
+    { name: 'Formula', action: () => openCalcModal(adoc.id, 'formula') },
+    { name: 'Redondeig', action: () => openRoundModal(adoc.id) }
+  ];
+
+  options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.textContent = opt.name;
+    btn.className = 'w-full text-left px-3 py-1 hover:bg-gray-100 dark:hover:bg-gray-700';
+    btn.addEventListener('click', () => {
+      opt.action();
+      document.body.removeChild(menu);
+    });
+    menu.appendChild(btn);
+  });
+
+  // Posicionar el menú al costat del botó
+  const rect = e.target.getBoundingClientRect();
+  menu.style.top = rect.bottom + window.scrollY + 'px';
+  menu.style.left = rect.left + window.scrollX + 'px';
+
+  document.body.appendChild(menu);
+
+  // Tancar si fas clic fora
+  const handler = ev => {
+    if (!menu.contains(ev.target)) {
+      document.body.removeChild(menu);
+      document.removeEventListener('click', handler);
+    }
+  };
+  document.addEventListener('click', handler);
+});
+
 
 
         // Edit / Delete
@@ -628,16 +660,21 @@ function renderAverages(){
 }
 
 /* ---------------- Open Calculation Modal ---------------- */
-function openCalcModal(activityId){
+function openCalcModal(activityId, type = 'numeric'){
   currentCalcActivityId = activityId; 
   openModal('modalCalc');
-  // Reset modal
-  document.getElementById('calcType').value = 'numeric';
-  document.getElementById('formulaInputs').classList.add('hidden');
-  document.getElementById('numericInput').classList.remove('hidden');
-  document.getElementById('numericField').value = '';
-  document.getElementById('formulaField').value = '';
+  
+  numericDiv.classList.toggle('hidden', type !== 'numeric');
+  formulaDiv.classList.toggle('hidden', type === 'numeric');
+  
+  numericField.value = '';
+  formulaField.value = '';
+
+  if(type === 'formula'){
+    buildFormulaButtons();
+  }
 }
+
 /* ---------------- Modal Calcul: Numeric / Formula ---------------- */
 const calcTypeSelect = document.getElementById('calcType');
 const numericDiv = document.getElementById('numericInput');
