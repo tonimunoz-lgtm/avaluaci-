@@ -20,6 +20,8 @@ let currentClassId = null;
 let classStudents = [];
 let classActivities = [];
 let deleteMode = false;
+let currentCalcActivityId = null; // Activitat actual per fer càlculs
+
 
 /* Elements */
 const loginScreen = document.getElementById('loginScreen');
@@ -487,9 +489,9 @@ function renderNotesGrid(){
           menu.classList.toggle('hidden');
         });
 
-        menuDiv.querySelector('.calc-btn').addEventListener('click', () => {
-          e.stopPropagation();
-          openCalcModal(id); // id és l'ID de l'activitat
+       menuDiv.querySelector('.calc-btn').addEventListener('click', e => {
+        e.stopPropagation(); // evitar que s'obri/ tanqui altres menús
+        openCalcModal(adoc.id); // adoc.id és l'activitat corresponent
         });
         
         menuDiv.querySelector('.edit-btn').addEventListener('click', ()=>{
@@ -615,6 +617,19 @@ function renderAverages(){
   }
   tr.appendChild(th('',''));
   notesTfoot.appendChild(tr);
+}
+
+function openCalcModal(activityId){
+  // Guardarem l'activitat que estem editant
+  currentCalcActivityId = activityId; // variable global nova que afegirem
+  // Obrir el modal
+  openModal('modalCalc');
+  // Reset inputs del modal
+  document.getElementById('calcType').value = 'numeric';
+  document.getElementById('formulaInputs').classList.add('hidden');
+  document.getElementById('numericInput').classList.remove('hidden');
+  document.getElementById('numericField').value = '';
+  document.getElementById('formulaField').value = '';
 }
 
 /* ---------------- Export Excel ---------------- */
