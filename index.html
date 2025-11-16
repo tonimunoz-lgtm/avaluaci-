@@ -48,10 +48,15 @@
           <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight">Gestor de Classes</h1>
           <p class="text-sm text-gray-500">Modern · Responsive · Mòbil-friendly</p>
         </div>
-        <div class="flex items-center gap-4">
-          <span id="usuariNom" class="font-medium text-gray-700"></span>
-          <button id="btnLogout" class="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg shadow">Logout</button>
+        <div id="userArea" class="flex items-center gap-2">
+          <span id="usuariNom">usuari</span>
+          <button id="userMenuBtn" class="text-gray-600 hover:text-gray-800">⋮</button>
+          <div id="userMenu" class="hidden absolute bg-white border rounded shadow-md p-2">
+            <button id="changePasswordBtn" class="w-full text-left px-2 py-1 hover:bg-gray-100">Canviar contrasenya</button>
+          </div>
+          <button id="btnLogout">Logout</button>
         </div>
+
       </header>
 
       <main>
