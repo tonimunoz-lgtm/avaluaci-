@@ -508,6 +508,8 @@ function renderNotesGrid(){
 
       headRow.appendChild(th('Mitjana', 'text-right'));
       notesThead.appendChild(headRow);
+      enableActivityDrag(); // Activem drag & drop per les columnes
+
 
       if(classStudents.length===0){
         notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivities.length+2}">No hi ha alumnes</td></tr>`;
@@ -780,6 +782,44 @@ function getStudentRowById(sid) {
   return notesTbody.children[studentIndex] || null;
 }
 
+/* ---------------- Drag & Drop per activitats ---------------- */
+function enableActivityDrag(){
+  const ths = notesThead.querySelectorAll('tr:first-child th');
+  ths.forEach((thEl, idx)=>{
+    if(idx === 0 || idx === ths.length-1) return; // No draggable: primera (Alumne) i última (Mitjana)
+    
+    thEl.setAttribute('draggable', true);
+    thEl.addEventListener('dragstart', e=>{
+      e.dataTransfer.setData('text/plain', idx);
+    });
+
+    thEl.addEventListener('dragover', e=>{
+      e.preventDefault();
+      thEl.classList.add('border-dashed', 'border-2');
+    });
+
+    thEl.addEventListener('dragleave', e=>{
+      thEl.classList.remove('border-dashed', 'border-2');
+    });
+
+    thEl.addEventListener('drop', e=>{
+      e.preventDefault();
+      thEl.classList.remove('border-dashed', 'border-2');
+      const fromIdx = Number(e.dataTransfer.getData('text/plain'));
+      const toIdx = idx;
+
+      if(fromIdx === toIdx) return;
+
+      // Reordenar classActivities
+      const arr = Array.from(classActivities);
+      const moved = arr.splice(fromIdx-1, 1)[0]; // -1 per ignorar columna Alumne
+      arr.splice(toIdx-1, 0, moved);
+      classActivities = arr;
+
+      renderNotesGrid();
+    });
+  });
+}
 
 
 /* ---------------- Export Excel ---------------- */
