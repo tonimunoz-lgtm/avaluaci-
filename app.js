@@ -839,3 +839,28 @@ document.addEventListener('click', function(e) {
     }
   });
 });
+const userMenuBtn = document.getElementById('userMenuBtn');
+const userMenu = document.getElementById('userMenu');
+const changePasswordBtn = document.getElementById('changePasswordBtn');
+
+// Toggle menú
+userMenuBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  userMenu.classList.toggle('hidden');
+});
+
+// Tancar menú si clics fora
+document.addEventListener('click', () => {
+  userMenu.classList.add('hidden');
+});
+
+// Canviar contrasenya
+changePasswordBtn.addEventListener('click', () => {
+  const email = auth.currentUser?.email;
+  if(!email) return alert('No hi ha usuari actiu.');
+  const newPw = prompt('Introdueix la nova contrasenya:');
+  if(!newPw) return;
+  auth.currentUser.updatePassword(newPw)
+    .then(()=> alert('Contrasenya canviada correctament!'))
+    .catch(e=> alert('Error: ' + e.message));
+});
