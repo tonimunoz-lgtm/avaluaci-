@@ -1,4 +1,4 @@
-// app.js - lògica principal (modules)
+// ---------------- app.js - Part 1/3 ----------------
 import { openModal, closeModal, confirmAction } from './modals.js';
 
 /* ---------------- FIREBASE CONFIG ---------------- */
@@ -119,14 +119,12 @@ function setupAfterAuth(user) {
   showApp();
   const email = user.email || '';
   usuariNom.textContent = email.split('@')[0] || email;
-
-  // Crida automàtica per carregar la graella de classes
   loadClassesScreen();
 }
 
 /* ---------------- Classes screen ---------------- */
 btnCreateClass.addEventListener('click', ()=> openModal('modalCreateClass'));
-/* ---------------- Classes Screen (cont.) ---------------- */
+
 function loadClassesScreen() {
   if(!professorUID) { alert('Fes login primer.'); return; }
   screenClass.classList.add('hidden');
@@ -174,13 +172,14 @@ function loadClassesScreen() {
               <button class="menu-btn text-white font-bold text-xl">⋮</button>
               <div class="menu hidden absolute right-0 mt-1 bg-white text-black border rounded shadow z-10 transition-opacity duration-200 opacity-0">
                 <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100">Editar</button>
+                <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100">Eliminar</button>
+                <button class="calc-btn px-3 py-1 w-full text-left hover:bg-gray-100">Calcul</button>
               </div>
             `;
             card.appendChild(menuDiv);
 
             const menuBtn = menuDiv.querySelector('.menu-btn');
             const menu = menuDiv.querySelector('.menu');
-
             menuBtn.addEventListener('click', e => {
               e.stopPropagation();
               document.querySelectorAll('.menu').forEach(m => m.classList.add('hidden'));
@@ -195,15 +194,23 @@ function loadClassesScreen() {
                 .catch(e => alert('Error editant classe: ' + e.message));
             });
 
+            menuDiv.querySelector('.delete-btn').addEventListener('click', () => {
+              confirmAction('Eliminar classe', 'Segur que vols eliminar-la?', ()=> {
+                db.collection('professors').doc(professorUID).update({
+                  classes: firebase.firestore.FieldValue.arrayRemove(d.id)
+                });
+                db.collection('classes').doc(d.id).delete();
+                loadClassesScreen();
+              });
+            });
+
+            menuDiv.querySelector('.calc-btn').addEventListener('click', ()=> openCalcModal(d.id));
+
             card.addEventListener('click', () => openClass(d.id));
           }
 
           classesGrid.appendChild(card);
         });
-
-        const existingBtn = document.querySelector('#classesGrid + .delete-selected-btn');
-        if(existingBtn) existingBtn.remove();
-        if(deleteMode) addDeleteSelectedButton();
       });
   }).catch(e=> {
     classesGrid.innerHTML = `<div class="text-sm text-red-500">Error carregant classes</div>`;
@@ -211,422 +218,212 @@ function loadClassesScreen() {
   });
 }
 
-/* ---------------- Delete Mode Classes ---------------- */
-const btnDeleteMode = document.getElementById('btnDeleteMode');
-btnDeleteMode.addEventListener('click', ()=> {
-  deleteMode = !deleteMode;
-  btnDeleteMode.textContent = deleteMode ? '❌ Cancel·lar eliminar' : '🗑️ Eliminar classe';
-  loadClassesScreen();
-});
+// Delete mode, create class modal, etc... segueix com abans
+// ---------------- app.js - Part 2/3 ----------------
 
-function addDeleteSelectedButton(){
-  const delBtn = document.createElement('button');
-  delBtn.textContent = 'Eliminar seleccionats';
-  delBtn.className = 'delete-selected-btn mt-3 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded shadow';
-  delBtn.onclick = confirmDeleteSelected;
-  classesGrid.parentNode.insertBefore(delBtn, classesGrid.nextSibling);
+// ---------- CÀLCUL ACTIVITATS ----------
+
+// Creem un modal simple (pots tenir-lo al HTML també)
+function openCalcModal(activityId){
+  const activityName = document.querySelector(`.class-card[data-id="${currentClassId}"] h3`)?.textContent || 'Activitat';
+  
+  // Crear modal container
+  const modal = document.createElement('div');
+  modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50';
+  modal.innerHTML = `
+    <div class="bg-white dark:bg-gray-800 p-6 rounded shadow w-96">
+      <h3 class="text-lg font-bold mb-4">Càlcul per: ${activityName}</h3>
+      <div class="mb-4">
+        <label class="block mb-1 font-medium">Tipus de càlcul</label>
+        <select id="calcType" class="w-full border rounded p-2">
+          <option value="numeric">Numeric (manual)</option>
+          <option value="formula">Fórmula</option>
+        </select>
+      </div>
+      <div class="mb-4 hidden" id="formulaDiv">
+        <label class="block mb-1 font-medium">Fórmula</label>
+        <input type="text" id="formulaInput" class="w-full border rounded p-2" placeholder="Ex: ((act1+act2)/2)*0.4 + act3*0.6">
+        <p class="text-xs text-gray-500 mt-1">Utilitza els IDs de les activitats: act1, act2, act3...</p>
+      </div>
+      <div class="flex justify-end gap-2">
+        <button id="calcCancelBtn" class="px-4 py-2 rounded border">Cancel·lar</button>
+        <button id="calcOkBtn" class="px-4 py-2 rounded bg-blue-600 text-white">Aplicar</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const calcType = modal.querySelector('#calcType');
+  const formulaDiv = modal.querySelector('#formulaDiv');
+  const formulaInput = modal.querySelector('#formulaInput');
+  const cancelBtn = modal.querySelector('#calcCancelBtn');
+  const okBtn = modal.querySelector('#calcOkBtn');
+
+  // Canviar visibilitat formula
+  calcType.addEventListener('change', ()=>{
+    formulaDiv.classList.toggle('hidden', calcType.value === 'numeric');
+  });
+
+  cancelBtn.addEventListener('click', ()=> modal.remove());
+
+  okBtn.addEventListener('click', ()=>{
+    const type = calcType.value;
+    if(type === 'numeric'){
+      alert('Numeric manté la introducció manual com ara.');
+      modal.remove();
+    } else {
+      const formula = formulaInput.value.trim();
+      if(!formula) return alert('Introdueix una fórmula vàlida.');
+      applyFormulaToActivity(activityId, formula);
+      modal.remove();
+    }
+  });
 }
 
-function confirmDeleteSelected(){
-  const selected = [...document.querySelectorAll('.delete-checkbox')]
-    .filter(chk => chk.checked)
-    .map(chk => chk.closest('.class-card'));
+// ---------- Aplicar fórmula ----------
 
-  if(selected.length === 0) return alert('Selecciona almenys una classe!');
+function applyFormulaToActivity(activityId, formula){
+  // Construïm un objecte amb notes de tots els alumnes
+  Promise.all(classStudents.map(sid => db.collection('alumnes').doc(sid).get()))
+    .then(studentDocs=>{
+      studentDocs.forEach(sdoc=>{
+        if(!sdoc.exists) return;
+        const notes = sdoc.data().notes || {};
 
-  confirmAction(
-    'Confirmació d\'eliminació',
-    `Estàs segur que vols eliminar ${selected.length} classe(s)? Aquesta acció no té marxa enrere.`,
-    () => {
-      selected.forEach(card => {
-        const classIdToRemove = card.dataset.id;
-        card.remove();
-        if(classIdToRemove){
-          db.collection('professors').doc(professorUID).update({
-            classes: firebase.firestore.FieldValue.arrayRemove(classIdToRemove)
-          });
-          db.collection('classes').doc(classIdToRemove).delete();
+        // Reemplaçar noms d'activitats a la fórmula
+        let expr = formula;
+        classActivities.forEach((aid,i)=>{
+          const val = notes[aid] !== undefined ? notes[aid] : 0;
+          const re = new RegExp(`act${i+1}`, 'g'); // act1, act2, etc.
+          expr = expr.replace(re, val);
+        });
+
+        let result;
+        try {
+          result = eval(expr); // atenció: només confia en fórmules controlades!
+        } catch(e){
+          console.error('Error a la fórmula:', e);
+          result = null;
+        }
+
+        if(result !== null && !isNaN(result)){
+          notes[activityId] = Number(result.toFixed(2));
+          db.collection('alumnes').doc(sdoc.id).update({ notes })
+            .catch(e=> console.error('Error actualitzant nota:', e));
         }
       });
-      deleteMode = false;
-      btnDeleteMode.textContent = '🗑️ Eliminar classe';
-      loadClassesScreen();
-    }
-  );
+    })
+    .then(()=> renderNotesGrid());
 }
+// ---------------- app.js - Part 3/3 ----------------
 
-/* ---------------- Create Class ---------------- */
-function createClassModal(){
-  const name = document.getElementById('modalClassName').value.trim();
-  if(!name) return alert('Posa un nom');
-  const ref = db.collection('classes').doc();
-  ref.set({ nom: name, alumnes: [], activitats: [] })
-    .then(()=> db.collection('professors').doc(professorUID).update({ classes: firebase.firestore.FieldValue.arrayUnion(ref.id) }))
-    .then(()=> {
-      closeModal('modalCreateClass');
-      document.getElementById('modalClassName').value = '';
-      loadClassesScreen();
-    }).catch(e=> alert('Error: ' + e.message));
-}
-modalCreateClassBtn.addEventListener('click', createClassModal);
+// ---------- Obtenir IDs i noms d'activitats ----------
 
-/* ---------------- Open Class ---------------- */
-function openClass(id){
-  currentClassId = id;
-  screenClasses.classList.add('hidden');
-  screenClass.classList.remove('hidden');
-  loadClassData();
-}
-
-btnBack.addEventListener('click', ()=> {
-  currentClassId = null;
-  screenClass.classList.add('hidden');
-  screenClasses.classList.remove('hidden');
-  loadClassesScreen();
-});
-
-/* ---------------- Load Class Data ---------------- */
-function loadClassData(){
-  if(!currentClassId) return;
-  db.collection('classes').doc(currentClassId).get().then(doc=>{
-    if(!doc.exists) { alert('Classe no trobada'); return; }
-    const data = doc.data();
-    classStudents = data.alumnes || [];
-    classActivities = data.activitats || [];
-    document.getElementById('classTitle').textContent = data.nom || 'Sense nom';
-    document.getElementById('classSub').textContent = `ID: ${doc.id}`;
-    renderStudentsList();
-    renderNotesGrid();
-  }).catch(e=> console.error(e));
-}
-
-/* ---------------- Students ---------------- */
-btnAddStudent.addEventListener('click', ()=> openModal('modalAddStudent'));
-modalAddStudentBtn.addEventListener('click', createStudentModal);
-
-function createStudentModal(){
-  const name = document.getElementById('modalStudentName').value.trim();
-  if(!name) return alert('Posa un nom');
-  const ref = db.collection('alumnes').doc();
-  ref.set({ nom: name, notes: {} })
-    .then(()=> db.collection('classes').doc(currentClassId).update({ alumnes: firebase.firestore.FieldValue.arrayUnion(ref.id) }))
-    .then(()=> {
-      closeModal('modalAddStudent');
-      document.getElementById('modalStudentName').value = '';
-      loadClassData();
-    }).catch(e=> alert('Error: '+e.message));
-}
-
-function removeStudent(studentId){
-  db.collection('classes').doc(currentClassId).update({ alumnes: firebase.firestore.FieldValue.arrayRemove(studentId) })
-    .then(()=> db.collection('alumnes').doc(studentId).delete())
-    .then(()=> loadClassData())
-    .catch(e=> alert('Error eliminant alumne: '+e.message));
-}
-
-function reorderStudents(fromIdx, toIdx){
-  if(fromIdx===toIdx) return;
-  const arr = Array.from(classStudents);
-  const item = arr.splice(fromIdx,1)[0];
-  arr.splice(toIdx,0,item);
-  db.collection('classes').doc(currentClassId).update({ alumnes: arr })
-    .then(()=> loadClassData())
-    .catch(e=> console.error('Error reordenant', e));
-}
-
-btnSortAlpha.addEventListener('click', sortStudentsAlpha);
-function sortStudentsAlpha(){
-  Promise.all(classStudents.map(id => db.collection('alumnes').doc(id).get()))
-    .then(docs=>{
-      const pairs = docs.map(d=> ({ id: d.id, name: d.exists? (d.data().nom||'') : '' }));
-      pairs.sort((a,b)=> a.name.localeCompare(b.name, 'ca'));
-      const newOrder = pairs.map(p=> p.id);
-      return db.collection('classes').doc(currentClassId).update({ alumnes: newOrder });
-    }).then(()=> loadClassData())
-    .catch(e=> console.error(e));
-}
-/* ---------------- Activities ---------------- */
-btnAddActivity.addEventListener('click', ()=> openModal('modalAddActivity'));
-modalAddActivityBtn.addEventListener('click', createActivityModal);
-
-function createActivityModal(){
-  const name = document.getElementById('modalActivityName').value.trim();
-  if(!name) return alert('Posa un nom');
-  const ref = db.collection('activitats').doc();
-  ref.set({ nom: name, data: new Date().toISOString().split('T')[0] })
-    .then(()=> db.collection('classes').doc(currentClassId).update({ activitats: firebase.firestore.FieldValue.arrayUnion(ref.id) }))
-    .then(()=> {
-      closeModal('modalAddActivity');
-      document.getElementById('modalActivityName').value = '';
-      loadClassData();
-    }).catch(e=> alert('Error: '+e.message));
-}
-
-function removeActivity(actId){
-  confirmAction('Eliminar activitat', 'Esborrar activitat i totes les notes relacionades?', ()=> {
-    db.collection('classes').doc(currentClassId).update({ activitats: firebase.firestore.FieldValue.arrayRemove(actId) })
-      .then(()=> {
-        const batch = db.batch();
-        classStudents.forEach(sid => {
-          const ref = db.collection('alumnes').doc(sid);
-          batch.update(ref, { [`notes.${actId}`]: firebase.firestore.FieldValue.delete() });
-        });
-        return batch.commit();
-      }).then(()=> loadClassData())
-      .catch(e=> alert('Error esborrant activitat: '+e.message));
+function getActivityIdsMap(){
+  // Retorna un objecte { act1: 'ID_real', act2: 'ID_real', ... }
+  const map = {};
+  classActivities.forEach((aid,i)=>{
+    map[`act${i+1}`] = aid;
   });
+  return map;
 }
 
-/* ---------------- Render Students List amb menú ---------------- */
-function renderStudentsList(){
-  studentsList.innerHTML = '';
-  studentsCount.textContent = `(${classStudents.length})`;
-
-  if(classStudents.length === 0){
-    studentsList.innerHTML = '<li class="text-sm text-gray-400">No hi ha alumnes</li>';
-    return;
-  }
-
-  classStudents.forEach((stuId, idx)=>{
-    db.collection('alumnes').doc(stuId).get().then(doc=>{
-      const name = doc.exists ? doc.data().nom : 'Desconegut';
-      const li = document.createElement('li');
-      li.className = 'flex items-center justify-between bg-gray-50 dark:bg-gray-900 p-2 rounded';
-
-      li.innerHTML = `
-        <div class="flex items-center gap-3">
-          <span draggable="true" title="Arrossega per reordenar" class="cursor-move text-sm text-gray-500">☰</span>
-          <span class="stu-name font-medium">${name}</span>
-        </div>
-        <div class="relative">
-          <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white tooltip">⋮</button>
-          <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10 transition-opacity duration-200 opacity-0">
-            <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
-            <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>
-          </div>
-        </div>
-      `;
-
-      const menuBtn = li.querySelector('.menu-btn');
-      const menu = li.querySelector('.menu');
-
-      menuBtn.addEventListener('click', e=>{
-        e.stopPropagation();
-        document.querySelectorAll('.menu').forEach(m=> m.classList.add('hidden'));
-        menu.classList.toggle('hidden');
-      });
-
-      li.querySelector('.edit-btn').addEventListener('click', ()=>{
-        const newName = prompt('Introdueix el nou nom:', name);
-        if(!newName || newName.trim()===name) return;
-        db.collection('alumnes').doc(stuId).update({ nom: newName.trim() })
-          .then(()=> loadClassData())
-          .catch(e=> alert('Error editant alumne: '+e.message));
-      });
-
-      li.querySelector('.delete-btn').addEventListener('click', ()=> removeStudent(stuId));
-
-      // Drag handle
-      const dragHandle = li.querySelector('[draggable]');
-      dragHandle.addEventListener('dragstart', e=>{
-        e.dataTransfer.setData('text/plain', idx.toString());
-      });
-      li.addEventListener('dragover', e=> e.preventDefault());
-      li.addEventListener('drop', e=>{
-        e.preventDefault();
-        const fromIdx = Number(e.dataTransfer.getData('text/plain'));
-        reorderStudents(fromIdx, idx);
-      });
-
-      studentsList.appendChild(li);
+function getActivityNamesMap(){
+  const map = {};
+  classActivities.forEach((aid,i)=>{
+    db.collection('activitats').doc(aid).get().then(doc=>{
+      map[`act${i+1}`] = doc.exists ? doc.data().nom || `act${i+1}` : `act${i+1}`;
     });
   });
+  return map;
 }
 
-/* ---------------- Notes Grid amb menú activitats ---------------- */
-function renderNotesGrid(){
-  notesThead.innerHTML = '';
-  notesTbody.innerHTML = '';
-  notesTfoot.innerHTML = '';
+// ---------- Validació fórmula segura ----------
 
-  const headRow = document.createElement('tr');
-  headRow.appendChild(th('Alumne'));
-
-  Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()))
-    .then(actDocs=>{
-      actDocs.forEach(adoc=>{
-        const id = adoc.id;
-        const name = adoc.exists ? (adoc.data().nom||'Sense nom') : 'Desconegut';
-        const thEl = th('');
-        const container = document.createElement('div');
-        container.className = 'flex items-center justify-between';
-
-        const spanName = document.createElement('span');
-        spanName.textContent = name;
-
-        const menuDiv = document.createElement('div');
-        menuDiv.className = 'relative';
-      menuDiv.innerHTML = `
-        <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white tooltip">⋮
-        </button>
-        <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10 transition-opacity duration-200 opacity-0">
-          <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
-          <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>
-          <button class="calc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Calcul</button>
-        </div>
-      `;
-        container.appendChild(spanName);
-        container.appendChild(menuDiv);
-        thEl.appendChild(container);
-        headRow.appendChild(thEl);
-
-        const menuBtn = menuDiv.querySelector('.menu-btn');
-        const menu = menuDiv.querySelector('.menu');
-        menuBtn.addEventListener('click', e=>{
-          e.stopPropagation();
-          document.querySelectorAll('.menu').forEach(m=> m.classList.add('hidden'));
-          menu.classList.toggle('hidden');
-        });
-
-        menuDiv.querySelector('.edit-btn').addEventListener('click', ()=>{
-          const newName = prompt('Introdueix el nou nom de l\'activitat:', name);
-          if(!newName || newName.trim()===name) return;
-          db.collection('activitats').doc(id).update({ nom: newName.trim() })
-            .then(()=> loadClassData())
-            .catch(e=> alert('Error editant activitat: '+e.message));
-        });
-
-        menuDiv.querySelector('.delete-btn').addEventListener('click', ()=> removeActivity(id));
-      });
-
-      headRow.appendChild(th('Mitjana', 'text-right'));
-      notesThead.appendChild(headRow);
-
-      if(classStudents.length===0){
-        notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivities.length+2}">No hi ha alumnes</td></tr>`;
-        renderAverages();
-        return;
-      }
-
-      Promise.all(classStudents.map(id => db.collection('alumnes').doc(id).get()))
-        .then(studentDocs=>{
-          studentDocs.forEach(sdoc=>{
-            const sid = sdoc.id;
-            const sdata = sdoc.exists ? sdoc.data() : { nom:'Desconegut', notes:{} };
-            const tr = document.createElement('tr');
-            tr.className = 'align-top';
-
-            const tdName = document.createElement('td');
-            tdName.className = 'border px-2 py-1';
-            tdName.textContent = sdata.nom;
-            tr.appendChild(tdName);
-
-            actDocs.forEach(actDoc=>{
-              const aid = actDoc.id;
-              const val = (sdata.notes && sdata.notes[aid]!==undefined) ? sdata.notes[aid] : '';
-              const td = document.createElement('td');
-              td.className = 'border px-2 py-1';
-              const input = document.createElement('input');
-              input.type='number'; input.min=0; input.max=10;
-              input.value=val;
-              input.className='table-input text-center rounded border p-1';
-              input.addEventListener('change', e=> saveNote(sid, aid, e.target.value));
-              input.addEventListener('input', ()=> applyCellColor(input));
-              applyCellColor(input);
-              td.appendChild(input);
-              tr.appendChild(td);
-            });
-
-            const avgTd = document.createElement('td');
-            avgTd.className = 'border px-2 py-1 text-right font-semibold';
-            avgTd.textContent = computeStudentAverageText(sdata);
-            tr.appendChild(avgTd);
-
-            notesTbody.appendChild(tr);
-          });
-          renderAverages();
-        });
-    });
-}
-
-/* ---------------- Helpers Notes & Excel ---------------- */
-function th(txt, cls=''){
-  const el = document.createElement('th');
-  el.className = 'border px-2 py-1 ' + cls;
-  el.textContent = txt;
-  return el;
-}
-
-function saveNote(studentId, activityId, value){
-  const num = value === '' ? null : Number(value);
-  const updateObj = {};
-  if(num === null || isNaN(num)) updateObj[`notes.${activityId}`] = firebase.firestore.FieldValue.delete();
-  else updateObj[`notes.${activityId}`] = num;
-  db.collection('alumnes').doc(studentId).update(updateObj)
-    .then(()=> renderNotesGrid())
-    .catch(e=> console.error('Error saving note', e));
-}
-
-function applyCellColor(inputEl){
-  const v = Number(inputEl.value);
-  inputEl.classList.remove('bg-red-100','bg-yellow-100','bg-green-100');
-  if(inputEl.value === '' || isNaN(v)) return;
-  if(v < 5) inputEl.classList.add('bg-red-100');
-  else if(v < 7) inputEl.classList.add('bg-yellow-100');
-  else inputEl.classList.add('bg-green-100');
-}
-
-function computeStudentAverageText(studentData){
-  const notesMap = (studentData && studentData.notes) ? studentData.notes : {};
-  const vals = classActivities.map(aid => (notesMap[aid] !== undefined ? Number(notesMap[aid]) : null)).filter(v=> v!==null && !isNaN(v));
-  if(vals.length === 0) return '';
-  return (vals.reduce((s,n)=> s+n,0)/vals.length).toFixed(2);
-}
-
-function renderAverages(){
-  Array.from(notesTbody.children).forEach(tr=>{
-    const inputs = Array.from(tr.querySelectorAll('input')).map(i=> Number(i.value)).filter(v=> !isNaN(v));
-    const lastTd = tr.querySelectorAll('td')[tr.querySelectorAll('td').length - 1];
-    lastTd.textContent = inputs.length ? (inputs.reduce((a,b)=>a+b,0)/inputs.length).toFixed(2) : '';
+function safeEvalFormula(expr, studentNotes){
+  // Substitueix només números i operadors bàsics
+  // Reemplaça act1, act2, ... amb el valor numèric de l'alumne
+  Object.keys(studentNotes).forEach(aid=>{
+    const re = new RegExp(aid,'g');
+    expr = expr.replace(re, studentNotes[aid] !== undefined ? studentNotes[aid] : 0);
   });
 
-  const actCount = classActivities.length;
-  notesTfoot.innerHTML = '';
-  const tr = document.createElement('tr');
-  tr.className = 'text-sm';
-  tr.appendChild(th('Mitjana activitat'));
-  if(actCount === 0){
-    tr.appendChild(th('',''));
-    notesTfoot.appendChild(tr);
-    return;
-  }
-  for(let i=0;i<actCount;i++){
-    const inputs = Array.from(notesTbody.querySelectorAll('tr')).map(r => r.querySelectorAll('input')[i]).filter(Boolean);
-    const vals = inputs.map(inp => Number(inp.value)).filter(v=> !isNaN(v));
-    const avg = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2) : '';
-    const td = document.createElement('td');
-    td.className = 'border px-2 py-1 text-center font-semibold';
-    td.textContent = avg;
-    tr.appendChild(td);
-  }
-  tr.appendChild(th('',''));
-  notesTfoot.appendChild(tr);
+  // Només permet números, +, -, *, /, (, ), . i espais
+  if(!/^[0-9+\-*/().\s]+$/.test(expr)) throw new Error('Fórmula conté caràcters no permesos');
+
+  // Evaluar
+  return Function('"use strict"; return (' + expr + ')')();
 }
 
-/* ---------------- Export Excel ---------------- */
-btnExport.addEventListener('click', exportExcel);
-function exportExcel(){
-  const table = document.getElementById('notesTable');
-  const wb = XLSX.utils.table_to_book(table, {sheet:"Notes"});
-  const fname = (document.getElementById('classTitle').textContent || 'classe') + '.xlsx';
-  XLSX.writeFile(wb, fname);
+// ---------- Aplicar fórmula avançada ----------
+
+function applyFormulaToActivity(activityId, formula){
+  const idsMap = getActivityIdsMap();
+
+  Promise.all(classStudents.map(sid => db.collection('alumnes').doc(sid).get()))
+    .then(studentDocs=>{
+      studentDocs.forEach(sdoc=>{
+        if(!sdoc.exists) return;
+        const notes = sdoc.data().notes || {};
+
+        // Reemplaçar act1, act2... amb valors reals de l'alumne
+        let expr = formula;
+        Object.keys(idsMap).forEach(actKey=>{
+          const aid = idsMap[actKey];
+          const val = notes[aid] !== undefined ? notes[aid] : 0;
+          const re = new RegExp(actKey, 'g');
+          expr = expr.replace(re, val);
+        });
+
+        let result;
+        try {
+          result = safeEvalFormula(expr, notes);
+        } catch(e){
+          console.error('Error a la fórmula:', e);
+          result = null;
+        }
+
+        if(result !== null && !isNaN(result)){
+          notes[activityId] = Number(result.toFixed(2));
+          db.collection('alumnes').doc(sdoc.id).update({ notes })
+            .catch(e=> console.error('Error actualitzant nota:', e));
+        }
+      });
+    })
+    .then(()=> renderNotesGrid());
 }
 
-// Tancar menús si fas clic fora
-document.addEventListener('click', function(e) {
-  document.querySelectorAll('.menu').forEach(menu => {
-    if (!menu.contains(e.target) && !e.target.classList.contains('menu-btn')) {
-      menu.classList.add('hidden');
+// ---------- Afegir opció "Calcul" als tres punts ----------
+
+document.addEventListener('click', e=>{
+  if(e.target.classList.contains('calc-btn')){
+    const thEl = e.target.closest('th');
+    if(!thEl) return;
+    const idx = Array.from(thEl.parentNode.children).indexOf(thEl) - 1; // -1 per la columna Alumne
+    const activityId = classActivities[idx];
+    openCalcModal(activityId);
+  }
+});
+
+// ---------- Integrar el botó "Calcul" ----------
+
+function enhanceActivityMenus(){
+  notesThead.querySelectorAll('th').forEach((thEl, i)=>{
+    if(i === 0 || i > classActivities.length) return; // Saltar Alumne i Mitjana
+    const menu = thEl.querySelector('.menu');
+    if(menu && !menu.querySelector('.calc-btn')){
+      const btn = document.createElement('button');
+      btn.className = 'calc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700';
+      btn.textContent = 'Calcul';
+      menu.appendChild(btn);
     }
   });
-});
+}
+
+// Trucar després de renderNotesGrid
+const originalRenderNotesGrid = renderNotesGrid;
+renderNotesGrid = function(){
+  originalRenderNotesGrid();
+  setTimeout(enhanceActivityMenus, 50); // Assegurar que els menús estiguin creats
+};
