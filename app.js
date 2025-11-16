@@ -113,57 +113,88 @@ btnCreateClass.addEventListener('click', ()=> openModal('modalCreateClass'));
 btnRefreshClasses.addEventListener('click', loadClassesScreen);
 
 function loadClassesScreen() {
-    if(!professorUID) { alert('Fes login primer.'); return; }
+  if(!professorUID) { alert('Fes login primer.'); return; }
+  screenClass.classList.add('hidden');
+  screenClasses.classList.remove('hidden');
+  classesGrid.innerHTML = '<div class="col-span-full text-sm text-gray-500">Carregant...</div>';
 
-    screenClass.classList.add('hidden');
-    screenClasses.classList.remove('hidden');
-    classesGrid.innerHTML = '<div class="col-span-full text-sm text-gray-500">Carregant...</div>';
+  const classColors = [
+    'from-indigo-600 to-purple-600',
+    'from-pink-500 to-red-500',
+    'from-yellow-400 to-orange-500',
+    'from-green-500 to-teal-500',
+    'from-blue-500 to-indigo-600',
+    'from-purple-500 to-pink-500'
+  ];
 
-    const classColors = [
-        'from-indigo-600 to-purple-600',
-        'from-pink-500 to-red-500',
-        'from-yellow-400 to-orange-500',
-        'from-green-500 to-teal-500',
-        'from-blue-500 to-indigo-600',
-        'from-purple-500 to-pink-500'
-    ];
+  db.collection('professors').doc(professorUID).get().then(doc => {
+    if(!doc.exists) { classesGrid.innerHTML = '<div class="text-sm text-red-500">Professor no trobat</div>'; return; }
+    const ids = doc.data().classes || [];
+    if(ids.length === 0) {
+      classesGrid.innerHTML = `<div class="col-span-full p-6 bg-white dark:bg-gray-800 rounded shadow text-center">No tens cap classe. Crea la primera!</div>`;
+      return;
+    }
 
-    db.collection('professors').doc(professorUID).get().then(doc => {
-        if(!doc.exists) {
-            classesGrid.innerHTML = '<div class="text-sm text-red-500">Professor no trobat</div>';
-            return;
-        }
-        const ids = doc.data().classes || [];
-        if(ids.length === 0) {
-            classesGrid.innerHTML = `<div class="col-span-full p-6 bg-white dark:bg-gray-800 rounded shadow text-center">No tens cap classe. Crea la primera!</div>`;
-            return;
-        }
+    Promise.all(ids.map(id => db.collection('classes').doc(id).get()))
+      .then(docs => {
+        classesGrid.innerHTML = '';
+        docs.forEach((d, i) => {
+          if(!d.exists) return;
+          const color = classColors[i % classColors.length];
+          const card = document.createElement('div');
+          card.className = `class-card bg-gradient-to-br ${color} text-white relative p-4 rounded-lg`;
+          card.dataset.id = d.id;
 
-        Promise.all(ids.map(id => db.collection('classes').doc(id).get()))
-            .then(docs => {
-                classesGrid.innerHTML = '';
-                docs.forEach((d, i) => {
-                    if(!d.exists) return;
-                    const color = classColors[i % classColors.length];
-                    const card = document.createElement('div');
-                    card.className = `class-card bg-gradient-to-br ${color} text-white relative`;
-                    card.dataset.id = d.id;
-                    card.innerHTML = `${deleteMode ? '<input type="checkbox" class="delete-checkbox absolute top-2 right-2 w-5 h-5">' : ''}
-                        <h3 class="text-lg font-bold">${d.data().nom||'Sense nom'}</h3>
-                        <p class="text-sm mt-2">${(d.data().alumnes||[]).length} alumnes · ${(d.data().activitats||[]).length} activitats</p>
-                        <div class="click-hint">${deleteMode ? 'Selecciona per eliminar' : 'Fes clic per obrir'}</div>`;
-                    if(!deleteMode) card.addEventListener('click', ()=> openClass(d.id));
-                    classesGrid.appendChild(card);
-                });
+          card.innerHTML = `
+            ${deleteMode ? '<input type="checkbox" class="delete-checkbox absolute top-2 right-2 w-5 h-5">' : ''}
+            <h3 class="text-lg font-bold">${d.data().nom||'Sense nom'}</h3>
+            <p class="text-sm mt-2">${(d.data().alumnes||[]).length} alumnes · ${(d.data().activitats||[]).length} activitats</p>
+            <div class="click-hint">${deleteMode ? 'Selecciona per eliminar' : 'Fes clic per obrir'}</div>
+          `;
 
-                const existingBtn = document.querySelector('#classesGrid + .delete-selected-btn');
-                if(existingBtn) existingBtn.remove();
-                if(deleteMode){ addDeleteSelectedButton(); }
+          // Afegim el menú amb els tres punts si NO estem en mode eliminar
+          if(!deleteMode){
+            const menuDiv = document.createElement('div');
+            menuDiv.className = 'absolute top-2 right-2';
+            menuDiv.innerHTML = `
+              <button class="menu-btn text-white font-bold text-xl">⋮</button>
+              <div class="menu hidden absolute right-0 mt-1 bg-white text-black border rounded shadow z-10 transition-opacity duration-200 opacity-0">
+                <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100">Editar</button>
+              </div>
+            `;
+            card.appendChild(menuDiv);
+
+            const menuBtn = menuDiv.querySelector('.menu-btn');
+            const menu = menuDiv.querySelector('.menu');
+
+            menuBtn.addEventListener('click', e => {
+              e.stopPropagation();
+              document.querySelectorAll('.menu').forEach(m => m.classList.add('hidden'));
+              menu.classList.toggle('hidden');
             });
-    }).catch(e=> {
-        classesGrid.innerHTML = `<div class="text-sm text-red-500">Error carregant classes</div>`;
-        console.error(e);
-    });
+
+            menuDiv.querySelector('.edit-btn').addEventListener('click', () => {
+              const newName = prompt('Introdueix el nou nom de la classe:', d.data().nom || '');
+              if(!newName || newName.trim() === d.data().nom) return;
+              db.collection('classes').doc(d.id).update({ nom: newName.trim() })
+                .then(() => loadClassesScreen())
+                .catch(e => alert('Error editant classe: ' + e.message));
+            });
+
+            card.addEventListener('click', () => openClass(d.id));
+          }
+
+          classesGrid.appendChild(card);
+        });
+
+        const existingBtn = document.querySelector('#classesGrid + .delete-selected-btn');
+        if(existingBtn) existingBtn.remove();
+        if(deleteMode) addDeleteSelectedButton();
+      });
+  }).catch(e=> {
+    classesGrid.innerHTML = `<div class="text-sm text-red-500">Error carregant classes</div>`;
+    console.error(e);
+  });
 }
 
 /* ---------- Mode eliminar classes ---------- */
