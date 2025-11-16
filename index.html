@@ -164,33 +164,37 @@
     </div>
   </div>
 
- <!-- Formula Modal -->
-<div id="modalFormula" class="fixed inset-0 hidden items-center justify-center z-50">
+  <!-- Modal Calcul -->
+<div id="modalCalc" class="fixed inset-0 hidden items-center justify-center z-50">
   <div class="modal-backdrop absolute inset-0"></div>
-  <div class="bg-white rounded shadow-lg z-10 w-full max-w-lg p-4">
-    <h3 class="text-lg font-semibold mb-2">Configura Fórmula</h3>
-    <p class="text-sm text-gray-600 mb-2">Crea una fórmula per aplicar a tota la columna de l'activitat:</p>
-    <div id="formulaBuilder" class="flex flex-wrap gap-1 mb-3 border p-2 rounded min-h-[40px]"></div>
-    <select id="activitySelect" class="border rounded px-2 py-1 mb-3 w-full">
-      <option value="">Selecciona activitat</option>
-    </select>
-    <div class="flex gap-2 flex-wrap mb-3">
-      <button class="formula-btn px-2 py-1 bg-gray-200 rounded" data-op="+">+</button>
-      <button class="formula-btn px-2 py-1 bg-gray-200 rounded" data-op="-">-</button>
-      <button class="formula-btn px-2 py-1 bg-gray-200 rounded" data-op="*">×</button>
-      <button class="formula-btn px-2 py-1 bg-gray-200 rounded" data-op="/">÷</button>
-      <button class="formula-btn px-2 py-1 bg-gray-200 rounded" data-op="(">(</button>
-      <button class="formula-btn px-2 py-1 bg-gray-200 rounded" data-op=")">)</button>
-      <button id="formulaClearBtn" class="px-2 py-1 bg-red-200 rounded">Borrar</button>
+  <div class="bg-white rounded shadow-lg z-10 w-full max-w-md p-4">
+    <h3 class="text-lg font-semibold mb-2">Aplicar Càlcul</h3>
+    
+    <div class="mb-3">
+      <label class="block font-medium mb-1">Tipus de càlcul:</label>
+      <select id="calcType" class="border rounded px-3 py-2 w-full">
+        <option value="numeric">Numeric</option>
+        <option value="formula">Fórmula</option>
+      </select>
     </div>
+
+    <div id="formulaInputs" class="hidden mb-3">
+      <label class="block font-medium mb-1">Fórmula:</label>
+      <input id="formulaField" type="text" placeholder="Ex: ((act1+act2)/2)*0.4 + act3*0.6" class="border rounded px-3 py-2 w-full mb-2">
+      <p class="text-xs text-gray-500">Utilitza els IDs de les activitats. Exemple: act1, act2...</p>
+    </div>
+
+    <div id="numericInput" class="mb-3">
+      <label class="block font-medium mb-1">Valor numèric:</label>
+      <input id="numericField" type="number" class="border rounded px-3 py-2 w-full">
+    </div>
+
     <div class="flex justify-end gap-2">
-      <button data-modal-close="modalFormula" class="modal-close px-3 py-1 rounded bg-gray-200">Cancel·lar</button>
-      <button id="formulaApplyBtn" class="px-3 py-1 rounded bg-teal-600 text-white">Aplica fórmula</button>
+      <button data-modal-close="modalCalc" class="modal-close px-3 py-1 rounded bg-gray-200">Cancel·lar</button>
+      <button id="applyCalcBtn" class="px-3 py-1 rounded bg-teal-600 text-white">Aplicar</button>
     </div>
   </div>
 </div>
-
-
 
 
   <!-- SCRIPT PRINCIPAL -->
