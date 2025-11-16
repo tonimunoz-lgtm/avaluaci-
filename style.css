@@ -1,20 +1,30 @@
 /* ---------------- Body general ---------------- */
 body {
-  background: #f3f4f6; /* fons clar suau */
+  background: #f3f4f6;
   font-family: 'Inter', sans-serif;
   margin: 0;
   padding: 0;
-  color: #1f2937; /* text fosc per contrast */
+  color: #1f2937;
 }
 
 /* ---------------- Contenidor principal ---------------- */
 #appRoot, #screen-classes, #screen-class {
+  width: 100%;
+  max-width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 1rem;
+  border-radius: 0;
   background: linear-gradient(135deg, #f3f4f6 0%, #ffffff 100%);
   color: #1f2937;
-  border-radius: 1rem;
-  padding: 2rem;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  box-shadow: none;
   transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* Centrar contingut opcional */
+#appRoot > div, #screen-classes > div, #screen-class > div {
+  max-width: 1600px;
+  margin: 0 auto;
 }
 
 /* ---------------- Titols ---------------- */
@@ -23,7 +33,6 @@ h1, h2, h3 {
   font-weight: 700;
 }
 
-/* Textos secundaris */
 p, span, td {
   color: #374151;
 }
@@ -69,8 +78,23 @@ p, span, td {
 #classSub { display: none !important; }
 #classTitle { color: #1f2937 !important; font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; }
 
-/* ---------------- Notes Grid ---------------- */
-#notesTable th, #notesTable td { border: 1px solid #d1d5db; padding: 0.5rem; }
+/* ---------------- Notes Table ---------------- */
+#notesTable-wrapper {
+  overflow-x: auto;
+  width: 100%;
+}
+
+#notesTable {
+  width: 100%;
+  min-width: 600px;
+  border-collapse: collapse;
+}
+
+#notesTable th, #notesTable td {
+  border: 1px solid #d1d5db;
+  padding: 0.5rem;
+}
+
 .table-input {
   background-color: #f9fafb;
   border: 1px solid #d1d5db;
@@ -105,7 +129,7 @@ button:hover { transform: scale(1.03); }
 
 /* ---------------- Modal Calcul ---------------- */
 #modalCalc {
-  display: none; /* hidden inicial */
+  display: none;
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.2);
@@ -127,13 +151,21 @@ button:hover { transform: scale(1.03); }
   transform: scale(1.05);
 }
 
-
 /* ---------------- Responsive ---------------- */
+@media (max-width: 1024px) {
+  #appRoot, #screen-classes, #screen-class {
+    padding: 0.5rem;
+  }
+}
+
 @media (max-width: 640px) {
   #loginScreen { padding: 1rem; }
-  .table-input { width: 2.8rem; }
+  .table-input { width: 2rem; font-size: 0.7rem; }
+  #notesTable th, #notesTable td { font-size: 0.7rem; padding: 0.25rem; }
+  .class-card { padding: 0.5rem; font-size: 0.75rem; }
 }
-/* Forçar que els menús es comportin bé quan es mostren */
+
+/* ---------------- Menús ---------------- */
 .menu {
   display: block !important;
   opacity: 1 !important;
@@ -141,7 +173,6 @@ button:hover { transform: scale(1.03); }
   pointer-events: auto !important;
   z-index: 9999 !important;
 }
-
 .menu.hidden {
   display: none !important;
 }
