@@ -347,6 +347,38 @@ function sortStudentsAlpha(){
     .catch(e=> console.error(e));
 }
 
+/* ---------------- Activities ---------------- */
+btnAddActivity.addEventListener('click', ()=> openModal('modalAddActivity'));
+modalAddActivityBtn.addEventListener('click', createActivityModal);
+
+function createActivityModal(){
+  const name = document.getElementById('modalActivityName').value.trim();
+  if(!name) return alert('Posa un nom');
+  const ref = db.collection('activitats').doc();
+  ref.set({ nom: name, data: new Date().toISOString().split('T')[0], calcType:'numeric', formula:'' })
+    .then(()=> db.collection('classes').doc(currentClassId).update({ activitats: firebase.firestore.FieldValue.arrayUnion(ref.id) }))
+    .then(()=> {
+      closeModal('modalAddActivity');
+      document.getElementById('modalActivityName').value = '';
+      loadClassData();
+    }).catch(e=> alert('Error: '+e.message));
+}
+
+function removeActivity(actId){
+  confirmAction('Eliminar activitat', 'Esborrar activitat i totes les notes relacionades?', ()=> {
+    db.collection('classes').doc(currentClassId).update({ activitats: firebase.firestore.FieldValue.arrayRemove(actId) })
+      .then(()=> {
+        const batch = db.batch();
+        classStudents.forEach(sid => {
+          const ref = db.collection('alumnes').doc(sid);
+          batch.update(ref, { [`notes.${actId}`]: firebase.firestore.FieldValue.delete() });
+        });
+        return batch.commit();
+      }).then(()=> loadClassData())
+      .catch(e=> alert('Error esborrant activitat: '+e.message));
+  });
+}
+
 /* ---------------- Render Students List amb menú ---------------- */
 function renderStudentsList(){
   studentsList.innerHTML = '';
