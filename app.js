@@ -488,48 +488,10 @@ function renderNotesGrid(){
         });
 
         // --- Calcul button ---
-       menuDiv.querySelector('.calc-btn').addEventListener('click', e => {
-  e.stopPropagation();
-  const menu = document.createElement('div');
-  menu.className = 'absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10';
-  menu.style.minWidth = '150px';
-  
-  // Opcions del desplegable
-  const options = [
-    { name: 'Numeric', action: () => openCalcModal(adoc.id, 'numeric') },
-    { name: 'Formula', action: () => openCalcModal(adoc.id, 'formula') },
-    { name: 'Redondeig', action: () => openRoundModal(adoc.id) }
-  ];
-
-  options.forEach(opt => {
-    const btn = document.createElement('button');
-    btn.textContent = opt.name;
-    btn.className = 'w-full text-left px-3 py-1 hover:bg-gray-100 dark:hover:bg-gray-700';
-    btn.addEventListener('click', () => {
-      opt.action();
-      document.body.removeChild(menu);
-    });
-    menu.appendChild(btn);
-  });
-
-  // Posicionar el menú al costat del botó
-  const rect = e.target.getBoundingClientRect();
-  menu.style.top = rect.bottom + window.scrollY + 'px';
-  menu.style.left = rect.left + window.scrollX + 'px';
-
-  document.body.appendChild(menu);
-
-  // Tancar si fas clic fora
-  const handler = ev => {
-    if (!menu.contains(ev.target)) {
-      document.body.removeChild(menu);
-      document.removeEventListener('click', handler);
-    }
-  };
-  document.addEventListener('click', handler);
-});
-
-
+        menuDiv.querySelector('.calc-btn').addEventListener('click', e => {
+          e.stopPropagation(); 
+          openCalcModal(adoc.id); 
+        });
 
         // Edit / Delete
         menuDiv.querySelector('.edit-btn').addEventListener('click', ()=>{
@@ -660,21 +622,16 @@ function renderAverages(){
 }
 
 /* ---------------- Open Calculation Modal ---------------- */
-function openCalcModal(activityId, type = 'numeric'){
+function openCalcModal(activityId){
   currentCalcActivityId = activityId; 
   openModal('modalCalc');
-  
-  numericDiv.classList.toggle('hidden', type !== 'numeric');
-  formulaDiv.classList.toggle('hidden', type === 'numeric');
-  
-  numericField.value = '';
-  formulaField.value = '';
-
-  if(type === 'formula'){
-    buildFormulaButtons();
-  }
+  // Reset modal
+  document.getElementById('calcType').value = 'numeric';
+  document.getElementById('formulaInputs').classList.add('hidden');
+  document.getElementById('numericInput').classList.remove('hidden');
+  document.getElementById('numericField').value = '';
+  document.getElementById('formulaField').value = '';
 }
-
 /* ---------------- Modal Calcul: Numeric / Formula ---------------- */
 const calcTypeSelect = document.getElementById('calcType');
 const numericDiv = document.getElementById('numericInput');
@@ -721,77 +678,6 @@ modalApplyCalcBtn.addEventListener('click', async ()=>{
     }
   }
 });
-
-function openRoundModal(activityId){
-  currentCalcActivityId = activityId; 
-  openModal('modalCalc');
-  
-  // Amaguem seccions que no calen
-  numericDiv.classList.add('hidden');
-  formulaDiv.classList.remove('hidden'); // reutilitzem aquesta secció
-  formulaField.value = ''; 
-  formulaButtonsDiv.innerHTML = '';
-
-  // Botons activitats
-  classActivities.forEach(aid=>{
-    db.collection('activitats').doc(aid).get().then(doc=>{
-      const name = doc.exists ? doc.data().nom : '???';
-      const btn = document.createElement('button');
-      btn.type='button';
-      btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
-      btn.textContent = name;
-      btn.addEventListener('click', ()=> addToFormula(name));
-      formulaButtonsDiv.appendChild(btn);
-    });
-  });
-
-  // Botons redondeig 0.25 / 0.5 / 1
-  [0.25, 0.5, 1].forEach(step=>{
-    const btn = document.createElement('button');
-    btn.type='button';
-    btn.className='px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
-    btn.textContent = step;
-    btn.addEventListener('click', ()=> applyRound(step));
-    formulaButtonsDiv.appendChild(btn);
-  });
-
-  // Botó esborrar
-  const clearBtn = document.createElement('button');
-  clearBtn.type='button';
-  clearBtn.className='px-2 py-1 m-1 bg-red-300 rounded hover:bg-red-400';
-  clearBtn.textContent = 'Esborrar';
-  clearBtn.addEventListener('click', ()=> formulaField.value='');
-  formulaButtonsDiv.appendChild(clearBtn);
-}
-
-function applyRound(step){
-  if(!currentCalcActivityId) return;
-  const formulaText = formulaField.value.trim();
-  if(!formulaText) return alert('Selecciona una activitat!');
-  
-  // Trobar ID de l'activitat seleccionada pel nom
-  const act = classActivities.find(aid=>{
-    const doc = db.collection('activitats').doc(aid);
-    return true; // comprovar nom després amb promesa
-  });
-
-  classStudents.forEach(async sid=>{
-    for(const aid of classActivities){
-      const adoc = await db.collection('activitats').doc(aid).get();
-      const actName = adoc.exists ? adoc.data().nom : '';
-      if(actName === formulaText){
-        const sdoc = await db.collection('alumnes').doc(sid).get();
-        let val = sdoc.exists && sdoc.data().notes ? sdoc.data().notes[aid] : 0;
-        val = Number(val) || 0;
-        // Redondeig
-        val = Math.round(val / step) * step;
-        saveNote(sid, aid, val);
-      }
-    }
-  });
-
-  closeModal('modalCalc');
-}
 
 
 // ---------------- Construir botons de fórmules ----------------
