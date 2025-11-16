@@ -22,7 +22,6 @@ let classActivities = [];
 let deleteMode = false;
 let currentCalcActivityId = null; // Activitat actual per fer càlculs
 
-
 /* Elements */
 const loginScreen = document.getElementById('loginScreen');
 const appRoot = document.getElementById('appRoot');
@@ -128,6 +127,7 @@ function setupAfterAuth(user) {
 
 /* ---------------- Classes screen ---------------- */
 btnCreateClass.addEventListener('click', ()=> openModal('modalCreateClass'));
+
 /* ---------------- Classes Screen (cont.) ---------------- */
 function loadClassesScreen() {
   if(!professorUID) { alert('Fes login primer.'); return; }
@@ -147,7 +147,7 @@ function loadClassesScreen() {
   db.collection('professors').doc(professorUID).get().then(doc => {
     if(!doc.exists) { classesGrid.innerHTML = '<div class="text-sm text-red-500">Professor no trobat</div>'; return; }
     const ids = doc.data().classes || [];
-    if(ids.length === 0) {
+    if(ids.length === 0){
       classesGrid.innerHTML = `<div class="col-span-full p-6 bg-white dark:bg-gray-800 rounded shadow text-center">No tens cap classe. Crea la primera!</div>`;
       return;
     }
@@ -212,7 +212,6 @@ function loadClassesScreen() {
     console.error(e);
   });
 }
-
 /* ---------------- Delete Mode Classes ---------------- */
 const btnDeleteMode = document.getElementById('btnDeleteMode');
 btnDeleteMode.addEventListener('click', ()=> {
@@ -347,37 +346,6 @@ function sortStudentsAlpha(){
     }).then(()=> loadClassData())
     .catch(e=> console.error(e));
 }
-/* ---------------- Activities ---------------- */
-btnAddActivity.addEventListener('click', ()=> openModal('modalAddActivity'));
-modalAddActivityBtn.addEventListener('click', createActivityModal);
-
-function createActivityModal(){
-  const name = document.getElementById('modalActivityName').value.trim();
-  if(!name) return alert('Posa un nom');
-  const ref = db.collection('activitats').doc();
-  ref.set({ nom: name, data: new Date().toISOString().split('T')[0] })
-    .then(()=> db.collection('classes').doc(currentClassId).update({ activitats: firebase.firestore.FieldValue.arrayUnion(ref.id) }))
-    .then(()=> {
-      closeModal('modalAddActivity');
-      document.getElementById('modalActivityName').value = '';
-      loadClassData();
-    }).catch(e=> alert('Error: '+e.message));
-}
-
-function removeActivity(actId){
-  confirmAction('Eliminar activitat', 'Esborrar activitat i totes les notes relacionades?', ()=> {
-    db.collection('classes').doc(currentClassId).update({ activitats: firebase.firestore.FieldValue.arrayRemove(actId) })
-      .then(()=> {
-        const batch = db.batch();
-        classStudents.forEach(sid => {
-          const ref = db.collection('alumnes').doc(sid);
-          batch.update(ref, { [`notes.${actId}`]: firebase.firestore.FieldValue.delete() });
-        });
-        return batch.commit();
-      }).then(()=> loadClassData())
-      .catch(e=> alert('Error esborrant activitat: '+e.message));
-  });
-}
 
 /* ---------------- Render Students List amb menú ---------------- */
 function renderStudentsList(){
@@ -444,7 +412,6 @@ function renderStudentsList(){
     });
   });
 }
-
 /* ---------------- Notes Grid amb menú activitats ---------------- */
 function renderNotesGrid(){
   notesThead.innerHTML = '';
@@ -489,11 +456,13 @@ function renderNotesGrid(){
           menu.classList.toggle('hidden');
         });
 
-       menuDiv.querySelector('.calc-btn').addEventListener('click', e => {
-        e.stopPropagation(); // evitar que s'obri/ tanqui altres menús
-        openCalcModal(adoc.id); // adoc.id és l'activitat corresponent
+        // --- Calcul button ---
+        menuDiv.querySelector('.calc-btn').addEventListener('click', e => {
+          e.stopPropagation(); 
+          openCalcModal(adoc.id); 
         });
-        
+
+        // Edit / Delete
         menuDiv.querySelector('.edit-btn').addEventListener('click', ()=>{
           const newName = prompt('Introdueix el nou nom de l\'activitat:', name);
           if(!newName || newName.trim()===name) return;
@@ -619,17 +588,139 @@ function renderAverages(){
   notesTfoot.appendChild(tr);
 }
 
+/* ---------------- Open Calculation Modal ---------------- */
 function openCalcModal(activityId){
-  // Guardarem l'activitat que estem editant
-  currentCalcActivityId = activityId; // variable global nova que afegirem
-  // Obrir el modal
+  currentCalcActivityId = activityId; 
   openModal('modalCalc');
-  // Reset inputs del modal
+  // Reset modal
   document.getElementById('calcType').value = 'numeric';
   document.getElementById('formulaInputs').classList.add('hidden');
   document.getElementById('numericInput').classList.remove('hidden');
   document.getElementById('numericField').value = '';
   document.getElementById('formulaField').value = '';
+}
+/* ---------------- Modal Calcul: Numeric / Formula ---------------- */
+const calcTypeSelect = document.getElementById('calcType');
+const numericDiv = document.getElementById('numericInput');
+const numericField = document.getElementById('numericField');
+const formulaDiv = document.getElementById('formulaInputs');
+const formulaField = document.getElementById('formulaField');
+const formulaButtonsDiv = document.getElementById('formulaButtons');
+const modalApplyCalcBtn = document.getElementById('modalApplyCalcBtn');
+
+// Canvi tipus càlcul
+calcTypeSelect.addEventListener('change', ()=>{
+  if(calcTypeSelect.value==='numeric'){
+    numericDiv.classList.remove('hidden');
+    formulaDiv.classList.add('hidden');
+  } else {
+    numericDiv.classList.add('hidden');
+    formulaDiv.classList.remove('hidden');
+    buildFormulaButtons(); // construir botons activitats + operadors
+  }
+});
+
+// Aplicar càlcul
+modalApplyCalcBtn.addEventListener('click', ()=>{
+  if(!currentCalcActivityId) return;
+  if(calcTypeSelect.value==='numeric'){
+    const val = Number(numericField.value);
+    if(isNaN(val)) return alert('Introdueix un número vàlid');
+    classStudents.forEach(sid=>{
+      saveNote(sid, currentCalcActivityId, val);
+    });
+    closeModal('modalCalc');
+  } else {
+    const formula = formulaField.value.trim();
+    if(!formula) return alert('Formula buida');
+    try{
+      classStudents.forEach(sid=>{
+        const notesMap = {}; 
+        classActivities.forEach(aid=>{
+          const input = document.querySelector(`tr td input`);
+          // Opcional: pots carregar notes si vols usar-les en fórmula
+        });
+        // Calcula la fórmula
+        const result = evalFormula(formula);
+        saveNote(sid, currentCalcActivityId, result);
+      });
+      closeModal('modalCalc');
+    } catch(e){
+      console.error(e);
+      alert('Error en calcular la fórmula: ' + e.message);
+    }
+  }
+});
+
+// ---------------- Construir botons de fórmules ----------------
+function buildFormulaButtons(){
+  formulaButtonsDiv.innerHTML = '';
+  // Botons activitats
+  classActivities.forEach(aid=>{
+    db.collection('activitats').doc(aid).get().then(doc=>{
+      const name = doc.exists ? doc.data().nom : '???';
+      const btn = document.createElement('button');
+      btn.type='button';
+      btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
+      btn.textContent = name;
+      btn.addEventListener('click', ()=> addToFormula(name));
+      formulaButtonsDiv.appendChild(btn);
+    });
+  });
+  // Botons operadors
+  ['+', '-', '*', '/', '(', ')'].forEach(op=>{
+    const btn = document.createElement('button');
+    btn.type='button';
+    btn.className='px-2 py-1 m-1 bg-gray-200 rounded hover:bg-gray-300';
+    btn.textContent = op;
+    btn.addEventListener('click', ()=> addToFormula(op));
+    formulaButtonsDiv.appendChild(btn);
+  });
+  // Botons números (0-10)
+  for(let i=0;i<=10;i++){
+    const btn = document.createElement('button');
+    btn.type='button';
+    btn.className='px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
+    btn.textContent = i;
+    btn.addEventListener('click', ()=> addToFormula(i));
+    formulaButtonsDiv.appendChild(btn);
+  }
+}
+
+function addToFormula(str){
+  formulaField.value += str;
+}
+
+// ---------------- Evaluar fórmula ----------------
+function evalFormula(formula){
+  // Substituir noms activitats per valors
+  let evalStr = formula;
+  classActivities.forEach(aid=>{
+    db.collection('activitats').doc(aid).get().then(doc=>{
+      const name = doc.exists ? doc.data().nom : '';
+      if(!name) return;
+      classStudents.forEach(sid=>{
+        const tr = Array.from(notesTbody.children).find(tr=> tr.firstChild.textContent === getStudentNameById(sid));
+        const inputs = Array.from(tr.querySelectorAll('input'));
+        const idx = classActivities.findIndex(a=>a===aid);
+        const val = Number(inputs[idx].value) || 0;
+        evalStr = evalStr.replaceAll(name, val);
+      });
+    });
+  });
+  try{
+    return Function('"use strict"; return (' + evalStr + ')')();
+  }catch(e){
+    console.error('Error evaluating formula:', formula, e);
+    return 0;
+  }
+}
+
+// ---------------- Helper per trobar nom alumne per ID ----------------
+function getStudentNameById(sid){
+  const tr = Array.from(notesTbody.children).find(tr=> tr.firstChild.textContent !== '');
+  if(!tr) return '';
+  return tr.firstChild.textContent;
 }
 
 /* ---------------- Export Excel ---------------- */
@@ -641,7 +732,7 @@ function exportExcel(){
   XLSX.writeFile(wb, fname);
 }
 
-// Tancar menús si fas clic fora
+/* ---------------- Tancar menús si fas clic fora ---------------- */
 document.addEventListener('click', function(e) {
   document.querySelectorAll('.menu').forEach(menu => {
     if (!menu.contains(e.target) && !e.target.classList.contains('menu-btn')) {
