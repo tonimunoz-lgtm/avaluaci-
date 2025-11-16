@@ -728,16 +728,17 @@ async function evalFormulaAsync(formula, studentId){
     const actName = actDoc.exists ? actDoc.data().nom : '';
     if(!actName) continue;
 
-    // Trobar el tr de l'alumne correcte
+    // Trobar la fila de l'alumne
     const tr = getStudentRowById(studentId);
-    if(!tr) continue;
+    if(!tr) continue;  // només una vegada
 
+    // Agafar l'índex de l'activitat
     const idx = classActivities.findIndex(a => a === aid);
     const input = tr.querySelectorAll('input')[idx];
     const val = Number(input?.value) || 0;
 
     // Substituir totes les aparicions del nom de l'activitat pel valor
-    const regex = new RegExp(actName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'); // escapar caràcters especials
+    const regex = new RegExp(actName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
     evalStr = evalStr.replace(regex, val);
   }
 
@@ -748,6 +749,7 @@ async function evalFormulaAsync(formula, studentId){
     return 0;
   }
 }
+
 
 
 
