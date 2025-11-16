@@ -176,3 +176,9 @@ button:hover { transform: scale(1.03); }
 .menu.hidden {
   display: none !important;
 }
+
+/* Mínim marge entre botons i targetes de classes */
+#btnCreateClass,
+#btnDeleteMode {
+  margin-bottom: 1.5rem; /* ajusta segons necessitis */
+}
