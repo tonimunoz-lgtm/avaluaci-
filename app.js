@@ -682,6 +682,7 @@ modalApplyCalcBtn.addEventListener('click', async ()=>{
 // ---------------- Construir botons de fórmules ----------------
 function buildFormulaButtons(){
   formulaButtonsDiv.innerHTML = '';
+
   // Botons activitats
   classActivities.forEach(aid=>{
     db.collection('activitats').doc(aid).get().then(doc=>{
@@ -694,6 +695,7 @@ function buildFormulaButtons(){
       formulaButtonsDiv.appendChild(btn);
     });
   });
+
   // Botons operadors
   ['+', '-', '*', '/', '(', ')'].forEach(op=>{
     const btn = document.createElement('button');
@@ -703,7 +705,8 @@ function buildFormulaButtons(){
     btn.addEventListener('click', ()=> addToFormula(op));
     formulaButtonsDiv.appendChild(btn);
   });
-  // Botons números (0-10)
+
+  // Botons números 0-10
   for(let i=0;i<=10;i++){
     const btn = document.createElement('button');
     btn.type='button';
@@ -712,32 +715,47 @@ function buildFormulaButtons(){
     btn.addEventListener('click', ()=> addToFormula(i));
     formulaButtonsDiv.appendChild(btn);
   }
+
+  // Botons decimals
+  ['.', ','].forEach(dec=>{
+    const btn = document.createElement('button');
+    btn.type='button';
+    btn.className='px-2 py-1 m-1 bg-yellow-200 rounded hover:bg-yellow-300';
+    btn.textContent = dec;
+    btn.addEventListener('click', ()=> addToFormula('.')); // sempre converteix ',' a '.'
+    formulaButtonsDiv.appendChild(btn);
+  });
+
+  // Botó Backspace
+  const backBtn = document.createElement('button');
+  backBtn.type='button';
+  backBtn.className='px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
+  backBtn.textContent = '⌫';
+  backBtn.addEventListener('click', ()=> formulaField.value = formulaField.value.slice(0,-1));
+  formulaButtonsDiv.appendChild(backBtn);
 }
 
+// Afegir a formula
 function addToFormula(str){
   formulaField.value += str;
 }
+
 
 // ---------------- Evaluar fórmula ----------------
 async function evalFormulaAsync(formula, studentId){
   let evalStr = formula;
 
-  // Map de noms d'activitats a valors de l'alumne
+  // Primer carreguem totes les notes de l'alumne
+  const studentDoc = await db.collection('alumnes').doc(studentId).get();
+  const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
+
   for(const aid of classActivities){
     const actDoc = await db.collection('activitats').doc(aid).get();
     const actName = actDoc.exists ? actDoc.data().nom : '';
     if(!actName) continue;
 
-    // Trobar la fila de l'alumne
-    const tr = getStudentRowById(studentId);
-    if(!tr) continue;  // només una vegada
+    const val = Number(notes[aid]) || 0; // Agafem directament les notes de Firestore
 
-    // Agafar l'índex de l'activitat
-    const idx = classActivities.findIndex(a => a === aid);
-    const input = tr.querySelectorAll('input')[idx];
-    const val = Number(input?.value) || 0;
-
-    // Substituir totes les aparicions del nom de l'activitat pel valor
     const regex = new RegExp(actName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
     evalStr = evalStr.replace(regex, val);
   }
@@ -749,6 +767,7 @@ async function evalFormulaAsync(formula, studentId){
     return 0;
   }
 }
+
 
 
 
