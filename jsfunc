@@ -487,6 +487,11 @@ function renderNotesGrid(){
           menu.classList.toggle('hidden');
         });
 
+        menuDiv.querySelector('.calc-btn').addEventListener('click', () => {
+          e.stopPropagation();
+          openCalcModal(id); // id és l'ID de l'activitat
+        });
+        
         menuDiv.querySelector('.edit-btn').addEventListener('click', ()=>{
           const newName = prompt('Introdueix el nou nom de l\'activitat:', name);
           if(!newName || newName.trim()===name) return;
