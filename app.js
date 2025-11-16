@@ -1,4 +1,4 @@
-// app.js - Part 1
+// app.js - lògica principal (modules)
 import { openModal, closeModal, confirmAction } from './modals.js';
 
 /* ---------------- FIREBASE CONFIG ---------------- */
@@ -21,7 +21,7 @@ let classStudents = [];
 let classActivities = [];
 let deleteMode = false;
 
-/* ---------------- Elements ---------------- */
+/* Elements */
 const loginScreen = document.getElementById('loginScreen');
 const appRoot = document.getElementById('appRoot');
 const usuariNom = document.getElementById('usuariNom');
@@ -30,8 +30,8 @@ const btnLogin = document.getElementById('btnLogin');
 const btnRegister = document.getElementById('btnRegister');
 const btnRecover = document.getElementById('btnRecover');
 const btnLogout = document.getElementById('btnLogout');
-
 const btnCreateClass = document.getElementById('btnCreateClass');
+
 const screenClasses = document.getElementById('screen-classes');
 const screenClass = document.getElementById('screen-class');
 const classesGrid = document.getElementById('classesGrid');
@@ -55,23 +55,20 @@ const modalAddActivityBtn = document.getElementById('modalAddActivityBtn');
 
 /* ---------- UTILS ---------- */
 function showLogin() {
-  if(loginScreen) loginScreen.style.display = 'block';
-  if(loginScreen) loginScreen.classList.remove('hidden');
-  if(appRoot) appRoot.classList.add('hidden');
+  loginScreen.style.display = 'block';
+  loginScreen.classList.remove('hidden');
+  appRoot.classList.add('hidden');
 }
-
 function showApp() {
-  if(loginScreen) loginScreen.style.display = 'none';
-  if(loginScreen) loginScreen.classList.add('hidden');
-  if(appRoot) appRoot.classList.remove('hidden');
+  loginScreen.style.display = 'none';
+  loginScreen.classList.add('hidden');
+  appRoot.classList.remove('hidden');
 }
 
 /* ---------- AUTH ---------- */
-if(btnLogin) btnLogin.addEventListener('click', () => {
-  const emailInput = document.getElementById('loginEmail');
-  const pwInput = document.getElementById('loginPassword');
-  const email = emailInput ? emailInput.value.trim() : '';
-  const pw = pwInput ? pwInput.value : '';
+btnLogin.addEventListener('click', () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pw = document.getElementById('loginPassword').value;
   if (!email || !pw) return alert('Introdueix email i contrasenya');
   auth.signInWithEmailAndPassword(email, pw)
     .then(u => {
@@ -80,11 +77,9 @@ if(btnLogin) btnLogin.addEventListener('click', () => {
     }).catch(e => alert('Error login: ' + e.message));
 });
 
-if(btnRegister) btnRegister.addEventListener('click', () => {
-  const emailInput = document.getElementById('loginEmail');
-  const pwInput = document.getElementById('loginPassword');
-  const email = emailInput ? emailInput.value.trim() : '';
-  const pw = pwInput ? pwInput.value : '';
+btnRegister.addEventListener('click', () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pw = document.getElementById('loginPassword').value;
   if (!email || !pw) return alert('Introdueix email i contrasenya');
   auth.createUserWithEmailAndPassword(email, pw)
     .then(u => {
@@ -94,16 +89,15 @@ if(btnRegister) btnRegister.addEventListener('click', () => {
     }).catch(e => alert('Error registre: ' + e.message));
 });
 
-if(btnRecover) btnRecover.addEventListener('click', () => {
-  const emailInput = document.getElementById('loginEmail');
-  const email = emailInput ? emailInput.value.trim() : '';
+btnRecover.addEventListener('click', () => {
+  const email = document.getElementById('loginEmail').value.trim();
   if(!email) return alert('Introdueix el teu email per recuperar la contrasenya');
   auth.sendPasswordResetEmail(email)
     .then(()=> alert('Email de recuperació enviat!'))
     .catch(e=> alert('Error: ' + e.message));
 });
 
-if(btnLogout) btnLogout.addEventListener('click', ()=> {
+btnLogout.addEventListener('click', ()=> {
   auth.signOut().then(()=> {
     professorUID = null;
     currentClassId = null;
@@ -124,19 +118,20 @@ auth.onAuthStateChanged(user => {
 function setupAfterAuth(user) {
   showApp();
   const email = user.email || '';
-  if(usuariNom) usuariNom.textContent = email.split('@')[0] || email;
+  usuariNom.textContent = email.split('@')[0] || email;
+
+  // Crida automàtica per carregar la graella de classes
   loadClassesScreen();
 }
-// app.js - Part 2
 
 /* ---------------- Classes screen ---------------- */
-if(btnCreateClass) btnCreateClass.addEventListener('click', ()=> openModal('modalCreateClass'));
-
+btnCreateClass.addEventListener('click', ()=> openModal('modalCreateClass'));
+/* ---------------- Classes Screen (cont.) ---------------- */
 function loadClassesScreen() {
   if(!professorUID) { alert('Fes login primer.'); return; }
-  if(screenClass) screenClass.classList.add('hidden');
-  if(screenClasses) screenClasses.classList.remove('hidden');
-  if(classesGrid) classesGrid.innerHTML = '<div class="col-span-full text-sm text-gray-500">Carregant...</div>';
+  screenClass.classList.add('hidden');
+  screenClasses.classList.remove('hidden');
+  classesGrid.innerHTML = '<div class="col-span-full text-sm text-gray-500">Carregant...</div>';
 
   const classColors = [
     'from-indigo-600 to-purple-600',
@@ -148,19 +143,16 @@ function loadClassesScreen() {
   ];
 
   db.collection('professors').doc(professorUID).get().then(doc => {
-    if(!doc.exists) { 
-      if(classesGrid) classesGrid.innerHTML = '<div class="text-sm text-red-500">Professor no trobat</div>'; 
-      return; 
-    }
+    if(!doc.exists) { classesGrid.innerHTML = '<div class="text-sm text-red-500">Professor no trobat</div>'; return; }
     const ids = doc.data().classes || [];
     if(ids.length === 0) {
-      if(classesGrid) classesGrid.innerHTML = `<div class="col-span-full p-6 bg-white dark:bg-gray-800 rounded shadow text-center">No tens cap classe. Crea la primera!</div>`;
+      classesGrid.innerHTML = `<div class="col-span-full p-6 bg-white dark:bg-gray-800 rounded shadow text-center">No tens cap classe. Crea la primera!</div>`;
       return;
     }
 
     Promise.all(ids.map(id => db.collection('classes').doc(id).get()))
       .then(docs => {
-        if(classesGrid) classesGrid.innerHTML = '';
+        classesGrid.innerHTML = '';
         docs.forEach((d, i) => {
           if(!d.exists) return;
           const color = classColors[i % classColors.length];
@@ -206,7 +198,7 @@ function loadClassesScreen() {
             card.addEventListener('click', () => openClass(d.id));
           }
 
-          if(classesGrid) classesGrid.appendChild(card);
+          classesGrid.appendChild(card);
         });
 
         const existingBtn = document.querySelector('#classesGrid + .delete-selected-btn');
@@ -214,14 +206,14 @@ function loadClassesScreen() {
         if(deleteMode) addDeleteSelectedButton();
       });
   }).catch(e=> {
-    if(classesGrid) classesGrid.innerHTML = `<div class="text-sm text-red-500">Error carregant classes</div>`;
+    classesGrid.innerHTML = `<div class="text-sm text-red-500">Error carregant classes</div>`;
     console.error(e);
   });
 }
 
-/* ---------------- Delete Mode ---------------- */
+/* ---------------- Delete Mode Classes ---------------- */
 const btnDeleteMode = document.getElementById('btnDeleteMode');
-if(btnDeleteMode) btnDeleteMode.addEventListener('click', ()=> {
+btnDeleteMode.addEventListener('click', ()=> {
   deleteMode = !deleteMode;
   btnDeleteMode.textContent = deleteMode ? '❌ Cancel·lar eliminar' : '🗑️ Eliminar classe';
   loadClassesScreen();
@@ -232,7 +224,7 @@ function addDeleteSelectedButton(){
   delBtn.textContent = 'Eliminar seleccionats';
   delBtn.className = 'delete-selected-btn mt-3 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded shadow';
   delBtn.onclick = confirmDeleteSelected;
-  if(classesGrid && classesGrid.parentNode) classesGrid.parentNode.insertBefore(delBtn, classesGrid.nextSibling);
+  classesGrid.parentNode.insertBefore(delBtn, classesGrid.nextSibling);
 }
 
 function confirmDeleteSelected(){
@@ -248,7 +240,7 @@ function confirmDeleteSelected(){
     () => {
       selected.forEach(card => {
         const classIdToRemove = card.dataset.id;
-        if(card) card.remove();
+        card.remove();
         if(classIdToRemove){
           db.collection('professors').doc(professorUID).update({
             classes: firebase.firestore.FieldValue.arrayRemove(classIdToRemove)
@@ -257,7 +249,7 @@ function confirmDeleteSelected(){
         }
       });
       deleteMode = false;
-      if(btnDeleteMode) btnDeleteMode.textContent = '🗑️ Eliminar classe';
+      btnDeleteMode.textContent = '🗑️ Eliminar classe';
       loadClassesScreen();
     }
   );
@@ -265,35 +257,33 @@ function confirmDeleteSelected(){
 
 /* ---------------- Create Class ---------------- */
 function createClassModal(){
-  const nameInput = document.getElementById('modalClassName');
-  const name = nameInput ? nameInput.value.trim() : '';
+  const name = document.getElementById('modalClassName').value.trim();
   if(!name) return alert('Posa un nom');
   const ref = db.collection('classes').doc();
   ref.set({ nom: name, alumnes: [], activitats: [] })
     .then(()=> db.collection('professors').doc(professorUID).update({ classes: firebase.firestore.FieldValue.arrayUnion(ref.id) }))
     .then(()=> {
       closeModal('modalCreateClass');
-      if(nameInput) nameInput.value = '';
+      document.getElementById('modalClassName').value = '';
       loadClassesScreen();
     }).catch(e=> alert('Error: ' + e.message));
 }
-if(modalCreateClassBtn) modalCreateClassBtn.addEventListener('click', createClassModal);
+modalCreateClassBtn.addEventListener('click', createClassModal);
 
 /* ---------------- Open Class ---------------- */
 function openClass(id){
   currentClassId = id;
-  if(screenClasses) screenClasses.classList.add('hidden');
-  if(screenClass) screenClass.classList.remove('hidden');
+  screenClasses.classList.add('hidden');
+  screenClass.classList.remove('hidden');
   loadClassData();
 }
 
-if(btnBack) btnBack.addEventListener('click', ()=> {
+btnBack.addEventListener('click', ()=> {
   currentClassId = null;
-  if(screenClass) screenClass.classList.add('hidden');
-  if(screenClasses) screenClasses.classList.remove('hidden');
+  screenClass.classList.add('hidden');
+  screenClasses.classList.remove('hidden');
   loadClassesScreen();
 });
-// app.js - Part 3
 
 /* ---------------- Load Class Data ---------------- */
 function loadClassData(){
@@ -303,29 +293,26 @@ function loadClassData(){
     const data = doc.data();
     classStudents = data.alumnes || [];
     classActivities = data.activitats || [];
-    const titleEl = document.getElementById('classTitle');
-    const subEl = document.getElementById('classSub');
-    if(titleEl) titleEl.textContent = data.nom || 'Sense nom';
-    if(subEl) subEl.textContent = `ID: ${doc.id}`;
+    document.getElementById('classTitle').textContent = data.nom || 'Sense nom';
+    document.getElementById('classSub').textContent = `ID: ${doc.id}`;
     renderStudentsList();
     renderNotesGrid();
   }).catch(e=> console.error(e));
 }
 
 /* ---------------- Students ---------------- */
-if(btnAddStudent) btnAddStudent.addEventListener('click', ()=> openModal('modalAddStudent'));
-if(modalAddStudentBtn) modalAddStudentBtn.addEventListener('click', createStudentModal);
+btnAddStudent.addEventListener('click', ()=> openModal('modalAddStudent'));
+modalAddStudentBtn.addEventListener('click', createStudentModal);
 
 function createStudentModal(){
-  const nameInput = document.getElementById('modalStudentName');
-  const name = nameInput ? nameInput.value.trim() : '';
+  const name = document.getElementById('modalStudentName').value.trim();
   if(!name) return alert('Posa un nom');
   const ref = db.collection('alumnes').doc();
   ref.set({ nom: name, notes: {} })
     .then(()=> db.collection('classes').doc(currentClassId).update({ alumnes: firebase.firestore.FieldValue.arrayUnion(ref.id) }))
     .then(()=> {
       closeModal('modalAddStudent');
-      if(nameInput) nameInput.value = '';
+      document.getElementById('modalStudentName').value = '';
       loadClassData();
     }).catch(e=> alert('Error: '+e.message));
 }
@@ -347,7 +334,7 @@ function reorderStudents(fromIdx, toIdx){
     .catch(e=> console.error('Error reordenant', e));
 }
 
-if(btnSortAlpha) btnSortAlpha.addEventListener('click', sortStudentsAlpha);
+btnSortAlpha.addEventListener('click', sortStudentsAlpha);
 function sortStudentsAlpha(){
   Promise.all(classStudents.map(id => db.collection('alumnes').doc(id).get()))
     .then(docs=>{
@@ -358,21 +345,19 @@ function sortStudentsAlpha(){
     }).then(()=> loadClassData())
     .catch(e=> console.error(e));
 }
-
 /* ---------------- Activities ---------------- */
-if(btnAddActivity) btnAddActivity.addEventListener('click', ()=> openModal('modalAddActivity'));
-if(modalAddActivityBtn) modalAddActivityBtn.addEventListener('click', createActivityModal);
+btnAddActivity.addEventListener('click', ()=> openModal('modalAddActivity'));
+modalAddActivityBtn.addEventListener('click', createActivityModal);
 
 function createActivityModal(){
-  const nameInput = document.getElementById('modalActivityName');
-  const name = nameInput ? nameInput.value.trim() : '';
+  const name = document.getElementById('modalActivityName').value.trim();
   if(!name) return alert('Posa un nom');
   const ref = db.collection('activitats').doc();
   ref.set({ nom: name, data: new Date().toISOString().split('T')[0] })
     .then(()=> db.collection('classes').doc(currentClassId).update({ activitats: firebase.firestore.FieldValue.arrayUnion(ref.id) }))
     .then(()=> {
       closeModal('modalAddActivity');
-      if(nameInput) nameInput.value = '';
+      document.getElementById('modalActivityName').value = '';
       loadClassData();
     }).catch(e=> alert('Error: '+e.message));
 }
@@ -392,11 +377,10 @@ function removeActivity(actId){
   });
 }
 
-/* ---------------- Render Students List ---------------- */
+/* ---------------- Render Students List amb menú ---------------- */
 function renderStudentsList(){
-  if(!studentsList) return;
   studentsList.innerHTML = '';
-  if(studentsCount) studentsCount.textContent = `(${classStudents.length})`;
+  studentsCount.textContent = `(${classStudents.length})`;
 
   if(classStudents.length === 0){
     studentsList.innerHTML = '<li class="text-sm text-gray-400">No hi ha alumnes</li>';
@@ -408,27 +392,30 @@ function renderStudentsList(){
       const name = doc.exists ? doc.data().nom : 'Desconegut';
       const li = document.createElement('li');
       li.className = 'flex items-center justify-between bg-gray-50 dark:bg-gray-900 p-2 rounded';
+
       li.innerHTML = `
         <div class="flex items-center gap-3">
           <span draggable="true" title="Arrossega per reordenar" class="cursor-move text-sm text-gray-500">☰</span>
           <span class="stu-name font-medium">${name}</span>
         </div>
         <div class="relative">
-          <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white tooltip">⋮
-          </button>
+          <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white tooltip">⋮</button>
           <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10 transition-opacity duration-200 opacity-0">
             <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
             <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>
           </div>
         </div>
       `;
+
       const menuBtn = li.querySelector('.menu-btn');
       const menu = li.querySelector('.menu');
+
       menuBtn.addEventListener('click', e=>{
         e.stopPropagation();
         document.querySelectorAll('.menu').forEach(m=> m.classList.add('hidden'));
         menu.classList.toggle('hidden');
       });
+
       li.querySelector('.edit-btn').addEventListener('click', ()=>{
         const newName = prompt('Introdueix el nou nom:', name);
         if(!newName || newName.trim()===name) return;
@@ -436,8 +423,10 @@ function renderStudentsList(){
           .then(()=> loadClassData())
           .catch(e=> alert('Error editant alumne: '+e.message));
       });
+
       li.querySelector('.delete-btn').addEventListener('click', ()=> removeStudent(stuId));
 
+      // Drag handle
       const dragHandle = li.querySelector('[draggable]');
       dragHandle.addEventListener('dragstart', e=>{
         e.dataTransfer.setData('text/plain', idx.toString());
@@ -454,9 +443,8 @@ function renderStudentsList(){
   });
 }
 
-/* ---------------- Render Notes Grid ---------------- */
+/* ---------------- Notes Grid amb menú activitats ---------------- */
 function renderNotesGrid(){
-  if(!notesThead || !notesTbody || !notesTfoot) return;
   notesThead.innerHTML = '';
   notesTbody.innerHTML = '';
   notesTfoot.innerHTML = '';
@@ -472,13 +460,14 @@ function renderNotesGrid(){
         const thEl = th('');
         const container = document.createElement('div');
         container.className = 'flex items-center justify-between';
+
         const spanName = document.createElement('span');
         spanName.textContent = name;
+
         const menuDiv = document.createElement('div');
         menuDiv.className = 'relative';
         menuDiv.innerHTML = `
-          <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white tooltip">⋮
-          </button>
+          <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white tooltip">⋮</button>
           <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10 transition-opacity duration-200 opacity-0">
             <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
             <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>
@@ -496,6 +485,7 @@ function renderNotesGrid(){
           document.querySelectorAll('.menu').forEach(m=> m.classList.add('hidden'));
           menu.classList.toggle('hidden');
         });
+
         menuDiv.querySelector('.edit-btn').addEventListener('click', ()=>{
           const newName = prompt('Introdueix el nou nom de l\'activitat:', name);
           if(!newName || newName.trim()===name) return;
@@ -503,6 +493,7 @@ function renderNotesGrid(){
             .then(()=> loadClassData())
             .catch(e=> alert('Error editant activitat: '+e.message));
         });
+
         menuDiv.querySelector('.delete-btn').addEventListener('click', ()=> removeActivity(id));
       });
 
@@ -556,7 +547,14 @@ function renderNotesGrid(){
     });
 }
 
-/* ---------------- Save Notes ---------------- */
+/* ---------------- Helpers Notes & Excel ---------------- */
+function th(txt, cls=''){
+  const el = document.createElement('th');
+  el.className = 'border px-2 py-1 ' + cls;
+  el.textContent = txt;
+  return el;
+}
+
 function saveNote(studentId, activityId, value){
   const num = value === '' ? null : Number(value);
   const updateObj = {};
@@ -583,7 +581,6 @@ function computeStudentAverageText(studentData){
   return (vals.reduce((s,n)=> s+n,0)/vals.length).toFixed(2);
 }
 
-/* ---------------- Render Averages ---------------- */
 function renderAverages(){
   Array.from(notesTbody.children).forEach(tr=>{
     const inputs = Array.from(tr.querySelectorAll('input')).map(i=> Number(i.value)).filter(v=> !isNaN(v));
@@ -615,16 +612,15 @@ function renderAverages(){
 }
 
 /* ---------------- Export Excel ---------------- */
-if(btnExport) btnExport.addEventListener('click', exportExcel);
+btnExport.addEventListener('click', exportExcel);
 function exportExcel(){
   const table = document.getElementById('notesTable');
-  if(!table) return alert('No hi ha taula per exportar');
   const wb = XLSX.utils.table_to_book(table, {sheet:"Notes"});
   const fname = (document.getElementById('classTitle').textContent || 'classe') + '.xlsx';
   XLSX.writeFile(wb, fname);
 }
 
-// Close menus if click outside
+// Tancar menús si fas clic fora
 document.addEventListener('click', function(e) {
   document.querySelectorAll('.menu').forEach(menu => {
     if (!menu.contains(e.target) && !e.target.classList.contains('menu-btn')) {
@@ -632,4 +628,3 @@ document.addEventListener('click', function(e) {
     }
   });
 });
-
