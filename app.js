@@ -268,78 +268,6 @@ function loadClassData(){
 }
 
 /* ---------------- Students ---------------- */
-function renderStudentsList(){
-  studentsList.innerHTML = '';
-  studentsCount.textContent = `(${classStudents.length})`;
-  if(classStudents.length === 0) {
-    studentsList.innerHTML = '<li class="text-sm text-gray-400">No hi ha alumnes</li>';
-    return;
-  }
-
-  classStudents.forEach((stuId, idx) => {
-    db.collection('alumnes').doc(stuId).get().then(doc=>{
-      const name = doc.exists ? doc.data().nom : 'Desconegut';
-      const li = document.createElement('li');
-      li.className = 'flex items-center justify-between bg-gray-50 dark:bg-gray-900 p-2 rounded';
-
-      li.innerHTML = `
-        <div class="flex items-center gap-3">
-          <span draggable="true" title="Arrossega per reordenar" class="cursor-move text-sm text-gray-500">☰</span>
-          <span class="stu-name font-medium">${name}</span>
-        </div>
-        <div class="relative">
-          <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white tooltip">⋮
-            <span class="tooltiptext">Opcions</span>
-          </button>
-          <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10 transition-opacity duration-200 opacity-0">
-            <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
-            <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>
-          </div>
-        </div>
-      `;
-
-      // Menu toggle
-      const menuBtn = li.querySelector('.menu-btn');
-      const menu = li.querySelector('.menu');
-      menuBtn.addEventListener('click', e=>{
-        e.stopPropagation();
-        document.querySelectorAll('.menu').forEach(m=> m.classList.add('hidden'));
-        menu.classList.toggle('hidden');
-        if(!menu.classList.contains('hidden')) menu.classList.add('show'); else menu.classList.remove('show');
-      });
-      document.addEventListener('click', ()=> menu.classList.add('hidden'));
-
-      // Edit student
-      li.querySelector('.edit-btn').addEventListener('click', ()=>{
-        const newName = prompt('Introdueix el nou nom:', name);
-        if(!newName || newName.trim()===name) return;
-        db.collection('alumnes').doc(stuId).update({ nom: newName.trim() })
-          .then(()=> loadClassData())
-          .catch(e=> alert('Error editant alumne: '+e.message));
-      });
-
-      // Delete student
-      li.querySelector('.delete-btn').addEventListener('click', ()=> {
-        confirmAction('Eliminar alumne', `Segur que vols eliminar ${name}?`, ()=> removeStudent(stuId));
-      });
-
-      // Drag handlers
-      const dragHandle = li.querySelector('[draggable]');
-      dragHandle.addEventListener('dragstart', e=>{
-        e.dataTransfer.setData('text/plain', idx.toString());
-      });
-      li.addEventListener('dragover', e=> e.preventDefault());
-      li.addEventListener('drop', e=>{
-        e.preventDefault();
-        const fromIdx = Number(e.dataTransfer.getData('text/plain'));
-        reorderStudents(fromIdx, idx);
-      });
-
-      studentsList.appendChild(li);
-    });
-  });
-}
-
 btnAddStudent.addEventListener('click', ()=> openModal('modalAddStudent'));
 modalAddStudentBtn.addEventListener('click', createStudentModal);
 
@@ -417,7 +345,75 @@ function removeActivity(actId){
   });
 }
 
-/* ---------------- Notes Grid ---------------- */
+/* ---------------- Render Students List amb menú ---------------- */
+function renderStudentsList(){
+  studentsList.innerHTML = '';
+  studentsCount.textContent = `(${classStudents.length})`;
+
+  if(classStudents.length === 0){
+    studentsList.innerHTML = '<li class="text-sm text-gray-400">No hi ha alumnes</li>';
+    return;
+  }
+
+  classStudents.forEach((stuId, idx)=>{
+    db.collection('alumnes').doc(stuId).get().then(doc=>{
+      const name = doc.exists ? doc.data().nom : 'Desconegut';
+      const li = document.createElement('li');
+      li.className = 'flex items-center justify-between bg-gray-50 dark:bg-gray-900 p-2 rounded';
+
+      li.innerHTML = `
+        <div class="flex items-center gap-3">
+          <span draggable="true" title="Arrossega per reordenar" class="cursor-move text-sm text-gray-500">☰</span>
+          <span class="stu-name font-medium">${name}</span>
+        </div>
+        <div class="relative">
+          <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white tooltip">⋮
+            <span class="tooltiptext">Opcions</span>
+          </button>
+          <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10 transition-opacity duration-200 opacity-0">
+            <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
+            <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>
+          </div>
+        </div>
+      `;
+
+      const menuBtn = li.querySelector('.menu-btn');
+      const menu = li.querySelector('.menu');
+      menuBtn.addEventListener('click', e=>{
+        e.stopPropagation();
+        document.querySelectorAll('.menu').forEach(m=> m.classList.add('hidden'));
+        menu.classList.toggle('hidden');
+      });
+      document.addEventListener('click', ()=> menu.classList.add('hidden'));
+
+      li.querySelector('.edit-btn').addEventListener('click', ()=>{
+        const newName = prompt('Introdueix el nou nom:', name);
+        if(!newName || newName.trim()===name) return;
+        db.collection('alumnes').doc(stuId).update({ nom: newName.trim() })
+          .then(()=> loadClassData())
+          .catch(e=> alert('Error editant alumne: '+e.message));
+      });
+
+      li.querySelector('.delete-btn').addEventListener('click', ()=> removeStudent(stuId));
+
+      // Drag handle
+      const dragHandle = li.querySelector('[draggable]');
+      dragHandle.addEventListener('dragstart', e=>{
+        e.dataTransfer.setData('text/plain', idx.toString());
+      });
+      li.addEventListener('dragover', e=> e.preventDefault());
+      li.addEventListener('drop', e=>{
+        e.preventDefault();
+        const fromIdx = Number(e.dataTransfer.getData('text/plain'));
+        reorderStudents(fromIdx, idx);
+      });
+
+      studentsList.appendChild(li);
+    });
+  });
+}
+
+/* ---------------- Notes Grid amb menú activitats ---------------- */
 function renderNotesGrid(){
   notesThead.innerHTML = '';
   notesTbody.innerHTML = '';
@@ -454,18 +450,15 @@ function renderNotesGrid(){
         thEl.appendChild(container);
         headRow.appendChild(thEl);
 
-        // Menu toggle
         const menuBtn = menuDiv.querySelector('.menu-btn');
         const menu = menuDiv.querySelector('.menu');
         menuBtn.addEventListener('click', e=>{
           e.stopPropagation();
           document.querySelectorAll('.menu').forEach(m=> m.classList.add('hidden'));
           menu.classList.toggle('hidden');
-          if(!menu.classList.contains('hidden')) menu.classList.add('show'); else menu.classList.remove('show');
         });
         document.addEventListener('click', ()=> menu.classList.add('hidden'));
 
-        // Edit activity
         menuDiv.querySelector('.edit-btn').addEventListener('click', ()=>{
           const newName = prompt('Introdueix el nou nom de l\'activitat:', name);
           if(!newName || newName.trim()===name) return;
@@ -474,14 +467,12 @@ function renderNotesGrid(){
             .catch(e=> alert('Error editant activitat: '+e.message));
         });
 
-        // Delete activity
         menuDiv.querySelector('.delete-btn').addEventListener('click', ()=> removeActivity(id));
       });
 
       headRow.appendChild(th('Mitjana', 'text-right'));
       notesThead.appendChild(headRow);
 
-      // continuar amb render de cossos i mitjanes (com abans)
       if(classStudents.length===0){
         notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivities.length+2}">No hi ha alumnes</td></tr>`;
         renderAverages();
@@ -529,6 +520,7 @@ function renderNotesGrid(){
     });
 }
 
+/* ---------------- Helpers Notes & Excel ---------------- */
 function th(txt, cls=''){
   const el = document.createElement('th');
   el.className = 'border px-2 py-1 ' + cls;
