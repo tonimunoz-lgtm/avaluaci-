@@ -692,21 +692,21 @@ async function evalFormulaAsync(formula, studentId){
 
   // Map de noms d'activitats a valors de l'alumne
   for(const aid of classActivities){
-    const doc = await db.collection('activitats').doc(aid).get();
-    const name = doc.exists ? doc.data().nom : '';
-    if(!name) continue;
+    const actDoc = await db.collection('activitats').doc(aid).get();
+    const actName = actDoc.exists ? actDoc.data().nom : '';
+    if(!actName) continue;
 
-    // Trobar valor de l'activitat per a aquest alumne
+    // Trobar el tr de l'alumne correcte
     const tr = Array.from(notesTbody.children)
       .find(tr => tr.firstChild.textContent === getStudentNameById(studentId));
     if(!tr) continue;
 
-    const idx = classActivities.findIndex(a => a===aid);
-    const inputs = Array.from(tr.querySelectorAll('input'));
-    const val = Number(inputs[idx]?.value) || 0;
+    const idx = classActivities.findIndex(a => a === aid);
+    const input = tr.querySelectorAll('input')[idx];
+    const val = Number(input?.value) || 0;
 
-    // Substituir totes les aparicions del nom per el valor
-    const regex = new RegExp(name, 'g'); // global
+    // Substituir totes les aparicions del nom de l'activitat pel valor
+    const regex = new RegExp(actName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'); // escapar caràcters especials
     evalStr = evalStr.replace(regex, val);
   }
 
@@ -717,6 +717,7 @@ async function evalFormulaAsync(formula, studentId){
     return 0;
   }
 }
+
 
 
 // ---------------- Helper per trobar nom alumne per ID ----------------
