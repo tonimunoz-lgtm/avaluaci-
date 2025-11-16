@@ -709,6 +709,23 @@ calcTypeSelect.addEventListener('change', () => {
   if (type === 'formula') {
     formulaDiv.classList.remove('hidden');
     numericDiv.classList.add('hidden');
+    // ---------------- Control del tipus de càlcul (numeric / formula) ----------------
+const calcType = document.getElementById('calcType');
+const formulaInputs = document.getElementById('formulaInputs');
+const numericInput = document.getElementById('numericInput');
+
+calcType.addEventListener('change', () => {
+  if (calcType.value === 'formula') {
+    formulaInputs.classList.remove('hidden'); // mostra la secció de fórmula
+    numericInput.classList.add('hidden');     // amaga l'input numèric
+
+    // Genera els botons d'activitats i operadors
+    buildFormulaButtons();
+  } else {
+    formulaInputs.classList.add('hidden');    // amaga la secció de fórmula
+    numericInput.classList.remove('hidden');  // mostra l'input numèric
+  }
+});
     buildFormulaButtons(); // funció que crearem en el següent pas
   } else {
     formulaDiv.classList.add('hidden');
