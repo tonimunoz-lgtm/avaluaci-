@@ -21,7 +21,7 @@ let classStudents = [];
 let classActivities = [];
 let deleteMode = false;
 
-/* Elements */
+/* ---------------- Elements ---------------- */
 const loginScreen = document.getElementById('loginScreen');
 const appRoot = document.getElementById('appRoot');
 const usuariNom = document.getElementById('usuariNom');
@@ -49,11 +49,7 @@ const notesThead = document.getElementById('notesThead');
 const notesTbody = document.getElementById('notesTbody');
 const notesTfoot = document.getElementById('notesTfoot');
 
-const modalCreateClassBtn = document.getElementById('modalCreateClassBtn');
-const modalAddStudentBtn = document.getElementById('modalAddStudentBtn');
-const modalAddActivityBtn = document.getElementById('modalAddActivityBtn');
-
-/* ---------- UTILS ---------- */
+/* ---------------- UTILS ---------------- */
 function showLogin() {
   loginScreen.style.display = 'block';
   loginScreen.classList.remove('hidden');
@@ -65,7 +61,7 @@ function showApp() {
   appRoot.classList.remove('hidden');
 }
 
-/* ---------- AUTH ---------- */
+/* ---------------- AUTH ---------------- */
 btnLogin.addEventListener('click', () => {
   const email = document.getElementById('loginEmail').value.trim();
   const pw = document.getElementById('loginPassword').value;
@@ -121,6 +117,7 @@ function setupAfterAuth(user) {
   usuariNom.textContent = email.split('@')[0] || email;
   loadClassesScreen();
 }
+// ---------------- app.js - Part 2/3 ----------------
 
 /* ---------------- Classes screen ---------------- */
 btnCreateClass.addEventListener('click', ()=> openModal('modalCreateClass'));
@@ -170,7 +167,7 @@ function loadClassesScreen() {
             menuDiv.className = 'absolute top-2 right-2';
             menuDiv.innerHTML = `
               <button class="menu-btn text-white font-bold text-xl">⋮</button>
-              <div class="menu hidden absolute right-0 mt-1 bg-white text-black border rounded shadow z-10 transition-opacity duration-200 opacity-0">
+              <div class="menu hidden absolute right-0 mt-1 bg-white text-black border rounded shadow z-10">
                 <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100">Editar</button>
                 <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100">Eliminar</button>
                 <button class="calc-btn px-3 py-1 w-full text-left hover:bg-gray-100">Calcul</button>
@@ -218,16 +215,10 @@ function loadClassesScreen() {
   });
 }
 
-// Delete mode, create class modal, etc... segueix com abans
-// ---------------- app.js - Part 2/3 ----------------
-
-// ---------- CÀLCUL ACTIVITATS ----------
-
-// Creem un modal simple (pots tenir-lo al HTML també)
+/* ---------------- Modal de càlcul ---------------- */
 function openCalcModal(activityId){
   const activityName = document.querySelector(`.class-card[data-id="${currentClassId}"] h3`)?.textContent || 'Activitat';
   
-  // Crear modal container
   const modal = document.createElement('div');
   modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50';
   modal.innerHTML = `
@@ -251,7 +242,6 @@ function openCalcModal(activityId){
       </div>
     </div>
   `;
-
   document.body.appendChild(modal);
 
   const calcType = modal.querySelector('#calcType');
@@ -260,17 +250,12 @@ function openCalcModal(activityId){
   const cancelBtn = modal.querySelector('#calcCancelBtn');
   const okBtn = modal.querySelector('#calcOkBtn');
 
-  // Canviar visibilitat formula
-  calcType.addEventListener('change', ()=>{
-    formulaDiv.classList.toggle('hidden', calcType.value === 'numeric');
-  });
-
+  calcType.addEventListener('change', ()=> formulaDiv.classList.toggle('hidden', calcType.value === 'numeric'));
   cancelBtn.addEventListener('click', ()=> modal.remove());
-
   okBtn.addEventListener('click', ()=>{
     const type = calcType.value;
     if(type === 'numeric'){
-      alert('Numeric manté la introducció manual com ara.');
+      alert('Numeric manté la introducció manual.');
       modal.remove();
     } else {
       const formula = formulaInput.value.trim();
@@ -280,48 +265,10 @@ function openCalcModal(activityId){
     }
   });
 }
-
-// ---------- Aplicar fórmula ----------
-
-function applyFormulaToActivity(activityId, formula){
-  // Construïm un objecte amb notes de tots els alumnes
-  Promise.all(classStudents.map(sid => db.collection('alumnes').doc(sid).get()))
-    .then(studentDocs=>{
-      studentDocs.forEach(sdoc=>{
-        if(!sdoc.exists) return;
-        const notes = sdoc.data().notes || {};
-
-        // Reemplaçar noms d'activitats a la fórmula
-        let expr = formula;
-        classActivities.forEach((aid,i)=>{
-          const val = notes[aid] !== undefined ? notes[aid] : 0;
-          const re = new RegExp(`act${i+1}`, 'g'); // act1, act2, etc.
-          expr = expr.replace(re, val);
-        });
-
-        let result;
-        try {
-          result = eval(expr); // atenció: només confia en fórmules controlades!
-        } catch(e){
-          console.error('Error a la fórmula:', e);
-          result = null;
-        }
-
-        if(result !== null && !isNaN(result)){
-          notes[activityId] = Number(result.toFixed(2));
-          db.collection('alumnes').doc(sdoc.id).update({ notes })
-            .catch(e=> console.error('Error actualitzant nota:', e));
-        }
-      });
-    })
-    .then(()=> renderNotesGrid());
-}
 // ---------------- app.js - Part 3/3 ----------------
 
-// ---------- Obtenir IDs i noms d'activitats ----------
-
+/* ---------- Obtenir IDs i noms d'activitats ---------- */
 function getActivityIdsMap(){
-  // Retorna un objecte { act1: 'ID_real', act2: 'ID_real', ... }
   const map = {};
   classActivities.forEach((aid,i)=>{
     map[`act${i+1}`] = aid;
@@ -339,11 +286,9 @@ function getActivityNamesMap(){
   return map;
 }
 
-// ---------- Validació fórmula segura ----------
-
+/* ---------- Validació fórmula segura ---------- */
 function safeEvalFormula(expr, studentNotes){
   // Substitueix només números i operadors bàsics
-  // Reemplaça act1, act2, ... amb el valor numèric de l'alumne
   Object.keys(studentNotes).forEach(aid=>{
     const re = new RegExp(aid,'g');
     expr = expr.replace(re, studentNotes[aid] !== undefined ? studentNotes[aid] : 0);
@@ -352,12 +297,10 @@ function safeEvalFormula(expr, studentNotes){
   // Només permet números, +, -, *, /, (, ), . i espais
   if(!/^[0-9+\-*/().\s]+$/.test(expr)) throw new Error('Fórmula conté caràcters no permesos');
 
-  // Evaluar
   return Function('"use strict"; return (' + expr + ')')();
 }
 
-// ---------- Aplicar fórmula avançada ----------
-
+/* ---------- Aplicar fórmula avançada ---------- */
 function applyFormulaToActivity(activityId, formula){
   const idsMap = getActivityIdsMap();
 
@@ -367,13 +310,12 @@ function applyFormulaToActivity(activityId, formula){
         if(!sdoc.exists) return;
         const notes = sdoc.data().notes || {};
 
-        // Reemplaçar act1, act2... amb valors reals de l'alumne
+        // Substitueix act1, act2... amb valors reals de l'alumne
         let expr = formula;
         Object.keys(idsMap).forEach(actKey=>{
           const aid = idsMap[actKey];
           const val = notes[aid] !== undefined ? notes[aid] : 0;
-          const re = new RegExp(actKey, 'g');
-          expr = expr.replace(re, val);
+          expr = expr.replace(new RegExp(actKey,'g'), val);
         });
 
         let result;
@@ -394,20 +336,18 @@ function applyFormulaToActivity(activityId, formula){
     .then(()=> renderNotesGrid());
 }
 
-// ---------- Afegir opció "Calcul" als tres punts ----------
-
+/* ---------- Integrar opció "Calcul" als tres punts ---------- */
 document.addEventListener('click', e=>{
   if(e.target.classList.contains('calc-btn')){
     const thEl = e.target.closest('th');
     if(!thEl) return;
-    const idx = Array.from(thEl.parentNode.children).indexOf(thEl) - 1; // -1 per la columna Alumne
+    const idx = Array.from(thEl.parentNode.children).indexOf(thEl) - 1; // -1 per columna Alumne
     const activityId = classActivities[idx];
     openCalcModal(activityId);
   }
 });
 
-// ---------- Integrar el botó "Calcul" ----------
-
+/* ---------- Afegir botó "Calcul" als menús ---------- */
 function enhanceActivityMenus(){
   notesThead.querySelectorAll('th').forEach((thEl, i)=>{
     if(i === 0 || i > classActivities.length) return; // Saltar Alumne i Mitjana
@@ -421,9 +361,12 @@ function enhanceActivityMenus(){
   });
 }
 
-// Trucar després de renderNotesGrid
+// Crida després de renderNotesGrid
 const originalRenderNotesGrid = renderNotesGrid;
 renderNotesGrid = function(){
   originalRenderNotesGrid();
   setTimeout(enhanceActivityMenus, 50); // Assegurar que els menús estiguin creats
 };
+
+
+
