@@ -166,28 +166,5 @@
 
   <!-- SCRIPT PRINCIPAL -->
   <script type="module" src="./app.js"></script>
-  <!-- Modal Calcul -->
-<div id="modalCalc" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-  <div class="bg-white dark:bg-gray-800 p-6 rounded shadow w-96">
-    <h3 class="text-lg font-bold mb-4">Calcul activitat</h3>
-    <div class="mb-4">
-      <label class="block mb-2">Tipus:</label>
-      <select id="calcType" class="border p-2 rounded w-full">
-        <option value="numeric">Numeric</option>
-        <option value="formula">Fórmula</option>
-      </select>
-    </div>
-    <div class="mb-4 hidden" id="formulaInputDiv">
-      <label class="block mb-2">Fórmula:</label>
-      <input type="text" id="formulaInput" class="border p-2 rounded w-full" placeholder="((act1+act2)/2)*0.4 + act3*0.6">
-      <p class="text-xs text-gray-500 mt-1">Usa act1, act2, ... com a referència a altres activitats</p>
-    </div>
-    <div class="flex justify-end gap-2">
-      <button id="modalCalcCancel" class="px-4 py-2 bg-gray-300 rounded">Cancel·lar</button>
-      <button id="modalCalcOk" class="px-4 py-2 bg-blue-600 text-white rounded">Aplica</button>
-    </div>
-  </div>
-</div>
-
 </body>
 </html>
