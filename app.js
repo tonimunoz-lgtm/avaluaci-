@@ -743,6 +743,38 @@ calcType.addEventListener('change', () => {
   document.getElementById('formulaField').value = '';
 }
 
+function buildFormulaButtons() {
+  const container = document.getElementById('formulaButtons');
+  container.innerHTML = ''; // neteja contingut anterior
+
+  // 1. Botons d’activitats
+  classActivities.forEach(actId => {
+    db.collection('activitats').doc(actId).get().then(doc => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'px-2 py-1 bg-indigo-200 rounded';
+      btn.textContent = doc.exists ? doc.data().nom : 'Desconegut';
+      btn.addEventListener('click', () => {
+        document.getElementById('formulaField').value += actId; // afegeix l’ID a la fórmula
+      });
+      container.appendChild(btn);
+    });
+  });
+
+  // 2. Botons operadors i parèntesis
+  const symbols = ['+', '-', '*', '/', '(', ')'];
+  symbols.forEach(sym => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'px-2 py-1 bg-gray-200 rounded';
+    btn.textContent = sym;
+    btn.addEventListener('click', () => {
+      document.getElementById('formulaField').value += sym;
+    });
+    container.appendChild(btn);
+  });
+}
+
 /* ---------------- Export Excel ---------------- */
 btnExport.addEventListener('click', exportExcel);
 function exportExcel(){
