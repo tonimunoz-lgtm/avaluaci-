@@ -622,6 +622,24 @@ function renderAverages(){
 function openCalcModal(activityId){
   // Guardarem l'activitat que estem editant
   currentCalcActivityId = activityId; // variable global nova que afegirem
+  
+  // Observar canvis en el selector de tipus de càlcul
+const calcTypeSelect = document.getElementById('calcType');
+calcTypeSelect.addEventListener('change', () => {
+  const type = calcTypeSelect.value;
+  const formulaDiv = document.getElementById('formulaInputs');
+  const numericDiv = document.getElementById('numericInput');
+  
+  if (type === 'formula') {
+    formulaDiv.classList.remove('hidden');
+    numericDiv.classList.add('hidden');
+    buildFormulaButtons(); // funció que crearem en el següent pas
+  } else {
+    formulaDiv.classList.add('hidden');
+    numericDiv.classList.remove('hidden');
+  }
+});
+  
   // Obrir el modal
   openModal('modalCalc');
   // Reset inputs del modal
