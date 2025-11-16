@@ -177,6 +177,7 @@ button:hover { transform: scale(1.03); }
   display: none !important;
 }
 
+
 /* Mínim marge entre botons i targetes de classes */
 #btnCreateClass,
 #btnDeleteMode {
