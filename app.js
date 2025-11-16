@@ -368,7 +368,6 @@ function renderStudentsList(){
         </div>
         <div class="relative">
           <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white tooltip">⋮
-            <span class="tooltiptext">Opcions</span>
           </button>
           <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10 transition-opacity duration-200 opacity-0">
             <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
@@ -438,7 +437,6 @@ function renderNotesGrid(){
         menuDiv.className = 'relative';
         menuDiv.innerHTML = `
           <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white tooltip">⋮
-            <span class="tooltiptext">Opcions</span>
           </button>
           <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10 transition-opacity duration-200 opacity-0">
             <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
