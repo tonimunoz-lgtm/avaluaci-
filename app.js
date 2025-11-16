@@ -55,6 +55,82 @@ const modalCreateClassBtn = document.getElementById('modalCreateClassBtn');
 const modalAddStudentBtn = document.getElementById('modalAddStudentBtn');
 const modalAddActivityBtn = document.getElementById('modalAddActivityBtn');
 
+
+// 2️⃣ Funcions helpers
+function buildFormulaButtons() {
+    const container = document.getElementById('formulaButtonsContainer');
+    if (!container) {
+        const modalBody = document.querySelector('#modalCalc .p-4');
+        const div = document.createElement('div');
+        div.id = 'formulaButtonsContainer';
+        div.className = 'mb-3 flex flex-wrap gap-2';
+        modalBody.insertBefore(div, document.getElementById('formulaField'));
+    }
+    const btnContainer = document.getElementById('formulaButtonsContainer');
+    btnContainer.innerHTML = ''; // netejar contingut anterior
+
+    // Afegir botons per a les activitats
+    classActivities.forEach(aid => {
+        const actDocPromise = db.collection('activitats').doc(aid).get();
+        actDocPromise.then(doc => {
+            if (!doc.exists) return;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'px-2 py-1 bg-indigo-200 rounded text-sm';
+            btn.textContent = doc.data().nom;
+            btn.dataset.aid = doc.id;
+            btn.addEventListener('click', () => {
+                const field = document.getElementById('formulaField');
+                field.value += doc.id; // afegir ID de l’activitat
+            });
+            btnContainer.appendChild(btn);
+        });
+    });
+
+    // Botons d’operadors i parèntesis
+    ['+', '-', '*', '/', '(', ')'].forEach(op => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'px-2 py-1 bg-gray-200 rounded text-sm';
+        btn.textContent = op;
+        btn.addEventListener('click', () => {
+            const field = document.getElementById('formulaField');
+            field.value += op;
+        });
+        btnContainer.appendChild(btn);
+    });
+
+    // Botons numèrics 0-10
+    for (let i = 0; i <= 10; i++) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'px-2 py-1 bg-green-200 rounded text-sm';
+        btn.textContent = i;
+        btn.addEventListener('click', () => {
+            const field = document.getElementById('formulaField');
+            field.value += i;
+        });
+        btnContainer.appendChild(btn);
+    }
+}
+
+// 3️⃣ Event listener del selector calcType
+const calcTypeSelect = document.getElementById('calcType');
+calcTypeSelect.addEventListener('change', () => {
+    const type = calcTypeSelect.value;
+    const formulaDiv = document.getElementById('formulaInputs');
+    const numericDiv = document.getElementById('numericInput');
+
+    if (type === 'formula') {
+        formulaDiv.classList.remove('hidden');
+        numericDiv.classList.add('hidden');
+        buildFormulaButtons(); // crida a la funció quan escollim "formula"
+    } else {
+        formulaDiv.classList.add('hidden');
+        numericDiv.classList.remove('hidden');
+    }
+});
+
 /* ---------- UTILS ---------- */
 function showLogin() {
   loginScreen.style.display = 'block';
