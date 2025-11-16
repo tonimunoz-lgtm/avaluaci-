@@ -729,8 +729,7 @@ async function evalFormulaAsync(formula, studentId){
     if(!actName) continue;
 
     // Trobar el tr de l'alumne correcte
-    const tr = Array.from(notesTbody.children)
-      .find(tr => tr.firstChild.textContent === getStudentNameById(studentId));
+    const tr = getStudentRowById(studentId);
     if(!tr) continue;
 
     const idx = classActivities.findIndex(a => a === aid);
@@ -753,14 +752,13 @@ async function evalFormulaAsync(formula, studentId){
 
 
 // ---------------- Helper per trobar nom alumne per ID ----------------
-function getStudentNameById(sid){
-  // Cerca real del nom
-  const stu = classStudents.indexOf(sid);
-  if(stu === -1) return '';
-  const tr = notesTbody.children[stu];
-  if(!tr) return '';
-  return tr.firstChild.textContent.trim();
+function getStudentRowById(sid) {
+  // Busca la fila corresponent a aquest studentId
+  const studentIndex = classStudents.findIndex(id => id === sid);
+  if (studentIndex === -1) return null;
+  return notesTbody.children[studentIndex] || null;
 }
+
 
 
 /* ---------------- Export Excel ---------------- */
