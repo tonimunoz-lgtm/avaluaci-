@@ -1100,3 +1100,47 @@ document.getElementById('btnImportGC').addEventListener('click', async () => {
   alert(`S’han importat ${students.length} alumnes de Google Classroom`);
 });
 
+// 1️⃣ Botó per obrir el modal
+document.getElementById('btnImportGC').addEventListener('click', async () => {
+  await gapi.auth2.getAuthInstance().signIn(); // Signin si no està fet
+
+  // Llistar les classes
+  gapi.client.classroom.courses.list({ pageSize: 50 }).then(response => {
+    const courses = response.result.courses;
+    const select = document.getElementById('gcClassesSelect');
+    select.innerHTML = ''; // Neteja anterior
+
+    if(courses && courses.length > 0){
+      courses.forEach(course => {
+        const option = document.createElement('option');
+        option.value = course.id;
+        option.textContent = course.name;
+        select.appendChild(option);
+      });
+      // Mostra modal
+      document.getElementById('modalImportGC').classList.remove('hidden');
+    } else {
+      alert('No tens classes disponibles a Google Classroom.');
+    }
+  });
+});
+
+// 2️⃣ Botó Confirmar dins el modal
+document.getElementById('btnImportGCConfirm').addEventListener('click', () => {
+  const courseId = document.getElementById('gcClassesSelect').value;
+  if(!courseId) return;
+
+  gapi.client.classroom.courses.students.list({ courseId }).then(response => {
+    const students = response.result.students;
+    if(students && students.length > 0){
+      students.forEach(student => {
+        const name = student.profile.name.fullName;
+        addStudentToGrid(name); // Funció que ja tens per afegir a la graella
+      });
+      renderNotesGrid(); // refresca la graella
+    }
+  });
+
+  // Tanca modal
+  document.getElementById('modalImportGC').classList.add('hidden');
+});
