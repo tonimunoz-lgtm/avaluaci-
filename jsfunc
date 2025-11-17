@@ -566,9 +566,6 @@ async function renderNotesGrid() {
   renderAverages();
 }
 
-
-
-
 /* ---------------- Helpers Notes & Excel ---------------- */
 function th(txt, cls=''){
   const el = document.createElement('th');
@@ -776,10 +773,6 @@ modalApplyCalcBtn.addEventListener('click', async () => {
 });
 
 
-
-
-
-
 // ---------------- Construir botons de fórmules ----------------
 function buildFormulaButtons(){
   formulaButtonsDiv.innerHTML = '';
@@ -875,6 +868,7 @@ function buildRoundingButtons(){
     formulaButtonsDiv.appendChild(btn);
   });
 }
+
 
 // ---------------- Evaluar fórmula ----------------
 async function evalFormulaAsync(formula, studentId){
