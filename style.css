@@ -104,6 +104,12 @@ p, span, td {
   text-align: center;
 }
 
+.formula-cell {
+  background-color: #fecaca !important; /* vermell clar */
+  cursor: not-allowed;
+}
+
+
 .bg-red-100 { background-color: #fca5a5 !important; }
 .bg-yellow-100 { background-color: #fde68a !important; }
 .bg-green-100 { background-color: #86efac !important; }
