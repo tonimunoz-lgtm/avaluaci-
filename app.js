@@ -534,6 +534,13 @@ function renderNotesGrid(){
               const td = document.createElement('td');
               td.className = 'border px-2 py-1';
               const input = document.createElement('input');
+              // Bloquejar si activitat té fórmula
+              const actDoc = await db.collection('activitats').doc(aid).get();
+              if(actDoc.exists && actDoc.data().formula){
+                input.readOnly = true;
+                input.classList.add('formula-cell');
+              }
+
               input.type='number'; input.min=0; input.max=10;
               input.value=val;
               input.className='table-input text-center rounded border p-1';
@@ -585,16 +592,36 @@ function markFormulaColumn(activityId){
   });
 }
 
+async function recalculateAllFormulaColumns(){
+  for(const actId of classActivities){
+    const actDoc = await db.collection('activitats').doc(actId).get();
+    const formula = actDoc.exists ? actDoc.data().formula : '';
+    if(!formula) continue;
+
+    for(const sid of classStudents){
+      const result = await evalFormulaAsync(formula, sid);
+      await saveNoteWithoutRerender(sid, actId, result);
+    }
+
+    markFormulaColumn(actId);
+  }
+}
+
 
 function saveNote(studentId, activityId, value){
   const num = value === '' ? null : Number(value);
   const updateObj = {};
   if(num === null || isNaN(num)) updateObj[`notes.${activityId}`] = firebase.firestore.FieldValue.delete();
   else updateObj[`notes.${activityId}`] = num;
+
   db.collection('alumnes').doc(studentId).update(updateObj)
-    .then(()=> renderNotesGrid())
+    .then(()=> {
+      recalculateAllFormulaColumns(); // 🔹 Recalcular fórmules
+      renderNotesGrid();
+    })
     .catch(e=> console.error('Error saving note', e));
 }
+
 
 function applyCellColor(inputEl){
   const v = Number(inputEl.value);
