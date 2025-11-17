@@ -712,46 +712,64 @@ calcTypeSelect.addEventListener('change', ()=>{
 });
 
 // Aplicar càlcul
-modalApplyCalcBtn.addEventListener('click', async ()=>{
-  if(!currentCalcActivityId) return;
+modalApplyCalcBtn.addEventListener('click', async () => {
+  if (!currentCalcActivityId) return;
 
-  if(calcTypeSelect.value==='numeric'){
-    const val = Number(numericField.value);
-    if(isNaN(val)) return alert('Introdueix un número vàlid');
-    for(const sid of classStudents){
-      await saveNoteWithoutRerender(sid, currentCalcActivityId, val);
+  const type = calcTypeSelect.value;
+
+  try {
+    if (type === 'numeric') {
+      const val = Number(numericField.value);
+      if (isNaN(val)) return alert('Introdueix un número vàlid');
+      for (const sid of classStudents) {
+        await saveNoteWithoutRerender(sid, currentCalcActivityId, val);
+      }
+
+    } else if (type === 'formula' || type === 'rounding') {
+      let operationStr = formulaField.value.trim();
+      if (!operationStr) return alert('Introdueix una fórmula o valor per al redondeig');
+
+      // Guardem la fórmula només si és tipus formula
+      if (type === 'formula') {
+        await db.collection('activitats').doc(currentCalcActivityId).update({ formula: operationStr });
+      } else {
+        // Si és rounding, podem guardar-la opcionalment com a nota o en camp diferent
+        await db.collection('activitats').doc(currentCalcActivityId).update({ formula: `round:${operationStr}` });
+      }
+
+      for (const sid of classStudents) {
+        let result = 0;
+        if (type === 'formula') {
+          result = await evalFormulaAsync(operationStr, sid);
+        } else if (type === 'rounding') {
+          const currentNote = await getStudentNoteForActivity(sid, currentCalcActivityId);
+          const roundVal = Number(operationStr);
+          if (isNaN(roundVal) || roundVal <= 0) continue;
+          result = Math.round(currentNote / roundVal) * roundVal;
+        }
+
+        await saveNoteWithoutRerender(sid, currentCalcActivityId, result);
+      }
     }
+
+    // Bloqueja la columna i refresca graella
+    markFormulaColumn(currentCalcActivityId);
     closeModal('modalCalc');
     renderNotesGrid();
 
-  } else if(calcTypeSelect.value==='formula'){
-    const formula = formulaField.value.trim();
-    if(!formula) return alert('Formula buida');
-
-    try{
-      // 1️⃣ Guardar fórmula a Firestore
-      await db.collection('activitats').doc(currentCalcActivityId).update({ formula });
-
-      // 2️⃣ Calcular valor per cada alumne
-      for(const sid of classStudents){
-        const result = await evalFormulaAsync(formula, sid);
-        await saveNoteWithoutRerender(sid, currentCalcActivityId, result);
-      }
-
-      // 3️⃣ Marcar columna amb classe 'formula-cell' i bloquejar inputs
-      markFormulaColumn(currentCalcActivityId);
-
-      closeModal('modalCalc');
-      renderNotesGrid(); // refrescar tota la graella
-    } catch(e){
-      console.error(e);
-      alert('Error en calcular la fórmula: ' + e.message);
-    }
-
-  } else if(calcTypeSelect.value==='rounding'){
-    // Manté la teva lògica de round, no cal canviar
+  } catch (e) {
+    console.error('Error aplicant càlcul:', e);
+    alert('Error aplicant càlcul: ' + e.message);
   }
 });
+
+// Helper per obtenir nota actual de l'alumne per activitat
+async function getStudentNoteForActivity(sid, actId) {
+  const doc = await db.collection('alumnes').doc(sid).get();
+  if (!doc.exists) return 0;
+  return Number(doc.data().notes?.[actId] || 0);
+}
+
 
 
 
