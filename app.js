@@ -66,6 +66,36 @@ function showApp() {
 }
 
 /* ---------- AUTH ---------- */
+
+const CLIENT_ID = 'EL_TEU_CLIENT_ID.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/classroom.rosters.readonly';
+
+function initClient() {
+  gapi.load('client:auth2', async () => {
+    await gapi.client.init({
+      clientId: CLIENT_ID,
+      scope: SCOPES
+    });
+  });
+}
+
+document.getElementById('btnImportGC').addEventListener('click', async () => {
+  const GoogleAuth = gapi.auth2.getAuthInstance();
+  if (!GoogleAuth.isSignedIn.get()) {
+    await GoogleAuth.signIn();
+  }
+
+  const response = await gapi.client.request({
+    path: 'https://classroom.googleapis.com/v1/courses'
+  });
+
+  console.log('Llista de cursos:', response.result.courses);
+  
+  // Aquí podries mostrar una finestra per triar el curs i després fer:
+  // GET https://classroom.googleapis.com/v1/courses/{courseId}/students
+});
+
+
 btnLogin.addEventListener('click', () => {
   const email = document.getElementById('loginEmail').value.trim();
   const pw = document.getElementById('loginPassword').value;
