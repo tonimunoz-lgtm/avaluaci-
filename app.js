@@ -630,6 +630,47 @@ function renderAverages(){
   notesTfoot.appendChild(tr);
 }
 
+// ---------------- Funció per aplicar fórmula de redondeig ----------------
+async function applyRoundingFormula(formula, studentId){
+  let selectedActivityName = '';
+  let multiplier = 1;
+
+  // Trobar l'activitat seleccionada i multiplicador (0.5 o 1)
+  for (const aid of classActivities){
+    const adoc = await db.collection('activitats').doc(aid).get();
+    const actName = adoc.exists ? adoc.data().nom : '';
+    if(actName && formula.startsWith(actName)){
+      selectedActivityName = actName;
+      multiplier = Number(formula.slice(actName.length)) || 1;
+      break;
+    }
+  }
+
+  // Carregar notes de l'alumne
+  const studentDoc = await db.collection('alumnes').doc(studentId).get();
+  const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
+
+  let val = 0;
+  // Buscar nota de l'activitat seleccionada
+  for (const aid of classActivities){
+    const adoc = await db.collection('activitats').doc(aid).get();
+    if(adoc.exists && adoc.data().nom === selectedActivityName){
+      val = Number(notes[aid]) || 0;
+      break;
+    }
+  }
+
+  // Aplicar redondeig
+  if(multiplier === 1){
+    val = Math.round(val);
+  } else if(multiplier === 0.5){
+    val = Math.round(val * 2) / 2;
+  }
+
+  return val;
+}
+
+
 /* ---------------- Open Calculation Modal ---------------- */
 function openCalcModal(activityId){
   currentCalcActivityId = activityId; 
