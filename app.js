@@ -721,9 +721,8 @@ modalApplyCalcBtn.addEventListener('click', async () => {
       if (isNaN(val)) return alert('Introdueix un número vàlid');
 
       for (const sid of classStudents) {
-        await saveNote(sid, currentCalcActivityId, val);
+        await db.collection('alumnes').doc(sid).update({ [`notes.${currentCalcActivityId}`]: val });
       }
-      closeModal('modalCalc');
 
     } else if (calcTypeSelect.value === 'formula') {
       const formula = formulaField.value.trim();
@@ -731,15 +730,13 @@ modalApplyCalcBtn.addEventListener('click', async () => {
 
       for (const sid of classStudents) {
         const result = await evalFormulaAsync(formula, sid);
-        await saveNote(sid, currentCalcActivityId, result);
+        await db.collection('alumnes').doc(sid).update({ [`notes.${currentCalcActivityId}`]: result });
       }
-      closeModal('modalCalc');
 
     } else if (calcTypeSelect.value === 'rounding') {
       const formula = formulaField.value.trim();
       if (!formula) return alert('Selecciona activitat i 0,5 o 1');
 
-      // Trobar activitat i multiplicador
       let selectedActivityId = null;
       let multiplier = 1;
 
@@ -760,24 +757,29 @@ modalApplyCalcBtn.addEventListener('click', async () => {
         const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
         let val = Number(notes[selectedActivityId]) || 0;
 
-        // Aplicar redondeig
-        if (multiplier === 1) val = Math.round(val);
-        else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
+        // Redondeig
+        val = multiplier === 1 ? Math.round(val) : Math.round(val * 2) / 2;
 
-        await saveNote(sid, currentCalcActivityId, val);
+        await db.collection('alumnes').doc(sid).update({ [`notes.${currentCalcActivityId}`]: val });
       }
-
-      closeModal('modalCalc');
     }
+
+    // Un cop totes les notes guardades, refresquem la graella
+    renderNotesGrid();
+
+    // Bloquejar la columna aplicada
+    Array.from(notesTbody.querySelectorAll('tr')).forEach(tr => {
+      const input = tr.querySelectorAll('input')[classActivities.indexOf(currentCalcActivityId)];
+      if (input) input.disabled = true;  // bloqueja input
+    });
+
+    closeModal('modalCalc');
+
   } catch (e) {
     console.error('Error aplicant càlcul:', e);
     alert('Error aplicant càlcul: ' + e.message);
   }
 });
-
-
-
-
 
 
 // ---------------- Construir botons de fórmules ----------------
