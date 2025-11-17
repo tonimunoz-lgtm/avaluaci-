@@ -715,57 +715,43 @@ calcTypeSelect.addEventListener('change', ()=>{
 modalApplyCalcBtn.addEventListener('click', async () => {
   if(!currentCalcActivityId) return;
 
-  if(calcTypeSelect.value === 'numeric') {
+  const type = calcTypeSelect.value;
+  const formulaVal = formulaField.value.trim();
+
+  if(type === 'numeric'){
     const val = Number(numericField.value);
     if(isNaN(val)) return alert('Introdueix un número vàlid');
     for(const sid of classStudents){
       await saveNoteWithoutRerender(sid, currentCalcActivityId, val);
     }
-    closeModal('modalCalc');
-    renderNotesGrid();
 
-  } else if(calcTypeSelect.value === 'formula') {
-    const formula = formulaField.value.trim();
-    if(!formula) return alert('Formula buida');
+  } else if(type === 'formula' || type === 'rounding'){
+    if(!formulaVal) return alert('Introdueix un valor');
 
-    try {
-      await db.collection('activitats').doc(currentCalcActivityId).update({ formula });
-
-      for(const sid of classStudents){
-        const result = await evalFormulaAsync(formula, sid);
-        await saveNoteWithoutRerender(sid, currentCalcActivityId, result);
-      }
-
-      markFormulaColumn(currentCalcActivityId);
-      closeModal('modalCalc');
-      renderNotesGrid();
-    } catch(e){
-      console.error(e);
-      alert('Error en calcular la fórmula: ' + e.message);
-    }
-
-  } else if(calcTypeSelect.value === 'rounding') {
-    const roundValue = Number(formulaField.value);
-    if(isNaN(roundValue)) return alert('Introdueix un valor vàlid per al redondeig');
+    // Guardem la fórmula / rounding al document de l'activitat
+    const actUpdate = {};
+    actUpdate.formula = (type==='formula') ? formulaVal : `round:${formulaVal}`;
+    await db.collection('activitats').doc(currentCalcActivityId).update(actUpdate);
 
     for(const sid of classStudents){
-      const currentNote = await getStudentNoteForActivity(sid, currentCalcActivityId);
-      const rounded = Math.round((currentNote || 0) / roundValue) * roundValue;
-      await saveNoteWithoutRerender(sid, currentCalcActivityId, rounded);
+      let result = 0;
+      if(type==='formula'){
+        result = await evalFormulaAsync(formulaVal, sid);
+      } else {
+        const currentNote = await getStudentNoteForActivity(sid, currentCalcActivityId);
+        const roundVal = Number(formulaVal);
+        if(isNaN(roundVal) || roundVal<=0) continue;
+        result = Math.round((currentNote||0)/roundVal)*roundVal;
+      }
+      await saveNoteWithoutRerender(sid, currentCalcActivityId, result);
     }
-
-    markFormulaColumn(currentCalcActivityId); // Bloqueja cel·la
-    closeModal('modalCalc');
-    renderNotesGrid();
   }
+
+  closeModal('modalCalc');
+  await renderNotesGrid();      // 🔹 Re-render taula
+  markFormulaColumn(currentCalcActivityId); // 🔹 Bloquejar columna
 });
 
-// Helper per obtenir nota actual de l'alumne per activitat
-async function getStudentNoteForActivity(sid, actId){
-  const doc = await db.collection('alumnes').doc(sid).get();
-  if(!doc.exists) return 0;
-  return Number(doc.data().notes?.[actId] || 0);
-}
 
 
 
