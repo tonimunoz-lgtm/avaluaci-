@@ -956,12 +956,60 @@ async function markActivityAsCalculated(activityId){
 
 /* ---------------- Export Excel ---------------- */
 btnExport.addEventListener('click', exportExcel);
-function exportExcel(){
-  const table = document.getElementById('notesTable');
-  const wb = XLSX.utils.table_to_book(table, {sheet:"Notes"});
-  const fname = (document.getElementById('classTitle').textContent || 'classe') + '.xlsx';
-  XLSX.writeFile(wb, fname);
+async function exportExcel(){
+  if(!currentClassId) return alert('No hi ha cap classe seleccionada.');
+
+  try {
+    // Carregar informació de la classe
+    const classDoc = await db.collection('classes').doc(currentClassId).get();
+    if(!classDoc.exists) return alert('Classe no trobada.');
+    const classData = classDoc.data();
+
+    // Carregar activitats
+    const actDocs = await Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()));
+
+    // Carregar alumnes
+    const studentDocs = await Promise.all(classStudents.map(id => db.collection('alumnes').doc(id).get()));
+
+    const ws_data = [];
+
+    // Capçalera
+    const header = ['Alumne', ...actDocs.map(a => a.exists ? a.data().nom : 'Sense nom'), 'Mitjana'];
+    ws_data.push(header);
+
+    // Files alumnes
+    studentDocs.forEach(sdoc => {
+      const notes = sdoc.exists ? sdoc.data().notes || {} : {};
+      const row = [sdoc.exists ? sdoc.data().nom : 'Desconegut'];
+
+      let sum = 0, count = 0;
+
+      actDocs.forEach(adoc => {
+        const aid = adoc.id;
+        const val = (notes[aid] !== undefined) ? Number(notes[aid]) : '';
+        row.push(val);
+        if(val !== '') { sum += val; count++; }
+      });
+
+      row.push(count ? (sum/count).toFixed(2) : '');
+      ws_data.push(row);
+    });
+
+    // Crear llibre Excel i full
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    XLSX.utils.book_append_sheet(wb, ws, 'Notes');
+
+    // Nom del fitxer
+    const fname = (document.getElementById('classTitle').textContent || 'classe') + '.xlsx';
+    XLSX.writeFile(wb, fname);
+
+  } catch(e){
+    console.error(e);
+    alert('Error exportant Excel: ' + e.message);
+  }
 }
+
 
 /* ---------------- Tancar menús si fas clic fora ---------------- */
 document.addEventListener('click', function(e) {
