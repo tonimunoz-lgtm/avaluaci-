@@ -104,12 +104,6 @@ p, span, td {
   text-align: center;
 }
 
-.formula-cell {
-  background-color: #fecaca !important; /* vermell clar */
-  cursor: not-allowed;
-}
-
-
 .bg-red-100 { background-color: #fca5a5 !important; }
 .bg-yellow-100 { background-color: #fde68a !important; }
 .bg-green-100 { background-color: #86efac !important; }
@@ -195,4 +189,3 @@ button:hover { transform: scale(1.03); }
 #userMenu { top: 100%; right: 0; z-index: 1000; min-width: 150px; }
 #userMenu button { border: none; background: none; cursor: pointer; }
 #userMenu button:hover { background-color: #f3f4f6; }
-
