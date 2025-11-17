@@ -567,8 +567,6 @@ async function renderNotesGrid() {
 }
 
 
-
-
 /* ---------------- Helpers Notes & Excel ---------------- */
 function th(txt, cls=''){
   const el = document.createElement('th');
@@ -711,6 +709,34 @@ calcTypeSelect.addEventListener('change', ()=>{
   }
 });
 
+/* ---------------- Funció helper per aplicar càlculs a columna ---------------- */
+async function applyCalcToColumn(activityId, calcFunc) {
+  const colIndex = classActivities.indexOf(activityId);
+  if (colIndex === -1) return;
+
+  for (const sid of classStudents) {
+    const studentDoc = await db.collection('alumnes').doc(sid).get();
+    const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
+    const newVal = await calcFunc(notes, activityId, sid) || 0;
+
+    // Guardem a Firestore
+    await db.collection('alumnes').doc(sid).update({ [`notes.${activityId}`]: newVal });
+
+    // Actualitzem l'input corresponent
+    const tr = getStudentRowById(sid);
+    if (tr) {
+      const input = tr.querySelectorAll('input')[colIndex];
+      if (input) {
+        input.value = newVal;
+        input.disabled = true;       // bloqueig
+        applyCellColor(input);       // color segons rang
+      }
+    }
+  }
+
+  renderAverages();
+}
+
 // Aplicar càlcul
 modalApplyCalcBtn.addEventListener('click', async () => {
   if (!currentCalcActivityId) return;
@@ -720,18 +746,15 @@ modalApplyCalcBtn.addEventListener('click', async () => {
       const val = Number(numericField.value);
       if (isNaN(val)) return alert('Introdueix un número vàlid');
 
-      for (const sid of classStudents) {
-        await db.collection('alumnes').doc(sid).update({ [`notes.${currentCalcActivityId}`]: val });
-      }
+      await applyCalcToColumn(currentCalcActivityId, () => val);
 
     } else if (calcTypeSelect.value === 'formula') {
       const formula = formulaField.value.trim();
       if (!formula) return alert('Formula buida');
 
-      for (const sid of classStudents) {
-        const result = await evalFormulaAsync(formula, sid);
-        await db.collection('alumnes').doc(sid).update({ [`notes.${currentCalcActivityId}`]: result });
-      }
+      await applyCalcToColumn(currentCalcActivityId, async (notes, aid, sid) => {
+        return await evalFormulaAsync(formula, sid);
+      });
 
     } else if (calcTypeSelect.value === 'rounding') {
       const formula = formulaField.value.trim();
@@ -752,26 +775,11 @@ modalApplyCalcBtn.addEventListener('click', async () => {
 
       if (!selectedActivityId) return alert('Activitat no trobada');
 
-      for (const sid of classStudents) {
-        const studentDoc = await db.collection('alumnes').doc(sid).get();
-        const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
-        let val = Number(notes[selectedActivityId]) || 0;
-
-        // Redondeig
-        val = multiplier === 1 ? Math.round(val) : Math.round(val * 2) / 2;
-
-        await db.collection('alumnes').doc(sid).update({ [`notes.${currentCalcActivityId}`]: val });
-      }
+      await applyCalcToColumn(selectedActivityId, (notes, aid) => {
+        let val = Number(notes[aid]) || 0;
+        return multiplier === 1 ? Math.round(val) : Math.round(val * 2) / 2;
+      });
     }
-
-    // Un cop totes les notes guardades, refresquem la graella
-    renderNotesGrid();
-
-    // Bloquejar la columna aplicada
-    Array.from(notesTbody.querySelectorAll('tr')).forEach(tr => {
-      const input = tr.querySelectorAll('input')[classActivities.indexOf(currentCalcActivityId)];
-      if (input) input.disabled = true;  // bloqueja input
-    });
 
     closeModal('modalCalc');
 
