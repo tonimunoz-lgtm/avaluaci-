@@ -443,7 +443,7 @@ function renderStudentsList(){
   });
 }
 /* ---------------- Notes Grid amb menú activitats ---------------- */
-async function renderNotesGrid(){
+async function renderNotesGrid() {
   notesThead.innerHTML = '';
   notesTbody.innerHTML = '';
   notesTfoot.innerHTML = '';
@@ -451,57 +451,121 @@ async function renderNotesGrid(){
   const headRow = document.createElement('tr');
   headRow.appendChild(th('Alumne'));
 
+  // Carreguem tots els documents d'activitats
   const actDocs = await Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()));
 
-for(const adoc of actDocs){
-  const id = adoc.id;
-  const name = adoc.exists ? (adoc.data().nom||'Sense nom') : 'Desconegut';
-  const thEl = th('');
-  const container = document.createElement('div');
-  container.className = 'flex items-center justify-between';
+  // Creació de capçaleres amb menús
+  for (const adoc of actDocs) {
+    const id = adoc.id;
+    const name = adoc.exists ? (adoc.data().nom || 'Sense nom') : 'Desconegut';
 
-  const spanName = document.createElement('span');
-  spanName.textContent = name;
+    const thEl = th('');
+    const container = document.createElement('div');
+    container.className = 'flex items-center justify-between';
 
-  const menuDiv = document.createElement('div');
-  menuDiv.className = 'relative';
-  menuDiv.innerHTML = `
-    <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white tooltip">⋮</button>
-    <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10 transition-opacity duration-200 opacity-0">
-       <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
-      <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>
-      <button class="calc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Calcul</button>
-    </div>
-  `;
-  container.appendChild(spanName);
-  container.appendChild(menuDiv);
-  thEl.appendChild(container);
-  headRow.appendChild(thEl);
+    const spanName = document.createElement('span');
+    spanName.textContent = name;
 
-  const menuBtn = menuDiv.querySelector('.menu-btn');
-  const menu = menuDiv.querySelector('.menu');
-  menuBtn.addEventListener('click', e=>{
-    e.stopPropagation();
-    document.querySelectorAll('.menu').forEach(m=> m.classList.add('hidden'));
-    menu.classList.toggle('hidden');
-  });
+    const menuDiv = document.createElement('div');
+    menuDiv.className = 'relative';
+    menuDiv.innerHTML = `
+      <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white tooltip">⋮</button>
+      <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10 transition-opacity duration-200 opacity-0">
+        <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
+        <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>
+        <button class="calc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Calcul</button>
+      </div>
+    `;
+    container.appendChild(spanName);
+    container.appendChild(menuDiv);
+    thEl.appendChild(container);
+    headRow.appendChild(thEl);
 
-  // --- Calcul button ---
-  menuDiv.querySelector('.calc-btn').addEventListener('click', e => {
-    e.stopPropagation(); 
-    openCalcModal(adoc.id); 
-  });
+    const menuBtn = menuDiv.querySelector('.menu-btn');
+    const menu = menuDiv.querySelector('.menu');
+    menuBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      document.querySelectorAll('.menu').forEach(m => m.classList.add('hidden'));
+      menu.classList.toggle('hidden');
+    });
 
-  // Edit / Delete
-  menuDiv.querySelector('.edit-btn').addEventListener('click', ()=> {
-    const newName = prompt('Introdueix el nou nom de l\'activitat:', name);
-    if(!newName || newName.trim()===name) return;
-    db.collection('activitats').doc(id).update({ nom: newName.trim() })
-      .then(()=> renderNotesGrid())
-      .catch(e=> alert('Error editant activitat: '+e.message));
-  });
-  menuDiv.querySelector('.delete-btn').addEventListener('click', ()=> removeActivity(id));
+    menuDiv.querySelector('.calc-btn').addEventListener('click', e => {
+      e.stopPropagation();
+      openCalcModal(adoc.id);
+    });
+
+    menuDiv.querySelector('.edit-btn').addEventListener('click', () => {
+      const newName = prompt('Introdueix el nou nom de l\'activitat:', name);
+      if (!newName || newName.trim() === name) return;
+      db.collection('activitats').doc(id).update({ nom: newName.trim() })
+        .then(() => loadClassData())
+        .catch(e => alert('Error editant activitat: ' + e.message));
+    });
+
+    menuDiv.querySelector('.delete-btn').addEventListener('click', () => removeActivity(id));
+  }
+
+  headRow.appendChild(th('Mitjana', 'text-right'));
+  notesThead.appendChild(headRow);
+  enableActivityDrag();
+
+  // Si no hi ha alumnes
+  if (classStudents.length === 0) {
+    notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivities.length + 2}">No hi ha alumnes</td></tr>`;
+    renderAverages();
+    return;
+  }
+
+  // Carregar alumnes i notes
+  const studentDocs = await Promise.all(classStudents.map(id => db.collection('alumnes').doc(id).get()));
+
+  for (const sdoc of studentDocs) {
+    const sid = sdoc.id;
+    const sdata = sdoc.exists ? sdoc.data() : { nom: 'Desconegut', notes: {} };
+    const tr = document.createElement('tr');
+    tr.className = 'align-top';
+
+    const tdName = document.createElement('td');
+    tdName.className = 'border px-2 py-1';
+    tdName.textContent = sdata.nom;
+    tr.appendChild(tdName);
+
+    for (const actDoc of actDocs) {
+      const aid = actDoc.id;
+      const val = (sdata.notes && sdata.notes[aid] !== undefined) ? sdata.notes[aid] : '';
+      const td = document.createElement('td');
+      td.className = 'border px-2 py-1';
+      const input = document.createElement('input');
+
+      // Bloquejar si activitat té fórmula
+      if (actDoc.exists && actDoc.data().formula) {
+        input.readOnly = true;
+        input.classList.add('formula-cell');
+      }
+
+      input.type = 'number';
+      input.min = 0;
+      input.max = 10;
+      input.value = val;
+      input.className = 'table-input text-center rounded border p-1';
+      input.addEventListener('change', e => saveNote(sid, aid, e.target.value));
+      input.addEventListener('input', () => applyCellColor(input));
+      applyCellColor(input);
+      td.appendChild(input);
+      tr.appendChild(td);
+    }
+
+    const avgTd = document.createElement('td');
+    avgTd.className = 'border px-2 py-1 text-right font-semibold';
+    avgTd.textContent = computeStudentAverageText(sdata);
+    tr.appendChild(avgTd);
+
+    notesTbody.appendChild(tr);
+  }
+
+  renderAverages();
 }
+
 
 
 
