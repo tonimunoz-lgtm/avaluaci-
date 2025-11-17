@@ -189,36 +189,3 @@ button:hover { transform: scale(1.03); }
 #userMenu { top: 100%; right: 0; z-index: 1000; min-width: 150px; }
 #userMenu button { border: none; background: none; cursor: pointer; }
 #userMenu button:hover { background-color: #f3f4f6; }
-
-/* ---------------- Llista d'alumnes més estreta ---------------- */
-#studentsList {
-  max-width: 300px;       /* Amplada màxima */
-  width: 100%;
-  overflow-y: auto;       /* Scroll si hi ha molts alumnes */
-  margin-right: 1rem;     /* Espai respecte la graella */
-  padding-right: 0.5rem;
-}
-
-/* Fila d'alumne */
-#studentsList li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-  margin-bottom: 0.25rem;
-}
-
-/* Botó de menú de cada alumne */
-#studentsList li .menu-btn {
-  flex-shrink: 0; /* Que el botó no es faci més petit */
-}
-
-/* Nom de l'alumne s'ajusta dins l'espai disponible */
-#studentsList li .stu-name {
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-left: 0.5rem;
-}
