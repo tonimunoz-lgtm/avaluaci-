@@ -574,14 +574,14 @@ function th(txt, cls=''){
   return el;
 }
 
-// ---------------- Versió Async de saveNote ----------------
-async function saveNoteAsync(studentId, activityId, value){
+function saveNote(studentId, activityId, value){
   const num = value === '' ? null : Number(value);
   const updateObj = {};
   if(num === null || isNaN(num)) updateObj[`notes.${activityId}`] = firebase.firestore.FieldValue.delete();
   else updateObj[`notes.${activityId}`] = num;
-
-  await db.collection('alumnes').doc(studentId).update(updateObj);
+  db.collection('alumnes').doc(studentId).update(updateObj)
+    .then(()=> renderNotesGrid())
+    .catch(e=> console.error('Error saving note', e));
 }
 
 function applyCellColor(inputEl){
@@ -630,47 +630,6 @@ function renderAverages(){
   notesTfoot.appendChild(tr);
 }
 
-// ---------------- Funció per aplicar fórmula de redondeig ----------------
-async function applyRoundingFormula(formula, studentId){
-  let selectedActivityName = '';
-  let multiplier = 1;
-
-  // Trobar l'activitat seleccionada i multiplicador (0.5 o 1)
-  for (const aid of classActivities){
-    const adoc = await db.collection('activitats').doc(aid).get();
-    const actName = adoc.exists ? adoc.data().nom : '';
-    if(actName && formula.startsWith(actName)){
-      selectedActivityName = actName;
-      multiplier = Number(formula.slice(actName.length)) || 1;
-      break;
-    }
-  }
-
-  // Carregar notes de l'alumne
-  const studentDoc = await db.collection('alumnes').doc(studentId).get();
-  const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
-
-  let val = 0;
-  // Buscar nota de l'activitat seleccionada
-  for (const aid of classActivities){
-    const adoc = await db.collection('activitats').doc(aid).get();
-    if(adoc.exists && adoc.data().nom === selectedActivityName){
-      val = Number(notes[aid]) || 0;
-      break;
-    }
-  }
-
-  // Aplicar redondeig
-  if(multiplier === 1){
-    val = Math.round(val);
-  } else if(multiplier === 0.5){
-    val = Math.round(val * 2) / 2;
-  }
-
-  return val;
-}
-
-
 /* ---------------- Open Calculation Modal ---------------- */
 function openCalcModal(activityId){
   currentCalcActivityId = activityId; 
@@ -708,46 +667,75 @@ calcTypeSelect.addEventListener('change', ()=>{
 });
 
 // Aplicar càlcul
-modalApplyCalcBtn.addEventListener('click', async () => {
+modalApplyCalcBtn.addEventListener('click', async ()=>{
   if(!currentCalcActivityId) return;
 
-  if(calcTypeSelect.value === 'numeric'){
+  if(calcTypeSelect.value==='numeric'){
     const val = Number(numericField.value);
     if(isNaN(val)) return alert('Introdueix un número vàlid');
-    for(const sid of classStudents){
-      await saveNote(sid, currentCalcActivityId, val);
-    }
-    await markActivityAsCalculated(currentCalcActivityId);
+    classStudents.forEach(sid=>{
+      saveNote(sid, currentCalcActivityId, val);
+    });
+    markActivityAsCalculated(currentCalcActivityId);
     closeModal('modalCalc');
 
-  } else if(calcTypeSelect.value === 'formula'){
+  } else if(calcTypeSelect.value==='formula'){
     const formula = formulaField.value.trim();
     if(!formula) return alert('Formula buida');
     try{
       for(const sid of classStudents){
         const result = await evalFormulaAsync(formula, sid);
-        await saveNote(sid, currentCalcActivityId, result);
+        saveNote(sid, currentCalcActivityId, result);
       }
-      await markActivityAsCalculated(currentCalcActivityId);
+      markActivityAsCalculated(currentCalcActivityId);
       closeModal('modalCalc');
     } catch(e){
       console.error(e);
       alert('Error en calcular la fórmula: ' + e.message);
     }
 
-  } else if(calcTypeSelect.value === 'rounding'){
+  } else if(calcTypeSelect.value==='rounding'){
     const formula = formulaField.value.trim();
     if(!formula) return alert('Selecciona activitat i 0,5 o 1');
 
-    for(const sid of classStudents){
-      const val = await applyRoundingFormula(formula, sid);
-      await saveNote(sid, currentCalcActivityId, val);
-    }
-    await markActivityAsCalculated(currentCalcActivityId);
-    closeModal('modalCalc');
+    // Separar el nom de l'activitat i el multiplicador (0.5 o 1)
+    let selectedActivityName = '';
+    let multiplier = 1;
+    classActivities.forEach(aid=>{
+      db.collection('activitats').doc(aid).get().then(doc=>{
+        const actName = doc.exists ? doc.data().nom : '';
+        if(actName && formula.startsWith(actName)){
+          selectedActivityName = actName;
+          multiplier = Number(formula.slice(actName.length)) || 1;
+
+          // Aplicar a cada alumne
+          classStudents.forEach(async sid=>{
+            const studentDoc = await db.collection('alumnes').doc(sid).get();
+            const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
+            let val = 0;
+            // Trobar la nota de l'activitat seleccionada
+            for(const aid of classActivities){
+              const adoc = await db.collection('activitats').doc(aid).get();
+              if(adoc.exists && adoc.data().nom === selectedActivityName){
+                val = Number(notes[aid]) || 0;
+              }
+            }
+
+            // Redondeig
+            if(multiplier === 1){
+              val = Math.round(val);
+            } else if(multiplier === 0.5){
+              val = Math.round(val*2)/2;
+            }
+            saveNote(sid, currentCalcActivityId, val);
+          });
+          markActivityAsCalculated(currentCalcActivityId);
+          closeModal('modalCalc');
+        }
+      });
+    });
   }
 });
-
 
 
 
@@ -926,14 +914,14 @@ function enableActivityDrag(){
   });
 }
 
-// ---------------- Marcar activitat com calculada (Async) ----------------
+/* ---------------- Marcar activitat com calculada ---------------- */
 async function markActivityAsCalculated(activityId){
   if(!currentClassId) return;
   await db.collection('classes').doc(currentClassId).update({
-    [`calculatedActivities.${activityId}`]: { type: 'formula' }
+    [`calculatedActivities.${activityId}`]: true
   });
-  // Re-render per bloqueig i color
-  await renderNotesGrid();
+  // Re-render per assegurar bloqueig i color
+  renderNotesGrid();
 }
 
 
