@@ -4,35 +4,20 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Gestor de Classes</title>
+
   <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
 
   <!-- CSS propi -->
   <link rel="stylesheet" href="style.css">
 
+  <!-- Firebase (compat per la teva base actual) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
   <!-- XLSX per export -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-
-  <!-- Firebase Modular -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-    import { getAuth } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-    import { getFirestore } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyA0P7TWcEw9y9_13yqRhvsgWN5d3YKH7yo",
-      authDomain: "gestornotes-cc6d0.firebaseapp.com",
-      projectId: "gestornotes-cc6d0",
-      storageBucket: "gestornotes-cc6d0.appspot.com",
-      messagingSenderId: "324570393360",
-      appId: "1:324570393360:web:13a65fcf948813805c5395"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    window.auth = getAuth(app);
-    window.db = getFirestore(app);
-  </script>
-
 </head>
 <body class="bg-gradient-to-br from-gray-100 via-white to-gray-200 text-gray-900">
 
@@ -71,6 +56,7 @@
           </div>
           <button id="btnLogout">Logout</button>
         </div>
+
       </header>
 
       <main>
@@ -184,33 +170,32 @@
   </div>
 
   <!-- Modal Calcul -->
-  <div id="modalCalc" class="modal hidden fixed inset-0 items-center justify-center z-50">
-    <div class="bg-white p-6 rounded shadow-lg w-96 max-w-full flex flex-col gap-4">
-      <button class="modal-close self-end" data-modal-close="modalCalc">✖</button>
-      <h2 class="text-lg font-bold">Calcul activitat</h2>
+<div id="modalCalc" class="modal hidden fixed inset-0 items-center justify-center z-50">
+  <div class="bg-white p-6 rounded shadow-lg w-96 max-w-full flex flex-col gap-4">
+    <button class="modal-close self-end" data-modal-close="modalCalc">✖</button>
+    <h2 class="text-lg font-bold">Calcul activitat</h2>
 
-      <label for="calcType">Tipus de càlcul:</label>
-      <select id="calcType" class="border rounded p-1">
-        <option value="numeric">Numeric</option>
-        <option value="formula">Fórmula</option>
-        <option value="rounding">Redondeig</option>
-      </select>
+    <label for="calcType">Tipus de càlcul:</label>
+    <select id="calcType" class="border rounded p-1">
+      <option value="numeric">Numeric</option>
+      <option value="formula">Fórmula</option>
+    </select>
 
-      <!-- Numeric -->
-      <div id="numericInput">
-        <label for="numericField">Valor:</label>
-        <input type="number" id="numericField" min="0" max="10" class="border rounded p-1 w-full">
-      </div>
-
-      <!-- Fórmula -->
-      <div id="formulaInputs" class="hidden flex flex-col gap-2">
-        <input type="text" id="formulaField" readonly class="border rounded p-1 w-full" placeholder="Construeix la fórmula">
-        <div id="formulaButtons" class="flex flex-wrap gap-1"></div>
-      </div>
-
-      <button id="modalApplyCalcBtn" class="bg-indigo-500 text-white p-2 rounded font-semibold">Aplica</button>
+    <!-- Numeric -->
+    <div id="numericInput">
+      <label for="numericField">Valor:</label>
+      <input type="number" id="numericField" min="0" max="10" class="border rounded p-1 w-full">
     </div>
+
+    <!-- Fórmula -->
+    <div id="formulaInputs" class="hidden flex flex-col gap-2">
+      <input type="text" id="formulaField" readonly class="border rounded p-1 w-full" placeholder="Construeix la fórmula">
+      <div id="formulaButtons" class="flex flex-wrap gap-1"></div>
+    </div>
+
+    <button id="modalApplyCalcBtn" class="bg-indigo-500 text-white p-2 rounded font-semibold">Aplica</button>
   </div>
+</div>
 
   <!-- SCRIPT PRINCIPAL -->
   <script type="module" src="./app.js"></script>
