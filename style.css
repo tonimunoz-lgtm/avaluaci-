@@ -81,9 +81,11 @@ p, span, td {
 
 /* ---------------- Notes Table ---------------- */
 #notesTable-wrapper {
+  flex-grow: 1;       /* Ocupa tot l'espai restant */
   overflow-x: auto;
-  width: 100%;
+  width: auto;        /* Ja no cal 100% */
 }
+
 
 #notesTable {
   width: 100%;
@@ -189,3 +191,21 @@ button:hover { transform: scale(1.03); }
 #userMenu { top: 100%; right: 0; z-index: 1000; min-width: 150px; }
 #userMenu button { border: none; background: none; cursor: pointer; }
 #userMenu button:hover { background-color: #f3f4f6; }
+
+/* ---------------- Layout classe oberta amb columna d'alumnes més estreta ---------------- */
+#classScreenWrapper {
+  display: flex;
+  gap: 1rem; /* espai entre columna alumnes i graella */
+}
+
+/* Contenidor llista d'alumnes (sidebar) */
+#studentsListContainer {
+  width: 250px;       /* Amplada fixa */
+  max-width: 250px;
+  min-width: 200px;
+  overflow-y: auto;   /* Scroll vertical si hi ha molts alumnes */
+  padding: 0.5rem;
+  background: #f9fafb;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
