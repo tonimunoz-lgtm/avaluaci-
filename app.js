@@ -1,5 +1,6 @@
 // app.js - lògica principal (modules)
 import { openModal, closeModal, confirmAction } from './modals.js';
+
 /* ---------------- FIREBASE CONFIG ---------------- */
 const firebaseConfig = {
   apiKey: "AIzaSyA0P7TWcEw9y9_13yqRhvsgWN5d3YKH7yo",
@@ -19,7 +20,7 @@ let currentClassId = null;
 let classStudents = [];
 let classActivities = [];
 let deleteMode = false;
-let currentCalcActivityId = null; // Activitat actual per fer càlculs
+let currentCalcActivityId = null;
 
 /* Elements */
 const loginScreen = document.getElementById('loginScreen');
@@ -120,14 +121,27 @@ function setupAfterAuth(user) {
   const email = user.email || '';
   usuariNom.textContent = email.split('@')[0] || email;
 
-  // Crida automàtica per carregar la graella de classes
   loadClassesScreen();
 }
 
 /* ---------------- Classes screen ---------------- */
 btnCreateClass.addEventListener('click', ()=> openModal('modalCreateClass'));
+modalCreateClassBtn.addEventListener('click', createClassModal);
 
-/* ---------------- Classes Screen (cont.) ---------------- */
+function createClassModal(){
+  const name = document.getElementById('modalClassName').value.trim();
+  if(!name) return alert('Posa un nom');
+  const ref = db.collection('classes').doc();
+  ref.set({ nom: name, alumnes: [], activitats: [] })
+    .then(()=> db.collection('professors').doc(professorUID).update({ classes: firebase.firestore.FieldValue.arrayUnion(ref.id) }))
+    .then(()=> {
+      closeModal('modalCreateClass');
+      document.getElementById('modalClassName').value = '';
+      loadClassesScreen();
+    }).catch(e=> alert('Error: ' + e.message));
+}
+
+/* ---------------- Load Classes ---------------- */
 function loadClassesScreen() {
   if(!professorUID) { alert('Fes login primer.'); return; }
   screenClass.classList.add('hidden');
@@ -211,6 +225,7 @@ function loadClassesScreen() {
     console.error(e);
   });
 }
+
 /* ---------------- Delete Mode Classes ---------------- */
 const btnDeleteMode = document.getElementById('btnDeleteMode');
 btnDeleteMode.addEventListener('click', ()=> {
@@ -254,22 +269,6 @@ function confirmDeleteSelected(){
     }
   );
 }
-
-/* ---------------- Create Class ---------------- */
-function createClassModal(){
-  const name = document.getElementById('modalClassName').value.trim();
-  if(!name) return alert('Posa un nom');
-  const ref = db.collection('classes').doc();
-  ref.set({ nom: name, alumnes: [], activitats: [] })
-    .then(()=> db.collection('professors').doc(professorUID).update({ classes: firebase.firestore.FieldValue.arrayUnion(ref.id) }))
-    .then(()=> {
-      closeModal('modalCreateClass');
-      document.getElementById('modalClassName').value = '';
-      loadClassesScreen();
-    }).catch(e=> alert('Error: ' + e.message));
-}
-modalCreateClassBtn.addEventListener('click', createClassModal);
-
 /* ---------------- Open Class ---------------- */
 function openClass(id){
   currentClassId = id;
@@ -345,6 +344,7 @@ function sortStudentsAlpha(){
     }).then(()=> loadClassData())
     .catch(e=> console.error(e));
 }
+
 /* ---------------- Activities ---------------- */
 btnAddActivity.addEventListener('click', ()=> openModal('modalAddActivity'));
 modalAddActivityBtn.addEventListener('click', createActivityModal);
@@ -468,7 +468,7 @@ function renderNotesGrid(){
         menuDiv.innerHTML = `
           <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white tooltip">⋮</button>
           <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10 transition-opacity duration-200 opacity-0">
-             <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
+            <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
             <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>
             <button class="calc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Calcul</button>
           </div>
@@ -486,13 +486,11 @@ function renderNotesGrid(){
           menu.classList.toggle('hidden');
         });
 
-        // --- Calcul button ---
-        menuDiv.querySelector('.calc-btn').addEventListener('click', e => {
-          e.stopPropagation(); 
-          openCalcModal(adoc.id); 
+        menuDiv.querySelector('.calc-btn').addEventListener('click', e=>{
+          e.stopPropagation();
+          openCalcModal(adoc.id);
         });
 
-        // Edit / Delete
         menuDiv.querySelector('.edit-btn').addEventListener('click', ()=>{
           const newName = prompt('Introdueix el nou nom de l\'activitat:', name);
           if(!newName || newName.trim()===name) return;
@@ -506,8 +504,7 @@ function renderNotesGrid(){
 
       headRow.appendChild(th('Mitjana', 'text-right'));
       notesThead.appendChild(headRow);
-      enableActivityDrag(); // Activem drag & drop per les columnes
-
+      enableActivityDrag();
 
       if(classStudents.length===0){
         notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivities.length+2}">No hi ha alumnes</td></tr>`;
@@ -556,7 +553,7 @@ function renderNotesGrid(){
     });
 }
 
-/* ---------------- Helpers Notes & Excel ---------------- */
+/* ---------------- Helpers Notes ---------------- */
 function th(txt, cls=''){
   const el = document.createElement('th');
   el.className = 'border px-2 py-1 ' + cls;
@@ -619,11 +616,11 @@ function renderAverages(){
   tr.appendChild(th('',''));
   notesTfoot.appendChild(tr);
 }
-
 /* ---------------- Open Calculation Modal ---------------- */
 function openCalcModal(activityId){
-  currentCalcActivityId = activityId; 
+  currentCalcActivityId = activityId;
   openModal('modalCalc');
+
   // Reset modal
   document.getElementById('calcType').value = 'numeric';
   document.getElementById('formulaInputs').classList.add('hidden');
@@ -631,6 +628,7 @@ function openCalcModal(activityId){
   document.getElementById('numericField').value = '';
   document.getElementById('formulaField').value = '';
 }
+
 /* ---------------- Modal Calcul: Numeric / Formula ---------------- */
 const calcTypeSelect = document.getElementById('calcType');
 const numericDiv = document.getElementById('numericInput');
@@ -648,11 +646,11 @@ calcTypeSelect.addEventListener('change', ()=>{
   } else if(calcTypeSelect.value==='formula'){
     numericDiv.classList.add('hidden');
     formulaDiv.classList.remove('hidden');
-    buildFormulaButtons(); // activitats + operadors + números
+    buildFormulaButtons();
   } else if(calcTypeSelect.value==='rounding'){
     numericDiv.classList.add('hidden');
     formulaDiv.classList.remove('hidden');
-    buildRoundingButtons(); // ACTIVITATS + 0,5 i 1
+    buildRoundingButtons();
   }
 });
 
@@ -663,9 +661,7 @@ modalApplyCalcBtn.addEventListener('click', async ()=>{
   if(calcTypeSelect.value==='numeric'){
     const val = Number(numericField.value);
     if(isNaN(val)) return alert('Introdueix un número vàlid');
-    classStudents.forEach(sid=>{
-      saveNote(sid, currentCalcActivityId, val);
-    });
+    classStudents.forEach(sid=> saveNote(sid, currentCalcActivityId, val));
     closeModal('modalCalc');
 
   } else if(calcTypeSelect.value==='formula'){
@@ -686,48 +682,44 @@ modalApplyCalcBtn.addEventListener('click', async ()=>{
     const formula = formulaField.value.trim();
     if(!formula) return alert('Selecciona activitat i 0,5 o 1');
 
-    // Separar el nom de l'activitat i el multiplicador (0.5 o 1)
     let selectedActivityName = '';
     let multiplier = 1;
-    classActivities.forEach(aid=>{
-      db.collection('activitats').doc(aid).get().then(doc=>{
-        const actName = doc.exists ? doc.data().nom : '';
-        if(actName && formula.startsWith(actName)){
-          selectedActivityName = actName;
-          multiplier = Number(formula.slice(actName.length)) || 1;
 
-          // Aplicar a cada alumne
-          classStudents.forEach(async sid=>{
-            const studentDoc = await db.collection('alumnes').doc(sid).get();
-            const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
-            let val = 0;
-            // Trobar la nota de l'activitat seleccionada
-            for(const aid of classActivities){
-              const adoc = await db.collection('activitats').doc(aid).get();
-              if(adoc.exists && adoc.data().nom === selectedActivityName){
-                val = Number(notes[aid]) || 0;
-              }
-            }
+    for(const aid of classActivities){
+      const adoc = await db.collection('activitats').doc(aid).get();
+      const actName = adoc.exists ? adoc.data().nom : '';
+      if(formula.startsWith(actName)){
+        selectedActivityName = actName;
+        multiplier = Number(formula.slice(actName.length)) || 1;
+        break;
+      }
+    }
 
-            // Redondeig
-            if(multiplier === 1){
-              val = Math.round(val);
-            } else if(multiplier === 0.5){
-              val = Math.round(val*2)/2;
-            }
-            saveNote(sid, currentCalcActivityId, val);
-          });
+    if(!selectedActivityName) return alert('Activitat no trobada');
 
-          closeModal('modalCalc');
+    for(const sid of classStudents){
+      const sdoc = await db.collection('alumnes').doc(sid).get();
+      const notes = sdoc.exists ? sdoc.data().notes || {} : {};
+      let val = 0;
+
+      for(const aid of classActivities){
+        const adoc = await db.collection('activitats').doc(aid).get();
+        if(adoc.exists && adoc.data().nom === selectedActivityName){
+          val = Number(notes[aid]) || 0;
         }
-      });
-    });
+      }
+
+      if(multiplier === 1) val = Math.round(val);
+      else if(multiplier === 0.5) val = Math.round(val*2)/2;
+
+      saveNote(sid, currentCalcActivityId, val);
+    }
+
+    closeModal('modalCalc');
   }
 });
 
-
-
-// ---------------- Construir botons de fórmules ----------------
+/* ---------------- Construir botons de fórmules ---------------- */
 function buildFormulaButtons(){
   formulaButtonsDiv.innerHTML = '';
 
@@ -744,7 +736,7 @@ function buildFormulaButtons(){
     });
   });
 
-  // Botons operadors
+  // Operadors
   ['+', '-', '*', '/', '(', ')'].forEach(op=>{
     const btn = document.createElement('button');
     btn.type='button';
@@ -754,7 +746,7 @@ function buildFormulaButtons(){
     formulaButtonsDiv.appendChild(btn);
   });
 
-  // Botons números 0-10
+  // Números 0-10
   for(let i=0;i<=10;i++){
     const btn = document.createElement('button');
     btn.type='button';
@@ -764,17 +756,15 @@ function buildFormulaButtons(){
     formulaButtonsDiv.appendChild(btn);
   }
 
-  // Botons decimals
-  ['.', ','].forEach(dec=>{
+  ['.', ','].forEach(d=>{
     const btn = document.createElement('button');
     btn.type='button';
     btn.className='px-2 py-1 m-1 bg-yellow-200 rounded hover:bg-yellow-300';
-    btn.textContent = dec;
-    btn.addEventListener('click', ()=> addToFormula('.')); // sempre converteix ',' a '.'
+    btn.textContent = d;
+    btn.addEventListener('click', ()=> addToFormula('.'));
     formulaButtonsDiv.appendChild(btn);
   });
 
-  // Botó Backspace
   const backBtn = document.createElement('button');
   backBtn.type='button';
   backBtn.className='px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
@@ -783,15 +773,11 @@ function buildFormulaButtons(){
   formulaButtonsDiv.appendChild(backBtn);
 }
 
-// Afegir a formula
-function addToFormula(str){
-  formulaField.value += str;
-}
+function addToFormula(str){ formulaField.value += str; }
 
 function buildRoundingButtons(){
   formulaButtonsDiv.innerHTML = '';
 
-  // Botons activitats
   classActivities.forEach(aid=>{
     db.collection('activitats').doc(aid).get().then(doc=>{
       const name = doc.exists ? doc.data().nom : '???';
@@ -799,36 +785,31 @@ function buildRoundingButtons(){
       btn.type='button';
       btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
       btn.textContent = name;
-      btn.addEventListener('click', ()=> addToFormula(name)); // el nom de l'activitat
+      btn.addEventListener('click', ()=> addToFormula(name));
       formulaButtonsDiv.appendChild(btn);
     });
   });
 
-  // Botó Backspace
+  [0.5,1].forEach(v=>{
+    const btn = document.createElement('button');
+    btn.type='button';
+    btn.className='px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
+    btn.textContent = v;
+    btn.addEventListener('click', ()=> addToFormula(v));
+    formulaButtonsDiv.appendChild(btn);
+  });
+
   const backBtn = document.createElement('button');
   backBtn.type='button';
   backBtn.className='px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
   backBtn.textContent = '⌫';
   backBtn.addEventListener('click', ()=> formulaField.value = formulaField.value.slice(0,-1));
   formulaButtonsDiv.appendChild(backBtn);
-
-  // Botons 0.5 i 1
-  [0.5,1].forEach(v=>{
-    const btn = document.createElement('button');
-    btn.type='button';
-    btn.className='px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
-    btn.textContent = v;
-    btn.addEventListener('click', ()=> addToFormula(v)); // afegim directament 0.5 o 1
-    formulaButtonsDiv.appendChild(btn);
-  });
 }
 
-
-// ---------------- Evaluar fórmula ----------------
+/* ---------------- Evaluar fórmula ---------------- */
 async function evalFormulaAsync(formula, studentId){
   let evalStr = formula;
-
-  // Primer carreguem totes les notes de l'alumne
   const studentDoc = await db.collection('alumnes').doc(studentId).get();
   const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
 
@@ -837,71 +818,40 @@ async function evalFormulaAsync(formula, studentId){
     const actName = actDoc.exists ? actDoc.data().nom : '';
     if(!actName) continue;
 
-    const val = Number(notes[aid]) || 0; // Agafem directament les notes de Firestore
-
+    const val = Number(notes[aid]) || 0;
     const regex = new RegExp(actName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
     evalStr = evalStr.replace(regex, val);
   }
 
-  try {
-    return Function('"use strict"; return (' + evalStr + ')')();
-  } catch(e){
-    console.error('Error evaluating formula:', formula, e);
-    return 0;
-  }
-}
-
-
-
-
-
-// ---------------- Helper per trobar nom alumne per ID ----------------
-function getStudentRowById(sid) {
-  // Busca la fila corresponent a aquest studentId
-  const studentIndex = classStudents.findIndex(id => id === sid);
-  if (studentIndex === -1) return null;
-  return notesTbody.children[studentIndex] || null;
+  try { return Function('"use strict"; return (' + evalStr + ')')(); }
+  catch(e){ console.error('Error evaluating formula:', formula, e); return 0; }
 }
 
 /* ---------------- Drag & Drop per activitats ---------------- */
 function enableActivityDrag(){
   const ths = notesThead.querySelectorAll('tr:first-child th');
   ths.forEach((thEl, idx)=>{
-    if(idx === 0 || idx === ths.length-1) return; // No draggable: primera (Alumne) i última (Mitjana)
-    
+    if(idx === 0 || idx === ths.length-1) return;
     thEl.setAttribute('draggable', true);
     thEl.addEventListener('dragstart', e=>{
       e.dataTransfer.setData('text/plain', idx);
     });
-
-    thEl.addEventListener('dragover', e=>{
-      e.preventDefault();
-      thEl.classList.add('border-dashed', 'border-2');
-    });
-
-    thEl.addEventListener('dragleave', e=>{
-      thEl.classList.remove('border-dashed', 'border-2');
-    });
-
+    thEl.addEventListener('dragover', e=>{ e.preventDefault(); thEl.classList.add('border-dashed','border-2'); });
+    thEl.addEventListener('dragleave', e=>{ thEl.classList.remove('border-dashed','border-2'); });
     thEl.addEventListener('drop', e=>{
       e.preventDefault();
-      thEl.classList.remove('border-dashed', 'border-2');
+      thEl.classList.remove('border-dashed','border-2');
       const fromIdx = Number(e.dataTransfer.getData('text/plain'));
       const toIdx = idx;
-
       if(fromIdx === toIdx) return;
-
-      // Reordenar classActivities
       const arr = Array.from(classActivities);
-      const moved = arr.splice(fromIdx-1, 1)[0]; // -1 per ignorar columna Alumne
+      const moved = arr.splice(fromIdx-1, 1)[0];
       arr.splice(toIdx-1, 0, moved);
       classActivities = arr;
-
       renderNotesGrid();
     });
   });
 }
-
 
 /* ---------------- Export Excel ---------------- */
 btnExport.addEventListener('click', exportExcel);
@@ -912,36 +862,5 @@ function exportExcel(){
   XLSX.writeFile(wb, fname);
 }
 
-/* ---------------- Tancar menús si fas clic fora ---------------- */
-document.addEventListener('click', function(e) {
-  document.querySelectorAll('.menu').forEach(menu => {
-    if (!menu.contains(e.target) && !e.target.classList.contains('menu-btn')) {
-      menu.classList.add('hidden');
-    }
-  });
-});
-const userMenuBtn = document.getElementById('userMenuBtn');
-const userMenu = document.getElementById('userMenu');
-const changePasswordBtn = document.getElementById('changePasswordBtn');
 
-// Toggle menú
-userMenuBtn.addEventListener('click', e => {
-  e.stopPropagation();
-  userMenu.classList.toggle('hidden');
-});
 
-// Tancar menú si clics fora
-document.addEventListener('click', () => {
-  userMenu.classList.add('hidden');
-});
-
-// Canviar contrasenya
-changePasswordBtn.addEventListener('click', () => {
-  const email = auth.currentUser?.email;
-  if(!email) return alert('No hi ha usuari actiu.');
-  const newPw = prompt('Introdueix la nova contrasenya:');
-  if(!newPw) return;
-  auth.currentUser.updatePassword(newPw)
-    .then(()=> alert('Contrasenya canviada correctament!'))
-    .catch(e=> alert('Error: ' + e.message));
-});
