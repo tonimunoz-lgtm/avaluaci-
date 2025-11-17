@@ -512,6 +512,8 @@ async function renderNotesGrid() {
   // Si no hi ha alumnes
   if (classStudents.length === 0) {
     notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivities.length + 2}">No hi ha alumnes</td></tr>`;
+    // Aplicar colors a totes les cel·les
+    Array.from(notesTbody.querySelectorAll('input')).forEach(input => applyCellColor(input));
     renderAverages();
     return;
   }
@@ -583,47 +585,60 @@ async function saveNoteWithoutRerender(studentId, activityId, value){
 }
 
 function markFormulaColumn(activityId){
-  const colIndex = classActivities.findIndex(aid => aid===activityId);
-  if(colIndex===-1) return;
+  const colIndex = classActivities.findIndex(aid => aid === activityId);
+  if(colIndex === -1) return;
 
   Array.from(notesTbody.querySelectorAll('tr')).forEach(tr=>{
     const input = tr.querySelectorAll('input')[colIndex];
     if(input){
-      input.readOnly = true; // Bloquejar modificació manual
-      input.classList.add('formula-cell'); // Vermell clar
+      input.readOnly = true;           // Bloquejar modificació manual
+      input.classList.add('formula-cell'); // Estil diferent
     }
   });
 }
+
+
 
 async function recalculateAllFormulaColumns(){
   for(const actId of classActivities){
     const actDoc = await db.collection('activitats').doc(actId).get();
     const formula = actDoc.exists ? actDoc.data().formula : '';
-    if(!formula) continue;
+    if(!formula || formula.trim() === '') continue;
 
     for(const sid of classStudents){
       const result = await evalFormulaAsync(formula, sid);
+      // Guardem sense disparar render immediat
       await saveNoteWithoutRerender(sid, actId, result);
     }
 
+    // Bloquejar cel·la i marcar amb classe
     markFormulaColumn(actId);
   }
+
+  // Aplicar colors després de recalcular
+  Array.from(notesTbody.querySelectorAll('input')).forEach(input => applyCellColor(input));
 }
 
 
-function saveNote(studentId, activityId, value){
+
+async function saveNote(studentId, activityId, value){
   const num = value === '' ? null : Number(value);
   const updateObj = {};
   if(num === null || isNaN(num)) updateObj[`notes.${activityId}`] = firebase.firestore.FieldValue.delete();
   else updateObj[`notes.${activityId}`] = num;
 
-  db.collection('alumnes').doc(studentId).update(updateObj)
-    .then(()=> {
-      recalculateAllFormulaColumns(); // 🔹 Recalcular fórmules
-      renderNotesGrid();
-    })
-    .catch(e=> console.error('Error saving note', e));
+  try {
+    // Guardem la nota
+    await db.collection('alumnes').doc(studentId).update(updateObj);
+    // Recalculem totes les fórmules després
+    await recalculateAllFormulaColumns();
+    // Renderitzem la taula amb colors actualitzats
+    renderNotesGrid();
+  } catch(e){
+    console.error('Error saving note', e);
+  }
 }
+
 
 
 function applyCellColor(inputEl){
