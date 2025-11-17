@@ -89,27 +89,28 @@
             </div>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div id="classScreenWrapper">
 
-            <!-- students col -->
-            <aside class="col-span-1 bg-white rounded-xl shadow p-4">
-              <h3 class="font-semibold mb-2">Alumnes <span id="studentsCount" class="text-sm text-gray-400"></span></h3>
-              <ul id="studentsList" class="space-y-2"></ul>
-              <p class="mt-3 text-xs text-gray-400">Arrossega per ordenar</p>
-            </aside>
+  <!-- students col -->
+  <aside id="studentsListContainer">
+    <h3 class="font-semibold mb-2">Alumnes <span id="studentsCount" class="text-sm text-gray-400"></span></h3>
+    <ul id="studentsList" class="space-y-2"></ul>
+    <p class="mt-3 text-xs text-gray-400">Arrossega per ordenar</p>
+  </aside>
 
-            <!-- notes grid -->
-            <div class="col-span-1 md:col-span-3 bg-white rounded-xl shadow p-3 overflow-x-auto">
-              <div id="gridWrapper" class="w-full">
-                <table id="notesTable" class="min-w-full border-collapse">
-                  <thead id="notesThead" class="bg-gray-100"></thead>
-                  <tbody id="notesTbody"></tbody>
-                  <tfoot id="notesTfoot" class="bg-gray-50"></tfoot>
-                </table>
-              </div>
-            </div>
+  <!-- notes grid -->
+  <div id="notesTable-wrapper" class="flex-grow bg-white rounded-xl shadow p-3 overflow-x-auto">
+    <div id="gridWrapper" class="w-full">
+      <table id="notesTable" class="min-w-full border-collapse">
+        <thead id="notesThead" class="bg-gray-100"></thead>
+        <tbody id="notesTbody"></tbody>
+        <tfoot id="notesTfoot" class="bg-gray-50"></tfoot>
+      </table>
+    </div>
+  </div>
 
-          </div>
+</div>
+
         </section>
 
       </main>
