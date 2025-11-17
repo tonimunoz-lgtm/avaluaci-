@@ -709,49 +709,45 @@ calcTypeSelect.addEventListener('change', ()=>{
 
 // Aplicar càlcul
 modalApplyCalcBtn.addEventListener('click', async () => {
-  if (!currentCalcActivityId) return;
+  if(!currentCalcActivityId) return;
 
-  try {
-    if (calcTypeSelect.value === 'numeric') {
-      const val = Number(numericField.value);
-      if (isNaN(val)) return alert('Introdueix un número vàlid');
+  if(calcTypeSelect.value === 'numeric'){
+    const val = Number(numericField.value);
+    if(isNaN(val)) return alert('Introdueix un número vàlid');
+    for(const sid of classStudents){
+      await saveNote(sid, currentCalcActivityId, val);
+    }
+    await markActivityAsCalculated(currentCalcActivityId);
+    closeModal('modalCalc');
 
-      for (const sid of classStudents) {
-        await saveNoteAsync(sid, currentCalcActivityId, val);
-      }
-      await markActivityAsCalculated(currentCalcActivityId);
-      closeModal('modalCalc');
-
-    } else if (calcTypeSelect.value === 'formula') {
-      const formula = formulaField.value.trim();
-      if (!formula) return alert('Formula buida');
-
-      for (const sid of classStudents) {
+  } else if(calcTypeSelect.value === 'formula'){
+    const formula = formulaField.value.trim();
+    if(!formula) return alert('Formula buida');
+    try{
+      for(const sid of classStudents){
         const result = await evalFormulaAsync(formula, sid);
-        await saveNoteAsync(sid, currentCalcActivityId, result);
+        await saveNote(sid, currentCalcActivityId, result);
       }
-
       await markActivityAsCalculated(currentCalcActivityId);
       closeModal('modalCalc');
-
-    } else if (calcTypeSelect.value === 'rounding') {
-      const formula = formulaField.value.trim();
-      if (!formula) return alert('Selecciona activitat i 0,5 o 1');
-
-      for (const sid of classStudents) {
-        const val = await applyRoundingFormula(formula, sid);
-        await saveNoteAsync(sid, currentCalcActivityId, val);
-      }
-
-      await markActivityAsCalculated(currentCalcActivityId);
-      closeModal('modalCalc');
+    } catch(e){
+      console.error(e);
+      alert('Error en calcular la fórmula: ' + e.message);
     }
 
-  } catch (e) {
-    console.error(e);
-    alert('Error aplicant càlcul: ' + e.message);
+  } else if(calcTypeSelect.value === 'rounding'){
+    const formula = formulaField.value.trim();
+    if(!formula) return alert('Selecciona activitat i 0,5 o 1');
+
+    for(const sid of classStudents){
+      const val = await applyRoundingFormula(formula, sid);
+      await saveNote(sid, currentCalcActivityId, val);
+    }
+    await markActivityAsCalculated(currentCalcActivityId);
+    closeModal('modalCalc');
   }
 });
+
 
 
 
