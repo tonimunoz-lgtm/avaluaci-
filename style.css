@@ -195,7 +195,7 @@ button:hover { transform: scale(1.03); }
 /* ---------------- Layout classe oberta amb columna d'alumnes més estreta ---------------- */
 #classScreenWrapper {
   display: flex;
-  gap: 1rem; /* espai entre columna alumnes i graella */
+  gap: 0.5rem; /* abans 1rem */
 }
 
 /* Contenidor llista d'alumnes (sidebar) */
