@@ -929,10 +929,18 @@ function enableActivityDrag(){
       arr.splice(toIdx-1, 0, moved);
       classActivities = arr;
 
+      // 🔥 Guardar el nou ordre a Firestore
+      if(currentClassId){
+        db.collection('classes').doc(currentClassId).update({ activitats: classActivities })
+          .then(() => console.log('Ordre d’activitats actualitzat a Firestore'))
+          .catch(e => console.error('Error guardant ordre activitats', e));
+      }
+
       renderNotesGrid();
     });
   });
 }
+
 
 /* ---------------- Marcar activitat com calculada ---------------- */
 async function markActivityAsCalculated(activityId){
