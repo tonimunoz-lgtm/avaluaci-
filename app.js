@@ -443,7 +443,8 @@ function renderStudentsList(){
   });
 }
 /* ---------------- Notes Grid amb menú activitats ---------------- */
-function renderNotesGrid(){
+/* ---------------- Notes Grid amb menú activitats ---------------- */
+async function renderNotesGrid(){
   notesThead.innerHTML = '';
   notesTbody.innerHTML = '';
   notesTfoot.innerHTML = '';
@@ -451,133 +452,266 @@ function renderNotesGrid(){
   const headRow = document.createElement('tr');
   headRow.appendChild(th('Alumne'));
 
-  db.collection('classes').doc(currentClassId).get().then(doc=>{
-    if(!doc.exists) return;
-    const classData = doc.data();
-    const calculatedActs = classData.calculatedActivities || {};
+  if(!currentClassId) return;
 
-    Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()))
-      .then(actDocs=>{
-        actDocs.forEach(adoc=>{
-          const id = adoc.id;
-          const name = adoc.exists ? (adoc.data().nom||'Sense nom') : 'Desconegut';
-          
-          const thEl = th('');
-          const container = document.createElement('div');
-          container.className = 'flex items-center justify-between';
+  const classDoc = await db.collection('classes').doc(currentClassId).get();
+  if(!classDoc.exists) return;
 
-          const spanName = document.createElement('span');
-          spanName.textContent = name;
+  const classData = classDoc.data();
+  const calculatedActs = classData.calculatedActivities || {};
 
-          const menuDiv = document.createElement('div');
-          menuDiv.className = 'relative';
-          menuDiv.innerHTML = `
-            <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white tooltip">⋮</button>
-            <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10 transition-opacity duration-200 opacity-0">
-              <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
-              <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>
-              <button class="calc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Calcul</button>
-            </div>
-          `;
-          
-          container.appendChild(spanName);
-          container.appendChild(menuDiv);
-          thEl.appendChild(container);
-          headRow.appendChild(thEl);
+  const actDocs = await Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()));
 
-          // Pintem capçalera vermella només si és fórmula
-          const calcData = calculatedActs[id];
-          if(calcData && calcData.type === 'formula'){
-            thEl.style.backgroundColor = '#fca5a5';
-            thEl.style.color = 'white';
-          } else {
-            thEl.style.backgroundColor = '';
-            thEl.style.color = '';
-          }
+  // Capçalera activitats amb menú
+  actDocs.forEach(adoc=>{
+    const id = adoc.id;
+    const name = adoc.exists ? (adoc.data().nom || 'Sense nom') : 'Desconegut';
+    const thEl = th('');
+    const container = document.createElement('div');
+    container.className = 'flex items-center justify-between';
 
-          // Events menú i càlcul
-          const menuBtn = menuDiv.querySelector('.menu-btn');
-          const menu = menuDiv.querySelector('.menu');
-          menuBtn.addEventListener('click', e=>{
-            e.stopPropagation();
-            document.querySelectorAll('.menu').forEach(m=> m.classList.add('hidden'));
-            menu.classList.toggle('hidden');
-          });
+    const spanName = document.createElement('span');
+    spanName.textContent = name;
 
-          menuDiv.querySelector('.calc-btn').addEventListener('click', e=>{
-            e.stopPropagation();
-            openCalcModal(adoc.id);
-          });
+    const menuDiv = document.createElement('div');
+    menuDiv.className = 'relative';
+    menuDiv.innerHTML = `
+      <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white tooltip">⋮</button>
+      <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10 transition-opacity duration-200 opacity-0">
+         <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
+         <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>
+         <button class="calc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Calcul</button>
+      </div>
+    `;
+    container.appendChild(spanName);
+    container.appendChild(menuDiv);
+    thEl.appendChild(container);
+    headRow.appendChild(thEl);
 
-          menuDiv.querySelector('.edit-btn').addEventListener('click', ()=>{
-            const newName = prompt('Introdueix el nou nom de l\'activitat:', name);
-            if(!newName || newName.trim()===name) return;
-            db.collection('activitats').doc(id).update({ nom: newName.trim() })
-              .then(()=> loadClassData())
-              .catch(e=> alert('Error editant activitat: '+e.message));
-          });
-
-          menuDiv.querySelector('.delete-btn').addEventListener('click', ()=> removeActivity(id));
-        });
-
-        headRow.appendChild(th('Mitjana', 'text-right'));
-        notesThead.appendChild(headRow);
-        enableActivityDrag();
-
-        if(classStudents.length===0){
-          notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivities.length+2}">No hi ha alumnes</td></tr>`;
-          renderAverages();
-          return;
-        }
-
-        Promise.all(classStudents.map(id => db.collection('alumnes').doc(id).get()))
-          .then(studentDocs=>{
-            studentDocs.forEach(sdoc=>{
-              const sid = sdoc.id;
-              const sdata = sdoc.exists ? sdoc.data() : { nom:'Desconegut', notes:{} };
-              const tr = document.createElement('tr');
-              tr.className = 'align-top';
-
-              const tdName = document.createElement('td');
-              tdName.className = 'border px-2 py-1';
-              tdName.textContent = sdata.nom;
-              tr.appendChild(tdName);
-
-              actDocs.forEach((actDoc, actIdx)=>{
-                const aid = actDoc.id;
-                const val = (sdata.notes && sdata.notes[aid]!==undefined) ? sdata.notes[aid] : '';
-                const td = document.createElement('td');
-                td.className = 'border px-2 py-1';
-                const input = document.createElement('input');
-                input.type='number'; input.min=0; input.max=10;
-                input.value=val;
-                input.className='table-input text-center rounded border p-1';
-
-                if(calculatedActs[aid]){
-                  input.disabled = true;
-                  input.style.backgroundColor = '#fca5a5';
-                } else {
-                  input.addEventListener('change', e=> saveNote(sid, aid, e.target.value));
-                  input.addEventListener('input', ()=> applyCellColor(input));
-                  applyCellColor(input);
-                }
-
-                td.appendChild(input);
-                tr.appendChild(td);
-              });
-
-              const avgTd = document.createElement('td');
-              avgTd.className = 'border px-2 py-1 text-right font-semibold';
-              avgTd.textContent = computeStudentAverageText(sdata);
-              tr.appendChild(avgTd);
-
-              notesTbody.appendChild(tr);
-            });
-            renderAverages();
-          });
-      });
+    // Menús
+    const menuBtn = menuDiv.querySelector('.menu-btn');
+    const menu = menuDiv.querySelector('.menu');
+    menuBtn.addEventListener('click', e=>{
+      e.stopPropagation();
+      document.querySelectorAll('.menu').forEach(m=> m.classList.add('hidden'));
+      menu.classList.toggle('hidden');
+    });
+    menuDiv.querySelector('.calc-btn').addEventListener('click', e=>{
+      e.stopPropagation();
+      openCalcModal(adoc.id);
+    });
+    menuDiv.querySelector('.edit-btn').addEventListener('click', ()=>{
+      const newName = prompt('Introdueix el nou nom de l\'activitat:', name);
+      if(!newName || newName.trim()===name) return;
+      db.collection('activitats').doc(id).update({ nom: newName.trim() }).then(()=> renderNotesGrid());
+    });
+    menuDiv.querySelector('.delete-btn').addEventListener('click', ()=> removeActivity(id));
   });
+
+  headRow.appendChild(th('Mitjana', 'text-right'));
+  notesThead.appendChild(headRow);
+  enableActivityDrag();
+
+  if(classStudents.length===0){
+    notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivities.length+2}">No hi ha alumnes</td></tr>`;
+    renderAverages();
+    return;
+  }
+
+  // Carregar alumnes i notes
+  const studentDocs = await Promise.all(classStudents.map(id => db.collection('alumnes').doc(id).get()));
+
+  studentDocs.forEach(sdoc=>{
+    const sid = sdoc.id;
+    const sdata = sdoc.exists ? sdoc.data() : { nom:'Desconegut', notes:{} };
+    const tr = document.createElement('tr');
+    tr.className = 'align-top';
+
+    const tdName = document.createElement('td');
+    tdName.className = 'border px-2 py-1';
+    tdName.textContent = sdata.nom;
+    tr.appendChild(tdName);
+
+    actDocs.forEach(adoc=>{
+      const aid = adoc.id;
+      const val = (sdata.notes && sdata.notes[aid]!==undefined) ? sdata.notes[aid] : '';
+      const td = document.createElement('td');
+      td.className = 'border px-2 py-1';
+      const input = document.createElement('input');
+      input.type='number'; input.min=0; input.max=10;
+      input.value=val;
+      input.className='table-input text-center rounded border p-1';
+
+      if(calculatedActs[aid]){
+        input.disabled = true;
+        input.style.backgroundColor = '#fca5a5'; // vermell
+      } else {
+        input.addEventListener('change', e=> saveNote(sid, aid, e.target.value));
+        input.addEventListener('input', ()=> applyCellColor(input));
+      }
+      applyCellColor(input);
+      td.appendChild(input);
+      tr.appendChild(td);
+    });
+
+    const avgTd = document.createElement('td');
+    avgTd.className = 'border px-2 py-1 text-right font-semibold';
+    avgTd.textContent = computeStudentAverageText(sdata);
+    tr.appendChild(avgTd);
+
+    notesTbody.appendChild(tr);
+  });
+
+  renderAverages();
 }
+
+
+/* ---------------- Helpers Notes & Excel ---------------- */
+function th(txt, cls=''){
+  const el = document.createElement('th');
+  el.className = 'border px-2 py-1 ' + cls;
+  el.textContent = txt;
+  return el;
+}
+
+// ---------------- Versió Async de saveNote ----------------
+async function saveNoteAsync(studentId, activityId, value){
+  const num = value === '' ? null : Number(value);
+  const updateObj = {};
+  if(num === null || isNaN(num)) updateObj[`notes.${activityId}`] = firebase.firestore.FieldValue.delete();
+  else updateObj[`notes.${activityId}`] = num;
+
+  await db.collection('alumnes').doc(studentId).update(updateObj);
+}
+
+function applyCellColor(inputEl){
+  const v = Number(inputEl.value);
+  inputEl.classList.remove('bg-red-100','bg-yellow-100','bg-green-100');
+  if(inputEl.value === '' || isNaN(v)) return;
+  if(v < 5) inputEl.classList.add('bg-red-100');
+  else if(v < 7) inputEl.classList.add('bg-yellow-100');
+  else inputEl.classList.add('bg-green-100');
+}
+
+function computeStudentAverageText(studentData){
+  const notesMap = (studentData && studentData.notes) ? studentData.notes : {};
+  const vals = classActivities.map(aid => (notesMap[aid] !== undefined ? Number(notesMap[aid]) : null)).filter(v=> v!==null && !isNaN(v));
+  if(vals.length === 0) return '';
+  return (vals.reduce((s,n)=> s+n,0)/vals.length).toFixed(2);
+}
+
+function renderAverages(){
+  Array.from(notesTbody.children).forEach(tr=>{
+    const inputs = Array.from(tr.querySelectorAll('input')).map(i=> Number(i.value)).filter(v=> !isNaN(v));
+    const lastTd = tr.querySelectorAll('td')[tr.querySelectorAll('td').length - 1];
+    lastTd.textContent = inputs.length ? (inputs.reduce((a,b)=>a+b,0)/inputs.length).toFixed(2) : '';
+  });
+
+  const actCount = classActivities.length;
+  notesTfoot.innerHTML = '';
+  const tr = document.createElement('tr');
+  tr.className = 'text-sm';
+  tr.appendChild(th('Mitjana activitat'));
+  if(actCount === 0){
+    tr.appendChild(th('',''));
+    notesTfoot.appendChild(tr);
+    return;
+  }
+  for(let i=0;i<actCount;i++){
+    const inputs = Array.from(notesTbody.querySelectorAll('tr')).map(r => r.querySelectorAll('input')[i]).filter(Boolean);
+    const vals = inputs.map(inp => Number(inp.value)).filter(v=> !isNaN(v));
+    const avg = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2) : '';
+    const td = document.createElement('td');
+    td.className = 'border px-2 py-1 text-center font-semibold';
+    td.textContent = avg;
+    tr.appendChild(td);
+  }
+  tr.appendChild(th('',''));
+  notesTfoot.appendChild(tr);
+}
+
+/* ---------------- Open Calculation Modal ---------------- */
+function openCalcModal(activityId){
+  currentCalcActivityId = activityId; 
+  openModal('modalCalc');
+  // Reset modal
+  document.getElementById('calcType').value = 'numeric';
+  document.getElementById('formulaInputs').classList.add('hidden');
+  document.getElementById('numericInput').classList.remove('hidden');
+  document.getElementById('numericField').value = '';
+  document.getElementById('formulaField').value = '';
+}
+/* ---------------- Modal Calcul: Numeric / Formula ---------------- */
+const calcTypeSelect = document.getElementById('calcType');
+const numericDiv = document.getElementById('numericInput');
+const numericField = document.getElementById('numericField');
+const formulaDiv = document.getElementById('formulaInputs');
+const formulaField = document.getElementById('formulaField');
+const formulaButtonsDiv = document.getElementById('formulaButtons');
+const modalApplyCalcBtn = document.getElementById('modalApplyCalcBtn');
+
+// Canvi tipus càlcul
+calcTypeSelect.addEventListener('change', ()=>{
+  if(calcTypeSelect.value==='numeric'){
+    numericDiv.classList.remove('hidden');
+    formulaDiv.classList.add('hidden');
+  } else if(calcTypeSelect.value==='formula'){
+    numericDiv.classList.add('hidden');
+    formulaDiv.classList.remove('hidden');
+    buildFormulaButtons(); // activitats + operadors + números
+  } else if(calcTypeSelect.value==='rounding'){
+    numericDiv.classList.add('hidden');
+    formulaDiv.classList.remove('hidden');
+    buildRoundingButtons(); // ACTIVITATS + 0,5 i 1
+  }
+});
+
+// Aplicar càlcul
+modalApplyCalcBtn.addEventListener('click', async () => {
+  if (!currentCalcActivityId) return;
+
+  try {
+    if (calcTypeSelect.value === 'numeric') {
+      const val = Number(numericField.value);
+      if (isNaN(val)) return alert('Introdueix un número vàlid');
+
+      for (const sid of classStudents) {
+        await saveNoteAsync(sid, currentCalcActivityId, val);
+      }
+      await markActivityAsCalculated(currentCalcActivityId);
+      closeModal('modalCalc');
+
+    } else if (calcTypeSelect.value === 'formula') {
+      const formula = formulaField.value.trim();
+      if (!formula) return alert('Formula buida');
+
+      for (const sid of classStudents) {
+        const result = await evalFormulaAsync(formula, sid);
+        await saveNoteAsync(sid, currentCalcActivityId, result);
+      }
+
+      await markActivityAsCalculated(currentCalcActivityId);
+      closeModal('modalCalc');
+
+    } else if (calcTypeSelect.value === 'rounding') {
+      const formula = formulaField.value.trim();
+      if (!formula) return alert('Selecciona activitat i 0,5 o 1');
+
+      for (const sid of classStudents) {
+        const val = await applyRoundingFormula(formula, sid);
+        await saveNoteAsync(sid, currentCalcActivityId, val);
+      }
+
+      await markActivityAsCalculated(currentCalcActivityId);
+      closeModal('modalCalc');
+    }
+
+  } catch (e) {
+    console.error(e);
+    alert('Error aplicant càlcul: ' + e.message);
+  }
+});
+
 
 
 // ---------------- Construir botons de fórmules ----------------
@@ -755,30 +889,15 @@ function enableActivityDrag(){
   });
 }
 
-/* ---------------- Marcar activitat com calculada ---------------- */
-async function markActivityAsCalculated(activityId, type='numeric'){
+// ---------------- Marcar activitat com calculada (Async) ----------------
+async function markActivityAsCalculated(activityId){
   if(!currentClassId) return;
-
-  // Guardem l'estat amb tipus
   await db.collection('classes').doc(currentClassId).update({
-    [`calculatedActivities.${activityId}`]: { type }
+    [`calculatedActivities.${activityId}`]: { type: 'formula' }
   });
-
-  // Marquem els inputs com a deshabilitats
-  const actIndex = classActivities.findIndex(aid => aid === activityId);
-  if(actIndex === -1) return;
-
-  Array.from(notesTbody.querySelectorAll('tr')).forEach(tr=>{
-    const input = tr.querySelectorAll('input')[actIndex];
-    if(input){
-      input.disabled = true;
-      input.style.backgroundColor = '#fca5a5'; // vermell cel·la
-    }
-  });
-
-  renderNotesGrid(); // Re-render per pintar capçalera
+  // Re-render per bloqueig i color
+  await renderNotesGrid();
 }
-
 
 
 
