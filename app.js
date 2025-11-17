@@ -1,6 +1,5 @@
 // app.js - lògica principal (modules)
 import { openModal, closeModal, confirmAction } from './modals.js';
-
 /* ---------------- FIREBASE CONFIG ---------------- */
 const firebaseConfig = {
   apiKey: "AIzaSyA0P7TWcEw9y9_13yqRhvsgWN5d3YKH7yo",
@@ -22,7 +21,7 @@ let classActivities = [];
 let deleteMode = false;
 let currentCalcActivityId = null; // Activitat actual per fer càlculs
 
-/* ---------- Elements ---------- */
+/* Elements */
 const loginScreen = document.getElementById('loginScreen');
 const appRoot = document.getElementById('appRoot');
 const usuariNom = document.getElementById('usuariNom');
@@ -124,6 +123,7 @@ function setupAfterAuth(user) {
   // Crida automàtica per carregar la graella de classes
   loadClassesScreen();
 }
+
 /* ---------------- Classes screen ---------------- */
 btnCreateClass.addEventListener('click', ()=> openModal('modalCreateClass'));
 
@@ -211,7 +211,6 @@ function loadClassesScreen() {
     console.error(e);
   });
 }
-
 /* ---------------- Delete Mode Classes ---------------- */
 const btnDeleteMode = document.getElementById('btnDeleteMode');
 btnDeleteMode.addEventListener('click', ()=> {
@@ -270,6 +269,7 @@ function createClassModal(){
     }).catch(e=> alert('Error: ' + e.message));
 }
 modalCreateClassBtn.addEventListener('click', createClassModal);
+
 /* ---------------- Open Class ---------------- */
 function openClass(id){
   currentClassId = id;
@@ -345,7 +345,6 @@ function sortStudentsAlpha(){
     }).then(()=> loadClassData())
     .catch(e=> console.error(e));
 }
-
 /* ---------------- Activities ---------------- */
 btnAddActivity.addEventListener('click', ()=> openModal('modalAddActivity'));
 modalAddActivityBtn.addEventListener('click', createActivityModal);
@@ -377,6 +376,7 @@ function removeActivity(actId){
       .catch(e=> alert('Error esborrant activitat: '+e.message));
   });
 }
+
 /* ---------------- Render Students List amb menú ---------------- */
 function renderStudentsList(){
   studentsList.innerHTML = '';
@@ -442,7 +442,6 @@ function renderStudentsList(){
     });
   });
 }
-
 /* ---------------- Notes Grid amb menú activitats ---------------- */
 function renderNotesGrid(){
   notesThead.innerHTML = '';
@@ -508,6 +507,8 @@ function renderNotesGrid(){
       headRow.appendChild(th('Mitjana', 'text-right'));
       notesThead.appendChild(headRow);
       enableActivityDrag(); // Activem drag & drop per les columnes
+
+
       if(classStudents.length===0){
         notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivities.length+2}">No hi ha alumnes</td></tr>`;
         renderAverages();
@@ -618,11 +619,11 @@ function renderAverages(){
   tr.appendChild(th('',''));
   notesTfoot.appendChild(tr);
 }
+
 /* ---------------- Open Calculation Modal ---------------- */
 function openCalcModal(activityId){
   currentCalcActivityId = activityId; 
   openModal('modalCalc');
-
   // Reset modal
   document.getElementById('calcType').value = 'numeric';
   document.getElementById('formulaInputs').classList.add('hidden');
@@ -630,8 +631,7 @@ function openCalcModal(activityId){
   document.getElementById('numericField').value = '';
   document.getElementById('formulaField').value = '';
 }
-
-/* ---------------- Modal Calcul: Numeric / Formula / Rounding ---------------- */
+/* ---------------- Modal Calcul: Numeric / Formula ---------------- */
 const calcTypeSelect = document.getElementById('calcType');
 const numericDiv = document.getElementById('numericInput');
 const numericField = document.getElementById('numericField');
@@ -671,25 +671,22 @@ modalApplyCalcBtn.addEventListener('click', async ()=>{
   } else if(calcTypeSelect.value==='formula'){
     const formula = formulaField.value.trim();
     if(!formula) return alert('Formula buida');
-
-    // Guardem la fórmula a Firestore perquè es pugui recalcular automàticament si canvien notes
-    db.collection('activitats').doc(currentCalcActivityId).update({ calcType:'formula', formula })
-      .then(async ()=>{
-        for(const sid of classStudents){
-          const result = await evalFormulaAsync(formula, sid);
-          saveNote(sid, currentCalcActivityId, result);
-        }
-        closeModal('modalCalc');
-      }).catch(e=>{
-        console.error(e);
-        alert('Error en guardar la fórmula: ' + e.message);
-      });
+    try{
+      for(const sid of classStudents){
+        const result = await evalFormulaAsync(formula, sid);
+        saveNote(sid, currentCalcActivityId, result);
+      }
+      closeModal('modalCalc');
+    } catch(e){
+      console.error(e);
+      alert('Error en calcular la fórmula: ' + e.message);
+    }
 
   } else if(calcTypeSelect.value==='rounding'){
     const formula = formulaField.value.trim();
     if(!formula) return alert('Selecciona activitat i 0,5 o 1');
 
-    // Separar nom de l'activitat i multiplicador (0.5 o 1)
+    // Separar el nom de l'activitat i el multiplicador (0.5 o 1)
     let selectedActivityName = '';
     let multiplier = 1;
     classActivities.forEach(aid=>{
@@ -704,6 +701,7 @@ modalApplyCalcBtn.addEventListener('click', async ()=>{
             const studentDoc = await db.collection('alumnes').doc(sid).get();
             const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
             let val = 0;
+            // Trobar la nota de l'activitat seleccionada
             for(const aid of classActivities){
               const adoc = await db.collection('activitats').doc(aid).get();
               if(adoc.exists && adoc.data().nom === selectedActivityName){
@@ -711,6 +709,7 @@ modalApplyCalcBtn.addEventListener('click', async ()=>{
               }
             }
 
+            // Redondeig
             if(multiplier === 1){
               val = Math.round(val);
             } else if(multiplier === 0.5){
@@ -725,6 +724,106 @@ modalApplyCalcBtn.addEventListener('click', async ()=>{
     });
   }
 });
+
+
+
+// ---------------- Construir botons de fórmules ----------------
+function buildFormulaButtons(){
+  formulaButtonsDiv.innerHTML = '';
+
+  // Botons activitats
+  classActivities.forEach(aid=>{
+    db.collection('activitats').doc(aid).get().then(doc=>{
+      const name = doc.exists ? doc.data().nom : '???';
+      const btn = document.createElement('button');
+      btn.type='button';
+      btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
+      btn.textContent = name;
+      btn.addEventListener('click', ()=> addToFormula(name));
+      formulaButtonsDiv.appendChild(btn);
+    });
+  });
+
+  // Botons operadors
+  ['+', '-', '*', '/', '(', ')'].forEach(op=>{
+    const btn = document.createElement('button');
+    btn.type='button';
+    btn.className='px-2 py-1 m-1 bg-gray-200 rounded hover:bg-gray-300';
+    btn.textContent = op;
+    btn.addEventListener('click', ()=> addToFormula(op));
+    formulaButtonsDiv.appendChild(btn);
+  });
+
+  // Botons números 0-10
+  for(let i=0;i<=10;i++){
+    const btn = document.createElement('button');
+    btn.type='button';
+    btn.className='px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
+    btn.textContent = i;
+    btn.addEventListener('click', ()=> addToFormula(i));
+    formulaButtonsDiv.appendChild(btn);
+  }
+
+  // Botons decimals
+  ['.', ','].forEach(dec=>{
+    const btn = document.createElement('button');
+    btn.type='button';
+    btn.className='px-2 py-1 m-1 bg-yellow-200 rounded hover:bg-yellow-300';
+    btn.textContent = dec;
+    btn.addEventListener('click', ()=> addToFormula('.')); // sempre converteix ',' a '.'
+    formulaButtonsDiv.appendChild(btn);
+  });
+
+  // Botó Backspace
+  const backBtn = document.createElement('button');
+  backBtn.type='button';
+  backBtn.className='px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
+  backBtn.textContent = '⌫';
+  backBtn.addEventListener('click', ()=> formulaField.value = formulaField.value.slice(0,-1));
+  formulaButtonsDiv.appendChild(backBtn);
+}
+
+// Afegir a formula
+function addToFormula(str){
+  formulaField.value += str;
+}
+
+function buildRoundingButtons(){
+  formulaButtonsDiv.innerHTML = '';
+
+  // Botons activitats
+  classActivities.forEach(aid=>{
+    db.collection('activitats').doc(aid).get().then(doc=>{
+      const name = doc.exists ? doc.data().nom : '???';
+      const btn = document.createElement('button');
+      btn.type='button';
+      btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
+      btn.textContent = name;
+      btn.addEventListener('click', ()=> addToFormula(name)); // el nom de l'activitat
+      formulaButtonsDiv.appendChild(btn);
+    });
+  });
+
+  // Botó Backspace
+  const backBtn = document.createElement('button');
+  backBtn.type='button';
+  backBtn.className='px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
+  backBtn.textContent = '⌫';
+  backBtn.addEventListener('click', ()=> formulaField.value = formulaField.value.slice(0,-1));
+  formulaButtonsDiv.appendChild(backBtn);
+
+  // Botons 0.5 i 1
+  [0.5,1].forEach(v=>{
+    const btn = document.createElement('button');
+    btn.type='button';
+    btn.className='px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
+    btn.textContent = v;
+    btn.addEventListener('click', ()=> addToFormula(v)); // afegim directament 0.5 o 1
+    formulaButtonsDiv.appendChild(btn);
+  });
+}
+
+
 // ---------------- Evaluar fórmula ----------------
 async function evalFormulaAsync(formula, studentId){
   let evalStr = formula;
@@ -733,13 +832,13 @@ async function evalFormulaAsync(formula, studentId){
   const studentDoc = await db.collection('alumnes').doc(studentId).get();
   const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
 
-  // Reemplaçar noms d'activitats per valors
   for(const aid of classActivities){
     const actDoc = await db.collection('activitats').doc(aid).get();
     const actName = actDoc.exists ? actDoc.data().nom : '';
     if(!actName) continue;
 
-    const val = Number(notes[aid]) || 0; // Agafem la nota actual
+    const val = Number(notes[aid]) || 0; // Agafem directament les notes de Firestore
+
     const regex = new RegExp(actName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
     evalStr = evalStr.replace(regex, val);
   }
@@ -752,84 +851,97 @@ async function evalFormulaAsync(formula, studentId){
   }
 }
 
-// ---------------- Recalcular automàticament columnes amb fórmules ----------------
-async function recalcFormulaActivities(){
-  for(const aid of classActivities){
-    const actDoc = await db.collection('activitats').doc(aid).get();
-    if(!actDoc.exists) continue;
-    const actData = actDoc.data();
 
-    if(actData.calcType === 'formula' && actData.formula){
-      for(const sid of classStudents){
-        const result = await evalFormulaAsync(actData.formula, sid);
-        saveNote(sid, aid, result);
-      }
+
+
+
+// ---------------- Helper per trobar nom alumne per ID ----------------
+function getStudentRowById(sid) {
+  // Busca la fila corresponent a aquest studentId
+  const studentIndex = classStudents.findIndex(id => id === sid);
+  if (studentIndex === -1) return null;
+  return notesTbody.children[studentIndex] || null;
+}
+
+/* ---------------- Drag & Drop per activitats ---------------- */
+function enableActivityDrag(){
+  const ths = notesThead.querySelectorAll('tr:first-child th');
+  ths.forEach((thEl, idx)=>{
+    if(idx === 0 || idx === ths.length-1) return; // No draggable: primera (Alumne) i última (Mitjana)
+    
+    thEl.setAttribute('draggable', true);
+    thEl.addEventListener('dragstart', e=>{
+      e.dataTransfer.setData('text/plain', idx);
+    });
+
+    thEl.addEventListener('dragover', e=>{
+      e.preventDefault();
+      thEl.classList.add('border-dashed', 'border-2');
+    });
+
+    thEl.addEventListener('dragleave', e=>{
+      thEl.classList.remove('border-dashed', 'border-2');
+    });
+
+    thEl.addEventListener('drop', e=>{
+      e.preventDefault();
+      thEl.classList.remove('border-dashed', 'border-2');
+      const fromIdx = Number(e.dataTransfer.getData('text/plain'));
+      const toIdx = idx;
+
+      if(fromIdx === toIdx) return;
+
+      // Reordenar classActivities
+      const arr = Array.from(classActivities);
+      const moved = arr.splice(fromIdx-1, 1)[0]; // -1 per ignorar columna Alumne
+      arr.splice(toIdx-1, 0, moved);
+      classActivities = arr;
+
+      renderNotesGrid();
+    });
+  });
+}
+
+
+/* ---------------- Export Excel ---------------- */
+btnExport.addEventListener('click', exportExcel);
+function exportExcel(){
+  const table = document.getElementById('notesTable');
+  const wb = XLSX.utils.table_to_book(table, {sheet:"Notes"});
+  const fname = (document.getElementById('classTitle').textContent || 'classe') + '.xlsx';
+  XLSX.writeFile(wb, fname);
+}
+
+/* ---------------- Tancar menús si fas clic fora ---------------- */
+document.addEventListener('click', function(e) {
+  document.querySelectorAll('.menu').forEach(menu => {
+    if (!menu.contains(e.target) && !e.target.classList.contains('menu-btn')) {
+      menu.classList.add('hidden');
     }
-  }
-}
+  });
+});
+const userMenuBtn = document.getElementById('userMenuBtn');
+const userMenu = document.getElementById('userMenu');
+const changePasswordBtn = document.getElementById('changePasswordBtn');
 
-// ---------------- Override saveNote per recalcul automàtic ----------------
-async function saveNote(studentId, activityId, value){
-  const num = value === '' ? null : Number(value);
-  const updateObj = {};
-  if(num === null || isNaN(num)) updateObj[`notes.${activityId}`] = firebase.firestore.FieldValue.delete();
-  else updateObj[`notes.${activityId}`] = num;
+// Toggle menú
+userMenuBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  userMenu.classList.toggle('hidden');
+});
 
-  try{
-    await db.collection('alumnes').doc(studentId).update(updateObj);
+// Tancar menú si clics fora
+document.addEventListener('click', () => {
+  userMenu.classList.add('hidden');
+});
 
-    // Recalcular automàticament activitats que depenen d'altres
-    await recalcFormulaActivities();
-
-    // Renderitzar la graella
-    renderNotesGrid();
-  } catch(e){
-    console.error('Error saving note', e);
-  }
-}
-// ---------------- Redondeig automàtic (opcional futur) ----------------
-async function recalcRoundingActivities(){
-  for(const aid of classActivities){
-    const actDoc = await db.collection('activitats').doc(aid).get();
-    if(!actDoc.exists) continue;
-    const actData = actDoc.data();
-
-    if(actData.calcType === 'rounding' && actData.formula){
-      for(const sid of classStudents){
-        const studentDoc = await db.collection('alumnes').doc(sid).get();
-        const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
-
-        // Trobar activitat de referència
-        let refValue = 0;
-        for(const refAid of classActivities){
-          const refAct = await db.collection('activitats').doc(refAid).get();
-          if(refAct.exists && actData.formula.startsWith(refAct.data().nom)){
-            refValue = Number(notes[refAid]) || 0;
-            break;
-          }
-        }
-
-        // Aplicar multiplicador / redondeig
-        let multiplier = Number(actData.formula.replace(/\D/g,'')) || 1;
-        if(multiplier === 1) refValue = Math.round(refValue);
-        else if(multiplier === 0.5) refValue = Math.round(refValue*2)/2;
-
-        await saveNote(sid, aid, refValue);
-      }
-    }
-  }
-}
-
-// ---------------- Recalcular totes les activitats després de canvis ----------------
-async function recalcAllActivities(){
-  await recalcFormulaActivities();
-  await recalcRoundingActivities(); // futur: si vols redondeig automàtic
-}
-
-// ---------------- Inicialització de l'app ----------------
-function initApp(){
-  showLogin();
-  // Altres inicialitzacions si cal
-}
-
-initApp();
+// Canviar contrasenya
+changePasswordBtn.addEventListener('click', () => {
+  const email = auth.currentUser?.email;
+  if(!email) return alert('No hi ha usuari actiu.');
+  const newPw = prompt('Introdueix la nova contrasenya:');
+  if(!newPw) return;
+  auth.currentUser.updatePassword(newPw)
+    .then(()=> alert('Contrasenya canviada correctament!'))
+    .catch(e=> alert('Error: ' + e.message));
+});
