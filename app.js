@@ -451,10 +451,10 @@ async function renderNotesGrid() {
   const headRow = document.createElement('tr');
   headRow.appendChild(th('Alumne'));
 
-  // Carreguem tots els documents d'activitats
+  // Carreguem activitats
   const actDocs = await Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()));
 
-  // Creació de capçaleres amb menús
+  // Capçaleres amb menús
   for (const adoc of actDocs) {
     const id = adoc.id;
     const name = adoc.exists ? (adoc.data().nom || 'Sense nom') : 'Desconegut';
@@ -481,6 +481,7 @@ async function renderNotesGrid() {
     thEl.appendChild(container);
     headRow.appendChild(thEl);
 
+    // Menús
     const menuBtn = menuDiv.querySelector('.menu-btn');
     const menu = menuDiv.querySelector('.menu');
     menuBtn.addEventListener('click', e => {
@@ -509,12 +510,8 @@ async function renderNotesGrid() {
   notesThead.appendChild(headRow);
   enableActivityDrag();
 
-  // Si no hi ha alumnes
-  if (classStudents.length === 0) {
-    notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivities.length + 2}">No hi ha alumnes</td></tr>`;
-    // Aplicar colors a totes les cel·les
-    Array.from(notesTbody.querySelectorAll('input')).forEach(input => applyCellColor(input));
-    renderAverages();
+  if(classStudents.length === 0){
+    notesTbody.innerHTML = `<tr><td colspan="${classActivities.length + 2}" class="p-3 text-sm text-gray-400">No hi ha alumnes</td></tr>`;
     return;
   }
 
@@ -523,7 +520,7 @@ async function renderNotesGrid() {
 
   for (const sdoc of studentDocs) {
     const sid = sdoc.id;
-    const sdata = sdoc.exists ? sdoc.data() : { nom: 'Desconegut', notes: {} };
+    const sdata = sdoc.exists ? sdoc.data() : { nom:'Desconegut', notes:{} };
     const tr = document.createElement('tr');
     tr.className = 'align-top';
 
@@ -532,31 +529,34 @@ async function renderNotesGrid() {
     tdName.textContent = sdata.nom;
     tr.appendChild(tdName);
 
-    for (const actDoc of actDocs) {
+    for(const actDoc of actDocs){
       const aid = actDoc.id;
-      const val = (sdata.notes && sdata.notes[aid] !== undefined) ? sdata.notes[aid] : '';
+      const val = sdata.notes?.[aid] ?? '';
       const td = document.createElement('td');
       td.className = 'border px-2 py-1';
       const input = document.createElement('input');
-
-      // Bloquejar si activitat té fórmula
-      if (actDoc.exists && actDoc.data().formula) {
-        input.readOnly = true;
-        input.classList.add('formula-cell');
-      }
 
       input.type = 'number';
       input.min = 0;
       input.max = 10;
       input.value = val;
       input.className = 'table-input text-center rounded border p-1';
+
+      // Bloquejar si té fórmula
+      if(actDoc.exists && actDoc.data().formula){
+        input.readOnly = true;
+        input.classList.add('formula-cell');
+      }
+
       input.addEventListener('change', e => saveNote(sid, aid, e.target.value));
       input.addEventListener('input', () => applyCellColor(input));
       applyCellColor(input);
+
       td.appendChild(input);
       tr.appendChild(td);
     }
 
+    // Mitjana
     const avgTd = document.createElement('td');
     avgTd.className = 'border px-2 py-1 text-right font-semibold';
     avgTd.textContent = computeStudentAverageText(sdata);
@@ -565,8 +565,12 @@ async function renderNotesGrid() {
     notesTbody.appendChild(tr);
   }
 
+  // Marcar totes les columnes amb fórmula i aplicar colors
+  classActivities.forEach(aid => markFormulaColumn(aid));
+  Array.from(notesTbody.querySelectorAll('input')).forEach(input => applyCellColor(input));
   renderAverages();
 }
+
 
 /* ---------------- Helpers Notes & Excel ---------------- */
 function th(txt, cls=''){
@@ -597,8 +601,6 @@ function markFormulaColumn(activityId){
   });
 }
 
-
-
 async function recalculateAllFormulaColumns(){
   for(const actId of classActivities){
     const actDoc = await db.collection('activitats').doc(actId).get();
@@ -607,13 +609,14 @@ async function recalculateAllFormulaColumns(){
 
     for(const sid of classStudents){
       const result = await evalFormulaAsync(formula, sid);
-      // Guardem sense disparar render immediat
       await saveNoteWithoutRerender(sid, actId, result);
     }
 
     // Bloquejar cel·la i marcar amb classe
     markFormulaColumn(actId);
   }
+}
+
 
   // Aplicar colors després de recalcular
   Array.from(notesTbody.querySelectorAll('input')).forEach(input => applyCellColor(input));
@@ -630,10 +633,13 @@ async function saveNote(studentId, activityId, value){
   try {
     // Guardem la nota
     await db.collection('alumnes').doc(studentId).update(updateObj);
-    // Recalculem totes les fórmules després
+
+    // Recalculem totes les fórmules
     await recalculateAllFormulaColumns();
-    // Renderitzem la taula amb colors actualitzats
-    renderNotesGrid();
+
+    // Actualitzem només colors i mitjanes
+    Array.from(notesTbody.querySelectorAll('input')).forEach(input => applyCellColor(input));
+    renderAverages();
   } catch(e){
     console.error('Error saving note', e);
   }
