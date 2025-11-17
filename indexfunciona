@@ -179,6 +179,7 @@
     <select id="calcType" class="border rounded p-1">
       <option value="numeric">Numeric</option>
       <option value="formula">Fórmula</option>
+      <option value="rounding">Redondeig</option>
     </select>
 
     <!-- Numeric -->
