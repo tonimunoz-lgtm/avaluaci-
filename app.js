@@ -1049,7 +1049,7 @@ changePasswordBtn.addEventListener('click', () => {
 // ... el teu codi existent ...
 
 // ---------------- Google Classroom Integration ----------------
-const CLIENT_ID = 'EL_TEU_CLIENT_ID.apps.googleusercontent.com';
+const CLIENT_ID = '16135843286-1c0rphurislf4if73o8utqu64acse7dd.apps.googleusercontent.com';
 const SCOPES = 'https://www.googleapis.com/auth/classroom.rosters.readonly';
 
 function initGoogleClient() {
