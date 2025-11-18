@@ -53,6 +53,12 @@ const modalCreateClassBtn = document.getElementById('modalCreateClassBtn');
 const modalAddStudentBtn = document.getElementById('modalAddStudentBtn');
 const modalAddActivityBtn = document.getElementById('modalAddActivityBtn');
 
+const btnImportAL = document.getElementById('btnImportAL');
+btnImportAL.addEventListener('click', () => {
+  openModal('modalImportAL');
+});
+
+
 /* ---------- UTILS ---------- */
 function showLogin() {
   loginScreen.style.display = 'block';
@@ -1044,3 +1050,73 @@ changePasswordBtn.addEventListener('click', () => {
     .then(()=> alert('Contrasenya canviada correctament!'))
     .catch(e=> alert('Error: ' + e.message));
 });
+
+// ----------------------Importar ------------------------
+// ---------------------- Importar alumnes ------------------------
+document.getElementById('btnImportALConfirm').addEventListener('click', () => {
+  const fileInput = document.getElementById('fileImport');
+  const file = fileInput.files[0];
+  if (!file) return alert("Selecciona un fitxer!");
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    let data = e.target.result;
+    let studentNames = [];
+
+    // Llegir CSV
+    if (file.name.endsWith('.csv')) {
+      const lines = data.split(/\r?\n/);
+      lines.forEach(line => {
+        const name = line.trim();
+        if (name) studentNames.push(name);
+      });
+    } 
+    // Llegir XLSX
+    else if (file.name.endsWith('.xlsx')) {
+      const workbook = XLSX.read(data, { type: 'binary' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      json.forEach(row => {
+        const name = row[0];
+        if (name) studentNames.push(name.trim());
+      });
+    }
+
+    if(studentNames.length === 0) return alert('No s’ha trobat cap alumne al fitxer.');
+
+    // Cridar funció per afegir alumnes a Firestore i classe
+    await addImportedStudents(studentNames);
+
+    closeModal('modalImportAL');
+  };
+
+  if (file.name.endsWith('.xlsx')) reader.readAsBinaryString(file);
+  else reader.readAsText(file);
+});
+
+// Funció per afegir alumnes a Firestore i a la classe
+async function addImportedStudents(names) {
+  if (!currentClassId) return alert('No hi ha cap classe seleccionada.');
+
+  const classRef = db.collection('classes').doc(currentClassId);
+
+  try {
+    for (const name of names) {
+      const studentRef = db.collection('alumnes').doc();
+      // Crear alumne a Firestore
+      await studentRef.set({ nom: name, notes: {} });
+      // Afegir ID alumne a la classe
+      await classRef.update({
+        alumnes: firebase.firestore.FieldValue.arrayUnion(studentRef.id)
+      });
+    }
+
+    // Recarregar la graella perquè apareguin amb menú i drag & drop
+    loadClassData();
+
+    alert(`${names.length} alumne(s) importat(s) correctament!`);
+  } catch(e) {
+    console.error(e);
+    alert('Error afegint alumnes: ' + e.message);
+  }
+}
