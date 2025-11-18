@@ -119,6 +119,21 @@
   </div>
 
   <!-- ---------- MODALS ---------- -->
+
+<!-- Modal Importar Alumnes -->
+<div id="modalImportAL" class="fixed inset-0 hidden items-center justify-center z-50">
+  <div class="modal-backdrop absolute inset-0"></div>
+  <div class="bg-white rounded shadow-lg z-10 w-full max-w-md p-4">
+    <h3 class="text-lg font-semibold mb-2">Importar alumnes</h3>
+    <input type="file" id="fileImport" accept=".csv,.xlsx" class="w-full mb-3" />
+    <div class="flex justify-end gap-2">
+      <button data-modal-close="modalImportAL" class="modal-close px-3 py-1 rounded bg-gray-200">Cancel·lar</button>
+      <button id="btnImportALConfirm" class="px-3 py-1 rounded bg-green-500 text-white">Importa</button>
+    </div>
+  </div>
+</div>
+
+  
   <!-- Create Class Modal -->
   <div id="modalCreateClass" class="fixed inset-0 hidden items-center justify-center z-50">
     <div class="modal-backdrop absolute inset-0"></div>
