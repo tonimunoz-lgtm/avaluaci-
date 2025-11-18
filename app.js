@@ -103,9 +103,6 @@ cont?.addEventListener("click", (e) => {
   }
 });
 
-
-
-
 /* ---------- UTILS ---------- */
 function showLogin() {
   loginScreen.style.display = 'block';
