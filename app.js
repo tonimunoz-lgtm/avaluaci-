@@ -1045,6 +1045,7 @@ changePasswordBtn.addEventListener('click', () => {
     .catch(e=> alert('Error: ' + e.message));
 });
 
+//--------------classroom----------------
 
 
 import { openModal, closeModal } from './modals.js';
@@ -1055,7 +1056,12 @@ let GoogleAuth;
 
 // Quan es fa clic a Classroom
 document.getElementById('btnImportGC').addEventListener('click', () => {
-  // Carregar GAPI només aquí
+  // Carreguem GAPI només si no està carregat
+  if (!window.gapi) {
+    alert("GAPI no carregat correctament.");
+    return;
+  }
+
   gapi.load('client:auth2', () => {
     gapi.client.init({
       clientId: CLIENT_ID,
