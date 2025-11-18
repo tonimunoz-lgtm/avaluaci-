@@ -1052,51 +1052,71 @@ changePasswordBtn.addEventListener('click', () => {
 });
 
 // ----------------------Importar ------------------------
+// ---------------------- Importar alumnes ------------------------
 document.getElementById('btnImportALConfirm').addEventListener('click', () => {
   const fileInput = document.getElementById('fileImport');
   const file = fileInput.files[0];
   if (!file) return alert("Selecciona un fitxer!");
 
-  const studentsList = document.getElementById('studentsList');
-  studentsList.innerHTML = ''; // neteja llista existent
-
   const reader = new FileReader();
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
     let data = e.target.result;
+    let studentNames = [];
 
+    // Llegir CSV
     if (file.name.endsWith('.csv')) {
-      // CSV simple
       const lines = data.split(/\r?\n/);
       lines.forEach(line => {
         const name = line.trim();
-        if (name) {
-          const li = document.createElement('li');
-          li.textContent = name;
-          studentsList.appendChild(li);
-        }
+        if (name) studentNames.push(name);
       });
-    } else if (file.name.endsWith('.xlsx')) {
-      // XLSX
+    } 
+    // Llegir XLSX
+    else if (file.name.endsWith('.xlsx')) {
       const workbook = XLSX.read(data, { type: 'binary' });
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
       json.forEach(row => {
         const name = row[0];
-        if (name) {
-          const li = document.createElement('li');
-          li.textContent = name;
-          studentsList.appendChild(li);
-        }
+        if (name) studentNames.push(name.trim());
       });
     }
+
+    if(studentNames.length === 0) return alert('No s’ha trobat cap alumne al fitxer.');
+
+    // Cridar funció per afegir alumnes a Firestore i classe
+    await addImportedStudents(studentNames);
 
     closeModal('modalImportAL');
   };
 
-  if (file.name.endsWith('.xlsx')) {
-    reader.readAsBinaryString(file);
-  } else {
-    reader.readAsText(file);
-  }
+  if (file.name.endsWith('.xlsx')) reader.readAsBinaryString(file);
+  else reader.readAsText(file);
 });
+
+// Funció per afegir alumnes a Firestore i a la classe
+async function addImportedStudents(names) {
+  if (!currentClassId) return alert('No hi ha cap classe seleccionada.');
+
+  const classRef = db.collection('classes').doc(currentClassId);
+
+  try {
+    for (const name of names) {
+      const studentRef = db.collection('alumnes').doc();
+      // Crear alumne a Firestore
+      await studentRef.set({ nom: name, notes: {} });
+      // Afegir ID alumne a la classe
+      await classRef.update({
+        alumnes: firebase.firestore.FieldValue.arrayUnion(studentRef.id)
+      });
+    }
+
+    // Recarregar la graella perquè apareguin amb menú i drag & drop
+    loadClassData();
+
+    alert(`${names.length} alumne(s) importat(s) correctament!`);
+  } catch(e) {
+    console.error(e);
+    alert('Error afegint alumnes: ' + e.message);
+  }
+}
