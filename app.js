@@ -1047,62 +1047,79 @@ changePasswordBtn.addEventListener('click', () => {
 
 //--------------classroom----------------
 
-
 import { openModal, closeModal } from './modals.js';
 
 const CLIENT_ID = '16135843286-1c0rphurislf4if73o8utqu64acse7dd.apps.googleusercontent.com';
 const SCOPES = 'https://www.googleapis.com/auth/classroom.rosters.readonly';
 let GoogleAuth;
 
-// Quan es fa clic a Classroom
-document.getElementById('btnImportGC').addEventListener('click', () => {
-  // Carreguem GAPI només si no està carregat
-  if (!window.gapi) {
-    alert("GAPI no carregat correctament.");
-    return;
-  }
-
-  gapi.load('client:auth2', () => {
-    gapi.client.init({
-      clientId: CLIENT_ID,
-      discoveryDocs: ["https://classroom.googleapis.com/$discovery/rest?version=v1"],
-      scope: SCOPES
-    }).then(() => {
-      GoogleAuth = gapi.auth2.getAuthInstance();
-      // Sign-in només dins clic d'usuari
-      GoogleAuth.signIn().then(() => {
-        // Carregar cursos
-        gapi.client.classroom.courses.list({ pageSize: 50 }).then(response => {
-          const courses = response.result.courses || [];
-          const select = document.getElementById('gcClassesSelect');
-          select.innerHTML = '';
-          courses.forEach(c => {
-            const option = document.createElement('option');
-            option.value = c.id;
-            option.textContent = c.name;
-            select.appendChild(option);
-          });
-          openModal('modalImportGC');
-        }).catch(err => console.error("Error carregant cursos:", err));
-      }).catch(err => console.error("Error login Google:", err));
-    }).catch(err => console.error("Error init GAPI:", err));
+// Funció per inicialitzar GAPI i sign-in
+async function initGAPIAndSignIn() {
+  return new Promise((resolve, reject) => {
+    gapi.load('client:auth2', async () => {
+      try {
+        await gapi.client.init({
+          clientId: CLIENT_ID,
+          discoveryDocs: ["https://classroom.googleapis.com/$discovery/rest?version=v1"],
+          scope: SCOPES
+        });
+        GoogleAuth = gapi.auth2.getAuthInstance();
+        const user = await GoogleAuth.signIn(); // sign-in només dins clic d’usuari
+        resolve(user);
+      } catch (err) {
+        reject(err);
+      }
+    });
   });
+}
+
+// Event botó Classroom
+document.getElementById('btnImportGC').addEventListener('click', async () => {
+  try {
+    if (!window.gapi) {
+      alert("GAPI no està carregat.");
+      return;
+    }
+
+    // Inicialitzar i sign-in
+    await initGAPIAndSignIn();
+
+    // Llistar cursos
+    const response = await gapi.client.classroom.courses.list({ pageSize: 50 });
+    const courses = response.result.courses || [];
+    const select = document.getElementById('gcClassesSelect');
+    select.innerHTML = '';
+    courses.forEach(c => {
+      const option = document.createElement('option');
+      option.value = c.id;
+      option.textContent = c.name;
+      select.appendChild(option);
+    });
+
+    openModal('modalImportGC');
+
+  } catch (err) {
+    console.error("Error Google Classroom:", err);
+  }
 });
 
 // Botó Confirmar Import
-document.getElementById('btnImportGCConfirm').addEventListener('click', () => {
+document.getElementById('btnImportGCConfirm').addEventListener('click', async () => {
   const courseId = document.getElementById('gcClassesSelect').value;
   if (!courseId) return;
 
-  gapi.client.classroom.courses.students.list({ courseId }).then(response => {
+  try {
+    const response = await gapi.client.classroom.courses.students.list({ courseId });
     const students = response.result.students || [];
     const studentsList = document.getElementById('studentsList');
-    studentsList.innerHTML = ''; // neteja abans
+    studentsList.innerHTML = ''; // neteja abans de posar alumnes
     students.forEach(s => {
       const li = document.createElement('li');
       li.textContent = s.profile.name.fullName;
       studentsList.appendChild(li);
     });
     closeModal('modalImportGC');
-  }).catch(err => console.error("Error important alumnes:", err));
+  } catch (err) {
+    console.error("Error important alumnes:", err);
+  }
 });
