@@ -53,6 +53,12 @@ const modalCreateClassBtn = document.getElementById('modalCreateClassBtn');
 const modalAddStudentBtn = document.getElementById('modalAddStudentBtn');
 const modalAddActivityBtn = document.getElementById('modalAddActivityBtn');
 
+const btnImportAL = document.getElementById('btnImportAL');
+btnImportAL.addEventListener('click', () => {
+  openModal('modalImportAL');
+});
+
+
 /* ---------- UTILS ---------- */
 function showLogin() {
   loginScreen.style.display = 'block';
@@ -1045,57 +1051,52 @@ changePasswordBtn.addEventListener('click', () => {
     .catch(e=> alert('Error: ' + e.message));
 });
 
-// ---------------- Altres inicialitzacions i funcions ----------------
-// ... el teu codi existent ...
+// ----------------------Importar ------------------------
+document.getElementById('btnImportALConfirm').addEventListener('click', () => {
+  const fileInput = document.getElementById('fileImport');
+  const file = fileInput.files[0];
+  if (!file) return alert("Selecciona un fitxer!");
 
-// ---------------- Google Classroom Integration ----------------
-const CLIENT_ID = '16135843286-1c0rphurislf4if73o8utqu64acse7dd.apps.googleusercontent.com';
-const SCOPES = 'https://www.googleapis.com/auth/classroom.rosters.readonly';
+  const studentsList = document.getElementById('studentsList');
+  studentsList.innerHTML = ''; // neteja llista existent
 
-function initGoogleClient() {
-  gapi.load('client:auth2', async () => {
-    await gapi.client.init({
-      clientId: CLIENT_ID,
-      scope: SCOPES
-    });
-    console.log('Google API client inicialitzat');
-  });
-}
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    let data = e.target.result;
 
-initGoogleClient();
+    if (file.name.endsWith('.csv')) {
+      // CSV simple
+      const lines = data.split(/\r?\n/);
+      lines.forEach(line => {
+        const name = line.trim();
+        if (name) {
+          const li = document.createElement('li');
+          li.textContent = name;
+          studentsList.appendChild(li);
+        }
+      });
+    } else if (file.name.endsWith('.xlsx')) {
+      // XLSX
+      const workbook = XLSX.read(data, { type: 'binary' });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      json.forEach(row => {
+        const name = row[0];
+        if (name) {
+          const li = document.createElement('li');
+          li.textContent = name;
+          studentsList.appendChild(li);
+        }
+      });
+    }
 
-document.getElementById('btnImportGC').addEventListener('click', async () => {
-  const GoogleAuth = gapi.auth2.getAuthInstance();
+    closeModal('modalImportAL');
+  };
 
-  if (!GoogleAuth.isSignedIn.get()) {
-    await GoogleAuth.signIn();
+  if (file.name.endsWith('.xlsx')) {
+    reader.readAsBinaryString(file);
+  } else {
+    reader.readAsText(file);
   }
-
-  const coursesResp = await gapi.client.request({
-    path: 'https://classroom.googleapis.com/v1/courses'
-  });
-
-  const courses = coursesResp.result.courses || [];
-  if (!courses.length) {
-    alert('No tens cursos disponibles a Google Classroom');
-    return;
-  }
-
-  const selectedCourse = courses[0]; 
-
-  const studentsResp = await gapi.client.request({
-    path: `https://classroom.googleapis.com/v1/courses/${selectedCourse.id}/students`
-  });
-
-  const students = studentsResp.result.students || [];
-  if (!students.length) {
-    alert('No hi ha alumnes a aquest curs');
-    return;
-  }
-
-  students.forEach(s => {
-    addStudent({ name: s.profile.name.fullName, email: s.profile.emailAddress });
-  });
-
-  alert(`S’han importat ${students.length} alumnes de Google Classroom`);
 });
