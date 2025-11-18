@@ -210,28 +210,4 @@ button:hover { transform: scale(1.03); }
   box-shadow: 0 1px 4px rgba(0,0,0,0.1);
 }
 
-/* ---------------- Modal Importar Alumnes ---------------- */
-#modalImportStudents {
-  display: none;           /* s'activa amb JS */
-  position: fixed;         /* fix a la finestra */
-  top: 50%;                /* centrat vertical */
-  left: 50%;               /* centrat horitzontal */
-  transform: translate(-50%, -50%); /* ajust exacte al centre */
-  z-index: 9999;           /* per sobre de tot */
-  background: white;
-  padding: 1.5rem;
-  border-radius: 0.5rem;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-  max-width: 400px;
-  width: 90%;              /* adaptable a pantalles petites */
-}
-
-/* Fons gris darrere del modal */
-#modalImportStudentsBackdrop {
-  display: none;           /* s'activa amb JS */
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.2);
-  z-index: 9998;
-}
 
