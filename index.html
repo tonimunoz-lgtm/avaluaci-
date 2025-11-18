@@ -121,17 +121,32 @@
   <!-- ---------- MODALS ---------- -->
 
 <!-- Modal Importar Alumnes -->
-<div id="modalImportAL" class="fixed inset-0 hidden items-center justify-center z-50">
-  <div class="modal-backdrop absolute inset-0"></div>
-  <div class="bg-white rounded shadow-lg z-10 w-full max-w-md p-4">
-    <h3 class="text-lg font-semibold mb-2">Importar alumnes</h3>
-    <input type="file" id="fileImport" accept=".csv,.xlsx" class="w-full mb-3" />
+<div id="modalImportAL" class="modal hidden">
+  <div class="modal-content p-4 bg-white dark:bg-gray-800 rounded shadow">
+    <h2 class="text-lg font-bold mb-2">Importar alumnes</h2>
+
+    <!-- 📝 Instruccions -->
+    <div class="text-sm text-gray-700 dark:text-gray-300 mb-4 p-2 bg-gray-100 dark:bg-gray-900 rounded">
+      <strong>Instruccions:</strong>
+      <ul class="list-disc list-inside mt-1">
+        <li>Prepara un fitxer <code>.xlsx</code> o <code>.csv</code>.</li>
+        <li>Escriu els <strong>noms i cognoms dels alumnes</strong> a <strong>una única columna</strong>, sense cap fila de capçalera.</li>
+        <li>Cada alumne ha d’estar en una fila diferent.</li>
+        <li>Desa el fitxer i selecciona’l aquí per importar-lo.</li>
+      </ul>
+      <p class="mt-1 text-xs text-gray-500">Exemple: una columna amb Maria Pérez, Joan García, Laura Rodríguez, etc.</p>
+    </div>
+
+    <!-- Selector d'arxiu -->
+    <input type="file" id="fileImport" class="mb-3 block w-full text-sm text-gray-600 dark:text-gray-300 border rounded p-1">
+
     <div class="flex justify-end gap-2">
-      <button data-modal-close="modalImportAL" class="modal-close px-3 py-1 rounded bg-gray-200">Cancel·lar</button>
-      <button id="btnImportALConfirm" class="px-3 py-1 rounded bg-green-500 text-white">Importa</button>
+      <button id="btnImportALConfirm" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Importar</button>
+      <button onclick="closeModal('modalImportAL')" class="bg-gray-300 hover:bg-gray-400 text-black px-4 py-2 rounded">Cancel·lar</button>
     </div>
   </div>
 </div>
+
 
   
   <!-- Create Class Modal -->
