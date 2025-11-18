@@ -1045,10 +1045,6 @@ changePasswordBtn.addEventListener('click', () => {
     .catch(e=> alert('Error: ' + e.message));
 });
 
-// ---------------- Altres inicialitzacions i funcions ----------------
-// ... el teu codi existent ...
-
-// ---------------- Google Classroom Integration ----------------
 // app.js
 import { openModal, closeModal } from './modals.js';
 
