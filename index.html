@@ -82,8 +82,9 @@
             </div>
             <div class="flex flex-wrap gap-2">
               <button id="btnSortAlpha" class="bg-yellow-400 text-black px-3 py-1 rounded">Ordenar A-Z</button>
-              <button id="btnExport" class="bg-amber-500 text-white px-3 py-1 rounded">Exportar Excel</button>
+              <button id="btnExport" class="bg-amber-500 text-white px-3 py-1 rounded">Exportar</button>
               <button id="btnImportAL" class="bg-blue-500 text-white px-3 py-1 rounded">Importar</button>
+              <button id="btnToggleStudentsMobile" class="block md:hidden bg-white text-gray-700 px-3 py-1 rounded shadow-sm">Alumnes</button>
               <button id="btnAddStudent" class="bg-purple-600 text-white px-3 py-1 rounded">➕ Alumne</button>
               <button id="btnAddActivity" class="bg-teal-600 text-white px-3 py-1 rounded">➕ Activitat</button>
             </div>
@@ -93,10 +94,13 @@
 
   <!-- students col -->
   <aside id="studentsListContainer">
+  <div class="students-card">
+    <button class="mobile-close-btn" id="btnCloseStudentsMobile">Tancar ✖</button>
     <h3 class="font-semibold mb-2">Alumnes <span id="studentsCount" class="text-sm text-gray-400"></span></h3>
     <ul id="studentsList" class="space-y-2"></ul>
     <p class="mt-3 text-xs text-gray-400">Arrossega per ordenar</p>
-  </aside>
+  </div>
+</aside>
 
   <!-- notes grid -->
   <div id="notesTable-wrapper" class="flex-grow bg-white rounded-xl shadow p-3 overflow-x-auto">
