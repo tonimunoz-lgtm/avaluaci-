@@ -1064,38 +1064,51 @@ function initGoogleClient() {
 
 initGoogleClient();
 
+// ---------------- Obre modal amb cursos ----------------
+function showCoursesModal(courses) {
+  const modal = document.getElementById('modalCourses');
+  const list = modal.querySelector('.courses-list');
+  list.innerHTML = '';
+
+  courses.forEach(course => {
+    const li = document.createElement('li');
+    li.className = 'p-2 bg-gray-100 dark:bg-gray-700 rounded cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600';
+    li.textContent = course.name || 'Sense nom';
+    li.addEventListener('click', () => importStudents(course.id, course.name));
+    list.appendChild(li);
+  });
+
+  modal.classList.remove('hidden');
+}
+
+// ---------------- Importa alumnes del curs ----------------
+async function importStudents(courseId, courseName) {
+  const studentsResp = await gapi.client.request({
+    path: `https://classroom.googleapis.com/v1/courses/${courseId}/students`
+  });
+
+  const students = studentsResp.result.students || [];
+  if (!students.length) return alert('No hi ha alumnes a aquest curs');
+
+  students.forEach(s => {
+    addStudent({ name: s.profile.name.fullName, email: s.profile.emailAddress });
+  });
+
+  closeModal('modalCourses');
+  alert(`S’han importat ${students.length} alumnes del curs "${courseName}"`);
+}
+
+// ---------------- Botó importar Google Classroom ----------------
 document.getElementById('btnImportGC').addEventListener('click', async () => {
   const GoogleAuth = gapi.auth2.getAuthInstance();
-
-  if (!GoogleAuth.isSignedIn.get()) {
-    await GoogleAuth.signIn();
-  }
+  if (!GoogleAuth.isSignedIn.get()) await GoogleAuth.signIn();
 
   const coursesResp = await gapi.client.request({
     path: 'https://classroom.googleapis.com/v1/courses'
   });
 
   const courses = coursesResp.result.courses || [];
-  if (!courses.length) {
-    alert('No tens cursos disponibles a Google Classroom');
-    return;
-  }
+  if (!courses.length) return alert('No tens cursos disponibles a Google Classroom');
 
-  const selectedCourse = courses[0]; 
-
-  const studentsResp = await gapi.client.request({
-    path: `https://classroom.googleapis.com/v1/courses/${selectedCourse.id}/students`
-  });
-
-  const students = studentsResp.result.students || [];
-  if (!students.length) {
-    alert('No hi ha alumnes a aquest curs');
-    return;
-  }
-
-  students.forEach(s => {
-    addStudent({ name: s.profile.name.fullName, email: s.profile.emailAddress });
-  });
-
-  alert(`S’han importat ${students.length} alumnes de Google Classroom`);
+  showCoursesModal(courses); // Mostra modal amb cursos
 });
