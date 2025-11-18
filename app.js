@@ -323,12 +323,20 @@ function createStudentModal(){
     }).catch(e=> alert('Error: '+e.message));
 }
 
-function removeStudent(studentId){
-  db.collection('classes').doc(currentClassId).update({ alumnes: firebase.firestore.FieldValue.arrayRemove(studentId) })
-    .then(()=> db.collection('alumnes').doc(studentId).delete())
-    .then(()=> loadClassData())
-    .catch(e=> alert('Error eliminant alumne: '+e.message));
+function removeStudent(studentId) {
+  confirmAction(
+    'Eliminar alumne',
+    'Estàs segur que vols eliminar aquest alumne?',
+    () => {
+      db.collection('classes').doc(currentClassId)
+        .update({ alumnes: firebase.firestore.FieldValue.arrayRemove(studentId) })
+        .then(() => db.collection('alumnes').doc(studentId).delete())
+        .then(() => loadClassData())
+        .catch(e => alert('Error eliminant alumne: ' + e.message));
+    }
+  );
 }
+
 
 function reorderStudents(fromIdx, toIdx){
   if(fromIdx===toIdx) return;
