@@ -58,6 +58,35 @@ btnImportAL.addEventListener('click', () => {
   openModal('modalImportAL');
 });
 
+// Mobile: toggle students overlay
+const btnToggleStudentsMobile = document.getElementById('btnToggleStudentsMobile');
+const btnCloseStudentsMobile = document.getElementById('btnCloseStudentsMobile');
+
+if (btnToggleStudentsMobile) {
+  btnToggleStudentsMobile.addEventListener('click', () => {
+    const cont = document.getElementById('studentsListContainer');
+    if (!cont) return;
+    cont.classList.add('mobile-open');
+  });
+}
+
+if (btnCloseStudentsMobile) {
+  btnCloseStudentsMobile.addEventListener('click', () => {
+    const cont = document.getElementById('studentsListContainer');
+    if (!cont) return;
+    cont.classList.remove('mobile-open');
+  });
+}
+
+// També tancar si cliques a fora del card (overlay)
+// detectem clicks al container però fora de .students-card
+document.getElementById('studentsListContainer')?.addEventListener('click', (e) => {
+  if (e.target.id === 'studentsListContainer') {
+    document.getElementById('studentsListContainer').classList.remove('mobile-open');
+  }
+});
+
+
 
 /* ---------- UTILS ---------- */
 function showLogin() {
