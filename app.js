@@ -52,11 +52,6 @@ const notesTfoot = document.getElementById('notesTfoot');
 const modalCreateClassBtn = document.getElementById('modalCreateClassBtn');
 const modalAddStudentBtn = document.getElementById('modalAddStudentBtn');
 const modalAddActivityBtn = document.getElementById('modalAddActivityBtn');
-const btnImportAL = document.getElementById('btnImportAL');
-btnImportAL.addEventListener('click', () => {
-  openModal('modalImportAL');
-});
-
 
 /* ---------- UTILS ---------- */
 function showLogin() {
@@ -1048,72 +1043,4 @@ changePasswordBtn.addEventListener('click', () => {
   auth.currentUser.updatePassword(newPw)
     .then(()=> alert('Contrasenya canviada correctament!'))
     .catch(e=> alert('Error: ' + e.message));
-});
-
-//----------------------importar excel-----------------
-document.getElementById('modalImportALBtn').addEventListener('click', async () => {
-  const rawText = document.getElementById('modalImportALInput').value;
-  const names = rawText.split('\n').map(n => n.trim()).filter(n => n);
-  if (names.length === 0) return alert('Introdueix almenys un nom.');
-  if (!currentClassId) return alert('No hi ha cap classe seleccionada.');
-
-  try {
-    // Primer, carregar tots els alumnes existents de la classe
-    const classDoc = await db.collection('classes').doc(currentClassId).get();
-    const existingIds = classDoc.exists ? classDoc.data().alumnes || [] : [];
-    const existingDocs = await Promise.all(existingIds.map(id => db.collection('alumnes').doc(id).get()));
-    const existingNames = existingDocs.map(d => d.exists ? d.data().nom.toLowerCase() : '');
-
-    let addedCount = 0;
-
-    for (const name of names) {
-      if (existingNames.includes(name.toLowerCase())) continue; // ja existeix, saltar
-      const ref = db.collection('alumnes').doc();
-      await ref.set({ nom: name, notes: {} });
-      await db.collection('classes').doc(currentClassId)
-              .update({ alumnes: firebase.firestore.FieldValue.arrayUnion(ref.id) });
-      addedCount++;
-    }
-
-    closeModal('modalImportAL');
-    document.getElementById('modalImportALInput').value = '';
-
-    if (addedCount === 0) alert('Tots els alumnes ja existien.');
-    else alert(`${addedCount} alumne(s) afegit(s) correctament.`);
-
-    loadClassData(); // recarregar tota la classe amb menús i drag & drop
-
-  } catch (e) {
-    console.error('Error important alumnes:', e);
-    alert('Hi ha hagut un error: ' + e.message);
-  }
-});
-// Botó del modal
-document.getElementById('modalImportALBtn').addEventListener('click', async () => {
-  const rawText = document.getElementById('modalImportALInput').value;
-  const names = rawText.split('\n').map(n => n.trim()).filter(n => n);
-  if (names.length === 0) return alert('Introdueix almenys un nom.');
-
-  if (!currentClassId) return alert('No hi ha cap classe seleccionada.');
-
-  try {
-    // Afegir cada alumne a Firestore i a la classe
-    for (const name of names) {
-      const ref = db.collection('alumnes').doc();
-      await ref.set({ nom: name, notes: {} });
-      await db.collection('classes').doc(currentClassId)
-              .update({ alumnes: firebase.firestore.FieldValue.arrayUnion(ref.id) });
-    }
-
-    // Tancar modal
-    closeModal('modalImportAL');
-    document.getElementById('modalImportALInput').value = '';
-
-    // 🔹 Aquí és clau: recarregar tota la classe
-    loadClassData(); // això crida renderStudentsList() i renderNotesGrid()
-    
-  } catch (e) {
-    console.error('Error important alumnes:', e);
-    alert('Hi ha hagut un error: ' + e.message);
-  }
 });
