@@ -1048,10 +1048,11 @@ changePasswordBtn.addEventListener('click', () => {
 // ---------------- Altres inicialitzacions i funcions ----------------
 // ... el teu codi existent ...
 
-// ---------------- Google Classroom Integration ----------------
-const CLIENT_ID = '16135843286-1c0rphurislf4if73o8utqu64acse7dd.apps.googleusercontent.com';
-const SCOPES = 'https://www.googleapis.com/auth/classroom.rosters.readonly';
+// ---------- CONFIGURACIÓ GOOGLE ----------
+const CLIENT_ID = 'EL_TEU_CLIENT_ID_AQUI';
+const SCOPES = 'https://www.googleapis.com/auth/classroom.courses.readonly https://www.googleapis.com/auth/classroom.rosters.readonly';
 
+// ---------- INICIALITZACIÓ GAPI ----------
 function initGoogleClient() {
   gapi.load('client:auth2', async () => {
     await gapi.client.init({
@@ -1061,54 +1062,84 @@ function initGoogleClient() {
     console.log('Google API client inicialitzat');
   });
 }
-
 initGoogleClient();
 
-// ---------------- Obre modal amb cursos ----------------
-function showCoursesModal(courses) {
-  const modal = document.getElementById('modalCourses');
-  const list = modal.querySelector('.courses-list');
-  list.innerHTML = '';
-
-  courses.forEach(course => {
-    const li = document.createElement('li');
-    li.className = 'p-2 bg-gray-100 dark:bg-gray-700 rounded cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600';
-    li.textContent = course.name || 'Sense nom';
-    li.addEventListener('click', () => importStudents(course.id, course.name));
-    list.appendChild(li);
-  });
-
-  modal.classList.remove('hidden');
-}
-
-// ---------------- Importa alumnes del curs ----------------
-async function importStudents(courseId, courseName) {
-  const studentsResp = await gapi.client.request({
-    path: `https://classroom.googleapis.com/v1/courses/${courseId}/students`
-  });
-
-  const students = studentsResp.result.students || [];
-  if (!students.length) return alert('No hi ha alumnes a aquest curs');
-
-  students.forEach(s => {
-    addStudent({ name: s.profile.name.fullName, email: s.profile.emailAddress });
-  });
-
-  closeModal('modalCourses');
-  alert(`S’han importat ${students.length} alumnes del curs "${courseName}"`);
-}
-
-// ---------------- Botó importar Google Classroom ----------------
+// ---------- BOTÓ CLASSROOM ----------
 document.getElementById('btnImportGC').addEventListener('click', async () => {
   const GoogleAuth = gapi.auth2.getAuthInstance();
-  if (!GoogleAuth.isSignedIn.get()) await GoogleAuth.signIn();
 
-  const coursesResp = await gapi.client.request({
-    path: 'https://classroom.googleapis.com/v1/courses'
-  });
+  // Sign-in si no està signat
+  if (!GoogleAuth.isSignedIn.get()) {
+    await GoogleAuth.signIn();
+  }
 
-  const courses = coursesResp.result.courses || [];
-  if (!courses.length) return alert('No tens cursos disponibles a Google Classroom');
-
-  showCoursesModal(courses); // Mostra modal amb cursos
+  // Llistem cursos i mostrem modal
+  listClassroomCourses();
 });
+
+// ---------- FUNCIONS ----------
+async function listClassroomCourses() {
+  try {
+    const resp = await gapi.client.request({
+      path: 'https://classroom.googleapis.com/v1/courses'
+    });
+
+    const courses = resp.result.courses || [];
+    if (!courses.length) return alert('No tens cursos disponibles a Google Classroom');
+
+    // Omplim select
+    const select = document.getElementById('gcClassesSelect');
+    select.innerHTML = '';
+    courses.forEach(course => {
+      const option = document.createElement('option');
+      option.value = course.id;
+      option.textContent = course.name;
+      select.appendChild(option);
+    });
+
+    // Mostrem modal
+    document.getElementById('modalImportGC').classList.remove('hidden');
+  } catch (error) {
+    console.error('Error obtenint cursos:', error);
+    alert('Hi ha hagut un error connectant amb Google Classroom.');
+  }
+}
+
+// ---------- IMPORTAR ALUMNES ----------
+document.getElementById('btnImportGCConfirm').addEventListener('click', async () => {
+  const courseId = document.getElementById('gcClassesSelect').value;
+  if (!courseId) return;
+
+  try {
+    const resp = await gapi.client.request({
+      path: `https://classroom.googleapis.com/v1/courses/${courseId}/students`
+    });
+
+    const students = resp.result.students || [];
+    if (!students.length) return alert('Aquest curs no té alumnes.');
+
+    students.forEach(s => {
+      addStudent({ name: s.profile.name.fullName, email: s.profile.emailAddress });
+    });
+
+    alert(`S’han importat ${students.length} alumnes`);
+    document.getElementById('modalImportGC').classList.add('hidden');
+
+  } catch (error) {
+    console.error('Error obtenint alumnes:', error);
+    alert('No s’han pogut importar els alumnes.');
+  }
+});
+
+// ---------- FUNCIO D’AJUDA addStudent ----------
+function addStudent(student) {
+  // Aquesta funció afegeix un alumne a la graella HTML
+  const ul = document.getElementById('studentsList');
+  const li = document.createElement('li');
+  li.textContent = student.name + (student.email ? ` (${student.email})` : '');
+  ul.appendChild(li);
+
+  // Actualitzem comptador
+  const countSpan = document.getElementById('studentsCount');
+  countSpan.textContent = ul.children.length;
+}
