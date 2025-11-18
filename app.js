@@ -1051,54 +1051,46 @@ changePasswordBtn.addEventListener('click', () => {
 });
 
 //----------------------importar excel-----------------
+import { openModal, closeModal } from './modals.js';
 
-document.getElementById('btnImportALConfirm').addEventListener('click', () => {
-  const fileInput = document.getElementById('fileImport');
-  const file = fileInput.files[0];
-  if (!file) return alert("Selecciona un fitxer!");
+document.getElementById('btnImportAL').addEventListener('click', () => {
+  openModal('modalImportAL');
+});
 
-  const studentsList = document.getElementById('studentsList');
-  studentsList.innerHTML = ''; // neteja llista existent
+// Funció per processar alumnes importats
+async function importAlumnes(namesArray) {
+  if (!currentClassId) return alert('No hi ha cap classe seleccionada.');
 
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    let data = e.target.result;
+  try {
+    for (const name of namesArray) {
+      if (!name.trim()) continue; // ignora noms buits
+      const ref = db.collection('alumnes').doc();
+      await ref.set({ nom: name.trim(), notes: {} });
 
-    if (file.name.endsWith('.csv')) {
-      // CSV simple
-      const lines = data.split(/\r?\n/);
-      lines.forEach(line => {
-        const name = line.trim();
-        if (name) {
-          const li = document.createElement('li');
-          li.textContent = name;
-          studentsList.appendChild(li);
-        }
-      });
-    } else if (file.name.endsWith('.xlsx')) {
-      // XLSX
-      const workbook = XLSX.read(data, { type: 'binary' });
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
-      const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-      json.forEach(row => {
-        const name = row[0];
-        if (name) {
-          const li = document.createElement('li');
-          li.textContent = name;
-          studentsList.appendChild(li);
-        }
-      });
+      await db.collection('classes').doc(currentClassId)
+              .update({ alumnes: firebase.firestore.FieldValue.arrayUnion(ref.id) });
     }
 
+    // Tancar modal i netejar input
     closeModal('modalImportAL');
-  };
+    document.getElementById('modalImportALInput').value = '';
 
-  if (file.name.endsWith('.xlsx')) {
-    reader.readAsBinaryString(file);
-  } else {
-    reader.readAsText(file);
+    // Recarregar la classe: actualitza llistat d’alumnes i graella
+    loadClassData();
+
+  } catch (e) {
+    console.error('Error important alumnes:', e);
+    alert('Hi ha hagut un error al importar els alumnes: ' + e.message);
   }
+}
+
+// Exemples: si tens un input tipus textarea amb ID modalImportALInput
+document.getElementById('modalImportALBtn').addEventListener('click', () => {
+  const rawText = document.getElementById('modalImportALInput').value;
+  const names = rawText.split('\n').map(n => n.trim()).filter(n => n);
+  if (names.length === 0) return alert('Introdueix almenys un nom.');
+  importAlumnes(names);
 });
+
 
 
