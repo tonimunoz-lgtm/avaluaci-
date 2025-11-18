@@ -1048,11 +1048,10 @@ changePasswordBtn.addEventListener('click', () => {
 // ---------------- Altres inicialitzacions i funcions ----------------
 // ... el teu codi existent ...
 
-// ---------- CONFIGURACIÓ GOOGLE ----------
-const CLIENT_ID = 'EL_TEU_CLIENT_ID_AQUI';
-const SCOPES = 'https://www.googleapis.com/auth/classroom.courses.readonly https://www.googleapis.com/auth/classroom.rosters.readonly';
+// ---------------- Google Classroom Integration ----------------
+const CLIENT_ID = '16135843286-1c0rphurislf4if73o8utqu64acse7dd.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/classroom.rosters.readonly';
 
-// ---------- INICIALITZACIÓ GAPI ----------
 function initGoogleClient() {
   gapi.load('client:auth2', async () => {
     await gapi.client.init({
@@ -1062,84 +1061,41 @@ function initGoogleClient() {
     console.log('Google API client inicialitzat');
   });
 }
+
 initGoogleClient();
 
-// ---------- BOTÓ CLASSROOM ----------
 document.getElementById('btnImportGC').addEventListener('click', async () => {
   const GoogleAuth = gapi.auth2.getAuthInstance();
 
-  // Sign-in si no està signat
   if (!GoogleAuth.isSignedIn.get()) {
     await GoogleAuth.signIn();
   }
 
-  // Llistem cursos i mostrem modal
-  listClassroomCourses();
-});
+  const coursesResp = await gapi.client.request({
+    path: 'https://classroom.googleapis.com/v1/courses'
+  });
 
-// ---------- FUNCIONS ----------
-async function listClassroomCourses() {
-  try {
-    const resp = await gapi.client.request({
-      path: 'https://classroom.googleapis.com/v1/courses'
-    });
-
-    const courses = resp.result.courses || [];
-    if (!courses.length) return alert('No tens cursos disponibles a Google Classroom');
-
-    // Omplim select
-    const select = document.getElementById('gcClassesSelect');
-    select.innerHTML = '';
-    courses.forEach(course => {
-      const option = document.createElement('option');
-      option.value = course.id;
-      option.textContent = course.name;
-      select.appendChild(option);
-    });
-
-    // Mostrem modal
-    document.getElementById('modalImportGC').classList.remove('hidden');
-  } catch (error) {
-    console.error('Error obtenint cursos:', error);
-    alert('Hi ha hagut un error connectant amb Google Classroom.');
+  const courses = coursesResp.result.courses || [];
+  if (!courses.length) {
+    alert('No tens cursos disponibles a Google Classroom');
+    return;
   }
-}
 
-// ---------- IMPORTAR ALUMNES ----------
-document.getElementById('btnImportGCConfirm').addEventListener('click', async () => {
-  const courseId = document.getElementById('gcClassesSelect').value;
-  if (!courseId) return;
+  const selectedCourse = courses[0]; 
 
-  try {
-    const resp = await gapi.client.request({
-      path: `https://classroom.googleapis.com/v1/courses/${courseId}/students`
-    });
+  const studentsResp = await gapi.client.request({
+    path: `https://classroom.googleapis.com/v1/courses/${selectedCourse.id}/students`
+  });
 
-    const students = resp.result.students || [];
-    if (!students.length) return alert('Aquest curs no té alumnes.');
-
-    students.forEach(s => {
-      addStudent({ name: s.profile.name.fullName, email: s.profile.emailAddress });
-    });
-
-    alert(`S’han importat ${students.length} alumnes`);
-    document.getElementById('modalImportGC').classList.add('hidden');
-
-  } catch (error) {
-    console.error('Error obtenint alumnes:', error);
-    alert('No s’han pogut importar els alumnes.');
+  const students = studentsResp.result.students || [];
+  if (!students.length) {
+    alert('No hi ha alumnes a aquest curs');
+    return;
   }
+
+  students.forEach(s => {
+    addStudent({ name: s.profile.name.fullName, email: s.profile.emailAddress });
+  });
+
+  alert(`S’han importat ${students.length} alumnes de Google Classroom`);
 });
-
-// ---------- FUNCIO D’AJUDA addStudent ----------
-function addStudent(student) {
-  // Aquesta funció afegeix un alumne a la graella HTML
-  const ul = document.getElementById('studentsList');
-  const li = document.createElement('li');
-  li.textContent = student.name + (student.email ? ` (${student.email})` : '');
-  ul.appendChild(li);
-
-  // Actualitzem comptador
-  const countSpan = document.getElementById('studentsCount');
-  countSpan.textContent = ul.children.length;
-}
