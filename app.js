@@ -1045,3 +1045,72 @@ changePasswordBtn.addEventListener('click', () => {
     .catch(e=> alert('Error: ' + e.message));
 });
 
+import { openModal, closeModal } from './modals.js';
+
+const CLIENT_ID = '16135843286-1c0rphurislf4if73o8utqu64acse7dd.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/classroom.rosters.readonly';
+let GoogleAuth;
+
+// Quan es fa clic a Classroom
+document.getElementById('btnImportGC').addEventListener('click', async () => {
+  try {
+    // Carregar GAPI només aquí
+    await new Promise((resolve, reject) => {
+      gapi.load('client:auth2', async () => {
+        try {
+          await gapi.client.init({
+            clientId: CLIENT_ID,
+            discoveryDocs: ["https://classroom.googleapis.com/$discovery/rest?version=v1"],
+            scope: SCOPES
+          });
+          GoogleAuth = gapi.auth2.getAuthInstance();
+          resolve();
+        } catch (err) {
+          reject(err);
+        }
+      });
+    });
+
+    // Login de Google Classroom
+    await GoogleAuth.signIn();
+
+    // Carregar cursos
+    const response = await gapi.client.classroom.courses.list({ pageSize: 50 });
+    const courses = response.result.courses || [];
+    const select = document.getElementById('gcClassesSelect');
+    select.innerHTML = '';
+    courses.forEach(c => {
+      const option = document.createElement('option');
+      option.value = c.id;
+      option.textContent = c.name;
+      select.appendChild(option);
+    });
+
+    openModal('modalImportGC');
+
+  } catch (err) {
+    console.error("Error Google Classroom:", err);
+  }
+});
+
+// Botó Confirmar Import
+document.getElementById('btnImportGCConfirm').addEventListener('click', async () => {
+  const courseId = document.getElementById('gcClassesSelect').value;
+  if (!courseId) return;
+  try {
+    const response = await gapi.client.classroom.courses.students.list({ courseId });
+    const students = response.result.students || [];
+    const studentsList = document.getElementById('studentsList');
+    students.forEach(s => {
+      const li = document.createElement('li');
+      li.textContent = s.profile.name.fullName;
+      studentsList.appendChild(li);
+    });
+    closeModal('modalImportGC');
+  } catch (err) {
+    console.error("Error important alumnes:", err);
+  }
+});
+
+
+
