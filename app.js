@@ -501,7 +501,6 @@ function renderStudentsList(){
   });
 }
 /* ---------------- Notes Grid amb menú activitats ---------------- */
-/* ---------------- Notes Grid amb menú activitats ---------------- */
 function renderNotesGrid(){
   notesThead.innerHTML = '';
   notesTbody.innerHTML = '';
