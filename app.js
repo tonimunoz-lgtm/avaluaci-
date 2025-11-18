@@ -53,6 +53,12 @@ const modalCreateClassBtn = document.getElementById('modalCreateClassBtn');
 const modalAddStudentBtn = document.getElementById('modalAddStudentBtn');
 const modalAddActivityBtn = document.getElementById('modalAddActivityBtn');
 
+const btnImportAL = document.getElementById('btnImportAL');
+btnImportAL.addEventListener('click', () => {
+  openModal('modalImportAL');
+});
+
+
 /* ---------- UTILS ---------- */
 function showLogin() {
   loginScreen.style.display = 'block';
@@ -1043,4 +1049,54 @@ changePasswordBtn.addEventListener('click', () => {
   auth.currentUser.updatePassword(newPw)
     .then(()=> alert('Contrasenya canviada correctament!'))
     .catch(e=> alert('Error: ' + e.message));
+});
+
+// ----------------------Importar ------------------------
+document.getElementById('btnImportALConfirm').addEventListener('click', () => {
+  const fileInput = document.getElementById('fileImport');
+  const file = fileInput.files[0];
+  if (!file) return alert("Selecciona un fitxer!");
+
+  const studentsList = document.getElementById('studentsList');
+  studentsList.innerHTML = ''; // neteja llista existent
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    let data = e.target.result;
+
+    if (file.name.endsWith('.csv')) {
+      // CSV simple
+      const lines = data.split(/\r?\n/);
+      lines.forEach(line => {
+        const name = line.trim();
+        if (name) {
+          const li = document.createElement('li');
+          li.textContent = name;
+          studentsList.appendChild(li);
+        }
+      });
+    } else if (file.name.endsWith('.xlsx')) {
+      // XLSX
+      const workbook = XLSX.read(data, { type: 'binary' });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      json.forEach(row => {
+        const name = row[0];
+        if (name) {
+          const li = document.createElement('li');
+          li.textContent = name;
+          studentsList.appendChild(li);
+        }
+      });
+    }
+
+    closeModal('modalImportAL');
+  };
+
+  if (file.name.endsWith('.xlsx')) {
+    reader.readAsBinaryString(file);
+  } else {
+    reader.readAsText(file);
+  }
 });
