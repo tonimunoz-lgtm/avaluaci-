@@ -86,6 +86,24 @@ document.getElementById('studentsListContainer')?.addEventListener('click', (e) 
   }
 });
 
+// MOBILE — OBRIR LLISTA ALUMNES
+const btnMobile = document.getElementById("btnToggleStudentsMobile");
+const cont = document.getElementById("studentsListContainer");
+
+if (btnMobile) {
+  btnMobile.addEventListener("click", () => {
+    cont.classList.add("mobile-open");
+  });
+}
+
+// TANCAR FENT CLIC FORA DEL PANELL BLANC
+cont?.addEventListener("click", (e) => {
+  if (e.target === cont) {
+    cont.classList.remove("mobile-open");
+  }
+});
+
+
 
 
 /* ---------- UTILS ---------- */
