@@ -655,14 +655,18 @@ function th(txt, cls=''){
   return el;
 }
 
-function saveNote(studentId, activityId, value){
+sync function saveNote(studentId, activityId, value){
   const num = value === '' ? null : Number(value);
   const updateObj = {};
   if(num === null || isNaN(num)) updateObj[`notes.${activityId}`] = firebase.firestore.FieldValue.delete();
   else updateObj[`notes.${activityId}`] = num;
-  db.collection('alumnes').doc(studentId).update(updateObj)
-    .then(()=> renderNotesGrid())
-    .catch(e=> console.error('Error saving note', e));
+
+  await db.collection('alumnes').doc(studentId).update(updateObj);
+
+  // 🔥 RECALCULAR ACTIVITATS CALCULADES
+  await recalculateActivities();   
+
+  renderNotesGrid();
 }
 
 function applyCellColor(inputEl){
