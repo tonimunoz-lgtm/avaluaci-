@@ -552,33 +552,26 @@ function renderNotesGrid(){
           thEl.appendChild(container);
           headRow.appendChild(thEl);
 
-          /* 🔴 NOVETAT: CAPÇALERA DE COLOR SI L’ACTIVITAT TÉ FÓRMULA / ARRODONIMENT */
           if (calculatedActs[id]) {
             thEl.style.backgroundColor = "#fecaca";   // vermell suau
             thEl.style.borderBottom = "3px solid #dc2626";
             thEl.style.color = "black";
           }
 
-          // Menú — igual que abans
           const menuBtn = menuDiv.querySelector('.menu-btn');
           const menu = menuDiv.querySelector('.menu');
-
           menuBtn.addEventListener('click', e=>{
             e.stopPropagation();
             document.querySelectorAll('.menu').forEach(m=> m.classList.add('hidden'));
             menu.classList.toggle('hidden');
           });
-
-          menuDiv.querySelector('.edit-btn').addEventListener('click', ()=>{
+          menuDiv.querySelector('.edit-btn').addEventListener('click', ()=> {
             const newName = prompt('Nou nom activitat:', name);
             if(!newName || newName.trim()===name) return;
-            db.collection('activitats').doc(id).update({ nom: newName.trim() })
-              .then(()=> loadClassData());
+            db.collection('activitats').doc(id).update({ nom: newName.trim() }).then(()=> loadClassData());
           });
-
           menuDiv.querySelector('.delete-btn').addEventListener('click', ()=> removeActivity(id));
           menuDiv.querySelector('.calc-btn').addEventListener('click', ()=> openCalcModal(id));
-
         });
 
         headRow.appendChild(th('Mitjana', 'text-right'));
@@ -589,6 +582,7 @@ function renderNotesGrid(){
         if(classStudents.length===0){
           notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivities.length+2}">No hi ha alumnes</td></tr>`;
           renderAverages();
+          applyColumnFormulas();
           return;
         }
 
@@ -610,11 +604,10 @@ function renderNotesGrid(){
 
                 const td = document.createElement('td');
                 td.className = 'border px-2 py-1';
+                td.dataset.col = aid; // 🔹 IDENTIFICADOR
+                if (calculatedActs[aid]) td.dataset.result = 'true';
 
-                /* 🔴 NOVETAT: COLOR DE COLUMNA CALCULADA */
-                if (calculatedActs[aid]) {
-                  td.style.backgroundColor = "#ffe4e6";  // rosa suau
-                }
+                if (calculatedActs[aid]) td.style.backgroundColor = "#ffe4e6";
 
                 const input = document.createElement('input');
                 input.type='number';
@@ -625,10 +618,13 @@ function renderNotesGrid(){
 
                 if (calculatedActs[aid]) {
                   input.disabled = true;
-                  input.style.backgroundColor = "#fca5a5"; // vermell cel·la calculada
+                  input.style.backgroundColor = "#fca5a5";
                 } else {
                   input.addEventListener('change', e=> saveNote(sid, aid, e.target.value));
-                  input.addEventListener('input', ()=> applyCellColor(input));
+                  input.addEventListener('input', ()=> {
+                    applyCellColor(input);
+                    applyColumnFormulas(); // 🔹 Recalcula en temps real
+                  });
                   applyCellColor(input);
                 }
 
@@ -645,12 +641,14 @@ function renderNotesGrid(){
             });
 
             renderAverages();
+            applyColumnFormulas(); // 🔹 Aplica fórmules al final
           });
       });
   });
 }
 
-
+renderAverages();
+applyColumnFormulas(); // 🔹 AFEGIT: aplica fórmules després de renderitzar
 
 /* ---------------- Helpers Notes & Excel ---------------- */
 function th(txt, cls=''){
@@ -1192,8 +1190,9 @@ if (closeBtn) {
 function applyColumnFormulas() {
   for (let colId in columnFormulas) {
     const { formula, decimals } = columnFormulas[colId];
-    const cells = document.querySelectorAll(`#notesTable td[data-col='${colId}']`);
-    const values = Array.from(cells).map(c => parseFloat(c.textContent) || 0);
+
+    const cells = document.querySelectorAll(`#notesTbody td[data-col='${colId}'] input`);
+    const values = Array.from(cells).map(c => parseFloat(c.value) || 0);
 
     let result;
     switch (formula) {
@@ -1203,10 +1202,20 @@ function applyColumnFormulas() {
       case 'average':
         result = values.reduce((a,b)=>a+b,0)/values.length;
         break;
-      // Pots afegir més fórmules aquí
       default:
         result = 0;
     }
+
+    if (decimals !== undefined) result = result.toFixed(decimals);
+
+    // Escriure el resultat a tots els inputs de la columna
+    cells.forEach(c => {
+      c.value = result;
+      applyCellColor(c);
+    });
+  }
+}
+
 
     if (decimals !== undefined) result = result.toFixed(decimals);
 
@@ -1225,7 +1234,4 @@ function setColumnFormula(colId, formula, decimals) {
   localStorage.setItem('columnFormulas', JSON.stringify(columnFormulas));
   applyColumnFormulas();
 }
-
-// Aplicar fórmules persistents al carregar
-applyColumnFormulas();
 
