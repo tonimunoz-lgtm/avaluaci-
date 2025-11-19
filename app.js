@@ -22,6 +22,15 @@ let deleteMode = false;
 let currentCalcActivityId = null; // Activitat actual per fer càlculs
 
 /* Elements */
+
+// ---------------- FÓRMULES PERSISTENTS ----------------
+let columnFormulas = {};  // Clau = id de columna, valor = { formula: 'sum', decimals: 2 }
+
+// Carregar fórmules de localStorage si existeixen
+const savedFormulas = localStorage.getItem('columnFormulas');
+if (savedFormulas) columnFormulas = JSON.parse(savedFormulas);
+
+
 const loginScreen = document.getElementById('loginScreen');
 const appRoot = document.getElementById('appRoot');
 const usuariNom = document.getElementById('usuariNom');
@@ -1179,3 +1188,44 @@ if (closeBtn) {
     container.classList.remove('mobile-open');
   });
 }
+
+function applyColumnFormulas() {
+  for (let colId in columnFormulas) {
+    const { formula, decimals } = columnFormulas[colId];
+    const cells = document.querySelectorAll(`#notesTable td[data-col='${colId}']`);
+    const values = Array.from(cells).map(c => parseFloat(c.textContent) || 0);
+
+    let result;
+    switch (formula) {
+      case 'sum':
+        result = values.reduce((a,b)=>a+b,0);
+        break;
+      case 'average':
+        result = values.reduce((a,b)=>a+b,0)/values.length;
+        break;
+      // Pots afegir més fórmules aquí
+      default:
+        result = 0;
+    }
+
+    if (decimals !== undefined) result = result.toFixed(decimals);
+
+    const resultCell = document.querySelector(`#notesTable td[data-col='${colId}'][data-result='true']`);
+    if (resultCell) resultCell.textContent = result;
+  }
+}
+document.querySelectorAll('#notesTable .table-input').forEach(input => {
+  input.addEventListener('input', () => {
+    applyColumnFormulas();
+  });
+});
+
+function setColumnFormula(colId, formula, decimals) {
+  columnFormulas[colId] = { formula, decimals };
+  localStorage.setItem('columnFormulas', JSON.stringify(columnFormulas));
+  applyColumnFormulas();
+}
+
+// Aplicar fórmules persistents al carregar
+applyColumnFormulas();
+
