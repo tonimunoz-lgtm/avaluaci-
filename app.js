@@ -664,40 +664,48 @@ function applyColumnFormulas() {
     const aid = thEl.querySelector('input, div')?.dataset?.col || thEl.dataset?.col;
     if(!aid) return;
 
-    // Totes les cel·les d'aquesta columna
     const colCells = rows.map(tr => tr.querySelector(`td[data-col="${aid}"]`)).filter(Boolean);
 
-    let total = 0;
-    let count = 0;
+    // Detecta si la columna és calculada
+    const isCalculated = colCells.some(td => td.dataset.result === 'true');
 
-    colCells.forEach(td => {
-      const input = td.querySelector('input');
-      if(input && !input.disabled && input.value !== '') {
-        total += parseFloat(input.value);
-        count++;
-      }
-    });
+    if(isCalculated){
+      // Recalcular columna (fórmula / redondeig)
+      let total = 0;
+      let count = 0;
 
-    const result = count > 0 ? Math.round((total / count) * 100) / 100 : 0;
-
-    // Posar resultat en les cel·les calculades
-    colCells.forEach(td => {
-      if(td.dataset.result === 'true') {
+      colCells.forEach(td => {
         const input = td.querySelector('input');
-        if(input) input.value = result;
-        applyCellColor(input);
-      }
-    });
+        if(input && !input.disabled && input.value !== ''){
+          total += parseFloat(input.value);
+          count++;
+        }
+      });
+
+      const result = count > 0 ? Math.round((total / count) * 100) / 100 : 0;
+
+      colCells.forEach(td => {
+        if(td.dataset.result === 'true'){
+          const input = td.querySelector('input');
+          if(input) input.value = result;
+          applyCellColor(input);
+        }
+      });
+    }
   });
 
-  // Recalcular mitjana per fila
+  // Recalcular mitjana per fila com abans
   rows.forEach(tr => {
     const inputs = Array.from(tr.querySelectorAll('td input')).filter(input => input.value !== '');
     const sum = inputs.reduce((acc, i) => acc + parseFloat(i.value), 0);
     const avg = inputs.length > 0 ? Math.round((sum / inputs.length) * 100) / 100 : 0;
     tr.querySelector('td:last-child').textContent = avg;
   });
+
+  // Actualitzar mitjana per columna (notesTfoot)
+  renderAverages();
 }
+
 
 
 
