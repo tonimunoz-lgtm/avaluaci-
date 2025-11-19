@@ -655,19 +655,21 @@ function th(txt, cls=''){
   return el;
 }
 
-sync function saveNote(studentId, activityId, value){
-  const num = value === '' ? null : Number(value);
-  const updateObj = {};
-  if(num === null || isNaN(num)) updateObj[`notes.${activityId}`] = firebase.firestore.FieldValue.delete();
-  else updateObj[`notes.${activityId}`] = num;
-
-  await db.collection('alumnes').doc(studentId).update(updateObj);
-
-  // 🔥 RECALCULAR ACTIVITATS CALCULADES
-  await recalculateActivities();   
-
+async function saveNote(studentId, activityId, rawValue){
+    let v = parseFloat(rawValue);
+    if(isNaN(v)) v = null;
+    const fsKey = `notes.${activityId}`;
+    const updateObj = {};
+    if(v===null){
+        updateObj[fsKey] = firebase.firestore.FieldValue.delete();
+    } else {
+        updateObj[fsKey] = v;
+    }
+    await db.collection('alumnes').doc(studentId).update(updateObj);
+    await recalculateActivities();
   renderNotesGrid();
 }
+
 
 function applyCellColor(inputEl){
   const v = Number(inputEl.value);
