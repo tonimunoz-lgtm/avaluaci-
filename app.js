@@ -1219,7 +1219,12 @@ if (closeBtn) {
 }
 //------------recalciular formules-----------
 // ---------------- Recalcular activitats calculades per tots els alumnes ----------------
-async function recalculateActivities() {
+async function recalculateActivities(classId, classStudents) {
+    if (!classId || !classStudents) {
+        console.error("Falta classId o classStudents!");
+        return;
+    }
+
     // 1. Carreguem totes les activitats de la classe
     const classActivitiesSnapshot = await db.collection('classes')
         .doc(classId)
