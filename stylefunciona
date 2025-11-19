@@ -7,7 +7,6 @@ body {
   color: #1f2937;
 }
 
-
 /* ---------------- Contenidor principal ---------------- */
 #appRoot, #screen-classes, #screen-class {
   width: 100%;
@@ -27,7 +26,6 @@ body {
   max-width: 1600px;
   margin: 0 auto;
 }
-
 /* ---------------- Titols ---------------- */
 h1, h2, h3 {
   color: #1f2937;
@@ -208,4 +206,47 @@ button:hover { transform: scale(1.03); }
   background: #f9fafb;
   border-radius: 0.5rem;
   box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+/* ---------- MOBILE ONLY ---------- */
+@media (max-width: 768px) {
+
+  /* Amaga completament la barra lateral */
+  #studentsListContainer {
+    display: none;
+  }
+
+  /* Quan s’obre en mòbil */
+  #studentsListContainer.mobile-open {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+  }
+
+  /* Panell interior */
+  #studentsListContent {
+    background: white;
+    width: 90%;
+    max-width: 350px;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    max-height: 90%;
+    overflow-y: auto;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  }
+
+  /* Oculta la barra lateral tradicional */
+  #studentsListContainer {
+    width: 0;
+    max-width: none;
+  }
+
+  /* La graella ocupa tota la pantalla */
+  #notesTable-wrapper {
+    width: 100% !important;
+  }
 }
