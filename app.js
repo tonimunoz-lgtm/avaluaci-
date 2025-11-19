@@ -336,19 +336,37 @@ btnBack.addEventListener('click', ()=> {
 });
 
 /* ---------------- Load Class Data ---------------- */
-function loadClassData(){
-  if(!currentClassId) return;
-  db.collection('classes').doc(currentClassId).get().then(doc=>{
-    if(!doc.exists) { alert('Classe no trobada'); return; }
-    const data = doc.data();
-    classStudents = data.alumnes || [];
-    classActivities = data.activitats || [];
-    document.getElementById('classTitle').textContent = data.nom || 'Sense nom';
-    document.getElementById('classSub').textContent = `ID: ${doc.id}`;
-    renderStudentsList();
-    renderNotesGrid();
-  }).catch(e=> console.error(e));
+async function loadClassData() {
+  const classDoc = await db.collection('classes').doc(currentClassId).get();
+  const data = classDoc.data();
+
+  // ----------- Modificació ----------
+  recalcFormulas(data.alumnesData);
+
+  renderStudentsList(data.alumnesData);
+  renderNotesGrid(data.alumnesData);
 }
+
+
+// ----------- Nou bloc ----------
+function recalcFormulas(notes) {
+  for (const alumneId in notes) {
+    for (const activityId in notes[alumneId]) {
+      const cell = notes[alumneId][activityId];
+      if (cell.formula) {
+        try {
+          const formulaStr = cell.formula.replace(/\b(\w+)\b/g, (match) => {
+            return notes[alumneId][match]?.value ?? 0;
+          });
+          cell.value = eval(formulaStr); // ⚠️ només amb fórmules controlades
+        } catch (e) {
+          console.error(`Error recalculant fórmula ${alumneId} ${activityId}:`, e);
+        }
+      }
+    }
+  }
+}
+
 
 /* ---------------- Students ---------------- */
 btnAddStudent.addEventListener('click', ()=> openModal('modalAddStudent'));
@@ -1171,11 +1189,56 @@ async function addImportedStudents(names) {
   }
 }
 
+// ----------- Nou bloc ----------
+async function saveCellValue(alumneId, activityId, value, formula = null) {
+  const cellData = { value };
+  if (formula) cellData.formula = formula;
+
+  try {
+    await db.collection('classes').doc(currentClassId).update({
+      [`alumnesData.${alumneId}.${activityId}`]: cellData
+    });
+  } catch (e) {
+    console.error('Error guardant cel·la:', e);
+  }
+}
+
+
 // --------------Botó per tancar la llista d'alumnes mòbil
 const closeBtn = document.getElementById('closeStudentsMobile');
 if (closeBtn) {
   closeBtn.addEventListener('click', () => {
     const container = document.getElementById('studentsListContainer');
     container.classList.remove('mobile-open');
+  });
+}
+
+// ----------- Nou bloc ----------
+document.getElementById('modalApplyCalcBtn').addEventListener('click', async () => {
+  const selectedAlumne = getSelectedAlumneId();   // funció existent
+  const selectedActivity = getSelectedActivityId(); // funció existent
+  const formulaStr = document.getElementById('formulaField').value;
+
+  let value = 0;
+  try {
+    value = eval(formulaStr.replace(/\b(\w+)\b/g, (match) => {
+      return currentClassData[selectedAlumne][match]?.value ?? 0;
+    }));
+  } catch (e) {
+    alert('Error en la fórmula: ' + e.message);
+    return;
+  }
+
+  await saveCellValue(selectedAlumne, selectedActivity, value, formulaStr);
+  loadClassData();
+  closeModal('modalCalc');
+});
+
+
+
+const closeBtn = document.getElementById('closeStudentsMobile');
+if (closeBtn) {
+  closeBtn.addEventListener('click', () => {
+    document.getElementById('studentsListContainer').classList.remove('mobile-open');
   });
 }
