@@ -651,6 +651,7 @@ function th(txt, cls=''){
   return el;
 }
 
+// ---------------- Guardar nota ----------------
 async function saveNote(studentId, activityId, rawValue){
     let v = parseFloat(rawValue);
     if(isNaN(v)) v = null;
@@ -665,10 +666,6 @@ async function saveNote(studentId, activityId, rawValue){
     }
 
     await db.collection('alumnes').doc(studentId).update(updateObj);
-
-    // 🔥 FALTA AIXÒ:
-    await recalculateActivities();  // <-- CANVIAR AIXÒ
-    renderNotesGrid();
 }
 
 
@@ -755,100 +752,88 @@ calcTypeSelect.addEventListener('change', ()=>{
 });
 
 // Aplicar càlcul
-modalApplyCalcBtn.addEventListener('click', async ()=> {
-  if (!currentCalcActivityId) return;
-
-  const classRef = db.collection('classes').doc(currentClassId);
-  const actRef = db.collection('activitats').doc(currentCalcActivityId);
+modalApplyCalcBtn.addEventListener('click', async ()=>{
+  if(!currentCalcActivityId) return;
 
   const calcType = calcTypeSelect.value;
 
-  try {
-    if (calcType === 'numeric') {
-      const val = Number(numericField.value);
-      if (isNaN(val)) return alert('Introdueix un número vàlid');
+  if(calcType==='numeric'){
+    const val = Number(numericField.value);
+    if(isNaN(val)) return alert('Introdueix un número vàlid');
 
-      // Guardar tipus i fórmula (en aquest cas valor numèric)
-      await actRef.update({
-        calcType: 'numeric',
-        formula: val.toString()
-      });
+    // Guardar totes les notes en paral·lel sense re-render immediat
+    await Promise.all(classStudents.map(sid => saveNote(sid, currentCalcActivityId, val)));
+    markActivityAsCalculated(currentCalcActivityId);
+    closeModal('modalCalc');
 
-      // Assignar a tots els alumnes
-      for (const sid of classStudents) {
-        await saveNote(sid, currentCalcActivityId, val);
-      }
-
-    } else if (calcType === 'formula') {
-      const formula = formulaField.value.trim();
-      if (!formula) return alert('Formula buida');
-
-      // Guardar tipus i fórmula a Firestore
-      await actRef.update({
-        calcType: 'formula',
-        formula: formula
-      });
-
-      // Aplicar a tots els alumnes
-      for (const sid of classStudents) {
+  } else if(calcType==='formula'){
+    const formula = formulaField.value.trim();
+    if(!formula) return alert('Formula buida');
+    try{
+      await Promise.all(classStudents.map(async sid => {
         const result = await evalFormulaAsync(formula, sid);
         await saveNote(sid, currentCalcActivityId, result);
-      }
-
-    } else if (calcType === 'rounding') {
-      const formula = formulaField.value.trim();
-      if (!formula) return alert('Selecciona activitat i multiplicador (0.5 o 1)');
-
-      // Separar nom activitat i multiplicador
-      let selectedActivityName = '';
-      let multiplier = 1;
-      classActivities.forEach(aid => {
-        db.collection('activitats').doc(aid).get().then(doc => {
-          const actName = doc.exists ? doc.data().nom : '';
-          if (formula.startsWith(actName)) {
-            selectedActivityName = actName;
-            multiplier = Number(formula.slice(actName.length)) || 1;
-          }
-        });
-      });
-
-      // Guardar activitat de redondeig a Firestore
-      await actRef.update({
-        calcType: 'rounding',
-        formula: multiplier.toString(),       // multiplicador
-        refActivityName: selectedActivityName // activitat de referència
-      });
-
-      // Aplicar redondeig a tots els alumnes
-      for (const sid of classStudents) {
-        const studentDoc = await db.collection('alumnes').doc(sid).get();
-        const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
-        let val = 0;
-        for (const aid of classActivities) {
-          const adoc = await db.collection('activitats').doc(aid).get();
-          if (adoc.exists && adoc.data().nom === selectedActivityName) {
-            val = Number(notes[aid] || 0);
-          }
-        }
-        if (multiplier === 1) val = Math.round(val);
-        else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
-
-        await saveNote(sid, currentCalcActivityId, val);
-      }
+      }));
+      markActivityAsCalculated(currentCalcActivityId);
+      closeModal('modalCalc');
+    } catch(e){
+      console.error(e);
+      alert('Error en calcular la fórmula: ' + e.message);
     }
 
-    // Marcar activitat com calculada
-    await classRef.update({
-      [`calculatedActivities.${currentCalcActivityId}`]: true
+  } else if(calcType==='rounding'){
+    const formula = formulaField.value.trim();
+    if(!formula) return alert('Selecciona activitat i 0,5 o 1');
+
+    let selectedActivityName = '';
+    let multiplier = 1;
+
+    // Trobar activitat seleccionada i multiplicador
+    classActivities.forEach(aid=>{
+      db.collection('activitats').doc(aid).get().then(doc=>{
+        const actName = doc.exists ? doc.data().nom : '';
+        if(actName && formula.startsWith(actName)){
+          selectedActivityName = actName;
+          multiplier = Number(formula.slice(actName.length)) || 1;
+        }
+      });
     });
 
-    closeModal('modalCalc');
-    renderNotesGrid();
+    // Esperem a tenir l'activitat seleccionada
+    if(!selectedActivityName) return alert('Activitat no trobada');
 
-  } catch (e) {
-    console.error(e);
-    alert('Error aplicant càlcul: ' + e.message);
+    // Aplicar redondeig només a notes existents
+    await Promise.all(classStudents.map(async sid=>{
+      const studentDoc = await db.collection('alumnes').doc(sid).get();
+      const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
+      let val = null;
+
+      for(const aid of classActivities){
+        const adoc = await db.collection('activitats').doc(aid).get();
+        if(adoc.exists && adoc.data().nom === selectedActivityName && notes[aid] !== undefined){
+          val = Number(notes[aid]);
+          break;
+        }
+      }
+
+      if(val === null) return; // No fer res si no hi ha nota
+
+      // Redondeig
+      if(multiplier === 1){
+        val = Math.round(val);
+      } else if(multiplier === 0.5){
+        val = Math.round(val*2)/2;
+      }
+
+      await saveNote(sid, currentCalcActivityId, val);
+    }));
+
+    markActivityAsCalculated(currentCalcActivityId);
+    closeModal('modalCalc');
   }
+
+  // Renderitzar només **un cop al final**
+  renderNotesGrid();
 });
 
 
