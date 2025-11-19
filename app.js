@@ -336,132 +336,19 @@ btnBack.addEventListener('click', ()=> {
 });
 
 /* ---------------- Load Class Data ---------------- */
-async function loadClassData() {
-  if (!currentClassId) return;
-
-  try {
-    const classDoc = await db.collection('classes').doc(currentClassId).get();
-    if (!classDoc.exists) return alert('Classe no trobada');
-    const data = classDoc.data();
-
-    // 🔹 Inicialitzar arrays globals
+function loadClassData(){
+  if(!currentClassId) return;
+  db.collection('classes').doc(currentClassId).get().then(doc=>{
+    if(!doc.exists) { alert('Classe no trobada'); return; }
+    const data = doc.data();
     classStudents = data.alumnes || [];
     classActivities = data.activitats || [];
-    currentClassData = data.alumnesData || {};
-    const calculatedActs = data.calculatedActivities || {};
-
-    // 🔹 Recalcular fórmules
-    recalcFormulas(currentClassData);
-
-    // 🔹 Renderitzar llista d’alumnes
-    studentsList.innerHTML = '';
-    studentsCount.textContent = `(${classStudents.length})`;
-    if (classStudents.length === 0) {
-      studentsList.innerHTML = '<li class="text-sm text-gray-400">No hi ha alumnes</li>';
-    } else {
-      for (const sid of classStudents) {
-        const sDoc = await db.collection('alumnes').doc(sid).get();
-        const sName = sDoc.exists ? sDoc.data().nom : 'Desconegut';
-        const li = document.createElement('li');
-        li.className = 'flex justify-between items-center p-2 bg-gray-50 rounded';
-        li.textContent = sName;
-        studentsList.appendChild(li);
-      }
-    }
-
-    // 🔹 Renderitzar graella de notes
-    notesThead.innerHTML = '';
-    notesTbody.innerHTML = '';
-    notesTfoot.innerHTML = '';
-
-    const headRow = document.createElement('tr');
-    headRow.appendChild(th('Alumne'));
-    for (const aid of classActivities) {
-      const actDoc = await db.collection('activitats').doc(aid).get();
-      const actName = actDoc.exists ? actDoc.data().nom : 'Sense nom';
-      const thEl = th(actName);
-      if (calculatedActs[aid]) {
-        thEl.style.backgroundColor = '#fecaca';
-        thEl.style.borderBottom = '3px solid #dc2626';
-      }
-      headRow.appendChild(thEl);
-    }
-    headRow.appendChild(th('Mitjana', 'text-right'));
-    notesThead.appendChild(headRow);
-
-    for (const sid of classStudents) {
-      const sDoc = await db.collection('alumnes').doc(sid).get();
-      const sData = sDoc.exists ? sDoc.data() : { nom: 'Desconegut', notes: {} };
-      const tr = document.createElement('tr');
-
-      // Alumne
-      const tdName = document.createElement('td');
-      tdName.textContent = sData.nom;
-      tdName.className = 'border px-2 py-1';
-      tr.appendChild(tdName);
-
-      // Notes activitats
-      for (const aid of classActivities) {
-        const val = sData.notes?.[aid] ?? '';
-        const td = document.createElement('td');
-        td.className = 'border px-2 py-1';
-        const input = document.createElement('input');
-        input.type = 'number';
-        input.min = 0;
-        input.max = 10;
-        input.value = val;
-        input.className = 'table-input text-center rounded border p-1';
-        if (calculatedActs[aid]) {
-          input.disabled = true;
-          input.style.backgroundColor = '#fca5a5';
-        } else {
-          input.addEventListener('change', e => saveNote(sid, aid, e.target.value));
-          applyCellColor(input);
-        }
-        td.appendChild(input);
-        tr.appendChild(td);
-      }
-
-      // Mitjana
-      const avgTd = document.createElement('td');
-      avgTd.className = 'border px-2 py-1 text-right font-semibold';
-      avgTd.textContent = computeStudentAverageText(sData);
-      tr.appendChild(avgTd);
-
-      notesTbody.appendChild(tr);
-    }
-
-    renderAverages();
-    enableActivityDrag();
-
-  } catch (e) {
-    console.error('Error carregant classe:', e);
-    alert('Error carregant classe');
-  }
+    document.getElementById('classTitle').textContent = data.nom || 'Sense nom';
+    document.getElementById('classSub').textContent = `ID: ${doc.id}`;
+    renderStudentsList();
+    renderNotesGrid();
+  }).catch(e=> console.error(e));
 }
-
-
-
-
-// ----------- Nou bloc ----------
-function recalcFormulas(notes) {
-  for (const alumneId in notes) {
-    for (const activityId in notes[alumneId]) {
-      const cell = notes[alumneId][activityId];
-      if (cell.formula) {
-        try {
-          const formulaStr = cell.formula.replace(/\b(\w+)\b/g, (match) => {
-            return notes[alumneId][match]?.value ?? 0;
-          });
-          cell.value = eval(formulaStr); // ⚠️ només amb fórmules controlades
-        } catch (e) {
-          console.error(`Error recalculant fórmula ${alumneId} ${activityId}:`, e);
-        }
-      }
-    }
-  }
-}
-
 
 /* ---------------- Students ---------------- */
 btnAddStudent.addEventListener('click', ()=> openModal('modalAddStudent'));
@@ -1284,54 +1171,11 @@ async function addImportedStudents(names) {
   }
 }
 
-// ----------- Nou bloc ----------
-async function saveCellValue(alumneId, activityId, value, formula = null) {
-  const cellData = { value };
-  if (formula) cellData.formula = formula;
-
-  try {
-    await db.collection('classes').doc(currentClassId).update({
-      [`alumnesData.${alumneId}.${activityId}`]: cellData
-    });
-  } catch (e) {
-    console.error('Error guardant cel·la:', e);
-  }
-}
-
-
 // --------------Botó per tancar la llista d'alumnes mòbil
-// ----------- Nou bloc al final de app.js -----------
-document.addEventListener('DOMContentLoaded', () => {
-
-  const closeBtn = document.getElementById('closeStudentsMobile');
-  if (closeBtn) {
-    closeBtn.addEventListener('click', () => {
-      document.getElementById('studentsListContainer').classList.remove('mobile-open');
-    });
-  }
-
-  const applyBtn = document.getElementById('modalApplyCalcBtn');
-  if (applyBtn) {
-    applyBtn.addEventListener('click', async () => {
-      const selectedAlumne = getSelectedAlumneId();
-      const selectedActivity = getSelectedActivityId();
-      if (!selectedAlumne || !selectedActivity) return;
-
-      const formulaStr = document.getElementById('formulaField').value;
-      let value = 0;
-      try {
-        value = eval(formulaStr.replace(/\b(\w+)\b/g, (match) => {
-          return currentClassData[selectedAlumne][match]?.value ?? 0;
-        }));
-      } catch (e) {
-        alert('Error en la fórmula: ' + e.message);
-        return;
-      }
-
-      await saveCellValue(selectedAlumne, selectedActivity, value, formulaStr);
-      loadClassData(); // Recarrega i renderitza la graella
-      closeModal('modalCalc');
-    });
-  }
-
-});
+const closeBtn = document.getElementById('closeStudentsMobile');
+if (closeBtn) {
+  closeBtn.addEventListener('click', () => {
+    const container = document.getElementById('studentsListContainer');
+    container.classList.remove('mobile-open');
+  });
+}
