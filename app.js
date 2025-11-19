@@ -1102,7 +1102,6 @@ changePasswordBtn.addEventListener('click', () => {
     .catch(e=> alert('Error: ' + e.message));
 });
 
-// ----------------------Importar ------------------------
 // ---------------------- Importar alumnes ------------------------
 document.getElementById('btnImportALConfirm').addEventListener('click', () => {
   const fileInput = document.getElementById('fileImport');
@@ -1170,4 +1169,13 @@ async function addImportedStudents(names) {
     console.error(e);
     alert('Error afegint alumnes: ' + e.message);
   }
+}
+
+// --------------Botó per tancar la llista d'alumnes mòbil
+const closeBtn = document.getElementById('closeStudentsMobile');
+if (closeBtn) {
+  closeBtn.addEventListener('click', () => {
+    const container = document.getElementById('studentsListContainer');
+    container.classList.remove('mobile-open');
+  });
 }
