@@ -1219,69 +1219,39 @@ if (closeBtn) {
 }
 //------------recalciular formules-----------
 // ---------------- Recalcular activitats calculades per tots els alumnes ----------------
-async function recalculateActivities() {
-  if (!currentClassId) return;
+function recalculateActivities() {
+    const activityValues = {}; // aquí guardem els valors actualitzats
 
-  const classDocSnap = await db.collection('classes').doc(currentClassId).get();
-  if (!classDocSnap.exists) return;
-  const classData = classDocSnap.data();
-  const calcActs = classData.calculatedActivities || {};
-
-  // Precarreguem totes les activitats de la classe per no fer crida repetida
-  const actDocsMap = {};
-  await Promise.all(classActivities.map(async aid => {
-    const adoc = await db.collection('activitats').doc(aid).get();
-    if(adoc.exists) actDocsMap[aid] = adoc.data();
-  }));
-
-  for (const studentId of classStudents) {
-    const studentDoc = await db.collection('alumnes').doc(studentId).get();
-    const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
-
-    for (const actId of classActivities) {
-      if (!calcActs[actId]) continue; // només recalcularem activitats marcades
-
-      const actData = actDocsMap[actId];
-      if (!actData) continue;
-
-      let result = 0;
-
-      if (actData.calcType === 'formula' && actData.formula) {
-        // Reutilitzem la lògica que ja funcionava amb fórmules
-        let formulaEval = actData.formula;
-        for (const aid of classActivities) {
-          const aData = actDocsMap[aid];
-          const aName = aData ? aData.nom : '';
-          const val = Number(notes[aid] || 0);
-          const regex = new RegExp(aName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-          formulaEval = formulaEval.replace(regex, val);
+    // Primer pas: recalculem totes les activitats per fórmules
+    activities.forEach(activity => {
+        if (activity.type === 'formula') {
+            try {
+                // Crear un entorn amb els valors actuals de les activitats
+                const env = { ...activityValues };
+                // Avaluar la fórmula
+                const value = eval(activity.formula); 
+                activityValues[activity.name] = value;
+            } catch (e) {
+                activityValues[activity.name] = 0;
+            }
         }
-        try { result = Function('"use strict"; return (' + formulaEval + ')')(); }
-        catch(e){ result = 0; }
-      } 
-      else if (actData.calcType === 'rounding') {
-        // Arrodoniment exactament com a la modal
-        const multiplier = Number(actData.formula) || 1;
-        const refName = actData.refActivityName || '';
-        let val = 0;
+    });
 
-        for (const aid of classActivities) {
-          const aData = actDocsMap[aid];
-          if (aData && aData.nom === refName) {
-            val = Number(notes[aid] || 0);
-          }
+    // Segon pas: aplicar arrodoniments
+    activities.forEach(activity => {
+        if (activity.type === 'rounding') {
+            const refValue = activityValues[activity.refActivity];
+            if (refValue !== undefined && refValue !== null) {
+                // Arrodonim al valor que vulguem (per defecte Math.round)
+                activityValues[activity.name] = Math.round(refValue);
+            } else {
+                activityValues[activity.name] = 0;
+            }
         }
+    });
 
-        if (multiplier === 1) val = Math.round(val);
-        else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
-
-        result = val;
-      }
-
-      // Guardar nota recalculada
-      await db.collection('alumnes').doc(studentId).update({
-        [`notes.${actId}`]: result
-      });
-    }
-  }
+    // Actualitzar la vista / la taula amb els valors calculats
+    activities.forEach(activity => {
+        document.getElementById(activity.name).value = activityValues[activity.name];
+    });
 }
