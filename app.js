@@ -339,19 +339,107 @@ btnBack.addEventListener('click', ()=> {
 async function loadClassData() {
   if (!currentClassId) return;
 
-  const classDoc = await db.collection('classes').doc(currentClassId).get();
-  const data = classDoc.data();
+  try {
+    const classDoc = await db.collection('classes').doc(currentClassId).get();
+    if (!classDoc.exists) return alert('Classe no trobada');
+    const data = classDoc.data();
 
-  // Inicialitza la variable global abans de qualsevol càlcul
-  currentClassData = data.alumnesData || {};
+    // 🔹 Inicialitzar arrays globals
+    classStudents = data.alumnes || [];
+    classActivities = data.activitats || [];
+    currentClassData = data.alumnesData || {};
+    const calculatedActs = data.calculatedActivities || {};
 
-  // Recalcula fórmules abans de renderitzar
-  recalcFormulas(currentClassData);
+    // 🔹 Recalcular fórmules
+    recalcFormulas(currentClassData);
 
-  // Renderitza sempre després
-  renderStudentsList(currentClassData);
-  renderNotesGrid(currentClassData);
+    // 🔹 Renderitzar llista d’alumnes
+    studentsList.innerHTML = '';
+    studentsCount.textContent = `(${classStudents.length})`;
+    if (classStudents.length === 0) {
+      studentsList.innerHTML = '<li class="text-sm text-gray-400">No hi ha alumnes</li>';
+    } else {
+      for (const sid of classStudents) {
+        const sDoc = await db.collection('alumnes').doc(sid).get();
+        const sName = sDoc.exists ? sDoc.data().nom : 'Desconegut';
+        const li = document.createElement('li');
+        li.className = 'flex justify-between items-center p-2 bg-gray-50 rounded';
+        li.textContent = sName;
+        studentsList.appendChild(li);
+      }
+    }
+
+    // 🔹 Renderitzar graella de notes
+    notesThead.innerHTML = '';
+    notesTbody.innerHTML = '';
+    notesTfoot.innerHTML = '';
+
+    const headRow = document.createElement('tr');
+    headRow.appendChild(th('Alumne'));
+    for (const aid of classActivities) {
+      const actDoc = await db.collection('activitats').doc(aid).get();
+      const actName = actDoc.exists ? actDoc.data().nom : 'Sense nom';
+      const thEl = th(actName);
+      if (calculatedActs[aid]) {
+        thEl.style.backgroundColor = '#fecaca';
+        thEl.style.borderBottom = '3px solid #dc2626';
+      }
+      headRow.appendChild(thEl);
+    }
+    headRow.appendChild(th('Mitjana', 'text-right'));
+    notesThead.appendChild(headRow);
+
+    for (const sid of classStudents) {
+      const sDoc = await db.collection('alumnes').doc(sid).get();
+      const sData = sDoc.exists ? sDoc.data() : { nom: 'Desconegut', notes: {} };
+      const tr = document.createElement('tr');
+
+      // Alumne
+      const tdName = document.createElement('td');
+      tdName.textContent = sData.nom;
+      tdName.className = 'border px-2 py-1';
+      tr.appendChild(tdName);
+
+      // Notes activitats
+      for (const aid of classActivities) {
+        const val = sData.notes?.[aid] ?? '';
+        const td = document.createElement('td');
+        td.className = 'border px-2 py-1';
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.min = 0;
+        input.max = 10;
+        input.value = val;
+        input.className = 'table-input text-center rounded border p-1';
+        if (calculatedActs[aid]) {
+          input.disabled = true;
+          input.style.backgroundColor = '#fca5a5';
+        } else {
+          input.addEventListener('change', e => saveNote(sid, aid, e.target.value));
+          applyCellColor(input);
+        }
+        td.appendChild(input);
+        tr.appendChild(td);
+      }
+
+      // Mitjana
+      const avgTd = document.createElement('td');
+      avgTd.className = 'border px-2 py-1 text-right font-semibold';
+      avgTd.textContent = computeStudentAverageText(sData);
+      tr.appendChild(avgTd);
+
+      notesTbody.appendChild(tr);
+    }
+
+    renderAverages();
+    enableActivityDrag();
+
+  } catch (e) {
+    console.error('Error carregant classe:', e);
+    alert('Error carregant classe');
+  }
 }
+
 
 
 
