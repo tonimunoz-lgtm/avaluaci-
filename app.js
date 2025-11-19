@@ -519,7 +519,7 @@ function renderNotesGrid() {
   headRow.appendChild(th('Alumne'));
 
   db.collection('classes').doc(currentClassId).get().then(doc => {
-    if (!doc.exists) return;
+    if(!doc.exists) return;
     const classData = doc.data();
     const calculatedActs = classData.calculatedActivities || {};
 
@@ -546,14 +546,14 @@ function renderNotesGrid() {
               <button class="calc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Càlcul</button>
             </div>
           `;
-
+          
           container.appendChild(spanName);
           container.appendChild(menuDiv);
           thEl.appendChild(container);
           headRow.appendChild(thEl);
 
-          if (calculatedActs[id]) {
-            thEl.style.backgroundColor = "#fecaca";   // vermell suau
+          if(calculatedActs[id]) {
+            thEl.style.backgroundColor = "#fecaca";
             thEl.style.borderBottom = "3px solid #dc2626";
             thEl.style.color = "black";
           }
@@ -565,13 +565,11 @@ function renderNotesGrid() {
             document.querySelectorAll('.menu').forEach(m => m.classList.add('hidden'));
             menu.classList.toggle('hidden');
           });
-
           menuDiv.querySelector('.edit-btn').addEventListener('click', () => {
             const newName = prompt('Nou nom activitat:', name);
-            if (!newName || newName.trim() === name) return;
+            if(!newName || newName.trim() === name) return;
             db.collection('activitats').doc(id).update({ nom: newName.trim() }).then(() => loadClassData());
           });
-
           menuDiv.querySelector('.delete-btn').addEventListener('click', () => removeActivity(id));
           menuDiv.querySelector('.calc-btn').addEventListener('click', () => openCalcModal(id));
         });
@@ -581,7 +579,7 @@ function renderNotesGrid() {
 
         enableActivityDrag();
 
-        if (classStudents.length === 0) {
+        if(classStudents.length === 0){
           notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivities.length + 2}">No hi ha alumnes</td></tr>`;
           renderAverages();
           applyColumnFormulas();
@@ -592,7 +590,7 @@ function renderNotesGrid() {
           .then(studentDocs => {
             studentDocs.forEach(sdoc => {
               const sid = sdoc.id;
-              const sdata = sdoc.exists ? sdoc.data() : { nom: 'Desconegut', notes: {} };
+              const sdata = sdoc.exists ? sdoc.data() : { nom:'Desconegut', notes:{} };
               const tr = document.createElement('tr');
 
               const tdName = document.createElement('td');
@@ -600,17 +598,15 @@ function renderNotesGrid() {
               tdName.textContent = sdata.nom;
               tr.appendChild(tdName);
 
-              actDocs.forEach(actDoc => {
+              actDocs.forEach((actDoc) => {
                 const aid = actDoc.id;
                 const val = (sdata.notes && sdata.notes[aid] !== undefined) ? sdata.notes[aid] : '';
 
                 const td = document.createElement('td');
                 td.className = 'border px-2 py-1';
                 td.dataset.col = aid;
-                if (calculatedActs[aid]) td.dataset.result = 'true';
-                else td.dataset.result = 'false';
-
-                if (calculatedActs[aid]) td.style.backgroundColor = "#ffe4e6";
+                if(calculatedActs[aid]) td.dataset.result = 'true';
+                if(calculatedActs[aid]) td.style.backgroundColor = "#ffe4e6";
 
                 const input = document.createElement('input');
                 input.type = 'number';
@@ -619,14 +615,14 @@ function renderNotesGrid() {
                 input.value = val;
                 input.className = 'table-input text-center rounded border p-1';
 
-                if (calculatedActs[aid]) {
+                if(calculatedActs[aid]) {
                   input.disabled = true;
                   input.style.backgroundColor = "#fca5a5";
                 } else {
-                  input.addEventListener('change', e => saveNote(sid, aid, e.target.value));
                   input.addEventListener('input', () => {
+                    saveNote(sid, aid, input.value);
                     applyCellColor(input);
-                    applyColumnFormulas(); // recalcul en temps real
+                    applyColumnFormulas();  // recalcul en temps real
                   });
                   applyCellColor(input);
                 }
@@ -643,43 +639,32 @@ function renderNotesGrid() {
               notesTbody.appendChild(tr);
             });
 
-            renderAverages();
-            applyColumnFormulas(); // aplica fórmules al final
+            applyColumnFormulas(); // recalcul final de totes les fórmules
           });
       });
   });
 }
 
-// ----------------Funció per aplicar fórmules a les columnes calculades
+// Funció de recalcul de columnes i mitjanes
 function applyColumnFormulas() {
-  // Recorrem totes les columnes que tinguin fórmules
-  for (let colId in columnFormulas) {
-    const { formula, decimals } = columnFormulas[colId];
-
-    // Recorrem cada fila
-    notesTbody.querySelectorAll('tr').forEach(tr => {
-      const inputCells = Array.from(tr.querySelectorAll(`td[data-col='${colId}'] input:not([disabled])`));
-      const resultCells = Array.from(tr.querySelectorAll(`td[data-col='${colId}'][data-result='true']`));
-
-      if (!resultCells.length) return;
-
-      // Obtenim els valors dels inputs
-      const values = inputCells.map(input => parseFloat(input.value) || 0);
-
-      // Calculem el resultat segons la fórmula
-      let result;
-      if (formula === 'sum') result = values.reduce((a, b) => a + b, 0);
-      else if (formula === 'average') result = values.length ? (values.reduce((a, b) => a + b, 0) / values.length) : 0;
-      else result = 0;
-
-      // Redondeig
-      if (decimals !== undefined) result = Number(result.toFixed(decimals));
-
-      // Assignem el resultat a totes les cel·les calculades d’aquesta fila
-      resultCells.forEach(td => td.textContent = result);
+  const rows = notesTbody.querySelectorAll('tr');
+  rows.forEach(tr => {
+    let sum = 0;
+    let count = 0;
+    tr.querySelectorAll('td[data-col]').forEach(td => {
+      const input = td.querySelector('input');
+      if(input && input.value !== '') {
+        sum += parseFloat(input.value);
+        count++;
+      }
     });
-  }
+    const avgTd = tr.querySelector('td:last-child');
+    avgTd.textContent = count > 0 ? (sum / count).toFixed(2) : '';
+  });
+
+  renderAverages(); // si tens mitjanes per columna
 }
+
 
 
 /* ---------------- Helpers Notes & Excel ---------------- */
