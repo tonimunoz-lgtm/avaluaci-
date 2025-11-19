@@ -1205,40 +1205,45 @@ async function saveCellValue(alumneId, activityId, value, formula = null) {
 
 
 // --------------Botó per tancar la llista d'alumnes mòbil
-const closeBtn = document.getElementById('closeStudentsMobile');
-if (closeBtn) {
-  closeBtn.addEventListener('click', () => {
-    const container = document.getElementById('studentsListContainer');
-    container.classList.remove('mobile-open');
-  });
-}
-
-// ----------- Nou bloc ----------
-document.getElementById('modalApplyCalcBtn').addEventListener('click', async () => {
-  const selectedAlumne = getSelectedAlumneId();   // funció existent
-  const selectedActivity = getSelectedActivityId(); // funció existent
-  const formulaStr = document.getElementById('formulaField').value;
-
-  let value = 0;
-  try {
-    value = eval(formulaStr.replace(/\b(\w+)\b/g, (match) => {
-      return currentClassData[selectedAlumne][match]?.value ?? 0;
-    }));
-  } catch (e) {
-    alert('Error en la fórmula: ' + e.message);
-    return;
+// ----------- Nou bloc al final de app.js -----------
+document.addEventListener('DOMContentLoaded', () => {
+  
+  // 1️⃣ Botó de tancament modal de la llista d'alumnes mòbil
+  const closeBtn = document.getElementById('closeStudentsMobile');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      const container = document.getElementById('studentsListContainer');
+      container.classList.remove('mobile-open');
+    });
   }
 
-  await saveCellValue(selectedAlumne, selectedActivity, value, formulaStr);
-  loadClassData();
-  closeModal('modalCalc');
+  // 2️⃣ Botó "Aplica" del modal de càlcul de fórmules/redondeig
+  const applyBtn = document.getElementById('modalApplyCalcBtn');
+  if (applyBtn) {
+    applyBtn.addEventListener('click', async () => {
+      const selectedAlumne = getSelectedAlumneId();    // Has de tenir la funció existent
+      const selectedActivity = getSelectedActivityId(); // Has de tenir la funció existent
+      const formulaStr = document.getElementById('formulaField').value;
+
+      let value = 0;
+      try {
+        // Substituir noms d'activitats per valors actuals de l'alumne
+        value = eval(formulaStr.replace(/\b(\w+)\b/g, (match) => {
+          return currentClassData[selectedAlumne][match]?.value ?? 0;
+        }));
+      } catch (e) {
+        alert('Error en la fórmula: ' + e.message);
+        return;
+      }
+
+      await saveCellValue(selectedAlumne, selectedActivity, value, formulaStr);
+
+      // Recalcula i renderitza tota la classe
+      loadClassData();
+
+      // Tanca el modal
+      closeModal('modalCalc');
+    });
+  }
+
 });
-
-
-
-const closeBtn = document.getElementById('closeStudentsMobile');
-if (closeBtn) {
-  closeBtn.addEventListener('click', () => {
-    document.getElementById('studentsListContainer').classList.remove('mobile-open');
-  });
-}
