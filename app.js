@@ -53,6 +53,10 @@ const modalCreateClassBtn = document.getElementById('modalCreateClassBtn');
 const modalAddStudentBtn = document.getElementById('modalAddStudentBtn');
 const modalAddActivityBtn = document.getElementById('modalAddActivityBtn');
 
+const btnRecalculate = document.getElementById('btnRecalculate');
+btnRecalculate.addEventListener('click', recalculateActivities);
+
+
 const btnImportAL = document.getElementById('btnImportAL');
 btnImportAL.addEventListener('click', () => {
   openModal('modalImportAL');
@@ -1179,3 +1183,78 @@ if (closeBtn) {
     container.classList.remove('mobile-open');
   });
 }
+
+async function recalculateActivities() {
+  if (!currentClassId) return;
+  if (!classStudents.length || !classActivities.length) return;
+
+  const classDoc = await db.collection('classes').doc(currentClassId).get();
+  if (!classDoc.exists) return;
+  const calculatedActs = classDoc.data().calculatedActivities || {};
+
+  for (const aid of classActivities) {
+    if (!calculatedActs[aid]) continue; // només activitats calculades
+
+    // Obtenim activitat
+    const actDoc = await db.collection('activitats').doc(aid).get();
+    if (!actDoc.exists) continue;
+    const actData = actDoc.data();
+
+    if (actData.calcType === 'numeric') {
+      const val = Number(actData.formula) || 0;
+      classStudents.forEach(sid => saveNote(sid, aid, val));
+
+    } else if (actData.calcType === 'formula') {
+      const formula = actData.formula || '';
+      if (!formula) continue;
+
+      for (const sid of classStudents) {
+        try {
+          const result = await evalFormulaAsync(formula, sid);
+          saveNote(sid, aid, result);
+        } catch (e) {
+          console.error('Error recalculant fórmula', formula, e);
+        }
+      }
+
+    } else if (actData.calcType === 'rounding') {
+      const formula = actData.formula || '';
+      if (!formula) continue;
+
+      // Separar nom activitat i multiplicador
+      let selectedActivityName = '';
+      let multiplier = 1;
+
+      for (const otherAid of classActivities) {
+        const otherDoc = await db.collection('activitats').doc(otherAid).get();
+        const otherName = otherDoc.exists ? otherDoc.data().nom : '';
+        if (formula.startsWith(otherName)) {
+          selectedActivityName = otherName;
+          multiplier = Number(formula.slice(otherName.length)) || 1;
+          break;
+        }
+      }
+
+      for (const sid of classStudents) {
+        const studentDoc = await db.collection('alumnes').doc(sid).get();
+        const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
+        let val = 0;
+        for (const otherAid of classActivities) {
+          const otherDoc = await db.collection('activitats').doc(otherAid).get();
+          const otherName = otherDoc.exists ? otherDoc.data().nom : '';
+          if (otherName === selectedActivityName) {
+            val = Number(notes[otherAid]) || 0;
+            break;
+          }
+        }
+        if (multiplier === 1) val = Math.round(val);
+        else if (multiplier === 0.5) val = Math.round(val*2)/2;
+        saveNote(sid, aid, val);
+      }
+    }
+  }
+
+  renderNotesGrid();
+  alert('Recalcul complet!');
+}
+
