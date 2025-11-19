@@ -1195,25 +1195,26 @@ if (closeBtn) {
 async function recalculateActivities() {
   if (!currentClassId) return;
 
-  // Carregar activitats calculades
-  const classDoc = await db.collection('classes').doc(currentClassId).get();
-  const calcActs = classDoc.exists ? classDoc.data().calculatedActivities || {} : {};
-
   for (const studentId of classStudents) {
     // Carregar notes de l'alumne
     const studentDoc = await db.collection('alumnes').doc(studentId).get();
     const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
 
-    // Recalcular cada activitat marcada com a calculada
-    for (const actId in calcActs) {
+    for (const actId of classActivities) {
+      // Carregar informació de l'activitat
       const actDoc = await db.collection('activitats').doc(actId).get();
       if (!actDoc.exists) continue;
       const actData = actDoc.data();
 
+      // Només recalcularem si està marcada com a calculada
+      const classDoc = await db.collection('classes').doc(currentClassId).get();
+      const calcActs = classDoc.exists ? classDoc.data().calculatedActivities || {} : {};
+      if (!calcActs[actId]) continue;
+
       let result = 0;
 
       if (actData.calcType === 'formula' && actData.formula) {
-        // Substitueix noms d'activitats per notes i avalua la fórmula
+        // Substituir noms d'activitats per notes
         let formulaEval = actData.formula;
         for (const aid of classActivities) {
           const aDoc = await db.collection('activitats').doc(aid).get();
@@ -1227,8 +1228,15 @@ async function recalculateActivities() {
       } else if (actData.calcType === 'rounding' && actData.formula) {
         // Redondeig segons multiplicador
         const multiplier = Number(actData.formula) || 1;
-        const refActivity = classActivities.find(aid2 => actData.formula.startsWith(aid2));
-        let val = Number(notes[refActivity] || 0);
+        const refActivityName = actData.refActivityName || '';
+        let val = 0;
+        // Trobar l'activitat de referència
+        for (const aid of classActivities) {
+          const aDoc = await db.collection('activitats').doc(aid).get();
+          if (aDoc.exists && aDoc.data().nom === refActivityName) {
+            val = Number(notes[aid] || 0);
+          }
+        }
         if (multiplier === 1) val = Math.round(val);
         else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
         result = val;
@@ -1241,4 +1249,3 @@ async function recalculateActivities() {
     }
   }
 }
-
