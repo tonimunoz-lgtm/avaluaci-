@@ -651,14 +651,14 @@ function th(txt, cls=''){
   return el;
 }
 
-async function saveNote(studentId, activityId, rawValue){
+async function saveNote(studentId, activityId, rawValue, skipRecalc = false){
     let v = parseFloat(rawValue);
     if(isNaN(v)) v = null;
 
     const fsKey = `notes.${activityId}`;
     const updateObj = {};
 
-    if(v===null){
+    if(v === null){
         updateObj[fsKey] = firebase.firestore.FieldValue.delete();
     } else {
         updateObj[fsKey] = v;
@@ -666,10 +666,13 @@ async function saveNote(studentId, activityId, rawValue){
 
     await db.collection('alumnes').doc(studentId).update(updateObj);
 
-    // 🔥 FALTA AIXÒ:
-    await recalculateActivities();  // <-- CANVIAR AIXÒ
-    renderNotesGrid();
+    // Només recalcular i renderitzar si no s'està fent un bucle
+    if(!skipRecalc){
+        await recalculateActivities();  
+        renderNotesGrid();
+    }
 }
+
 
 
 function applyCellColor(inputEl){
@@ -717,6 +720,27 @@ function renderAverages(){
   tr.appendChild(th('',''));
   notesTfoot.appendChild(tr);
 }
+
+async function applyCalculationToAll(activityId, calculateFn){
+    const classStudents = await getAllStudents(); // Obtenir llista completa d'alumnes
+    const updates = [];
+
+    for (const student of classStudents) {
+        const oldValue = student.notes[activityId] ?? null;
+        const newValue = calculateFn(oldValue); // Funció que retorna el valor calculat o null
+
+        // Guardem les promeses però amb skipRecalc = true
+        updates.push(saveNote(student.id, activityId, newValue, true));
+    }
+
+    // Esperem que tots els updates acabin
+    await Promise.all(updates);
+
+    // Recalculem i renderitzem només una vegada al final
+    await recalculateActivities();
+    renderNotesGrid();
+}
+
 
 /* ---------------- Open Calculation Modal ---------------- */
 function openCalcModal(activityId){
