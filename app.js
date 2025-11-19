@@ -1220,58 +1220,39 @@ if (closeBtn) {
 //------------recalciular formules-----------
 // ---------------- Recalcular activitats calculades per tots els alumnes ----------------
 async function recalculateActivities(classId, classStudents) {
-    if (!classId || !classStudents) {
-        console.error("Falta classId o classStudents!");
-        return;
-    }
+    if (!classId || !classStudents) return;
 
-    // 1. Carreguem totes les activitats de la classe
     const classActivitiesSnapshot = await db.collection('classes')
         .doc(classId)
         .collection('activities')
         .get();
 
-    // Guardem en un objecte per accés ràpid
     const allActivities = {};
-    classActivitiesSnapshot.forEach(doc => {
-        allActivities[doc.id] = doc.data();
-    });
+    classActivitiesSnapshot.forEach(doc => allActivities[doc.id] = doc.data());
 
-    // 2. Iterem sobre tots els alumnes
     for (const studentId of classStudents) {
-        // notes[studentId] és un objecte { activityId: nota }
         const studentNotes = notes[studentId] || {};
 
-        // 3. Iterem sobre totes les activitats
         for (const [actId, actData] of Object.entries(allActivities)) {
             let result = null;
 
             if (actData.calcType === 'formula' && actData.formula) {
-                // Fórmula amb referències a altres activitats
                 let formula = actData.formula;
 
-                // Substituïm noms d'activitats per les notes
                 for (const [refId, refData] of Object.entries(allActivities)) {
                     const regex = new RegExp(`\\b${refData.nom}\\b`, 'g');
                     const val = Number(studentNotes[refId] || 0);
                     formula = formula.replace(regex, val);
                 }
 
-                try {
-                    result = eval(formula); // potser vols usar una funció segura en lloc de eval
-                } catch {
-                    result = 0;
-                }
+                try { result = eval(formula); } catch { result = 0; }
 
             } else if (actData.calcType === 'rounding' && actData.refActivityName) {
                 const multiplier = Number(actData.formula) || 1;
                 const refActivity = Object.entries(allActivities).find(([id, data]) => data.nom === actData.refActivityName);
 
                 let val = 0;
-                if (refActivity) {
-                    const [refId] = refActivity;
-                    val = Number(studentNotes[refId] || 0);
-                }
+                if (refActivity) val = Number(studentNotes[refActivity[0]] || 0);
 
                 if (multiplier === 1) val = Math.round(val);
                 else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
@@ -1279,14 +1260,20 @@ async function recalculateActivities(classId, classStudents) {
                 result = val;
             }
 
-            // Guardem el resultat al objecte local de notes
             studentNotes[actId] = result;
+
+            // **Actualitzem Firestore directament**
+            await db.collection('classes')
+                .doc(classId)
+                .collection('students')
+                .doc(studentId)
+                .collection('notes')
+                .doc(actId)
+                .set({ nota: result }, { merge: true });
         }
 
-        // Actualitzem l'objecte global notes
         notes[studentId] = studentNotes;
     }
 
-    // 4. Actualitzar la graella després de recalcular
     renderNotesGrid();
 }
