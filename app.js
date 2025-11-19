@@ -763,9 +763,9 @@ modalApplyCalcBtn.addEventListener('click', async () => {
   if (calcType === 'numeric') {
     const val = Number(numericField.value);
     if (isNaN(val)) return alert('Introdueix un número vàlid');
-    for (const sid of classStudents) {
-      await saveNote(sid, currentCalcActivityId, val);
-    }
+
+    await Promise.all(classStudents.map(sid => saveNote(sid, currentCalcActivityId, val)));
+
     await markActivityAsCalculated(currentCalcActivityId);
     closeModal('modalCalc');
 
@@ -774,10 +774,11 @@ modalApplyCalcBtn.addEventListener('click', async () => {
     if (!formula) return alert('Formula buida');
 
     try {
-      for (const sid of classStudents) {
+      await Promise.all(classStudents.map(async sid => {
         const result = await evalFormulaAsync(formula, sid);
         await saveNote(sid, currentCalcActivityId, result);
-      }
+      }));
+
       await markActivityAsCalculated(currentCalcActivityId);
       closeModal('modalCalc');
     } catch (e) {
@@ -789,40 +790,41 @@ modalApplyCalcBtn.addEventListener('click', async () => {
     const formula = formulaField.value.trim();
     if (!formula) return alert('Selecciona activitat i multiplicador (0.5 o 1)');
 
-    // Extraurem activitat de referència i multiplicador del formulaField
     let selectedActivityName = '';
     let multiplier = 1;
+    let refActivityId = null;
 
-    classActivities.forEach(aid => {
-      db.collection('activitats').doc(aid).get().then(doc => {
-        const actName = doc.exists ? doc.data().nom : '';
-        if (actName && formula.startsWith(actName)) {
-          selectedActivityName = actName;
-          multiplier = Number(formula.slice(actName.length)) || 1;
+    // Trobar activitat de referència
+    for (const aid of classActivities) {
+      const actDoc = await db.collection('activitats').doc(aid).get();
+      const actName = actDoc.exists ? actDoc.data().nom : '';
+      if (actName && formula.startsWith(actName)) {
+        selectedActivityName = actName;
+        multiplier = Number(formula.slice(actName.length)) || 1;
+        refActivityId = aid;
+        break;
+      }
+    }
 
-          // Trobar l'ID de l'activitat de referència
-          const refActivityId = aid;
+    if (!refActivityId) return alert('No s’ha trobat l’activitat per al redondeig');
 
-          // Aplicar redondeig a tots els alumnes
-          classStudents.forEach(async sid => {
-            const studentDoc = await db.collection('alumnes').doc(sid).get();
-            const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
-            const refVal = Number(notes[refActivityId] || 0); // ← agafem la nota real
-            let val = refVal;
+    // Aplicar redondeig a tots els alumnes
+    await Promise.all(classStudents.map(async sid => {
+      const studentDoc = await db.collection('alumnes').doc(sid).get();
+      const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
+      let val = Number(notes[refActivityId] || 0);
 
-            if (multiplier === 1) val = Math.round(val);
-            else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
+      if (multiplier === 1) val = Math.round(val);
+      else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
 
-            await saveNote(sid, currentCalcActivityId, val);
-          });
+      await saveNote(sid, currentCalcActivityId, val);
+    }));
 
-          markActivityAsCalculated(currentCalcActivityId);
-          closeModal('modalCalc');
-        }
-      });
-    });
+    await markActivityAsCalculated(currentCalcActivityId);
+    closeModal('modalCalc');
   }
 });
+
 
 
 
