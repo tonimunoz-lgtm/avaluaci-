@@ -651,15 +651,23 @@ function th(txt, cls=''){
   return el;
 }
 
-function saveNote(studentId, activityId, value){
+async function saveNote(studentId, activityId, value) {
   const num = value === '' ? null : Number(value);
   const updateObj = {};
-  if(num === null || isNaN(num)) updateObj[`notes.${activityId}`] = firebase.firestore.FieldValue.delete();
-  else updateObj[`notes.${activityId}`] = num;
-  db.collection('alumnes').doc(studentId).update(updateObj)
-    .then(()=> renderNotesGrid())
-    .catch(e=> console.error('Error saving note', e));
+
+  if(num === null || isNaN(num)) 
+      updateObj[`notes.${activityId}`] = firebase.firestore.FieldValue.delete();
+  else 
+      updateObj[`notes.${activityId}`] = num;
+
+  await db.collection('alumnes').doc(studentId).update(updateObj);
+
+  // 🔥 NOVETAT: Recalcular activitats derivades
+  await recomputeCalculatedActivitiesForStudent(studentId);
+
+  renderNotesGrid();
 }
+
 
 function applyCellColor(inputEl){
   const v = Number(inputEl.value);
@@ -1178,4 +1186,25 @@ if (closeBtn) {
     const container = document.getElementById('studentsListContainer');
     container.classList.remove('mobile-open');
   });
+}
+//------------recalciular formules-----------
+async function recomputeCalculatedActivitiesForStudent(studentId) {
+  const classDoc = await db.collection('classes').doc(currentClassId).get();
+  const calcActs = classDoc.data().calculatedActivities || {};
+
+  for (const actId in calcActs) {
+    const cfg = calcActs[actId];
+    if (cfg.type === 'formula') {
+      const result = await evalFormulaAsync(cfg.formula, studentId);
+      await db.collection('alumnes').doc(studentId).update({
+        [`notes.${actId}`]: result
+      });
+    }
+    if (cfg.type === 'rounding') {
+      const result = await applyRoundingAct(cfg, studentId);
+      await db.collection('alumnes').doc(studentId).update({
+        [`notes.${actId}`]: result
+      });
+    }
+  }
 }
