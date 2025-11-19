@@ -337,15 +337,22 @@ btnBack.addEventListener('click', ()=> {
 
 /* ---------------- Load Class Data ---------------- */
 async function loadClassData() {
+  if (!currentClassId) return;
+
   const classDoc = await db.collection('classes').doc(currentClassId).get();
   const data = classDoc.data();
 
-  // ----------- Modificació ----------
-  recalcFormulas(data.alumnesData);
+  // Inicialitza la variable global abans de qualsevol càlcul
+  currentClassData = data.alumnesData || {};
 
-  renderStudentsList(data.alumnesData);
-  renderNotesGrid(data.alumnesData);
+  // Recalcula fórmules abans de renderitzar
+  recalcFormulas(currentClassData);
+
+  // Renderitza sempre després
+  renderStudentsList(currentClassData);
+  renderNotesGrid(currentClassData);
 }
+
 
 
 // ----------- Nou bloc ----------
@@ -1207,27 +1214,24 @@ async function saveCellValue(alumneId, activityId, value, formula = null) {
 // --------------Botó per tancar la llista d'alumnes mòbil
 // ----------- Nou bloc al final de app.js -----------
 document.addEventListener('DOMContentLoaded', () => {
-  
-  // 1️⃣ Botó de tancament modal de la llista d'alumnes mòbil
+
   const closeBtn = document.getElementById('closeStudentsMobile');
   if (closeBtn) {
     closeBtn.addEventListener('click', () => {
-      const container = document.getElementById('studentsListContainer');
-      container.classList.remove('mobile-open');
+      document.getElementById('studentsListContainer').classList.remove('mobile-open');
     });
   }
 
-  // 2️⃣ Botó "Aplica" del modal de càlcul de fórmules/redondeig
   const applyBtn = document.getElementById('modalApplyCalcBtn');
   if (applyBtn) {
     applyBtn.addEventListener('click', async () => {
-      const selectedAlumne = getSelectedAlumneId();    // Has de tenir la funció existent
-      const selectedActivity = getSelectedActivityId(); // Has de tenir la funció existent
-      const formulaStr = document.getElementById('formulaField').value;
+      const selectedAlumne = getSelectedAlumneId();
+      const selectedActivity = getSelectedActivityId();
+      if (!selectedAlumne || !selectedActivity) return;
 
+      const formulaStr = document.getElementById('formulaField').value;
       let value = 0;
       try {
-        // Substituir noms d'activitats per valors actuals de l'alumne
         value = eval(formulaStr.replace(/\b(\w+)\b/g, (match) => {
           return currentClassData[selectedAlumne][match]?.value ?? 0;
         }));
@@ -1237,11 +1241,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       await saveCellValue(selectedAlumne, selectedActivity, value, formulaStr);
-
-      // Recalcula i renderitza tota la classe
-      loadClassData();
-
-      // Tanca el modal
+      loadClassData(); // Recarrega i renderitza la graella
       closeModal('modalCalc');
     });
   }
