@@ -654,63 +654,51 @@ function renderNotesGrid() {
 
 // Funció de recalcul de columnes i mitjanes
 function applyColumnFormulas() {
-  const calculatedActs = {}; // omple-ho amb les activitats calculades si tens la info global
-  if (typeof currentClassId !== 'undefined') {
-    db.collection('classes').doc(currentClassId).get().then(doc => {
-      if (!doc.exists) return;
-      const classData = doc.data();
-      const calcActs = classData.calculatedActivities || {};
+  const rows = Array.from(notesTbody.querySelectorAll('tr'));
+  if(rows.length === 0) return;
 
-      Object.keys(calcActs).forEach(aid => {
-        // trobar totes les cel·les d'aquesta columna
-        const cells = Array.from(document.querySelectorAll(`td[data-col="${aid}"]`));
+  // Itera per cada columna (excepte nom i mitjana)
+  const colHeaders = Array.from(notesThead.querySelectorAll('th')).slice(1, -1);
 
-        if (cells.length === 0) return;
+  colHeaders.forEach(thEl => {
+    const aid = thEl.querySelector('input, div')?.dataset?.col || thEl.dataset?.col;
+    if(!aid) return;
 
-        let total = 0;
-        let count = 0;
+    // Totes les cel·les d'aquesta columna
+    const colCells = rows.map(tr => tr.querySelector(`td[data-col="${aid}"]`)).filter(Boolean);
 
-        cells.forEach(td => {
-          if (!td.dataset.result) {
-            const input = td.querySelector('input');
-            if (input && input.value !== '') {
-              total += parseFloat(input.value);
-              count++;
-            }
-          }
-        });
+    let total = 0;
+    let count = 0;
 
-        // Exemple: calcul simple = mitjana de la columna
-        const result = count > 0 ? total / count : 0;
-        const rounded = Math.round(result * 100) / 100;
-
-        // posar resultat a la primera cel·la marcada com a resultat
-        const resultTd = cells.find(td => td.dataset.result);
-        if (resultTd) {
-          const input = resultTd.querySelector('input');
-          if (input) {
-            input.value = rounded;
-            applyCellColor(input);
-          }
-        }
-      });
-
-      // recalcular mitjanes de fila
-      Array.from(notesTbody.querySelectorAll('tr')).forEach(tr => {
-        const sdata = { notes: {} };
-        const tds = tr.querySelectorAll('td');
-        for (let i = 1; i < tds.length - 1; i++) {
-          const td = tds[i];
-          const input = td.querySelector('input');
-          if (input && input.value !== '') {
-            sdata.notes[td.dataset.col] = parseFloat(input.value);
-          }
-        }
-        tr.querySelector('td:last-child').textContent = computeStudentAverageText(sdata);
-      });
+    colCells.forEach(td => {
+      const input = td.querySelector('input');
+      if(input && !input.disabled && input.value !== '') {
+        total += parseFloat(input.value);
+        count++;
+      }
     });
-  }
+
+    const result = count > 0 ? Math.round((total / count) * 100) / 100 : 0;
+
+    // Posar resultat en les cel·les calculades
+    colCells.forEach(td => {
+      if(td.dataset.result === 'true') {
+        const input = td.querySelector('input');
+        if(input) input.value = result;
+        applyCellColor(input);
+      }
+    });
+  });
+
+  // Recalcular mitjana per fila
+  rows.forEach(tr => {
+    const inputs = Array.from(tr.querySelectorAll('td input')).filter(input => input.value !== '');
+    const sum = inputs.reduce((acc, i) => acc + parseFloat(i.value), 0);
+    const avg = inputs.length > 0 ? Math.round((sum / inputs.length) * 100) / 100 : 0;
+    tr.querySelector('td:last-child').textContent = avg;
+  });
 }
+
 
 
 /* ---------------- Helpers Notes & Excel ---------------- */
