@@ -1184,22 +1184,26 @@ if (closeBtn) {
   });
 }
 
+
+//-----------------------------
 async function recalculateActivities() {
-  if (!currentClassId || !classStudents.length || !classActivities.length) return;
+  if (!currentClassId) return;
+  if (!classStudents.length || !classActivities.length) return;
 
   const classDoc = await db.collection('classes').doc(currentClassId).get();
   if (!classDoc.exists) return;
   const calculatedActs = classDoc.data().calculatedActivities || {};
 
-  // Mapa activitats {nom: id} per evitar múltiples crides a Firestore
-  const actsDocs = await Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()));
-  const actNameToId = {};
-  actsDocs.forEach(doc => {
-    if (doc.exists) actNameToId[doc.data().nom] = doc.id;
-  });
+  // Carregar totes les notes dels alumnes en memòria
+  const studentsData = {};
+  await Promise.all(classStudents.map(async sid => {
+    const doc = await db.collection('alumnes').doc(sid).get();
+    studentsData[sid] = doc.exists ? doc.data().notes || {} : {};
+  }));
 
+  // Per cada activitat calculada
   for (const aid of classActivities) {
-    if (!calculatedActs[aid]) continue;
+    if (!calculatedActs[aid]) continue; // només activitats calculades
 
     const actDoc = await db.collection('activitats').doc(aid).get();
     if (!actDoc.exists) continue;
@@ -1207,58 +1211,65 @@ async function recalculateActivities() {
 
     if (actData.calcType === 'numeric') {
       const val = Number(actData.formula) || 0;
-      // Batch update
-      const batch = db.batch();
-      classStudents.forEach(sid => {
-        const ref = db.collection('alumnes').doc(sid);
-        batch.update(ref, { [`notes.${aid}`]: val });
-      });
-      await batch.commit();
-    } 
-    else if (actData.calcType === 'formula') {
+      for (const sid of classStudents) studentsData[sid][aid] = val;
+
+    } else if (actData.calcType === 'formula') {
       const formula = actData.formula || '';
       if (!formula) continue;
 
       for (const sid of classStudents) {
-        try {
-          const result = await evalFormulaAsync(formula, sid);
-          await db.collection('alumnes').doc(sid).update({ [`notes.${aid}`]: result });
-        } catch(e) { console.error(e); }
+        const result = await evalFormulaInMemory(formula, studentsData[sid]);
+        studentsData[sid][aid] = result;
       }
-    } 
-    else if (actData.calcType === 'rounding') {
+
+    } else if (actData.calcType === 'rounding') {
       const formula = actData.formula || '';
       if (!formula) continue;
 
-      // Separar nom activitat i multiplicador
       let selectedActivityName = '';
       let multiplier = 1;
-      Object.keys(actNameToId).forEach(name => {
-        if (formula.startsWith(name)) {
-          selectedActivityName = name;
-          multiplier = Number(formula.slice(name.length)) || 1;
+      for (const otherAid of classActivities) {
+        const otherDoc = await db.collection('activitats').doc(otherAid).get();
+        const otherName = otherDoc.exists ? otherDoc.data().nom : '';
+        if (formula.startsWith(otherName)) {
+          selectedActivityName = otherName;
+          multiplier = Number(formula.slice(otherName.length)) || 1;
+          break;
         }
-      });
+      }
 
-      const refAid = actNameToId[selectedActivityName];
-      if (!refAid) continue;
-
-      const batch = db.batch();
       for (const sid of classStudents) {
-        const studentDoc = await db.collection('alumnes').doc(sid).get();
-        const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
-        let val = Number(notes[refAid]) || 0;
-
+        let val = 0;
+        for (const otherAid of classActivities) {
+          const otherDoc = await db.collection('activitats').doc(otherAid).get();
+          const otherName = otherDoc.exists ? otherDoc.data().nom : '';
+          if (otherName === selectedActivityName) val = Number(studentsData[sid][otherAid]) || 0;
+        }
         if (multiplier === 1) val = Math.round(val);
         else if (multiplier === 0.5) val = Math.round(val*2)/2;
-
-        batch.update(db.collection('alumnes').doc(sid), { [`notes.${aid}`]: val });
+        studentsData[sid][aid] = val;
       }
-      await batch.commit();
     }
   }
 
-  // Re-renderitzar un cop ja totes les notes estan guardades
+  // Un cop calculades totes, fer update a Firestore
+  const batch = db.batch();
+  for (const sid of classStudents) {
+    const ref = db.collection('alumnes').doc(sid);
+    batch.update(ref, { notes: studentsData[sid] });
+  }
+  await batch.commit();
+
   renderNotesGrid();
   alert('Recalcul complet!');
+}
+
+// Funció auxiliar per fórmules en memòria
+function evalFormulaInMemory(formula, notesMap) {
+  let evalStr = formula;
+  for (const [aid, val] of Object.entries(notesMap)) {
+    const regex = new RegExp(aid, 'g'); // o utilitza el nom de l’activitat si vols
+    evalStr = evalStr.replace(regex, val);
+  }
+  return Function('"use strict"; return (' + evalStr + ')')();
 }
