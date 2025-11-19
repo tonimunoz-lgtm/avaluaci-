@@ -510,7 +510,7 @@ function renderStudentsList(){
   });
 }
 /* ---------------- Notes Grid amb menú activitats ---------------- */
-function renderNotesGrid(){
+function renderNotesGrid() {
   notesThead.innerHTML = '';
   notesTbody.innerHTML = '';
   notesTfoot.innerHTML = '';
@@ -518,17 +518,17 @@ function renderNotesGrid(){
   const headRow = document.createElement('tr');
   headRow.appendChild(th('Alumne'));
 
-  db.collection('classes').doc(currentClassId).get().then(doc=>{
-    if(!doc.exists) return;
+  db.collection('classes').doc(currentClassId).get().then(doc => {
+    if (!doc.exists) return;
     const classData = doc.data();
     const calculatedActs = classData.calculatedActivities || {};
 
     Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()))
-      .then(actDocs=>{
-        actDocs.forEach(adoc=>{
+      .then(actDocs => {
+        actDocs.forEach(adoc => {
           const id = adoc.id;
-          const name = adoc.exists ? (adoc.data().nom||'Sense nom') : 'Desconegut';
-          
+          const name = adoc.exists ? (adoc.data().nom || 'Sense nom') : 'Desconegut';
+
           const thEl = th('');
           const container = document.createElement('div');
           container.className = 'flex items-center justify-between';
@@ -546,7 +546,7 @@ function renderNotesGrid(){
               <button class="calc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Càlcul</button>
             </div>
           `;
-          
+
           container.appendChild(spanName);
           container.appendChild(menuDiv);
           thEl.appendChild(container);
@@ -560,18 +560,20 @@ function renderNotesGrid(){
 
           const menuBtn = menuDiv.querySelector('.menu-btn');
           const menu = menuDiv.querySelector('.menu');
-          menuBtn.addEventListener('click', e=>{
+          menuBtn.addEventListener('click', e => {
             e.stopPropagation();
-            document.querySelectorAll('.menu').forEach(m=> m.classList.add('hidden'));
+            document.querySelectorAll('.menu').forEach(m => m.classList.add('hidden'));
             menu.classList.toggle('hidden');
           });
-          menuDiv.querySelector('.edit-btn').addEventListener('click', ()=> {
+
+          menuDiv.querySelector('.edit-btn').addEventListener('click', () => {
             const newName = prompt('Nou nom activitat:', name);
-            if(!newName || newName.trim()===name) return;
-            db.collection('activitats').doc(id).update({ nom: newName.trim() }).then(()=> loadClassData());
+            if (!newName || newName.trim() === name) return;
+            db.collection('activitats').doc(id).update({ nom: newName.trim() }).then(() => loadClassData());
           });
-          menuDiv.querySelector('.delete-btn').addEventListener('click', ()=> removeActivity(id));
-          menuDiv.querySelector('.calc-btn').addEventListener('click', ()=> openCalcModal(id));
+
+          menuDiv.querySelector('.delete-btn').addEventListener('click', () => removeActivity(id));
+          menuDiv.querySelector('.calc-btn').addEventListener('click', () => openCalcModal(id));
         });
 
         headRow.appendChild(th('Mitjana', 'text-right'));
@@ -579,18 +581,18 @@ function renderNotesGrid(){
 
         enableActivityDrag();
 
-        if(classStudents.length===0){
-          notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivities.length+2}">No hi ha alumnes</td></tr>`;
+        if (classStudents.length === 0) {
+          notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivities.length + 2}">No hi ha alumnes</td></tr>`;
           renderAverages();
           applyColumnFormulas();
           return;
         }
 
         Promise.all(classStudents.map(id => db.collection('alumnes').doc(id).get()))
-          .then(studentDocs=>{
-            studentDocs.forEach(sdoc=>{
+          .then(studentDocs => {
+            studentDocs.forEach(sdoc => {
               const sid = sdoc.id;
-              const sdata = sdoc.exists ? sdoc.data() : { nom:'Desconegut', notes:{} };
+              const sdata = sdoc.exists ? sdoc.data() : { nom: 'Desconegut', notes: {} };
               const tr = document.createElement('tr');
 
               const tdName = document.createElement('td');
@@ -598,32 +600,33 @@ function renderNotesGrid(){
               tdName.textContent = sdata.nom;
               tr.appendChild(tdName);
 
-              actDocs.forEach((actDoc, actIndex)=>{
+              actDocs.forEach(actDoc => {
                 const aid = actDoc.id;
-                const val = (sdata.notes && sdata.notes[aid]!==undefined) ? sdata.notes[aid] : '';
+                const val = (sdata.notes && sdata.notes[aid] !== undefined) ? sdata.notes[aid] : '';
 
                 const td = document.createElement('td');
                 td.className = 'border px-2 py-1';
-                td.dataset.col = aid; // 🔹 IDENTIFICADOR
+                td.dataset.col = aid;
                 if (calculatedActs[aid]) td.dataset.result = 'true';
+                else td.dataset.result = 'false';
 
                 if (calculatedActs[aid]) td.style.backgroundColor = "#ffe4e6";
 
                 const input = document.createElement('input');
-                input.type='number';
-                input.min=0;
-                input.max=10;
-                input.value=val;
-                input.className='table-input text-center rounded border p-1';
+                input.type = 'number';
+                input.min = 0;
+                input.max = 10;
+                input.value = val;
+                input.className = 'table-input text-center rounded border p-1';
 
                 if (calculatedActs[aid]) {
                   input.disabled = true;
                   input.style.backgroundColor = "#fca5a5";
                 } else {
-                  input.addEventListener('change', e=> saveNote(sid, aid, e.target.value));
-                  input.addEventListener('input', ()=> {
+                  input.addEventListener('change', e => saveNote(sid, aid, e.target.value));
+                  input.addEventListener('input', () => {
                     applyCellColor(input);
-                    applyColumnFormulas(); // 🔹 Recalcula en temps real
+                    applyColumnFormulas(); // recalcul en temps real
                   });
                   applyCellColor(input);
                 }
@@ -641,14 +644,34 @@ function renderNotesGrid(){
             });
 
             renderAverages();
-            applyColumnFormulas(); // 🔹 Aplica fórmules al final
+            applyColumnFormulas(); // aplica fórmules al final
           });
       });
   });
 }
 
-renderAverages();
-applyColumnFormulas(); // 🔹 AFEGIT: aplica fórmules després de renderitzar
+// Funció per aplicar fórmules a les columnes calculades
+function applyColumnFormulas() {
+  for (let colId in columnFormulas) {
+    const { formula, decimals } = columnFormulas[colId];
+
+    const resultCells = notesTbody.querySelectorAll(`td[data-col='${colId}'][data-result='true']`);
+    if (!resultCells.length) continue;
+
+    const values = Array.from(notesTbody.querySelectorAll(`td[data-col='${colId}'] input`))
+                        .map(input => parseFloat(input.value) || 0);
+
+    let result;
+    switch (formula) {
+      case 'sum': result = values.reduce((a, b) => a + b, 0); break;
+      case 'average': result = values.reduce((a, b) => a + b, 0) / values.length; break;
+      default: result = 0;
+    }
+    if (decimals !== undefined) result = Number(result.toFixed(decimals));
+
+    resultCells.forEach(td => td.textContent = result);
+  }
+}
 
 /* ---------------- Helpers Notes & Excel ---------------- */
 function th(txt, cls=''){
@@ -1187,51 +1210,3 @@ if (closeBtn) {
   });
 }
 
-// ---------------- Aplicar fórmules persistents a columnes ----------------
-function applyColumnFormulas() {
-  if (!notesTbody) return;
-
-  for (let colId in columnFormulas) {
-    const { formula, decimals } = columnFormulas[colId];
-
-    // Agafem tots els inputs de la columna
-    const cells = notesTbody.querySelectorAll(`td[data-col='${colId}'] input`);
-    if (!cells || cells.length === 0) continue;
-
-    const values = Array.from(cells).map(c => parseFloat(c.value) || 0);
-
-    let result;
-    switch (formula) {
-      case 'sum':
-        result = values.reduce((a, b) => a + b, 0);
-        break;
-      case 'average':
-        result = values.reduce((a, b) => a + b, 0) / values.length;
-        break;
-      default:
-        result = 0;
-    }
-
-    if (decimals !== undefined) result = result.toFixed(decimals);
-
-    // Escriure el resultat a tots els inputs de la columna
-    cells.forEach(c => {
-      c.value = result;
-      applyCellColor(c);
-    });
-
-    // Si tens cel·la de resultat específica (per mostrar fora de l'input)
-    const resultCell = notesTbody.querySelector(`td[data-col='${colId}'][data-result='true']`);
-    if (resultCell) resultCell.textContent = result;
-  }
-}
-
-// ---------------- Funció per establir fórmula d'una columna ----------------
-function setColumnFormula(colId, formula, decimals) {
-  columnFormulas[colId] = { formula, decimals };
-  localStorage.setItem('columnFormulas', JSON.stringify(columnFormulas));
-  applyColumnFormulas();
-}
-
-// 🔹 Ja no fem document.querySelectorAll('#notesTable .table-input') perquè trencava tot
-// Les columnes s’aplicaran automàticament dins de renderNotesGrid() quan es cridi applyColumnFormulas()
