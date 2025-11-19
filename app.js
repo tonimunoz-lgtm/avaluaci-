@@ -1187,20 +1187,26 @@ if (closeBtn) {
   });
 }
 
+// ---------------- Aplicar fórmules persistents a columnes ----------------
 function applyColumnFormulas() {
+  if (!notesTbody) return;
+
   for (let colId in columnFormulas) {
     const { formula, decimals } = columnFormulas[colId];
 
-    const cells = document.querySelectorAll(`#notesTbody td[data-col='${colId}'] input`);
+    // Agafem tots els inputs de la columna
+    const cells = notesTbody.querySelectorAll(`td[data-col='${colId}'] input`);
+    if (!cells || cells.length === 0) continue;
+
     const values = Array.from(cells).map(c => parseFloat(c.value) || 0);
 
     let result;
     switch (formula) {
       case 'sum':
-        result = values.reduce((a,b)=>a+b,0);
+        result = values.reduce((a, b) => a + b, 0);
         break;
       case 'average':
-        result = values.reduce((a,b)=>a+b,0)/values.length;
+        result = values.reduce((a, b) => a + b, 0) / values.length;
         break;
       default:
         result = 0;
@@ -1213,25 +1219,19 @@ function applyColumnFormulas() {
       c.value = result;
       applyCellColor(c);
     });
-  }
-}
 
-
-    if (decimals !== undefined) result = result.toFixed(decimals);
-
-    const resultCell = document.querySelector(`#notesTable td[data-col='${colId}'][data-result='true']`);
+    // Si tens cel·la de resultat específica (per mostrar fora de l'input)
+    const resultCell = notesTbody.querySelector(`td[data-col='${colId}'][data-result='true']`);
     if (resultCell) resultCell.textContent = result;
   }
 }
-document.querySelectorAll('#notesTable .table-input').forEach(input => {
-  input.addEventListener('input', () => {
-    applyColumnFormulas();
-  });
-});
 
+// ---------------- Funció per establir fórmula d'una columna ----------------
 function setColumnFormula(colId, formula, decimals) {
   columnFormulas[colId] = { formula, decimals };
   localStorage.setItem('columnFormulas', JSON.stringify(columnFormulas));
   applyColumnFormulas();
 }
 
+// 🔹 Ja no fem document.querySelectorAll('#notesTable .table-input') perquè trencava tot
+// Les columnes s’aplicaran automàticament dins de renderNotesGrid() quan es cridi applyColumnFormulas()
