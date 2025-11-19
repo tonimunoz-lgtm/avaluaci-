@@ -651,7 +651,6 @@ function th(txt, cls=''){
   return el;
 }
 
-// ---------------- Guardar nota ----------------
 async function saveNote(studentId, activityId, rawValue){
     let v = parseFloat(rawValue);
     if(isNaN(v)) v = null;
@@ -666,6 +665,10 @@ async function saveNote(studentId, activityId, rawValue){
     }
 
     await db.collection('alumnes').doc(studentId).update(updateObj);
+
+    // 🔥 FALTA AIXÒ:
+    await recalculateActivities();  // <-- CANVIAR AIXÒ
+    renderNotesGrid();
 }
 
 
@@ -752,80 +755,103 @@ calcTypeSelect.addEventListener('change', ()=>{
 });
 
 // Aplicar càlcul
-modalApplyCalcBtn.addEventListener('click', async () => {
+modalApplyCalcBtn.addEventListener('click', async ()=> {
   if (!currentCalcActivityId) return;
 
-  if (calcTypeSelect.value === 'numeric') {
-    const val = Number(numericField.value);
-    if (isNaN(val)) return alert('Introdueix un número vàlid');
+  const classRef = db.collection('classes').doc(currentClassId);
+  const actRef = db.collection('activitats').doc(currentCalcActivityId);
 
-    // Guardem totes les notes primer en paral·lel
-    await Promise.all(classStudents.map(sid => saveNote(sid, currentCalcActivityId, val)));
+  const calcType = calcTypeSelect.value;
 
-    markActivityAsCalculated(currentCalcActivityId);
-    closeModal('modalCalc');
+  try {
+    if (calcType === 'numeric') {
+      const val = Number(numericField.value);
+      if (isNaN(val)) return alert('Introdueix un número vàlid');
 
-  } else if (calcTypeSelect.value === 'formula') {
-    const formula = formulaField.value.trim();
-    if (!formula) return alert('Formula buida');
+      // Guardar tipus i fórmula (en aquest cas valor numèric)
+      await actRef.update({
+        calcType: 'numeric',
+        formula: val.toString()
+      });
 
-    try {
+      // Assignar a tots els alumnes
+      for (const sid of classStudents) {
+        await saveNote(sid, currentCalcActivityId, val);
+      }
+
+    } else if (calcType === 'formula') {
+      const formula = formulaField.value.trim();
+      if (!formula) return alert('Formula buida');
+
+      // Guardar tipus i fórmula a Firestore
+      await actRef.update({
+        calcType: 'formula',
+        formula: formula
+      });
+
+      // Aplicar a tots els alumnes
       for (const sid of classStudents) {
         const result = await evalFormulaAsync(formula, sid);
         await saveNote(sid, currentCalcActivityId, result);
       }
-      markActivityAsCalculated(currentCalcActivityId);
-      closeModal('modalCalc');
-    } catch (e) {
-      console.error(e);
-      alert('Error en calcular la fórmula: ' + e.message);
-    }
 
-  } else if (calcTypeSelect.value === 'rounding') {
-    const formula = formulaField.value.trim();
-    if (!formula) return alert('Selecciona activitat i 0,5 o 1');
+    } else if (calcType === 'rounding') {
+      const formula = formulaField.value.trim();
+      if (!formula) return alert('Selecciona activitat i multiplicador (0.5 o 1)');
 
-    let selectedActivityName = '';
-    let multiplier = 1;
+      // Separar nom activitat i multiplicador
+      let selectedActivityName = '';
+      let multiplier = 1;
+      classActivities.forEach(aid => {
+        db.collection('activitats').doc(aid).get().then(doc => {
+          const actName = doc.exists ? doc.data().nom : '';
+          if (formula.startsWith(actName)) {
+            selectedActivityName = actName;
+            multiplier = Number(formula.slice(actName.length)) || 1;
+          }
+        });
+      });
 
-    // Trobar activitat i multiplicador
-    for (const aid of classActivities) {
-      const adoc = await db.collection('activitats').doc(aid).get();
-      const actName = adoc.exists ? adoc.data().nom : '';
-      if (formula.startsWith(actName)) {
-        selectedActivityName = actName;
-        multiplier = Number(formula.slice(actName.length)) || 1;
-        break;
-      }
-    }
+      // Guardar activitat de redondeig a Firestore
+      await actRef.update({
+        calcType: 'rounding',
+        formula: multiplier.toString(),       // multiplicador
+        refActivityName: selectedActivityName // activitat de referència
+      });
 
-    if (!selectedActivityName) return alert('No s’ha trobat activitat vàlida');
-
-    // Guardar totes les notes de redondeig en paral·lel
-    await Promise.all(classStudents.map(async sid => {
-      const studentDoc = await db.collection('alumnes').doc(sid).get();
-      const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
-      let val = 0;
-
-      // Agafar nota de l’activitat seleccionada
-      for (const aid of classActivities) {
-        const adoc = await db.collection('activitats').doc(aid).get();
-        if (adoc.exists && adoc.data().nom === selectedActivityName) {
-          val = Number(notes[aid]) || 0;
+      // Aplicar redondeig a tots els alumnes
+      for (const sid of classStudents) {
+        const studentDoc = await db.collection('alumnes').doc(sid).get();
+        const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
+        let val = 0;
+        for (const aid of classActivities) {
+          const adoc = await db.collection('activitats').doc(aid).get();
+          if (adoc.exists && adoc.data().nom === selectedActivityName) {
+            val = Number(notes[aid] || 0);
+          }
         }
+        if (multiplier === 1) val = Math.round(val);
+        else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
+
+        await saveNote(sid, currentCalcActivityId, val);
       }
+    }
 
-      // Aplicar redondeig
-      if (multiplier === 1) val = Math.round(val);
-      else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
+    // Marcar activitat com calculada
+    await classRef.update({
+      [`calculatedActivities.${currentCalcActivityId}`]: true
+    });
 
-      await saveNote(sid, currentCalcActivityId, val);
-    }));
-
-    markActivityAsCalculated(currentCalcActivityId);
     closeModal('modalCalc');
+    renderNotesGrid();
+
+  } catch (e) {
+    console.error(e);
+    alert('Error aplicant càlcul: ' + e.message);
   }
 });
+
+
 
 
 // ---------------- Construir botons de fórmules ----------------
