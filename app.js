@@ -53,10 +53,6 @@ const modalCreateClassBtn = document.getElementById('modalCreateClassBtn');
 const modalAddStudentBtn = document.getElementById('modalAddStudentBtn');
 const modalAddActivityBtn = document.getElementById('modalAddActivityBtn');
 
-const btnRecalculate = document.getElementById('btnRecalculate');
-btnRecalculate.addEventListener('click', recalculateActivities);
-
-
 const btnImportAL = document.getElementById('btnImportAL');
 btnImportAL.addEventListener('click', () => {
   openModal('modalImportAL');
@@ -655,21 +651,15 @@ function th(txt, cls=''){
   return el;
 }
 
-async function saveNote(studentId, activityId, rawValue){
-    let v = parseFloat(rawValue);
-    if(isNaN(v)) v = null;
-    const fsKey = `notes.${activityId}`;
-    const updateObj = {};
-    if(v===null){
-        updateObj[fsKey] = firebase.firestore.FieldValue.delete();
-    } else {
-        updateObj[fsKey] = v;
-    }
-    await db.collection('alumnes').doc(studentId).update(updateObj);
-    await recalculateActivities();
-  renderNotesGrid();
+function saveNote(studentId, activityId, value){
+  const num = value === '' ? null : Number(value);
+  const updateObj = {};
+  if(num === null || isNaN(num)) updateObj[`notes.${activityId}`] = firebase.firestore.FieldValue.delete();
+  else updateObj[`notes.${activityId}`] = num;
+  db.collection('alumnes').doc(studentId).update(updateObj)
+    .then(()=> renderNotesGrid())
+    .catch(e=> console.error('Error saving note', e));
 }
-
 
 function applyCellColor(inputEl){
   const v = Number(inputEl.value);
@@ -1188,85 +1178,4 @@ if (closeBtn) {
     const container = document.getElementById('studentsListContainer');
     container.classList.remove('mobile-open');
   });
-}
-
-
-//-----------------------------
-async function recalculateActivities(classId) {
-  const classRef = db.collection('classes').doc(classId);
-
-  // Carreguem alumnes i notes
-  const studentsSnapshot = await db.collection('alumnes')
-    .where('classId', '==', classId).get();
-
-  const students = {};
-  studentsSnapshot.forEach(doc => {
-    students[doc.id] = { ...doc.data(), notes: doc.data().notes || {} };
-  });
-
-  // Carreguem activitats
-  const activitiesSnapshot = await db.collection('activitats')
-    .where('classId', '==', classId).get();
-
-  const activities = {};
-  activitiesSnapshot.forEach(doc => {
-    activities[doc.id] = doc.data();
-  });
-
-  for (const aid in activities) {
-    const act = activities[aid];
-    if (!act.calcType) continue; // només activitats calculades
-
-    console.log(`Recalculant activitat: ${act.nom} (${aid}), tipus: ${act.calcType}`);
-
-    for (const sid in students) {
-      const student = students[sid];
-      const notes = student.notes;
-
-      console.log(`Alumne: ${student.nom}, notes disponibles:`, notes);
-
-      let newVal = 0;
-
-      if (act.calcType === 'numeric') {
-        newVal = Number(act.formula) || 0;
-
-      } else if (act.calcType === 'formula') {
-        try {
-          newVal = await evalFormulaAsync(act.formula, sid, notes);
-        } catch(e) {
-          console.error('Error en fórmula:', act.formula, e);
-          newVal = 0;
-        }
-
-      } else if (act.calcType === 'rounding') {
-        const formula = act.formula || '';
-        let selectedActivityName = '';
-        let multiplier = 1;
-
-        // Trobar activitat referenciada
-        for (const otherAid in activities) {
-          const otherName = activities[otherAid].nom;
-          if (formula.startsWith(otherName)) {
-            selectedActivityName = otherAid;
-            multiplier = Number(formula.slice(otherName.length)) || 1;
-            break;
-          }
-        }
-
-        let val = Number(notes[selectedActivityName]) || 0;
-        if (multiplier === 1) val = Math.round(val);
-        else if (multiplier === 0.5) val = Math.round(val*2)/2;
-        newVal = val;
-      }
-
-      console.log(`→ Nova nota per alumne ${sid}, activitat ${aid}:`, newVal);
-
-      // Guardem només al final
-      await db.collection('alumnes').doc(sid).update({
-        [`notes.${aid}`]: newVal
-      });
-    }
-  }
-
-  console.log('Recalcul completat!');
 }
