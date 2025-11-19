@@ -755,68 +755,103 @@ calcTypeSelect.addEventListener('change', ()=>{
 });
 
 // Aplicar càlcul
-modalApplyCalcBtn.addEventListener('click', async () => {
-  if (!currentClassId) return;
+modalApplyCalcBtn.addEventListener('click', async ()=> {
+  if (!currentCalcActivityId) return;
 
-  const classDoc = await db.collection('classes').doc(currentClassId).get();
-  if (!classDoc.exists) return;
-  const calcActs = classDoc.data().calculatedActivities || {};
+  const classRef = db.collection('classes').doc(currentClassId);
+  const actRef = db.collection('activitats').doc(currentCalcActivityId);
 
-  // Iterar per cada alumne
-  for (const studentId of classStudents) {
-    const studentDoc = await db.collection('alumnes').doc(studentId).get();
-    if (!studentDoc.exists) continue;
+  const calcType = calcTypeSelect.value;
 
-    const notes = studentDoc.data().notes || {};
+  try {
+    if (calcType === 'numeric') {
+      const val = Number(numericField.value);
+      if (isNaN(val)) return alert('Introdueix un número vàlid');
 
-    for (const actId of classActivities) {
-      const actDoc = await db.collection('activitats').doc(actId).get();
-      if (!actDoc.exists) continue;
+      // Guardar tipus i fórmula (en aquest cas valor numèric)
+      await actRef.update({
+        calcType: 'numeric',
+        formula: val.toString()
+      });
 
-      const actData = actDoc.data();
-
-      if (!calcActs[actId]) continue; // Només activitats calculades
-
-      let val = 0;
-
-      if (actData.calcType === 'formula') {
-        // --- Càlcul amb fórmula ---
-        const formula = actData.formula || '0';
-        try {
-          val = await evalFormulaAsync(studentId, formula, notes);
-        } catch (err) {
-          console.error('Error a la fórmula:', err);
-          val = 0;
-        }
-
-      } else if (actData.calcType === 'rounding') {
-        // --- Càlcul d'arrodoniment ---
-        const multiplier = Number(actData.formula) || 1; // 1 o 0.5
-        const refActivityName = actData.refActivityName || '';
-
-        // Trobar activitat de referència
-        let refVal = 0;
-        for (const aid of classActivities) {
-          const aDoc = await db.collection('activitats').doc(aid).get();
-          if (aDoc.exists && aDoc.data().nom === refActivityName) {
-            refVal = Number(notes[aid] || 0);
-          }
-        }
-
-        if (multiplier === 1) val = Math.round(refVal);
-        else if (multiplier === 0.5) val = Math.round(refVal * 2) / 2;
+      // Assignar a tots els alumnes
+      for (const sid of classStudents) {
+        await saveNote(sid, currentCalcActivityId, val);
       }
 
-      // Guardar nota a Firestore
-      await db.collection('alumnes').doc(studentId).update({
-        [`notes.${actId}`]: val
-      });
-    }
-  }
+    } else if (calcType === 'formula') {
+      const formula = formulaField.value.trim();
+      if (!formula) return alert('Formula buida');
 
-  // Re-renderitzar taula
-  renderNotesGrid();
+      // Guardar tipus i fórmula a Firestore
+      await actRef.update({
+        calcType: 'formula',
+        formula: formula
+      });
+
+      // Aplicar a tots els alumnes
+      for (const sid of classStudents) {
+        const result = await evalFormulaAsync(formula, sid);
+        await saveNote(sid, currentCalcActivityId, result);
+      }
+
+    } else if (calcType === 'rounding') {
+      const formula = formulaField.value.trim();
+      if (!formula) return alert('Selecciona activitat i multiplicador (0.5 o 1)');
+
+      // Separar nom activitat i multiplicador
+      let selectedActivityName = '';
+      let multiplier = 1;
+      classActivities.forEach(aid => {
+        db.collection('activitats').doc(aid).get().then(doc => {
+          const actName = doc.exists ? doc.data().nom : '';
+          if (formula.startsWith(actName)) {
+            selectedActivityName = actName;
+            multiplier = Number(formula.slice(actName.length)) || 1;
+          }
+        });
+      });
+
+      // Guardar activitat de redondeig a Firestore
+      await actRef.update({
+        calcType: 'rounding',
+        formula: multiplier.toString(),       // multiplicador
+        refActivityName: selectedActivityName // activitat de referència
+      });
+
+      // Aplicar redondeig a tots els alumnes
+      for (const sid of classStudents) {
+        const studentDoc = await db.collection('alumnes').doc(sid).get();
+        const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
+        let val = 0;
+        for (const aid of classActivities) {
+          const adoc = await db.collection('activitats').doc(aid).get();
+          if (adoc.exists && adoc.data().nom === selectedActivityName) {
+            val = Number(notes[aid] || 0);
+          }
+        }
+        if (multiplier === 1) val = Math.round(val);
+        else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
+
+        await saveNote(sid, currentCalcActivityId, val);
+      }
+    }
+
+    // Marcar activitat com calculada
+    await classRef.update({
+      [`calculatedActivities.${currentCalcActivityId}`]: true
+    });
+
+    closeModal('modalCalc');
+    renderNotesGrid();
+
+  } catch (e) {
+    console.error(e);
+    alert('Error aplicant càlcul: ' + e.message);
+  }
 });
+
+
 
 
 // ---------------- Construir botons de fórmules ----------------
@@ -1240,67 +1275,4 @@ async function recalculateActivities() {
       });
     }
   }
-}
-
-//--------------------------------------------------
-
-async function applyRoundingAsync(studentId, roundingActivityId) {
-  if (!currentClassId) return 0;
-
-  const studentDoc = await db.collection('alumnes').doc(studentId).get();
-  const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
-
-  const actDoc = await db.collection('activitats').doc(roundingActivityId).get();
-  if (!actDoc.exists) return 0;
-  const actData = actDoc.data();
-
-  if (actData.calcType !== 'rounding') return 0;
-
-  const multiplier = Number(actData.formula) || 1;
-  const refActivityName = actData.refActivityName || '';
-
-  let val = 0;
-  // Trobar activitat de referència
-  for (const aid of classActivities) {
-    const aDoc = await db.collection('activitats').doc(aid).get();
-    if (aDoc.exists && aDoc.data().nom === refActivityName) {
-      val = Number(notes[aid] || 0);
-    }
-  }
-
-  // Aplicar arrodoniment
-  if (multiplier === 1) val = Math.round(val);
-  else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
-
-  // Guardar a Firestore
-  await db.collection('alumnes').doc(studentId).update({
-    [`notes.${roundingActivityId}`]: val
-  });
-
-  return val;
-}
-
-//-----------------------------
-
-async function recalculateRoundingActivities() {
-  if (!currentClassId) return;
-
-  const classDoc = await db.collection('classes').doc(currentClassId).get();
-  if (!classDoc.exists) return;
-  const calcActs = classDoc.data().calculatedActivities || {};
-
-  // Iterar per cada alumne
-  for (const studentId of classStudents) {
-    for (const actId of classActivities) {
-      const actDoc = await db.collection('activitats').doc(actId).get();
-      if (!actDoc.exists) continue;
-      const actData = actDoc.data();
-
-      if (actData.calcType === 'rounding' && calcActs[actId]) {
-        await applyRoundingAsync(studentId, actId);
-      }
-    }
-  }
-
-  renderNotesGrid(); // Re-renderitzar
 }
