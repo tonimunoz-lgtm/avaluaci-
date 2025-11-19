@@ -20,6 +20,13 @@ let classStudents = [];
 let classActivities = [];
 let deleteMode = false;
 let currentCalcActivityId = null; // Activitat actual per fer càlculs
+// --- Model de dades: llista d'alumnes i activitats ---
+let tableData = [
+  // exemple inicial
+  { student: 'Anna', activity1: 5, activity2: 7, formula: null },
+  { student: 'Pere', activity1: 6, activity2: 8, formula: null },
+];
+
 
 /* Elements */
 const loginScreen = document.getElementById('loginScreen');
@@ -114,6 +121,73 @@ function showApp() {
   loginScreen.classList.add('hidden');
   appRoot.classList.remove('hidden');
 }
+
+function recalcFormulas() {
+  tableData.forEach(row => {
+    // exemple: mitjana d'activitats 1 i 2 amb redondeig
+    row.formula = Math.round((row.activity1 + row.activity2) / 2);
+  });
+}
+
+function renderTable() {
+  const tbody = document.querySelector('#notesTable tbody');
+  tbody.innerHTML = ''; // netegem contingut actual
+
+  tableData.forEach((row, i) => {
+    const tr = document.createElement('tr');
+
+    // Nom alumne
+    const tdName = document.createElement('td');
+    tdName.textContent = row.student;
+    tr.appendChild(tdName);
+
+    // Activitat 1
+    const tdAct1 = document.createElement('td');
+    const input1 = document.createElement('input');
+    input1.type = 'number';
+    input1.value = row.activity1;
+    input1.classList.add('table-input');
+    input1.dataset.row = i;
+    input1.dataset.col = 'activity1';
+    tdAct1.appendChild(input1);
+    tr.appendChild(tdAct1);
+
+    // Activitat 2
+    const tdAct2 = document.createElement('td');
+    const input2 = document.createElement('input');
+    input2.type = 'number';
+    input2.value = row.activity2;
+    input2.classList.add('table-input');
+    input2.dataset.row = i;
+    input2.dataset.col = 'activity2';
+    tdAct2.appendChild(input2);
+    tr.appendChild(tdAct2);
+
+    // Fórmula / mitjana
+    const tdFormula = document.createElement('td');
+    tdFormula.textContent = row.formula ?? '';
+    tr.appendChild(tdFormula);
+
+    tbody.appendChild(tr);
+  });
+
+  attachInputListeners();
+}
+
+function attachInputListeners() {
+  document.querySelectorAll('.table-input').forEach(input => {
+    input.oninput = (e) => {
+      const row = e.target.dataset.row;
+      const col = e.target.dataset.col;
+      tableData[row][col] = Number(e.target.value);
+      recalcFormulas();
+      renderTable();
+    };
+  });
+}
+
+
+
 
 /* ---------- AUTH ---------- */
 btnLogin.addEventListener('click', () => {
@@ -1179,3 +1253,6 @@ if (closeBtn) {
     container.classList.remove('mobile-open');
   });
 }
+
+recalcFormulas();
+renderTable();
