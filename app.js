@@ -1220,59 +1220,68 @@ if (closeBtn) {
 //------------recalciular formules-----------
 // ---------------- Recalcular activitats calculades per tots els alumnes ----------------
 async function recalculateActivities() {
-  for (const aid of classActivities) {
-    const actDoc = await db.collection('activitats').doc(aid).get();
-    if (!actDoc.exists) continue;
-    const actData = actDoc.data();
+  if (!currentClassId) return;
 
-    for (const studentId in notes) {
-      let result = notes[studentId][aid] || 0;
+  const classDocSnap = await db.collection('classes').doc(currentClassId).get();
+  if (!classDocSnap.exists) return;
+  const classData = classDocSnap.data();
+  const calcActs = classData.calculatedActivities || {};
 
-      // --- Fórmules ---
+  // Precarreguem totes les activitats de la classe per no fer crida repetida
+  const actDocsMap = {};
+  await Promise.all(classActivities.map(async aid => {
+    const adoc = await db.collection('activitats').doc(aid).get();
+    if(adoc.exists) actDocsMap[aid] = adoc.data();
+  }));
+
+  for (const studentId of classStudents) {
+    const studentDoc = await db.collection('alumnes').doc(studentId).get();
+    const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
+
+    for (const actId of classActivities) {
+      if (!calcActs[actId]) continue; // només recalcularem activitats marcades
+
+      const actData = actDocsMap[actId];
+      if (!actData) continue;
+
+      let result = 0;
+
       if (actData.calcType === 'formula' && actData.formula) {
-        try {
-          // Exemple: la fórmula pot ser "A1 + A2"
-          // Substituïm els noms d'activitat per valors reals
-          let formulaStr = actData.formula;
-          for (const refAid of classActivities) {
-            const refName = (await db.collection('activitats').doc(refAid).get()).data()?.nom;
-            const val = Number(notes[studentId][refAid] || 0);
-            formulaStr = formulaStr.replaceAll(refName, val);
-          }
-          result = eval(formulaStr); // <-- seguretat: només per entorn controlat!
-        } catch (e) {
-          result = 0;
+        // Reutilitzem la lògica que ja funcionava amb fórmules
+        let formulaEval = actData.formula;
+        for (const aid of classActivities) {
+          const aData = actDocsMap[aid];
+          const aName = aData ? aData.nom : '';
+          const val = Number(notes[aid] || 0);
+          const regex = new RegExp(aName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+          formulaEval = formulaEval.replace(regex, val);
         }
-      }
-
-      // --- Arrodoniments ---
+        try { result = Function('"use strict"; return (' + formulaEval + ')')(); }
+        catch(e){ result = 0; }
+      } 
       else if (actData.calcType === 'rounding') {
+        // Arrodoniment exactament com a la modal
         const multiplier = Number(actData.formula) || 1;
-        const refActivityName = actData.refActivityName || '';
+        const refName = actData.refActivityName || '';
         let val = 0;
 
-        // Trobar la nota de l'activitat de referència
-        for (const refAid of classActivities) {
-          const aDoc = await db.collection('activitats').doc(refAid).get();
-          if (aDoc.exists && aDoc.data().nom === refActivityName) {
-            val = Number(notes[studentId][refAid] || 0);
-            break;
+        for (const aid of classActivities) {
+          const aData = actDocsMap[aid];
+          if (aData && aData.nom === refName) {
+            val = Number(notes[aid] || 0);
           }
         }
 
-        // Aplicar redondeig segons el multiplier
         if (multiplier === 1) val = Math.round(val);
         else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
-        else val = val; // per si s'afegeix un altre tipus
 
         result = val;
       }
 
-      // Guardar el resultat final
-      notes[studentId][aid] = result;
+      // Guardar nota recalculada
+      await db.collection('alumnes').doc(studentId).update({
+        [`notes.${actId}`]: result
+      });
     }
   }
-
-  // Opcional: refrescar UI
-  renderNotesTable();
 }
