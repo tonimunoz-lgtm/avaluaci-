@@ -1185,76 +1185,80 @@ if (closeBtn) {
 }
 
 async function recalculateActivities() {
-  if (!currentClassId) return;
-  if (!classStudents.length || !classActivities.length) return;
+  if (!currentClassId || !classStudents.length || !classActivities.length) return;
 
   const classDoc = await db.collection('classes').doc(currentClassId).get();
   if (!classDoc.exists) return;
   const calculatedActs = classDoc.data().calculatedActivities || {};
 
-  for (const aid of classActivities) {
-    if (!calculatedActs[aid]) continue; // només activitats calculades
+  // Mapa activitats {nom: id} per evitar múltiples crides a Firestore
+  const actsDocs = await Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()));
+  const actNameToId = {};
+  actsDocs.forEach(doc => {
+    if (doc.exists) actNameToId[doc.data().nom] = doc.id;
+  });
 
-    // Obtenim activitat
+  for (const aid of classActivities) {
+    if (!calculatedActs[aid]) continue;
+
     const actDoc = await db.collection('activitats').doc(aid).get();
     if (!actDoc.exists) continue;
     const actData = actDoc.data();
 
     if (actData.calcType === 'numeric') {
       const val = Number(actData.formula) || 0;
-      classStudents.forEach(sid => saveNote(sid, aid, val));
-
-    } else if (actData.calcType === 'formula') {
+      // Batch update
+      const batch = db.batch();
+      classStudents.forEach(sid => {
+        const ref = db.collection('alumnes').doc(sid);
+        batch.update(ref, { [`notes.${aid}`]: val });
+      });
+      await batch.commit();
+    } 
+    else if (actData.calcType === 'formula') {
       const formula = actData.formula || '';
       if (!formula) continue;
 
       for (const sid of classStudents) {
         try {
           const result = await evalFormulaAsync(formula, sid);
-          saveNote(sid, aid, result);
-        } catch (e) {
-          console.error('Error recalculant fórmula', formula, e);
-        }
+          await db.collection('alumnes').doc(sid).update({ [`notes.${aid}`]: result });
+        } catch(e) { console.error(e); }
       }
-
-    } else if (actData.calcType === 'rounding') {
+    } 
+    else if (actData.calcType === 'rounding') {
       const formula = actData.formula || '';
       if (!formula) continue;
 
       // Separar nom activitat i multiplicador
       let selectedActivityName = '';
       let multiplier = 1;
-
-      for (const otherAid of classActivities) {
-        const otherDoc = await db.collection('activitats').doc(otherAid).get();
-        const otherName = otherDoc.exists ? otherDoc.data().nom : '';
-        if (formula.startsWith(otherName)) {
-          selectedActivityName = otherName;
-          multiplier = Number(formula.slice(otherName.length)) || 1;
-          break;
+      Object.keys(actNameToId).forEach(name => {
+        if (formula.startsWith(name)) {
+          selectedActivityName = name;
+          multiplier = Number(formula.slice(name.length)) || 1;
         }
-      }
+      });
 
+      const refAid = actNameToId[selectedActivityName];
+      if (!refAid) continue;
+
+      const batch = db.batch();
       for (const sid of classStudents) {
         const studentDoc = await db.collection('alumnes').doc(sid).get();
         const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
-        let val = 0;
-        for (const otherAid of classActivities) {
-          const otherDoc = await db.collection('activitats').doc(otherAid).get();
-          const otherName = otherDoc.exists ? otherDoc.data().nom : '';
-          if (otherName === selectedActivityName) {
-            val = Number(notes[otherAid]) || 0;
-            break;
-          }
-        }
+        let val = Number(notes[refAid]) || 0;
+
         if (multiplier === 1) val = Math.round(val);
         else if (multiplier === 0.5) val = Math.round(val*2)/2;
-        saveNote(sid, aid, val);
+
+        batch.update(db.collection('alumnes').doc(sid), { [`notes.${aid}`]: val });
       }
+      await batch.commit();
     }
   }
 
+  // Re-renderitzar un cop ja totes les notes estan guardades
   renderNotesGrid();
   alert('Recalcul complet!');
 }
-
