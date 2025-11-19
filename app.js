@@ -1190,86 +1190,101 @@ async function recalculateActivities() {
   if (!currentClassId) return;
   if (!classStudents.length || !classActivities.length) return;
 
-  const classDoc = await db.collection('classes').doc(currentClassId).get();
-  if (!classDoc.exists) return;
-  const calculatedActs = classDoc.data().calculatedActivities || {};
+  try {
+    const classDoc = await db.collection('classes').doc(currentClassId).get();
+    if (!classDoc.exists) return;
+    const calculatedActs = classDoc.data().calculatedActivities || {};
 
-  // Carregar totes les notes dels alumnes en memòria
-  const studentsData = {};
-  await Promise.all(classStudents.map(async sid => {
-    const doc = await db.collection('alumnes').doc(sid).get();
-    studentsData[sid] = doc.exists ? doc.data().notes || {} : {};
-  }));
+    // Carreguem totes les notes dels alumnes una sola vegada
+    const studentDocs = await Promise.all(classStudents.map(sid => db.collection('alumnes').doc(sid).get()));
+    const studentsNotes = {};
+    studentDocs.forEach(doc => {
+      studentsNotes[doc.id] = doc.exists ? doc.data().notes || {} : {};
+    });
 
-  // Per cada activitat calculada
-  for (const aid of classActivities) {
-    if (!calculatedActs[aid]) continue; // només activitats calculades
+    // Carreguem totes les activitats una sola vegada
+    const activityDocs = await Promise.all(classActivities.map(aid => db.collection('activitats').doc(aid).get()));
+    const activitiesMap = {};
+    activityDocs.forEach(doc => {
+      if (doc.exists) activitiesMap[doc.id] = doc.data();
+    });
 
-    const actDoc = await db.collection('activitats').doc(aid).get();
-    if (!actDoc.exists) continue;
-    const actData = actDoc.data();
+    // Creem un batch per actualitzar totes les notes a Firestore
+    const batch = db.batch();
 
-    if (actData.calcType === 'numeric') {
-      const val = Number(actData.formula) || 0;
-      for (const sid of classStudents) studentsData[sid][aid] = val;
-
-    } else if (actData.calcType === 'formula') {
-      const formula = actData.formula || '';
-      if (!formula) continue;
-
-      for (const sid of classStudents) {
-        const result = await evalFormulaInMemory(formula, studentsData[sid]);
-        studentsData[sid][aid] = result;
-      }
-
-    } else if (actData.calcType === 'rounding') {
-      const formula = actData.formula || '';
-      if (!formula) continue;
-
-      let selectedActivityName = '';
-      let multiplier = 1;
-      for (const otherAid of classActivities) {
-        const otherDoc = await db.collection('activitats').doc(otherAid).get();
-        const otherName = otherDoc.exists ? otherDoc.data().nom : '';
-        if (formula.startsWith(otherName)) {
-          selectedActivityName = otherName;
-          multiplier = Number(formula.slice(otherName.length)) || 1;
-          break;
-        }
-      }
+    for (const aid of classActivities) {
+      if (!calculatedActs[aid]) continue; // Només activitats calculades
+      const actData = activitiesMap[aid];
+      if (!actData) continue;
 
       for (const sid of classStudents) {
-        let val = 0;
-        for (const otherAid of classActivities) {
-          const otherDoc = await db.collection('activitats').doc(otherAid).get();
-          const otherName = otherDoc.exists ? otherDoc.data().nom : '';
-          if (otherName === selectedActivityName) val = Number(studentsData[sid][otherAid]) || 0;
+        let newVal = 0;
+
+        if (actData.calcType === 'numeric') {
+          newVal = Number(actData.formula) || 0;
+
+        } else if (actData.calcType === 'formula') {
+          const formula = actData.formula || '';
+          if (!formula) continue;
+          newVal = await evalFormulaAsyncForRecalc(formula, sid, studentsNotes, activitiesMap);
+
+        } else if (actData.calcType === 'rounding') {
+          const formula = actData.formula || '';
+          if (!formula) continue;
+
+          let selectedActivityName = '';
+          let multiplier = 1;
+
+          for (const otherAid of classActivities) {
+            const otherAct = activitiesMap[otherAid];
+            if (formula.startsWith(otherAct.nom)) {
+              selectedActivityName = otherAct.nom;
+              multiplier = Number(formula.slice(selectedActivityName.length)) || 1;
+              break;
+            }
+          }
+
+          let baseVal = 0;
+          for (const otherAid of classActivities) {
+            const otherAct = activitiesMap[otherAid];
+            if (otherAct.nom === selectedActivityName) {
+              baseVal = Number(studentsNotes[sid][otherAid] || 0);
+              break;
+            }
+          }
+
+          newVal = multiplier === 1 ? Math.round(baseVal) : Math.round(baseVal * 2) / 2;
         }
-        if (multiplier === 1) val = Math.round(val);
-        else if (multiplier === 0.5) val = Math.round(val*2)/2;
-        studentsData[sid][aid] = val;
+
+        batch.update(db.collection('alumnes').doc(sid), { [`notes.${aid}`]: newVal });
       }
     }
-  }
 
-  // Un cop calculades totes, fer update a Firestore
-  const batch = db.batch();
-  for (const sid of classStudents) {
-    const ref = db.collection('alumnes').doc(sid);
-    batch.update(ref, { notes: studentsData[sid] });
+    await batch.commit();
+    renderNotesGrid();
+    alert('Recalcul complet!');
+  } catch (e) {
+    console.error('Error recalculant activitats', e);
+    alert('Error recalculant activitats: ' + e.message);
   }
-  await batch.commit();
-
-  renderNotesGrid();
-  alert('Recalcul complet!');
 }
 
-// Funció auxiliar per fórmules en memòria
-function evalFormulaInMemory(formula, notesMap) {
+// Funció modificada per a recalcular fórmules sense agafar zeros
+async function evalFormulaAsyncForRecalc(formula, studentId, studentsNotes, activitiesMap) {
   let evalStr = formula;
-  for (const [aid, val] of Object.entries(notesMap)) {
-    const regex = new RegExp(aid, 'g'); // o utilitza el nom de l’activitat si vols
+  for (const aid in activitiesMap) {
+    const actName = activitiesMap[aid].nom || '';
+    if (!actName) continue;
+    const val = Number(studentsNotes[studentId][aid] || 0);
+
+    const regex = new RegExp(actName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
     evalStr = evalStr.replace(regex, val);
   }
-  return Function('"use strict"; return (' + evalStr + ')')();
+
+  try {
+    return Function('"use strict"; return (' + evalStr + ')')();
+  } catch (e) {
+    console.error('Error evaluating formula:', formula, e);
+    return 0;
+  }
 }
