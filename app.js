@@ -1276,3 +1276,66 @@ async function recalculateActivities() {
     }
   }
 }
+
+//--------------------------------------------------
+
+async function applyRoundingAsync(studentId, roundingActivityId) {
+  if (!currentClassId) return 0;
+
+  const studentDoc = await db.collection('alumnes').doc(studentId).get();
+  const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
+
+  const actDoc = await db.collection('activitats').doc(roundingActivityId).get();
+  if (!actDoc.exists) return 0;
+  const actData = actDoc.data();
+
+  if (actData.calcType !== 'rounding') return 0;
+
+  const multiplier = Number(actData.formula) || 1;
+  const refActivityName = actData.refActivityName || '';
+
+  let val = 0;
+  // Trobar activitat de referència
+  for (const aid of classActivities) {
+    const aDoc = await db.collection('activitats').doc(aid).get();
+    if (aDoc.exists && aDoc.data().nom === refActivityName) {
+      val = Number(notes[aid] || 0);
+    }
+  }
+
+  // Aplicar arrodoniment
+  if (multiplier === 1) val = Math.round(val);
+  else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
+
+  // Guardar a Firestore
+  await db.collection('alumnes').doc(studentId).update({
+    [`notes.${roundingActivityId}`]: val
+  });
+
+  return val;
+}
+
+//-----------------------------
+
+async function recalculateRoundingActivities() {
+  if (!currentClassId) return;
+
+  const classDoc = await db.collection('classes').doc(currentClassId).get();
+  if (!classDoc.exists) return;
+  const calcActs = classDoc.data().calculatedActivities || {};
+
+  // Iterar per cada alumne
+  for (const studentId of classStudents) {
+    for (const actId of classActivities) {
+      const actDoc = await db.collection('activitats').doc(actId).get();
+      if (!actDoc.exists) continue;
+      const actData = actDoc.data();
+
+      if (actData.calcType === 'rounding' && calcActs[actId]) {
+        await applyRoundingAsync(studentId, actId);
+      }
+    }
+  }
+
+  renderNotesGrid(); // Re-renderitzar
+}
