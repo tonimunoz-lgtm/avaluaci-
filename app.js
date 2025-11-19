@@ -1219,68 +1219,60 @@ if (closeBtn) {
 }
 //------------recalciular formules-----------
 // ---------------- Recalcular activitats calculades per tots els alumnes ----------------
-// Exemple d'activitats
-const activities = [
-    { name: 'nota1', type: 'input', value: 0 },
-    { name: 'nota2', type: 'input', value: 0 },
-    { name: 'total', type: 'formula', formula: 'nota1 + nota2' },
-    { name: 'totalArrodonit', type: 'rounding', refActivity: 'total' }
-];
+async function recalculateActivities() {
+  if (!currentClassId) return;
 
-// Objecte on guardarem els valors actuals
-let activityValues = {};
+  for (const studentId of classStudents) {
+    // Carregar notes de l'alumne
+    const studentDoc = await db.collection('alumnes').doc(studentId).get();
+    const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
 
-// Funció que recalcula tot
-function recalculateActivities() {
-    // Primer, agafem els valors d'entrada
-    activities.forEach(activity => {
-        if (activity.type === 'input') {
-            activityValues[activity.name] = activity.value;
+    for (const actId of classActivities) {
+      // Carregar informació de l'activitat
+      const actDoc = await db.collection('activitats').doc(actId).get();
+      if (!actDoc.exists) continue;
+      const actData = actDoc.data();
+
+      // Només recalcularem si està marcada com a calculada
+      const classDoc = await db.collection('classes').doc(currentClassId).get();
+      const calcActs = classDoc.exists ? classDoc.data().calculatedActivities || {} : {};
+      if (!calcActs[actId]) continue;
+
+      let result = 0;
+
+      if (actData.calcType === 'formula' && actData.formula) {
+        // Substituir noms d'activitats per notes
+        let formulaEval = actData.formula;
+        for (const aid of classActivities) {
+          const aDoc = await db.collection('activitats').doc(aid).get();
+          const aName = aDoc.exists ? aDoc.data().nom : '';
+          const val = Number(notes[aid] || 0);
+          const regex = new RegExp(aName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+          formulaEval = formulaEval.replace(regex, val);
         }
-    });
-
-    // Recalculem les fórmules
-    activities.forEach(activity => {
-        if (activity.type === 'formula') {
-            try {
-                // Fem que eval vegi les variables dins de activityValues
-                activityValues[activity.name] = (function(env){
-                    with(env) { 
-                        return eval(activity.formula); 
-                    }
-                })(activityValues);
-            } catch(e) {
-                activityValues[activity.name] = 0;
-                console.error(`Error a la fórmula ${activity.name}:`, e);
-            }
+        try { result = Function('"use strict"; return (' + formulaEval + ')')(); }
+        catch(e){ result = 0; }
+      } else if (actData.calcType === 'rounding' && actData.formula) {
+        // Redondeig segons multiplicador
+        const multiplier = Number(actData.formula) || 1;
+        const refActivityName = actData.refActivityName || '';
+        let val = 0;
+        // Trobar l'activitat de referència
+        for (const aid of classActivities) {
+          const aDoc = await db.collection('activitats').doc(aid).get();
+          if (aDoc.exists && aDoc.data().nom === refActivityName) {
+            val = Number(notes[aid] || 0);
+          }
         }
-    });
+        if (multiplier === 1) val = Math.round(val);
+        else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
+        result = val;
+      }
 
-    // Recalculem els arrodoniments
-    activities.forEach(activity => {
-        if (activity.type === 'rounding') {
-            const ref = activity.refActivity;
-            if (activityValues.hasOwnProperty(ref)) {
-                activityValues[activity.name] = Math.round(activityValues[ref]);
-            } else {
-                activityValues[activity.name] = 0;
-            }
-        }
-    });
-
-    // Mostrem el resultat a consola (o actualitzem la UI)
-    console.log(activityValues);
-}
-
-// Exemple d'actualització d'entrada
-function updateInput(name, newValue) {
-    const activity = activities.find(a => a.name === name);
-    if (activity && activity.type === 'input') {
-        activity.value = newValue;
-        recalculateActivities(); // recalcul immediat
+      // Guardar nota recalculada
+      await db.collection('alumnes').doc(studentId).update({
+        [`notes.${actId}`]: result
+      });
     }
+  }
 }
-
-// Prova
-updateInput('nota1', 7.3);
-updateInput('nota2', 5.6);
