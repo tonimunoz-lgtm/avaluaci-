@@ -22,15 +22,6 @@ let deleteMode = false;
 let currentCalcActivityId = null; // Activitat actual per fer càlculs
 
 /* Elements */
-
-// ---------------- FÓRMULES PERSISTENTS ----------------
-let columnFormulas = {};  // Clau = id de columna, valor = { formula: 'sum', decimals: 2 }
-
-// Carregar fórmules de localStorage si existeixen
-const savedFormulas = localStorage.getItem('columnFormulas');
-if (savedFormulas) columnFormulas = JSON.parse(savedFormulas);
-
-
 const loginScreen = document.getElementById('loginScreen');
 const appRoot = document.getElementById('appRoot');
 const usuariNom = document.getElementById('usuariNom');
@@ -510,7 +501,7 @@ function renderStudentsList(){
   });
 }
 /* ---------------- Notes Grid amb menú activitats ---------------- */
-function renderNotesGrid() {
+function renderNotesGrid(){
   notesThead.innerHTML = '';
   notesTbody.innerHTML = '';
   notesTfoot.innerHTML = '';
@@ -518,17 +509,17 @@ function renderNotesGrid() {
   const headRow = document.createElement('tr');
   headRow.appendChild(th('Alumne'));
 
-  db.collection('classes').doc(currentClassId).get().then(doc => {
-    if (!doc.exists) return;
+  db.collection('classes').doc(currentClassId).get().then(doc=>{
+    if(!doc.exists) return;
     const classData = doc.data();
     const calculatedActs = classData.calculatedActivities || {};
 
     Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()))
-      .then(actDocs => {
-        actDocs.forEach(adoc => {
+      .then(actDocs=>{
+        actDocs.forEach(adoc=>{
           const id = adoc.id;
-          const name = adoc.exists ? (adoc.data().nom || 'Sense nom') : 'Desconegut';
-
+          const name = adoc.exists ? (adoc.data().nom||'Sense nom') : 'Desconegut';
+          
           const thEl = th('');
           const container = document.createElement('div');
           container.className = 'flex items-center justify-between';
@@ -546,34 +537,39 @@ function renderNotesGrid() {
               <button class="calc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Càlcul</button>
             </div>
           `;
-
+          
           container.appendChild(spanName);
           container.appendChild(menuDiv);
           thEl.appendChild(container);
           headRow.appendChild(thEl);
 
+          /* 🔴 NOVETAT: CAPÇALERA DE COLOR SI L’ACTIVITAT TÉ FÓRMULA / ARRODONIMENT */
           if (calculatedActs[id]) {
-            thEl.style.backgroundColor = "#fecaca";
+            thEl.style.backgroundColor = "#fecaca";   // vermell suau
             thEl.style.borderBottom = "3px solid #dc2626";
             thEl.style.color = "black";
           }
 
+          // Menú — igual que abans
           const menuBtn = menuDiv.querySelector('.menu-btn');
           const menu = menuDiv.querySelector('.menu');
-          menuBtn.addEventListener('click', e => {
+
+          menuBtn.addEventListener('click', e=>{
             e.stopPropagation();
-            document.querySelectorAll('.menu').forEach(m => m.classList.add('hidden'));
+            document.querySelectorAll('.menu').forEach(m=> m.classList.add('hidden'));
             menu.classList.toggle('hidden');
           });
 
-          menuDiv.querySelector('.edit-btn').addEventListener('click', () => {
+          menuDiv.querySelector('.edit-btn').addEventListener('click', ()=>{
             const newName = prompt('Nou nom activitat:', name);
-            if (!newName || newName.trim() === name) return;
-            db.collection('activitats').doc(id).update({ nom: newName.trim() }).then(() => loadClassData());
+            if(!newName || newName.trim()===name) return;
+            db.collection('activitats').doc(id).update({ nom: newName.trim() })
+              .then(()=> loadClassData());
           });
 
-          menuDiv.querySelector('.delete-btn').addEventListener('click', () => removeActivity(id));
-          menuDiv.querySelector('.calc-btn').addEventListener('click', () => openCalcModal(id));
+          menuDiv.querySelector('.delete-btn').addEventListener('click', ()=> removeActivity(id));
+          menuDiv.querySelector('.calc-btn').addEventListener('click', ()=> openCalcModal(id));
+
         });
 
         headRow.appendChild(th('Mitjana', 'text-right'));
@@ -581,18 +577,17 @@ function renderNotesGrid() {
 
         enableActivityDrag();
 
-        if (classStudents.length === 0) {
-          notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivities.length + 2}">No hi ha alumnes</td></tr>`;
+        if(classStudents.length===0){
+          notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivities.length+2}">No hi ha alumnes</td></tr>`;
           renderAverages();
-          applyColumnFormulas();
           return;
         }
 
         Promise.all(classStudents.map(id => db.collection('alumnes').doc(id).get()))
-          .then(studentDocs => {
-            studentDocs.forEach(sdoc => {
+          .then(studentDocs=>{
+            studentDocs.forEach(sdoc=>{
               const sid = sdoc.id;
-              const sdata = sdoc.exists ? sdoc.data() : { nom: 'Desconegut', notes: {} };
+              const sdata = sdoc.exists ? sdoc.data() : { nom:'Desconegut', notes:{} };
               const tr = document.createElement('tr');
 
               const tdName = document.createElement('td');
@@ -600,35 +595,31 @@ function renderNotesGrid() {
               tdName.textContent = sdata.nom;
               tr.appendChild(tdName);
 
-              actDocs.forEach((actDoc, actIndex) => {
+              actDocs.forEach((actDoc, actIndex)=>{
                 const aid = actDoc.id;
-                const val = (sdata.notes && sdata.notes[aid] !== undefined) ? sdata.notes[aid] : '';
+                const val = (sdata.notes && sdata.notes[aid]!==undefined) ? sdata.notes[aid] : '';
 
                 const td = document.createElement('td');
                 td.className = 'border px-2 py-1';
-                td.dataset.col = aid;
-                if (calculatedActs[aid]) td.dataset.result = 'true';
-                if (calculatedActs[aid]) td.style.backgroundColor = "#ffe4e6";
+
+                /* 🔴 NOVETAT: COLOR DE COLUMNA CALCULADA */
+                if (calculatedActs[aid]) {
+                  td.style.backgroundColor = "#ffe4e6";  // rosa suau
+                }
 
                 const input = document.createElement('input');
-                input.type = 'number';
-                input.min = 0;
-                input.max = 10;
-                input.value = val;
-                input.className = 'table-input text-center rounded border p-1';
+                input.type='number';
+                input.min=0;
+                input.max=10;
+                input.value=val;
+                input.className='table-input text-center rounded border p-1';
 
                 if (calculatedActs[aid]) {
                   input.disabled = true;
-                  input.style.backgroundColor = "#fca5a5";
+                  input.style.backgroundColor = "#fca5a5"; // vermell cel·la calculada
                 } else {
-                  input.addEventListener('change', e => saveNote(sid, aid, e.target.value));
-                  input.addEventListener('input', () => {
-                    applyCellColor(input);
-                    applyColumnFormulas(); // 🔹 recalcul immediat
-                    // recalcul de la mitjana per fila
-                    const rowAvg = computeStudentAverageText(sdata);
-                    tr.querySelector('td:last-child').textContent = rowAvg;
-                  });
+                  input.addEventListener('change', e=> saveNote(sid, aid, e.target.value));
+                  input.addEventListener('input', ()=> applyCellColor(input));
                   applyCellColor(input);
                 }
 
@@ -645,67 +636,10 @@ function renderNotesGrid() {
             });
 
             renderAverages();
-            applyColumnFormulas();
           });
       });
   });
 }
-
-
-// Funció de recalcul de columnes i mitjanes
-function applyColumnFormulas() {
-  const rows = Array.from(notesTbody.querySelectorAll('tr'));
-  if(rows.length === 0) return;
-
-  // Itera per cada columna (excepte nom i mitjana)
-  const colHeaders = Array.from(notesThead.querySelectorAll('th')).slice(1, -1);
-
-  colHeaders.forEach(thEl => {
-    const aid = thEl.querySelector('input, div')?.dataset?.col || thEl.dataset?.col;
-    if(!aid) return;
-
-    const colCells = rows.map(tr => tr.querySelector(`td[data-col="${aid}"]`)).filter(Boolean);
-
-    // Detecta si la columna és calculada
-    const isCalculated = colCells.some(td => td.dataset.result === 'true');
-
-    if(isCalculated){
-      // Recalcular columna (fórmula / redondeig)
-      let total = 0;
-      let count = 0;
-
-      colCells.forEach(td => {
-        const input = td.querySelector('input');
-        if(input && !input.disabled && input.value !== ''){
-          total += parseFloat(input.value);
-          count++;
-        }
-      });
-
-      const result = count > 0 ? Math.round((total / count) * 100) / 100 : 0;
-
-      colCells.forEach(td => {
-        if(td.dataset.result === 'true'){
-          const input = td.querySelector('input');
-          if(input) input.value = result;
-          applyCellColor(input);
-        }
-      });
-    }
-  });
-
-  // Recalcular mitjana per fila com abans
-  rows.forEach(tr => {
-    const inputs = Array.from(tr.querySelectorAll('td input')).filter(input => input.value !== '');
-    const sum = inputs.reduce((acc, i) => acc + parseFloat(i.value), 0);
-    const avg = inputs.length > 0 ? Math.round((sum / inputs.length) * 100) / 100 : 0;
-    tr.querySelector('td:last-child').textContent = avg;
-  });
-
-  // Actualitzar mitjana per columna (notesTfoot)
-  renderAverages();
-}
-
 
 
 
@@ -1245,4 +1179,3 @@ if (closeBtn) {
     container.classList.remove('mobile-open');
   });
 }
-
