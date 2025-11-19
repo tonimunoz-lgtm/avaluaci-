@@ -519,7 +519,7 @@ function renderNotesGrid() {
   headRow.appendChild(th('Alumne'));
 
   db.collection('classes').doc(currentClassId).get().then(doc => {
-    if(!doc.exists) return;
+    if (!doc.exists) return;
     const classData = doc.data();
     const calculatedActs = classData.calculatedActivities || {};
 
@@ -546,13 +546,13 @@ function renderNotesGrid() {
               <button class="calc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Càlcul</button>
             </div>
           `;
-          
+
           container.appendChild(spanName);
           container.appendChild(menuDiv);
           thEl.appendChild(container);
           headRow.appendChild(thEl);
 
-          if(calculatedActs[id]) {
+          if (calculatedActs[id]) {
             thEl.style.backgroundColor = "#fecaca";
             thEl.style.borderBottom = "3px solid #dc2626";
             thEl.style.color = "black";
@@ -565,11 +565,13 @@ function renderNotesGrid() {
             document.querySelectorAll('.menu').forEach(m => m.classList.add('hidden'));
             menu.classList.toggle('hidden');
           });
+
           menuDiv.querySelector('.edit-btn').addEventListener('click', () => {
             const newName = prompt('Nou nom activitat:', name);
-            if(!newName || newName.trim() === name) return;
+            if (!newName || newName.trim() === name) return;
             db.collection('activitats').doc(id).update({ nom: newName.trim() }).then(() => loadClassData());
           });
+
           menuDiv.querySelector('.delete-btn').addEventListener('click', () => removeActivity(id));
           menuDiv.querySelector('.calc-btn').addEventListener('click', () => openCalcModal(id));
         });
@@ -579,7 +581,7 @@ function renderNotesGrid() {
 
         enableActivityDrag();
 
-        if(classStudents.length === 0){
+        if (classStudents.length === 0) {
           notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivities.length + 2}">No hi ha alumnes</td></tr>`;
           renderAverages();
           applyColumnFormulas();
@@ -590,7 +592,7 @@ function renderNotesGrid() {
           .then(studentDocs => {
             studentDocs.forEach(sdoc => {
               const sid = sdoc.id;
-              const sdata = sdoc.exists ? sdoc.data() : { nom:'Desconegut', notes:{} };
+              const sdata = sdoc.exists ? sdoc.data() : { nom: 'Desconegut', notes: {} };
               const tr = document.createElement('tr');
 
               const tdName = document.createElement('td');
@@ -598,15 +600,15 @@ function renderNotesGrid() {
               tdName.textContent = sdata.nom;
               tr.appendChild(tdName);
 
-              actDocs.forEach((actDoc) => {
+              actDocs.forEach((actDoc, actIndex) => {
                 const aid = actDoc.id;
                 const val = (sdata.notes && sdata.notes[aid] !== undefined) ? sdata.notes[aid] : '';
 
                 const td = document.createElement('td');
                 td.className = 'border px-2 py-1';
                 td.dataset.col = aid;
-                if(calculatedActs[aid]) td.dataset.result = 'true';
-                if(calculatedActs[aid]) td.style.backgroundColor = "#ffe4e6";
+                if (calculatedActs[aid]) td.dataset.result = 'true';
+                if (calculatedActs[aid]) td.style.backgroundColor = "#ffe4e6";
 
                 const input = document.createElement('input');
                 input.type = 'number';
@@ -615,14 +617,17 @@ function renderNotesGrid() {
                 input.value = val;
                 input.className = 'table-input text-center rounded border p-1';
 
-                if(calculatedActs[aid]) {
+                if (calculatedActs[aid]) {
                   input.disabled = true;
                   input.style.backgroundColor = "#fca5a5";
                 } else {
+                  input.addEventListener('change', e => saveNote(sid, aid, e.target.value));
                   input.addEventListener('input', () => {
-                    saveNote(sid, aid, input.value);
                     applyCellColor(input);
-                    applyColumnFormulas();  // recalcul en temps real
+                    applyColumnFormulas(); // 🔹 recalcul immediat
+                    // recalcul de la mitjana per fila
+                    const rowAvg = computeStudentAverageText(sdata);
+                    tr.querySelector('td:last-child').textContent = rowAvg;
                   });
                   applyCellColor(input);
                 }
@@ -639,32 +644,73 @@ function renderNotesGrid() {
               notesTbody.appendChild(tr);
             });
 
-            applyColumnFormulas(); // recalcul final de totes les fórmules
+            renderAverages();
+            applyColumnFormulas();
           });
       });
   });
 }
 
+
 // Funció de recalcul de columnes i mitjanes
 function applyColumnFormulas() {
-  const rows = notesTbody.querySelectorAll('tr');
-  rows.forEach(tr => {
-    let sum = 0;
-    let count = 0;
-    tr.querySelectorAll('td[data-col]').forEach(td => {
-      const input = td.querySelector('input');
-      if(input && input.value !== '') {
-        sum += parseFloat(input.value);
-        count++;
-      }
+  const calculatedActs = {}; // omple-ho amb les activitats calculades si tens la info global
+  if (typeof currentClassId !== 'undefined') {
+    db.collection('classes').doc(currentClassId).get().then(doc => {
+      if (!doc.exists) return;
+      const classData = doc.data();
+      const calcActs = classData.calculatedActivities || {};
+
+      Object.keys(calcActs).forEach(aid => {
+        // trobar totes les cel·les d'aquesta columna
+        const cells = Array.from(document.querySelectorAll(`td[data-col="${aid}"]`));
+
+        if (cells.length === 0) return;
+
+        let total = 0;
+        let count = 0;
+
+        cells.forEach(td => {
+          if (!td.dataset.result) {
+            const input = td.querySelector('input');
+            if (input && input.value !== '') {
+              total += parseFloat(input.value);
+              count++;
+            }
+          }
+        });
+
+        // Exemple: calcul simple = mitjana de la columna
+        const result = count > 0 ? total / count : 0;
+        const rounded = Math.round(result * 100) / 100;
+
+        // posar resultat a la primera cel·la marcada com a resultat
+        const resultTd = cells.find(td => td.dataset.result);
+        if (resultTd) {
+          const input = resultTd.querySelector('input');
+          if (input) {
+            input.value = rounded;
+            applyCellColor(input);
+          }
+        }
+      });
+
+      // recalcular mitjanes de fila
+      Array.from(notesTbody.querySelectorAll('tr')).forEach(tr => {
+        const sdata = { notes: {} };
+        const tds = tr.querySelectorAll('td');
+        for (let i = 1; i < tds.length - 1; i++) {
+          const td = tds[i];
+          const input = td.querySelector('input');
+          if (input && input.value !== '') {
+            sdata.notes[td.dataset.col] = parseFloat(input.value);
+          }
+        }
+        tr.querySelector('td:last-child').textContent = computeStudentAverageText(sdata);
+      });
     });
-    const avgTd = tr.querySelector('td:last-child');
-    avgTd.textContent = count > 0 ? (sum / count).toFixed(2) : '';
-  });
-
-  renderAverages(); // si tens mitjanes per columna
+  }
 }
-
 
 
 /* ---------------- Helpers Notes & Excel ---------------- */
