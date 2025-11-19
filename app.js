@@ -650,28 +650,37 @@ function renderNotesGrid() {
   });
 }
 
-// Funció per aplicar fórmules a les columnes calculades
+// ----------------Funció per aplicar fórmules a les columnes calculades
 function applyColumnFormulas() {
+  // Recorrem totes les columnes que tinguin fórmules
   for (let colId in columnFormulas) {
     const { formula, decimals } = columnFormulas[colId];
 
-    const resultCells = notesTbody.querySelectorAll(`td[data-col='${colId}'][data-result='true']`);
-    if (!resultCells.length) continue;
+    // Recorrem cada fila
+    notesTbody.querySelectorAll('tr').forEach(tr => {
+      const inputCells = Array.from(tr.querySelectorAll(`td[data-col='${colId}'] input:not([disabled])`));
+      const resultCells = Array.from(tr.querySelectorAll(`td[data-col='${colId}'][data-result='true']`));
 
-    const values = Array.from(notesTbody.querySelectorAll(`td[data-col='${colId}'] input`))
-                        .map(input => parseFloat(input.value) || 0);
+      if (!resultCells.length) return;
 
-    let result;
-    switch (formula) {
-      case 'sum': result = values.reduce((a, b) => a + b, 0); break;
-      case 'average': result = values.reduce((a, b) => a + b, 0) / values.length; break;
-      default: result = 0;
-    }
-    if (decimals !== undefined) result = Number(result.toFixed(decimals));
+      // Obtenim els valors dels inputs
+      const values = inputCells.map(input => parseFloat(input.value) || 0);
 
-    resultCells.forEach(td => td.textContent = result);
+      // Calculem el resultat segons la fórmula
+      let result;
+      if (formula === 'sum') result = values.reduce((a, b) => a + b, 0);
+      else if (formula === 'average') result = values.length ? (values.reduce((a, b) => a + b, 0) / values.length) : 0;
+      else result = 0;
+
+      // Redondeig
+      if (decimals !== undefined) result = Number(result.toFixed(decimals));
+
+      // Assignem el resultat a totes les cel·les calculades d’aquesta fila
+      resultCells.forEach(td => td.textContent = result);
+    });
   }
 }
+
 
 /* ---------------- Helpers Notes & Excel ---------------- */
 function th(txt, cls=''){
