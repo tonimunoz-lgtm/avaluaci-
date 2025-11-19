@@ -651,22 +651,27 @@ function th(txt, cls=''){
   return el;
 }
 
-async function saveNote(studentId, activityId, value) {
-  const num = value === '' ? null : Number(value);
-  const updateObj = {};
+async function saveNote(studentId, activityId, rawValue){
+    let v = parseFloat(rawValue);
+    if(isNaN(v)) v = null;
 
-  if(num === null || isNaN(num)) 
-      updateObj[`notes.${activityId}`] = firebase.firestore.FieldValue.delete();
-  else 
-      updateObj[`notes.${activityId}`] = num;
+    const fsKey = `notes.${activityId}`;
+    const updateObj = {};
 
-  await db.collection('alumnes').doc(studentId).update(updateObj);
+    if(v===null){
+        updateObj[fsKey] = firebase.firestore.FieldValue.delete();
+    } else {
+        updateObj[fsKey] = v;
+    }
 
-  // 🔥 NOVETAT: Recalcular activitats derivades
-  await recomputeCalculatedActivitiesForStudent(studentId);
+    await db.collection('alumnes').doc(studentId).update(updateObj);
 
-  renderNotesGrid();
+    // 🔥 FALTA AIXÒ:
+    await recalculateActivities();
+
+    renderNotesGrid();
 }
+
 
 
 function applyCellColor(inputEl){
