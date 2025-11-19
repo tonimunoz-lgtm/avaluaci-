@@ -728,12 +728,18 @@ function th(txt, cls=''){
 function saveNote(studentId, activityId, value){
   const num = value === '' ? null : Number(value);
   const updateObj = {};
-  if(num === null || isNaN(num)) updateObj[`notes.${activityId}`] = firebase.firestore.FieldValue.delete();
-  else updateObj[`notes.${activityId}`] = num;
-  db.collection('alumnes').doc(studentId).update(updateObj)
-    .then(()=> renderNotesGrid())
-    .catch(e=> console.error('Error saving note', e));
+
+  if(num === null || isNaN(num))
+    updateObj[`notes.${activityId}`] = firebase.firestore.FieldValue.delete();
+  else
+    updateObj[`notes.${activityId}`] = num;
+
+  return db.collection('alumnes')
+    .doc(studentId)
+    .update(updateObj)
+    .catch(e => console.error('Error saving note', e));
 }
+
 
 function applyCellColor(inputEl){
   const v = Number(inputEl.value);
