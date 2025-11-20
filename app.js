@@ -525,45 +525,11 @@ function renderNotesGrid() {
           const container = document.createElement('div');
           container.className = 'flex items-center justify-between';
 
-          // Nom activitat
           const spanName = document.createElement('span');
           spanName.textContent = name;
 
-          // Icona de refrescar
-          const refreshBtn = document.createElement('button');
-          refreshBtn.type = 'button';
-          refreshBtn.className = 'text-gray-500 hover:text-gray-700 dark:hover:text-white ml-2';
-          refreshBtn.innerHTML = '🔄';
-          refreshBtn.dataset.activityId = id;
-
-          refreshBtn.addEventListener('click', async e => {
-            e.stopPropagation();
-            if (!calculatedActs[id]) return alert('No hi ha càlcul guardat per aquesta activitat.');
-            const calcInfo = calculatedActs[id];
-            try {
-              switch(calcInfo.type){
-                case 'numeric':
-                  await applyNumeric(calcInfo.value);
-                  break;
-                case 'formula':
-                  await applyFormula(calcInfo.value);
-                  break;
-                case 'rounding':
-                  await applyRounding(calcInfo.value);
-                  break;
-                default:
-                  throw new Error('Tipus de càlcul desconegut');
-              }
-              renderNotesGrid();
-            } catch(err){
-              console.error(err);
-              alert('Error en tornar a aplicar el càlcul: ' + err.message);
-            }
-          });
-
-          // Menú tres puntets
           const menuDiv = document.createElement('div');
-          menuDiv.className = 'relative ml-2';
+          menuDiv.className = 'relative';
           menuDiv.innerHTML = `
             <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white tooltip">⋮</button>
             <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10">
@@ -573,10 +539,10 @@ function renderNotesGrid() {
             </div>
           `;
 
-          container.appendChild(spanName);      // Nom
-          container.appendChild(refreshBtn);    // Refrescar
-          container.appendChild(menuDiv);       // Menú tres puntets
+          container.appendChild(spanName);
+          container.appendChild(menuDiv);
           thEl.appendChild(container);
+          headRow.appendChild(thEl);
 
           // Capçalera color calculada
           if (calculatedActs[id]) {
@@ -585,7 +551,7 @@ function renderNotesGrid() {
             thEl.style.color = "black";
           }
 
-          // Menú funcionalitat
+          // Menú
           const menuBtn = menuDiv.querySelector('.menu-btn');
           const menu = menuDiv.querySelector('.menu');
           menuBtn.addEventListener('click', e => {
@@ -598,13 +564,12 @@ function renderNotesGrid() {
             const newName = prompt('Nou nom activitat:', name);
             if (!newName || newName.trim() === name) return;
             db.collection('activitats').doc(id).update({ nom: newName.trim() })
-              .then(() => renderNotesGrid());
+              .then(() => loadClassData());
           });
 
           menuDiv.querySelector('.delete-btn').addEventListener('click', () => removeActivity(id));
           menuDiv.querySelector('.calc-btn').addEventListener('click', () => openCalcModal(id));
 
-          headRow.appendChild(thEl);
         });
 
         headRow.appendChild(th('Mitjana', 'text-right'));
@@ -618,7 +583,7 @@ function renderNotesGrid() {
           return;
         }
 
-        // Cos taula alumnes
+        // Cos taula
         Promise.all(classStudents.map(id => db.collection('alumnes').doc(id).get()))
           .then(studentDocs => {
             studentDocs.forEach(sdoc => {
@@ -642,6 +607,10 @@ function renderNotesGrid() {
                   const td = document.createElement('td');
                   td.className = 'border px-2 py-1';
 
+                  if (calculatedActs[aid]) {
+                    td.style.backgroundColor = "#ffe4e6";
+                  }
+
                   const input = document.createElement('input');
                   input.type = 'number';
                   input.min = 0;
@@ -649,9 +618,15 @@ function renderNotesGrid() {
                   input.value = val;
                   input.dataset.activityId = aid;
                   input.className = 'table-input text-center rounded border p-1';
-                  input.addEventListener('change', e => saveNote(sid, aid, e.target.value));
-                  input.addEventListener('input', () => applyCellColor(input));
-                  applyCellColor(input);
+
+                  if (calculatedActs[aid]) {
+                    input.disabled = true;
+                    input.style.backgroundColor = "#fca5a5";
+                  } else {
+                    input.addEventListener('change', e => saveNote(sid, aid, e.target.value));
+                    input.addEventListener('input', () => applyCellColor(input));
+                    applyCellColor(input);
+                  }
 
                   td.appendChild(input);
                   tr.appendChild(td);
@@ -671,7 +646,6 @@ function renderNotesGrid() {
       });
   });
 }
-
 
 // Funció per actualitzar cel·les calculades sense recrear tota la taula
 function updateCalculatedCells() {
@@ -848,41 +822,30 @@ modalApplyCalcBtn.addEventListener('click', async () => {
   if (!currentCalcActivityId) return;
 
   try {
-    let calcValue;
     switch (calcTypeSelect.value) {
       case 'numeric':
-        calcValue = Number(numericField.value);
-        await applyNumeric(calcValue);
+        await applyNumeric(Number(numericField.value));
         break;
       case 'formula':
-        calcValue = formulaField.value;
-        await applyFormula(calcValue);
+        await applyFormula(formulaField.value);
         break;
       case 'rounding':
-        calcValue = formulaField.value;
-        await applyRounding(calcValue);
+        await applyRounding(formulaField.value);
         break;
       default:
         throw new Error('Tipus de càlcul desconegut');
     }
 
-    // Guardar info del càlcul a Firestore
-    await db.collection('classes').doc(currentClassId).update({
-      [`calculatedActivities.${currentCalcActivityId}`]: {
-        type: calcTypeSelect.value,
-        value: calcValue,
-        timestamp: new Date().toISOString(),
-        user: auth.currentUser?.uid || null
-      }
-    });
-
+    await markActivityAsCalculated(currentCalcActivityId);
     closeModal('modalCalc');
-    renderNotesGrid();
+
   } catch (e) {
     console.error(e);
     alert('Error en aplicar el càlcul: ' + e.message);
   }
 });
+
+
 
 
 // ---------------- Construir botons de fórmules ----------------
