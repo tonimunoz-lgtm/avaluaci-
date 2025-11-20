@@ -649,6 +649,29 @@ function renderNotesGrid(){
   });
 }
 
+/* Funció de recalcul */
+function recalcActivity(aid){
+  db.collection('activitats').doc(aid).get().then(adoc=>{
+    if(!adoc.exists) return;
+    const actData = adoc.data();
+    const formula = actData.formula;
+    const rounding = actData.rounding; // pot ser número de decimals
+
+    Promise.all(classStudents.map(sid=>{
+      return db.collection('alumnes').doc(sid).get().then(sdoc=>{
+        const sdata = sdoc.exists ? sdoc.data() : { notes:{} };
+        let newVal = evalFormula(formula, sdata.notes || {}); // Funció que avalua la fórmula
+        if(rounding!==undefined){
+          newVal = Number(newVal.toFixed(rounding));
+        }
+        return db.collection('alumnes').doc(sid).update({
+          [`notes.${aid}`]: newVal
+        });
+      });
+    })).then(()=> loadClassData());
+  });
+}
+
 
 /* ---------------- Helpers Notes & Excel ---------------- */
 function th(txt, cls=''){
