@@ -770,9 +770,9 @@ modalApplyCalcBtn.addEventListener('click', async ()=> {
 
       // Guardar tipus i fórmula (en aquest cas valor numèric)
       await actRef.update({
-        calcType: 'numeric',
-        formula: val.toString()
-      });
+  calcType: 'rounding',
+  formula: `${selectedActivityName} * ${multiplier}`
+});
 
       // Assignar a tots els alumnes
       for (const sid of classStudents) {
