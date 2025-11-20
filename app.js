@@ -983,51 +983,61 @@ function getStudentRowById(sid) {
 }
 
 /* ---------------- Drag & Drop per activitats ---------------- */
-function enableActivityDrag(){
+function enableActivityDrag() {
   const ths = notesThead.querySelectorAll('tr:first-child th');
-  ths.forEach((thEl, idx)=>{
-    if(idx === 0 || idx === ths.length-1) return; // No draggable: primera (Alumne) i última (Mitjana)
-    
+
+  ths.forEach((thEl, idx) => {
+
+    // Ignorem primera i última columna
+    if (idx === 0 || idx === ths.length - 1) return;
+
+    // Si ja hem inicialitzat el drag en aquest TH, no fem res
+    if (thEl.dataset.dragInit === "1") return;
+
+    // Marquem que ja té els listeners
+    thEl.dataset.dragInit = "1";
+
     thEl.setAttribute('draggable', true);
-    thEl.addEventListener('dragstart', e=>{
+
+    thEl.addEventListener('dragstart', e => {
       e.dataTransfer.setData('text/plain', idx);
     });
 
-    thEl.addEventListener('dragover', e=>{
+    thEl.addEventListener('dragover', e => {
       e.preventDefault();
       thEl.classList.add('border-dashed', 'border-2');
     });
 
-    thEl.addEventListener('dragleave', e=>{
+    thEl.addEventListener('dragleave', () => {
       thEl.classList.remove('border-dashed', 'border-2');
     });
 
-    thEl.addEventListener('drop', e=>{
+    thEl.addEventListener('drop', e => {
       e.preventDefault();
       thEl.classList.remove('border-dashed', 'border-2');
+      
       const fromIdx = Number(e.dataTransfer.getData('text/plain'));
       const toIdx = idx;
 
-      if(fromIdx === toIdx) return;
+      if (fromIdx === toIdx) return;
 
-      // Reordenar classActivities
-      const arr = Array.from(classActivities);
-      const moved = arr.splice(fromIdx-1, 1)[0]; // -1 per ignorar columna Alumne
-      arr.splice(toIdx-1, 0, moved);
+      // Reordenació real
+      const arr = [...classActivities];
+      const moved = arr.splice(fromIdx - 1, 1)[0]; 
+      arr.splice(toIdx - 1, 0, moved);
       classActivities = arr;
 
-      // 🔥 Guardar el nou ordre a Firestore
-      if(currentClassId){
-        db.collection('classes').doc(currentClassId).update({ activitats: classActivities })
-          .then(() => console.log('Ordre d’activitats actualitzat a Firestore'))
-          .catch(e => console.error('Error guardant ordre activitats', e));
+      // Guardar nou ordre a Firestore
+      if (currentClassId) {
+        db.collection('classes').doc(currentClassId).update({ activitats: classActivities });
       }
 
+      // Tornar a renderitzar sense duplicar listeners
       renderNotesGrid();
     });
+
   });
 }
-
 
 /* ---------------- Marcar activitat com calculada ---------------- */
 async function markActivityAsCalculated(activityId){
