@@ -518,8 +518,9 @@ function renderNotesGrid(){
       .then(actDocs=>{
         actDocs.forEach(adoc=>{
           const id = adoc.id;
-          const name = adoc.exists ? (adoc.data().nom||'Sense nom') : 'Desconegut';
-          
+          const actData = adoc.exists ? adoc.data() : {};
+          const name = actData.nom || 'Sense nom';
+
           const thEl = th('');
           const container = document.createElement('div');
           container.className = 'flex items-center justify-between';
@@ -529,27 +530,31 @@ function renderNotesGrid(){
 
           const menuDiv = document.createElement('div');
           menuDiv.className = 'relative';
+
+          const isCalculated = actData.formula || actData.rounding;
+
           menuDiv.innerHTML = `
             <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white tooltip">⋮</button>
             <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10">
               <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
               <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>
-              <button class="calc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Càlcul</button>
-              ${calculatedActs[id] ? `<button class="recalc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Recalcular</button>` : ''}
+              ${isCalculated ? `<button class="calc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Recalcular</button>` : ''}
             </div>
           `;
-          
+
           container.appendChild(spanName);
           container.appendChild(menuDiv);
           thEl.appendChild(container);
           headRow.appendChild(thEl);
 
-          if (calculatedActs[id]) {
+          /* 🔴 CAPÇALERA DE COLOR SI L’ACTIVITAT TÉ FÓRMULA / ARRODONIMENT */
+          if (isCalculated) {
             thEl.style.backgroundColor = "#fecaca";   // vermell suau
             thEl.style.borderBottom = "3px solid #dc2626";
             thEl.style.color = "black";
           }
 
+          // Menú — igual que abans
           const menuBtn = menuDiv.querySelector('.menu-btn');
           const menu = menuDiv.querySelector('.menu');
 
@@ -567,14 +572,11 @@ function renderNotesGrid(){
           });
 
           menuDiv.querySelector('.delete-btn').addEventListener('click', ()=> removeActivity(id));
-          menuDiv.querySelector('.calc-btn').addEventListener('click', ()=> openCalcModal(id));
 
-          const recalcBtn = menuDiv.querySelector('.recalc-btn');
-          if(recalcBtn){
-            recalcBtn.addEventListener('click', ()=>{
-              recalcActivity(id).then(()=> loadClassData());
-            });
+          if(isCalculated){
+            menuDiv.querySelector('.calc-btn').addEventListener('click', ()=> recalcActivity(id));
           }
+
         });
 
         headRow.appendChild(th('Mitjana', 'text-right'));
@@ -602,12 +604,14 @@ function renderNotesGrid(){
 
               actDocs.forEach((actDoc, actIndex)=>{
                 const aid = actDoc.id;
+                const actData = actDoc.exists ? actDoc.data() : {};
                 const val = (sdata.notes && sdata.notes[aid]!==undefined) ? sdata.notes[aid] : '';
 
                 const td = document.createElement('td');
                 td.className = 'border px-2 py-1';
 
-                if (calculatedActs[aid]) {
+                /* 🔴 COLOR DE COLUMNA CALCULADA */
+                if (actData.formula || actData.rounding) {
                   td.style.backgroundColor = "#ffe4e6";  // rosa suau
                 }
 
@@ -618,7 +622,7 @@ function renderNotesGrid(){
                 input.value=val;
                 input.className='table-input text-center rounded border p-1';
 
-                if (calculatedActs[aid]) {
+                if (actData.formula || actData.rounding) {
                   input.disabled = true;
                   input.style.backgroundColor = "#fca5a5"; // vermell cel·la calculada
                 } else {
