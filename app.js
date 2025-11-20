@@ -519,27 +519,14 @@ function renderNotesGrid(){
         actDocs.forEach(adoc=>{
           const id = adoc.id;
           const name = adoc.exists ? (adoc.data().nom||'Sense nom') : 'Desconegut';
-
-          // === Container principal ===
+          
           const thEl = th('');
           const container = document.createElement('div');
           container.className = 'flex items-center justify-between';
 
-          // Nom de l'activitat
           const spanName = document.createElement('span');
           spanName.textContent = name;
-          container.appendChild(spanName);
 
-          // Botó de refrescar
-          const refreshBtn = document.createElement('button');
-          refreshBtn.type = 'button';
-          refreshBtn.title = 'Refrescar arrodoniment';
-          refreshBtn.className = 'ml-1 text-sm px-1 py-0.5 bg-blue-200 rounded hover:bg-blue-300';
-          refreshBtn.textContent = '⟳';
-          refreshBtn.addEventListener('click', () => recalcSingleActivity(adoc.id));
-          container.appendChild(refreshBtn);
-
-          // Menú desplegable
           const menuDiv = document.createElement('div');
           menuDiv.className = 'relative';
           menuDiv.innerHTML = `
@@ -548,21 +535,21 @@ function renderNotesGrid(){
               <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
               <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>
               <button class="calc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Càlcul</button>
+              ${calculatedActs[id] ? `<button class="recalc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Recalcular</button>` : ''}
             </div>
           `;
+          
+          container.appendChild(spanName);
           container.appendChild(menuDiv);
-
           thEl.appendChild(container);
           headRow.appendChild(thEl);
 
-          // Color si activitat calculada
           if (calculatedActs[id]) {
             thEl.style.backgroundColor = "#fecaca";   // vermell suau
             thEl.style.borderBottom = "3px solid #dc2626";
             thEl.style.color = "black";
           }
 
-          // Menú funcionalitat
           const menuBtn = menuDiv.querySelector('.menu-btn');
           const menu = menuDiv.querySelector('.menu');
 
@@ -582,6 +569,12 @@ function renderNotesGrid(){
           menuDiv.querySelector('.delete-btn').addEventListener('click', ()=> removeActivity(id));
           menuDiv.querySelector('.calc-btn').addEventListener('click', ()=> openCalcModal(id));
 
+          const recalcBtn = menuDiv.querySelector('.recalc-btn');
+          if(recalcBtn){
+            recalcBtn.addEventListener('click', ()=>{
+              recalcActivity(id).then(()=> loadClassData());
+            });
+          }
         });
 
         headRow.appendChild(th('Mitjana', 'text-right'));
@@ -614,7 +607,6 @@ function renderNotesGrid(){
                 const td = document.createElement('td');
                 td.className = 'border px-2 py-1';
 
-                // Color de cel·la calculada
                 if (calculatedActs[aid]) {
                   td.style.backgroundColor = "#ffe4e6";  // rosa suau
                 }
@@ -653,6 +645,7 @@ function renderNotesGrid(){
   });
 }
 
+
 /* ---------------- Helpers Notes & Excel ---------------- */
 function th(txt, cls=''){
   const el = document.createElement('th');
@@ -677,6 +670,7 @@ async function saveNote(studentId, activityId, rawValue){
     await db.collection('alumnes').doc(studentId).update(updateObj);
 
     // 🔥 FALTA AIXÒ:
+    await recalculateActivities();  // <-- CANVIAR AIXÒ
     renderNotesGrid();
 }
 
@@ -1285,54 +1279,3 @@ async function recalculateActivities() {
     }
   }
 }
-
-//-------------------------------------
-async function recalcSingleActivity(activityId) {
-  if (!currentClassId) return;
-
-  const actDoc = await db.collection('activitats').doc(activityId).get();
-  if (!actDoc.exists) return;
-  const actData = actDoc.data();
-
-  if (!actData.calcType) return; // només recalcularem activitats calculades
-
-  for (const studentId of classStudents) {
-    const studentDoc = await db.collection('alumnes').doc(studentId).get();
-    const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
-    let result = 0;
-
-    if (actData.calcType === 'formula' && actData.formula) {
-      let formulaEval = actData.formula;
-      for (const aid of classActivities) {
-        const aDoc = await db.collection('activitats').doc(aid).get();
-        const aName = aDoc.exists ? aDoc.data().nom : '';
-        const val = Number(notes[aid] || 0);
-        const regex = new RegExp(aName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-        formulaEval = formulaEval.replace(regex, val);
-      }
-      try { result = Function('"use strict"; return (' + formulaEval + ')')(); }
-      catch(e){ result = 0; }
-
-    } else if (actData.calcType === 'rounding' && actData.formula) {
-      const multiplier = Number(actData.formula) || 1;
-      const refActivityName = actData.refActivityName || '';
-      let val = 0;
-      for (const aid of classActivities) {
-        const aDoc = await db.collection('activitats').doc(aid).get();
-        if (aDoc.exists && aDoc.data().nom === refActivityName) {
-          val = Number(notes[aid] || 0);
-        }
-      }
-      if (multiplier === 1) val = Math.round(val);
-      else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
-      result = val;
-    }
-
-    await db.collection('alumnes').doc(studentId).update({
-      [`notes.${activityId}`]: result
-    });
-  }
-
-  renderNotesGrid();
-}
-
