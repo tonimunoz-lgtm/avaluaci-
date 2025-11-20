@@ -542,14 +542,12 @@ function renderNotesGrid(){
           thEl.appendChild(container);
           headRow.appendChild(thEl);
 
-          /* 🔴 NOVETAT: CAPÇALERA DE COLOR SI L’ACTIVITAT TÉ FÓRMULA / ARRODONIMENT */
           if (calculatedActs[id]) {
-            thEl.style.backgroundColor = "#fecaca";   // vermell suau
+            thEl.style.backgroundColor = "#fecaca";
             thEl.style.borderBottom = "3px solid #dc2626";
             thEl.style.color = "black";
           }
 
-          // Menú — igual que abans
           const menuBtn = menuDiv.querySelector('.menu-btn');
           const menu = menuDiv.querySelector('.menu');
 
@@ -601,9 +599,8 @@ function renderNotesGrid(){
                 const td = document.createElement('td');
                 td.className = 'border px-2 py-1';
 
-                /* 🔴 NOVETAT: COLOR DE COLUMNA CALCULADA */
                 if (calculatedActs[aid]) {
-                  td.style.backgroundColor = "#ffe4e6";  // rosa suau
+                  td.style.backgroundColor = "#ffe4e6";
                 }
 
                 const input = document.createElement('input');
@@ -615,7 +612,7 @@ function renderNotesGrid(){
 
                 if (calculatedActs[aid]) {
                   input.disabled = true;
-                  input.style.backgroundColor = "#fca5a5"; // vermell cel·la calculada
+                  input.style.backgroundColor = "#fca5a5";
                 } else {
                   input.addEventListener('change', e=> saveNote(sid, aid, e.target.value));
                   input.addEventListener('input', ()=> applyCellColor(input));
@@ -639,6 +636,7 @@ function renderNotesGrid(){
       });
   });
 }
+
 
 
 
