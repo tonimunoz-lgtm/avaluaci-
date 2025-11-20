@@ -804,40 +804,40 @@ modalApplyCalcBtn.addEventListener('click', async () => {
     const formula = formulaField.value.trim();
     if (!formula) return alert('Selecciona activitat i 0,5 o 1');
 
-    let selectedActivityName = '';
-    let multiplier = 1;
+    // -------------------------------
+    // 1. Llegim totes les activitats una vegada
+    // -------------------------------
+    const activityDocs = await Promise.all(classActivities.map(aid => db.collection('activitats').doc(aid).get()));
+    let selectedActivity = activityDocs.find(doc => doc.exists && formula.startsWith(doc.data().nom));
+    if (!selectedActivity) return alert('Activitat no trobada');
 
-    // Trobar activitat seleccionada i multiplicador
-    for (const aid of classActivities) {
-      const doc = await db.collection('activitats').doc(aid).get();
-      const actName = doc.exists ? doc.data().nom : '';
-      if (actName && formula.startsWith(actName)) {
-        selectedActivityName = actName;
-        multiplier = Number(formula.slice(actName.length)) || 1;
-        break;
-      }
-    }
+    const selectedActivityName = selectedActivity.data().nom;
+    const multiplier = Number(formula.slice(selectedActivityName.length)) || 1;
 
-    if (!selectedActivityName) return alert('Activitat no trobada');
-
+    // -------------------------------
+    // 2. Per cada alumne, llegim les notes una vegada
+    // -------------------------------
     await Promise.all(classStudents.map(async sid => {
       const studentDoc = await db.collection('alumnes').doc(sid).get();
       const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
       let val = 0;
 
-      for (const aid of classActivities) {
-        const adoc = await db.collection('activitats').doc(aid).get();
-        if (adoc.exists && adoc.data().nom === selectedActivityName) {
-          val = Number(notes[aid]) || 0;
-        }
+      // Trobar nota de l'activitat seleccionada
+      const activity = activityDocs.find(doc => doc.exists && doc.data().nom === selectedActivityName);
+      if (activity) {
+        val = Number(notes[activity.id]) || 0;
       }
 
+      // Aplicar redondeig
       if (multiplier === 1) val = Math.round(val);
       else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
 
       await saveNote(sid, currentCalcActivityId, val);
     }));
 
+    // -------------------------------
+    // 3. Marcar activitat i tancar modal
+    // -------------------------------
     await markActivityAsCalculated(currentCalcActivityId);
     closeModal('modalCalc');
   }
