@@ -1220,109 +1220,74 @@ if (closeBtn) {
 }
 //------------recalciular formules-----------
 // ---------------- Recalcular activitats calculades per tots els alumnes ----------------
-function renderNotesGrid() {
-  notesTbody.innerHTML = '';
+async function recalculateActivities() {
+  if (!currentClassId) return;
 
-  if (classStudents.length === 0) {
-    notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivities.length+2}">No hi ha alumnes</td></tr>`;
-    renderAverages();
-    return;
+  // Carregar la classe i activitats només una vegada
+  const classDoc = await db.collection('classes').doc(currentClassId).get();
+  const calcActs = classDoc.exists ? classDoc.data().calculatedActivities || {} : {};
+
+  const actDocs = {};
+  for (const actId of classActivities) {
+    const doc = await db.collection('activitats').doc(actId).get();
+    if (doc.exists) actDocs[actId] = doc.data();
   }
 
-  Promise.all(classStudents.map(id => db.collection('alumnes').doc(id).get()))
-    .then(studentDocs => {
-      studentDocs.forEach(sdoc => {
-        const sid = sdoc.id;
-        const sdata = sdoc.exists ? sdoc.data() : { nom: 'Desconegut', notes: {} };
-        const tr = document.createElement('tr');
+  // Recalcular per cada alumne
+  for (const studentId of classStudents) {
+    const studentRef = db.collection('alumnes').doc(studentId);
+    const studentDoc = await studentRef.get();
+    let notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
 
-        // Nom alumne
-        const tdName = document.createElement('td');
-        tdName.className = 'border px-2 py-1';
-        tdName.textContent = sdata.nom;
-        tr.appendChild(tdName);
+    let updates = {};
 
-        actDocs.forEach((actDoc, actIndex) => {
-          const aid = actDoc.id;
-          let val = (sdata.notes && sdata.notes[aid] !== undefined) ? sdata.notes[aid] : '';
+    // ---------- 1. Fórmules ----------
+    for (const actId of classActivities) {
+      if (!calcActs[actId]) continue;
+      const actData = actDocs[actId];
+      if (!actData) continue;
 
-          // 🔹 Activitats calculades
-          if (calculatedActs[aid] && actDoc.exists) {
-            const actData = actDoc.data();
+      if (actData.calcType === 'formula' && actData.formula) {
+        let formulaEval = actData.formula;
+        for (const aid of classActivities) {
+          const name = actDocs[aid]?.nom || '';
+          const val = Number(notes[aid] || 0);
+          if (name) formulaEval = formulaEval.replace(new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), val);
+        }
+        let result = 0;
+        try { result = Function('"use strict"; return (' + formulaEval + ')')(); } 
+        catch(e){ result = 0; }
+        updates[`notes.${actId}`] = result;
+        notes[actId] = result; // Actualitzar localment per redondeig
+      }
+    }
 
-            if (actData.calcType === 'formula' && actData.formula) {
-              // Fórmula
-              val = 0;
-              try {
-                let evalStr = actData.formula;
-                for (const rAid of classActivities) {
-                  const refAct = actDocs.find(d => d.id === rAid);
-                  if (!refAct || !refAct.exists) continue;
-                  const refVal = Number(sdata.notes[rAid] || 0);
-                  const refName = refAct.data().nom;
-                  const regex = new RegExp(refName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-                  evalStr = evalStr.replace(regex, refVal);
-                }
-                val = Function('"use strict"; return (' + evalStr + ')')();
-              } catch (e) { val = 0; }
-            }
-            else if (actData.calcType === 'rounding') {
-              // Redondeig
-              const multiplier = Number(actData.formula) || 1;
-              const refName = actData.refActivityName || '';
-              let refVal = 0;
+    // ---------- 2. Redondeigs ----------
+    for (const actId of classActivities) {
+      if (!calcActs[actId]) continue;
+      const actData = actDocs[actId];
+      if (!actData) continue;
 
-              for (const rAid of classActivities) {
-                const refAct = actDocs.find(d => d.id === rAid);
-                if (!refAct || !refAct.exists) continue;
-                if (refAct.data().nom === refName) {
-                  refVal = Number(sdata.notes[rAid] || 0);
-                  break;
-                }
-              }
+      if (actData.calcType === 'rounding') {
+        const refName = actData.refActivityName || '';
+        const multiplier = Number(actData.formula) || 1;
+        let val = 0;
 
-              if (multiplier === 1) refVal = Math.round(refVal);
-              else if (multiplier === 0.5) refVal = Math.round(refVal * 2) / 2;
-              val = refVal;
-            }
-          }
+        for (const aid of classActivities) {
+          if (actDocs[aid]?.nom === refName) val = Number(notes[aid] || 0);
+        }
 
-          const td = document.createElement('td');
-          td.className = 'border px-2 py-1';
+        if (multiplier === 1) val = Math.round(val);
+        else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
 
-          // Color de columna calculada
-          if (calculatedActs[aid]) td.style.backgroundColor = "#ffe4e6";
+        updates[`notes.${actId}`] = val;
+        notes[actId] = val;
+      }
+    }
 
-          const input = document.createElement('input');
-          input.type = 'number';
-          input.min = 0;
-          input.max = 10;
-          input.value = val;
-          input.className = 'table-input text-center rounded border p-1';
-
-          if (calculatedActs[aid]) {
-            input.disabled = true;
-            input.style.backgroundColor = "#fca5a5";
-          } else {
-            input.addEventListener('change', e => saveNote(sid, aid, e.target.value).then(renderNotesGrid));
-            input.addEventListener('input', () => applyCellColor(input));
-            applyCellColor(input);
-          }
-
-          td.appendChild(input);
-          tr.appendChild(td);
-        });
-
-        // Mitjana
-        const avgTd = document.createElement('td');
-        avgTd.className = 'border px-2 py-1 text-right font-semibold';
-        avgTd.textContent = computeStudentAverageText(sdata);
-        tr.appendChild(avgTd);
-
-        notesTbody.appendChild(tr);
-      });
-
-      renderAverages();
-      enableActivityDrag();
-    });
+    // ---------- Actualitzar Firestore d’una sola passada ----------
+    if (Object.keys(updates).length > 0) {
+      await studentRef.update(updates);
+    }
+  }
 }
