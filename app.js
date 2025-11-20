@@ -665,10 +665,6 @@ async function saveNote(studentId, activityId, rawValue){
     }
 
     await db.collection('alumnes').doc(studentId).update(updateObj);
-
-    // 🔥 FALTA AIXÒ:
-    await recalculateActivities();  // <-- CANVIAR AIXÒ
-    renderNotesGrid();
 }
 
 
