@@ -962,30 +962,40 @@ function buildRoundingButtons(){
 
 
 // ---------------- Evaluar fórmula ----------------
-async function evalFormulaAsync(formula, studentId) {
+// ---------------- Evaluar fórmula ----------------
+async function evalFormulaAsync(formula, studentId){
   let evalStr = formula;
 
+  // Notes de l’alumne
   const studentDoc = await db.collection('alumnes').doc(studentId).get();
-  const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
+  const notes = studentDoc.exists ? (studentDoc.data().notes || {}) : {};
 
+  // Substituir noms d’activitats per valors
   for (const aid of classActivities) {
     const actDoc = await db.collection('activitats').doc(aid).get();
     const actName = actDoc.exists ? actDoc.data().nom : null;
+
     if (!actName) continue;
 
-    const val = Number(notes[aid] || 0);
-    const regex = new RegExp(actName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), "g");
-    evalStr = evalStr.replace(regex, val.toString());
+    const val = notes[aid] !== undefined ? Number(notes[aid]) : 0;
+
+    // Crear regex per substituir el nom de l'activitat
+    const re = new RegExp(`\\b${actName}\\b`, 'g');
+    evalStr = evalStr.replace(re, val.toString());
   }
 
+  // Normalitzar comes
+  evalStr = evalStr.replace(/,/g, '.');
+
+  // Avaluar amb seguretat
   try {
-    return Function(`"use strict"; return (${evalStr})`)();
+    const result = Function(`"use strict"; return (${evalStr})`)();
+    return isNaN(result) ? 0 : result;
   } catch (e) {
-    console.error("Error fórmula:", formula, evalStr);
+    console.error("Error fórmula:", evalStr, e);
     return 0;
   }
 }
-
 
 
 
