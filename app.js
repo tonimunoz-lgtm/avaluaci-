@@ -774,56 +774,67 @@ calcTypeSelect.addEventListener('change', ()=>{
 });
 
 // Aplicar càlcul
+// ─────────── Helpers ───────────
+
+// Numeric
+async function applyNumeric(val) {
+  if (isNaN(val)) throw new Error('Introdueix un número vàlid');
+  await Promise.all(classStudents.map(sid => saveNote(sid, currentCalcActivityId, val)));
+}
+
+// Formula
+async function applyFormula(formula) {
+  if (!formula.trim()) throw new Error('Formula buida');
+  await Promise.all(classStudents.map(async sid => {
+    const result = await evalFormulaAsync(formula, sid);
+    await saveNote(sid, currentCalcActivityId, result);
+  }));
+}
+
+// Rounding
+async function applyRounding(formula) {
+  if (!formula.trim()) throw new Error('Selecciona activitat i 0,5 o 1');
+
+  // Llegim totes les activitats
+  const activityDocs = await Promise.all(classActivities.map(aid => db.collection('activitats').doc(aid).get()));
+  const selectedActivityDoc = activityDocs.find(doc => doc.exists && formula.startsWith(doc.data().nom));
+  if (!selectedActivityDoc) throw new Error('Activitat no trobada');
+
+  const selectedActivityName = selectedActivityDoc.data().nom;
+  const multiplier = Number(formula.slice(selectedActivityName.length)) || 1;
+
+  await Promise.all(classStudents.map(async sid => {
+    const studentDoc = await db.collection('alumnes').doc(sid).get();
+    const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
+    let val = Number(notes[selectedActivityDoc.id]) || 0;
+
+    if (multiplier === 1) val = Math.round(val);
+    else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
+
+    await saveNote(sid, currentCalcActivityId, val);
+  }));
+}
+
+// ─────────── Event Listener ───────────
+
 modalApplyCalcBtn.addEventListener('click', async () => {
   if (!currentCalcActivityId) return;
 
-  const calcType = calcTypeSelect.value;
-
   try {
-    if (calcType === 'numeric') {
-      const val = Number(numericField.value);
-      if (isNaN(val)) return alert('Introdueix un número vàlid');
-
-      await Promise.all(classStudents.map(sid => saveNote(sid, currentCalcActivityId, val)));
-
-    } else if (calcType === 'formula') {
-      const formula = formulaField.value.trim();
-      if (!formula) return alert('Formula buida');
-
-      await Promise.all(classStudents.map(async sid => {
-        const result = await evalFormulaAsync(formula, sid);
-        await saveNote(sid, currentCalcActivityId, result);
-      }));
-
-    } else if (calcType === 'rounding') {
-      const formula = formulaField.value.trim();
-      if (!formula) return alert('Selecciona activitat i 0,5 o 1');
-
-      // 1️⃣ Llegim totes les activitats una sola vegada
-      const activityDocs = await Promise.all(classActivities.map(aid => db.collection('activitats').doc(aid).get()));
-      const selectedActivityDoc = activityDocs.find(doc => doc.exists && formula.startsWith(doc.data().nom));
-      if (!selectedActivityDoc) return alert('Activitat no trobada');
-
-      const selectedActivityName = selectedActivityDoc.data().nom;
-      const multiplier = Number(formula.slice(selectedActivityName.length)) || 1;
-
-      // 2️⃣ Llegim tots els alumnes una sola vegada i apliquem redondeig
-      await Promise.all(classStudents.map(async sid => {
-        const studentDoc = await db.collection('alumnes').doc(sid).get();
-        const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
-        let val = Number(notes[selectedActivityDoc.id]) || 0;
-
-        if (multiplier === 1) val = Math.round(val);
-        else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
-
-        await saveNote(sid, currentCalcActivityId, val);
-      }));
-
-    } else {
-      return alert('Tipus de càlcul desconegut');
+    switch (calcTypeSelect.value) {
+      case 'numeric':
+        await applyNumeric(Number(numericField.value));
+        break;
+      case 'formula':
+        await applyFormula(formulaField.value);
+        break;
+      case 'rounding':
+        await applyRounding(formulaField.value);
+        break;
+      default:
+        throw new Error('Tipus de càlcul desconegut');
     }
 
-    // 3️⃣ Marcar activitat com a calculada i tancar modal
     await markActivityAsCalculated(currentCalcActivityId);
     closeModal('modalCalc');
 
