@@ -651,14 +651,12 @@ function th(txt, cls=''){
   return el;
 }
 
-/* ---------------- Guardar nota de forma asíncrona ---------------- */
 function saveNoteAsync(studentId, activityId, value) {
   const num = value === '' ? null : Number(value);
   const updateObj = {};
   if(num === null || isNaN(num)) updateObj[`notes.${activityId}`] = firebase.firestore.FieldValue.delete();
   else updateObj[`notes.${activityId}`] = num;
-
-  return db.collection('alumnes').doc(studentId).update(updateObj);
+  return db.collection('alumnes').doc(studentId).update(updateObj); // només retorna la promesa
 }
 
 function applyCellColor(inputEl){
@@ -744,68 +742,56 @@ calcTypeSelect.addEventListener('change', ()=>{
 });
 
 // Aplicar càlcul
-modalApplyCalcBtn.addEventListener('click', async ()=> {
-  if(!currentCalcActivityId) return;
+modalApplyCalcBtn.addEventListener('click', async () => {
+  if (!currentCalcActivityId) return;
 
   try {
-    if(calcTypeSelect.value === 'numeric'){
+    const promises = [];
+
+    if (calcTypeSelect.value === 'numeric') {
       const val = Number(numericField.value);
-      if(isNaN(val)) return alert('Introdueix un número vàlid');
+      if (isNaN(val)) return alert('Introdueix un número vàlid');
 
-      const promises = classStudents.map(sid => saveNoteAsync(sid, currentCalcActivityId, val));
-      await Promise.all(promises);
+      classStudents.forEach(sid => promises.push(saveNoteAsync(sid, currentCalcActivityId, val)));
 
-      await markActivityAsCalculated(currentCalcActivityId);
-      renderNotesGrid();
-      closeModal('modalCalc');
-
-    } else if(calcTypeSelect.value === 'formula'){
+    } else if (calcTypeSelect.value === 'formula') {
       const formula = formulaField.value.trim();
-      if(!formula) return alert('Formula buida');
+      if (!formula) return alert('Formula buida');
 
-      const promises = classStudents.map(async sid => {
+      for (const sid of classStudents) {
         const result = await evalFormulaAsync(formula, sid);
-        return saveNoteAsync(sid, currentCalcActivityId, result);
-      });
+        promises.push(saveNoteAsync(sid, currentCalcActivityId, result));
+      }
 
-      await Promise.all(promises);
-
-      await markActivityAsCalculated(currentCalcActivityId);
-      renderNotesGrid();
-      closeModal('modalCalc');
-
-    } else if(calcTypeSelect.value === 'rounding'){
+    } else if (calcTypeSelect.value === 'rounding') {
       const formula = formulaField.value.trim();
-      if(!formula) return alert('Selecciona activitat i 0,5 o 1');
+      if (!formula) return alert('Selecciona activitat i 0,5 o 1');
 
-      const promises = [];
-
-      for(const sid of classStudents){
+      for (const sid of classStudents) {
         const studentDoc = await db.collection('alumnes').doc(sid).get();
         const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
-        let val = 0;
-
-        // Trobar la nota de l'activitat seleccionada
-        for(const aid of classActivities){
+        for (const aid of classActivities) {
           const adoc = await db.collection('activitats').doc(aid).get();
-          if(adoc.exists && formula.startsWith(adoc.data().nom)){
-            val = Number(notes[aid]) || 0;
+          if (adoc.exists && formula.startsWith(adoc.data().nom)) {
+            let val = Number(notes[aid]) || 0;
             const multiplier = Number(formula.slice(adoc.data().nom.length)) || 1;
-
-            if(multiplier === 1) val = Math.round(val);
-            else if(multiplier === 0.5) val = Math.round(val*2)/2;
-
+            val = multiplier === 1 ? Math.round(val) : Math.round(val * 2) / 2;
             promises.push(saveNoteAsync(sid, currentCalcActivityId, val));
           }
         }
       }
-
-      await Promise.all(promises);
-      await markActivityAsCalculated(currentCalcActivityId);
-      renderNotesGrid();
-      closeModal('modalCalc');
     }
-  } catch(e){
+
+    // Esperem que s’acabin totes les actualitzacions
+    await Promise.all(promises);
+
+    // Marcar activitat com calculada i només aquí renderitzem
+    await markActivityAsCalculated(currentCalcActivityId);
+
+    renderNotesGrid(); // **només UNA vegada**
+    closeModal('modalCalc');
+
+  } catch (e) {
     console.error(e);
     alert('Error aplicant càlcul: ' + e.message);
   }
