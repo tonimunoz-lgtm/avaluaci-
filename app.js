@@ -525,11 +525,23 @@ function renderNotesGrid() {
           const container = document.createElement('div');
           container.className = 'flex items-center justify-between';
 
+          // Nom activitat
           const spanName = document.createElement('span');
           spanName.textContent = name;
 
+          // Icona de refrescar
+          const refreshBtn = document.createElement('button');
+          refreshBtn.type = 'button';
+          refreshBtn.className = 'text-gray-500 hover:text-gray-700 dark:hover:text-white ml-2';
+          refreshBtn.innerHTML = '🔄';
+          refreshBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            console.log('Refrescar activitat: ' + name);
+          });
+
+          // Menú tres puntets
           const menuDiv = document.createElement('div');
-          menuDiv.className = 'relative';
+          menuDiv.className = 'relative ml-2';
           menuDiv.innerHTML = `
             <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white tooltip">⋮</button>
             <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10">
@@ -539,10 +551,10 @@ function renderNotesGrid() {
             </div>
           `;
 
-          container.appendChild(spanName);
-          container.appendChild(menuDiv);
+          container.appendChild(spanName);      // Nom
+          container.appendChild(refreshBtn);    // Refrescar
+          container.appendChild(menuDiv);       // Menú tres puntets
           thEl.appendChild(container);
-          headRow.appendChild(thEl);
 
           // Capçalera color calculada
           if (calculatedActs[id]) {
@@ -551,7 +563,7 @@ function renderNotesGrid() {
             thEl.style.color = "black";
           }
 
-          // Menú
+          // Menú funcionalitat
           const menuBtn = menuDiv.querySelector('.menu-btn');
           const menu = menuDiv.querySelector('.menu');
           menuBtn.addEventListener('click', e => {
@@ -570,6 +582,7 @@ function renderNotesGrid() {
           menuDiv.querySelector('.delete-btn').addEventListener('click', () => removeActivity(id));
           menuDiv.querySelector('.calc-btn').addEventListener('click', () => openCalcModal(id));
 
+          headRow.appendChild(thEl);
         });
 
         headRow.appendChild(th('Mitjana', 'text-right'));
@@ -583,7 +596,7 @@ function renderNotesGrid() {
           return;
         }
 
-        // Cos taula
+        // Cos taula alumnes
         Promise.all(classStudents.map(id => db.collection('alumnes').doc(id).get()))
           .then(studentDocs => {
             studentDocs.forEach(sdoc => {
@@ -607,10 +620,6 @@ function renderNotesGrid() {
                   const td = document.createElement('td');
                   td.className = 'border px-2 py-1';
 
-                  if (calculatedActs[aid]) {
-                    td.style.backgroundColor = "#ffe4e6";
-                  }
-
                   const input = document.createElement('input');
                   input.type = 'number';
                   input.min = 0;
@@ -618,15 +627,9 @@ function renderNotesGrid() {
                   input.value = val;
                   input.dataset.activityId = aid;
                   input.className = 'table-input text-center rounded border p-1';
-
-                  if (calculatedActs[aid]) {
-                    input.disabled = true;
-                    input.style.backgroundColor = "#fca5a5";
-                  } else {
-                    input.addEventListener('change', e => saveNote(sid, aid, e.target.value));
-                    input.addEventListener('input', () => applyCellColor(input));
-                    applyCellColor(input);
-                  }
+                  input.addEventListener('change', e => saveNote(sid, aid, e.target.value));
+                  input.addEventListener('input', () => applyCellColor(input));
+                  applyCellColor(input);
 
                   td.appendChild(input);
                   tr.appendChild(td);
@@ -646,6 +649,7 @@ function renderNotesGrid() {
       });
   });
 }
+
 
 // Funció per actualitzar cel·les calculades sense recrear tota la taula
 function updateCalculatedCells() {
