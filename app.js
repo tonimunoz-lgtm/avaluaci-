@@ -516,18 +516,21 @@ function renderNotesGrid() {
     Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()))
       .then(actDocs => {
 
-        // Capçalera
+        // Capçalera activitats
         actDocs.forEach(adoc => {
           const id = adoc.id;
           const name = adoc.exists ? (adoc.data().nom || 'Sense nom') : 'Desconegut';
 
           const thEl = th('');
           const container = document.createElement('div');
-          container.className = 'flex items-center justify-between';
+          container.className = 'flex flex-col items-start justify-between';
 
           const spanName = document.createElement('span');
           spanName.textContent = name;
 
+          container.appendChild(spanName);
+
+          // Menú activitat
           const menuDiv = document.createElement('div');
           menuDiv.className = 'relative';
           menuDiv.innerHTML = `
@@ -538,20 +541,32 @@ function renderNotesGrid() {
               <button class="calc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Càlcul</button>
             </div>
           `;
-
-          container.appendChild(spanName);
           container.appendChild(menuDiv);
-          thEl.appendChild(container);
-          headRow.appendChild(thEl);
 
-          // Capçalera color calculada
-          if (calculatedActs[id]) {
+          // Mostrar info de càlcul si existeix
+          const info = calculatedActs[id]; 
+          if(info){
+            const infoEl = document.createElement('small');
+            infoEl.className = 'text-xs text-gray-700 dark:text-gray-200 mt-1';
+            infoEl.textContent = info.type === 'formula' ? 'fórmula: ' + info.value
+                               : info.type === 'rounding' ? 'redondeig: ' + info.value
+                               : info.type === 'numeric' ? 'valor fix: ' + info.value
+                               : '';
+            container.appendChild(infoEl);
+          }
+
+          thEl.appendChild(container);
+
+          // Color si està calculada
+          if(info){
             thEl.style.backgroundColor = "#fecaca";
             thEl.style.borderBottom = "3px solid #dc2626";
             thEl.style.color = "black";
           }
 
-          // Menú
+          headRow.appendChild(thEl);
+
+          // Menú funcional
           const menuBtn = menuDiv.querySelector('.menu-btn');
           const menu = menuDiv.querySelector('.menu');
           menuBtn.addEventListener('click', e => {
@@ -577,68 +592,62 @@ function renderNotesGrid() {
 
         enableActivityDrag();
 
+        // Cos taula alumnes
         if (classStudents.length === 0) {
           notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivities.length + 2}">No hi ha alumnes</td></tr>`;
           renderAverages();
           return;
         }
 
-        // Cos taula
         Promise.all(classStudents.map(id => db.collection('alumnes').doc(id).get()))
           .then(studentDocs => {
             studentDocs.forEach(sdoc => {
               const sid = sdoc.id;
               const sdata = sdoc.exists ? sdoc.data() : { nom: 'Desconegut', notes: {} };
-              let tr = document.querySelector(`tr[data-student-id="${sid}"]`);
+              let tr = document.createElement('tr');
+              tr.dataset.studentId = sid;
 
-              if (!tr) {
-                tr = document.createElement('tr');
-                tr.dataset.studentId = sid;
+              const tdName = document.createElement('td');
+              tdName.className = 'border px-2 py-1';
+              tdName.textContent = sdata.nom;
+              tr.appendChild(tdName);
 
-                const tdName = document.createElement('td');
-                tdName.className = 'border px-2 py-1';
-                tdName.textContent = sdata.nom;
-                tr.appendChild(tdName);
+              actDocs.forEach(actDoc => {
+                const aid = actDoc.id;
+                const val = (sdata.notes && sdata.notes[aid] !== undefined) ? sdata.notes[aid] : '';
 
-                actDocs.forEach(actDoc => {
-                  const aid = actDoc.id;
-                  const val = (sdata.notes && sdata.notes[aid] !== undefined) ? sdata.notes[aid] : '';
+                const td = document.createElement('td');
+                td.className = 'border px-2 py-1';
 
-                  const td = document.createElement('td');
-                  td.className = 'border px-2 py-1';
+                if(calculatedActs[aid]) td.style.backgroundColor = "#ffe4e6";
 
-                  if (calculatedActs[aid]) {
-                    td.style.backgroundColor = "#ffe4e6";
-                  }
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.min = 0;
+                input.max = 10;
+                input.value = val;
+                input.dataset.activityId = aid;
+                input.className = 'table-input text-center rounded border p-1';
 
-                  const input = document.createElement('input');
-                  input.type = 'number';
-                  input.min = 0;
-                  input.max = 10;
-                  input.value = val;
-                  input.dataset.activityId = aid;
-                  input.className = 'table-input text-center rounded border p-1';
+                if(calculatedActs[aid]){
+                  input.disabled = true;
+                  input.style.backgroundColor = "#fca5a5";
+                } else {
+                  input.addEventListener('change', e => saveNote(sid, aid, e.target.value));
+                  input.addEventListener('input', () => applyCellColor(input));
+                  applyCellColor(input);
+                }
 
-                  if (calculatedActs[aid]) {
-                    input.disabled = true;
-                    input.style.backgroundColor = "#fca5a5";
-                  } else {
-                    input.addEventListener('change', e => saveNote(sid, aid, e.target.value));
-                    input.addEventListener('input', () => applyCellColor(input));
-                    applyCellColor(input);
-                  }
+                td.appendChild(input);
+                tr.appendChild(td);
+              });
 
-                  td.appendChild(input);
-                  tr.appendChild(td);
-                });
+              const avgTd = document.createElement('td');
+              avgTd.className = 'border px-2 py-1 text-right font-semibold';
+              avgTd.textContent = computeStudentAverageText(sdata);
+              tr.appendChild(avgTd);
 
-                const avgTd = document.createElement('td');
-                avgTd.className = 'border px-2 py-1 text-right font-semibold';
-                avgTd.textContent = computeStudentAverageText(sdata);
-                tr.appendChild(avgTd);
-
-                notesTbody.appendChild(tr);
-              }
+              notesTbody.appendChild(tr);
             });
 
             renderAverages();
@@ -822,21 +831,26 @@ modalApplyCalcBtn.addEventListener('click', async () => {
   if (!currentCalcActivityId) return;
 
   try {
+    let calcInfo;
+
     switch (calcTypeSelect.value) {
       case 'numeric':
         await applyNumeric(Number(numericField.value));
+        calcInfo = { type:'numeric', value: numericField.value };
         break;
       case 'formula':
         await applyFormula(formulaField.value);
+        calcInfo = { type:'formula', value: formulaField.value };
         break;
       case 'rounding':
         await applyRounding(formulaField.value);
+        calcInfo = { type:'rounding', value: formulaField.value };
         break;
       default:
         throw new Error('Tipus de càlcul desconegut');
     }
 
-    await markActivityAsCalculated(currentCalcActivityId);
+    await markActivityAsCalculated(currentCalcActivityId, calcInfo);
     closeModal('modalCalc');
 
   } catch (e) {
@@ -844,8 +858,6 @@ modalApplyCalcBtn.addEventListener('click', async () => {
     alert('Error en aplicar el càlcul: ' + e.message);
   }
 });
-
-
 
 
 // ---------------- Construir botons de fórmules ----------------
@@ -1211,3 +1223,35 @@ if (closeBtn) {
     container.classList.remove('mobile-open');
   });
 }
+
+modalApplyCalcBtn.addEventListener('click', async () => {
+  if (!currentCalcActivityId) return;
+
+  try {
+    let calcInfo;
+
+    switch (calcTypeSelect.value) {
+      case 'numeric':
+        await applyNumeric(Number(numericField.value));
+        calcInfo = { type:'numeric', value: numericField.value };
+        break;
+      case 'formula':
+        await applyFormula(formulaField.value);
+        calcInfo = { type:'formula', value: formulaField.value };
+        break;
+      case 'rounding':
+        await applyRounding(formulaField.value);
+        calcInfo = { type:'rounding', value: formulaField.value };
+        break;
+      default:
+        throw new Error('Tipus de càlcul desconegut');
+    }
+
+    await markActivityAsCalculated(currentCalcActivityId, calcInfo);
+    closeModal('modalCalc');
+
+  } catch (e) {
+    console.error(e);
+    alert('Error en aplicar el càlcul: ' + e.message);
+  }
+});
