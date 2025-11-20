@@ -651,14 +651,12 @@ function th(txt, cls=''){
   return el;
 }
 
-function saveNote(studentId, activityId, value){
+function saveNoteAsync(studentId, activityId, value){
   const num = value === '' ? null : Number(value);
   const updateObj = {};
   if(num === null || isNaN(num)) updateObj[`notes.${activityId}`] = firebase.firestore.FieldValue.delete();
   else updateObj[`notes.${activityId}`] = num;
-  db.collection('alumnes').doc(studentId).update(updateObj)
-    .then(()=> renderNotesGrid())
-    .catch(e=> console.error('Error saving note', e));
+  return db.collection('alumnes').doc(studentId).update(updateObj);
 }
 
 function applyCellColor(inputEl){
@@ -752,19 +750,16 @@ modalApplyCalcBtn.addEventListener('click', async () => {
       const val = Number(numericField.value);
       if (isNaN(val)) return alert('Introdueix un número vàlid');
 
-      const promises = classStudents.map(sid => saveNoteAsync(sid, currentCalcActivityId, val));
-      await Promise.all(promises);
+      await Promise.all(classStudents.map(sid => saveNoteAsync(sid, currentCalcActivityId, val)));
 
     } else if (calcTypeSelect.value === 'formula') {
       const formula = formulaField.value.trim();
       if (!formula) return alert('Formula buida');
 
-      const promises = classStudents.map(async sid => {
+      await Promise.all(classStudents.map(async sid => {
         const result = await evalFormulaAsync(formula, sid);
         return saveNoteAsync(sid, currentCalcActivityId, result);
-      });
-
-      await Promise.all(promises);
+      }));
 
     } else if (calcTypeSelect.value === 'rounding') {
       const formula = formulaField.value.trim();
@@ -787,7 +782,7 @@ modalApplyCalcBtn.addEventListener('click', async () => {
 
       if (!selectedActivityId) return alert('Activitat no trobada');
 
-      const promises = classStudents.map(async sid => {
+      await Promise.all(classStudents.map(async sid => {
         const studentDoc = await db.collection('alumnes').doc(sid).get();
         const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
         let val = Number(notes[selectedActivityId]) || 0;
@@ -796,13 +791,13 @@ modalApplyCalcBtn.addEventListener('click', async () => {
         else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
 
         return saveNoteAsync(sid, currentCalcActivityId, val);
-      });
-
-      await Promise.all(promises);
+      }));
     }
 
-    // Marcar activitat com calculada i renderitzar només un cop
+    // Marcar activitat com calculada
     await markActivityAsCalculated(currentCalcActivityId);
+
+    // Renderitzar només un cop al final
     renderNotesGrid();
     closeModal('modalCalc');
 
@@ -812,6 +807,39 @@ modalApplyCalcBtn.addEventListener('click', async () => {
   }
 });
 
+// ---------------- Evaluar fórmula ----------------
+async function evalFormulaAsync(formula, studentId){
+  let evalStr = formula;
+
+  // Carregar totes les notes de l’alumne
+  const studentDoc = await db.collection('alumnes').doc(studentId).get();
+  const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
+
+  for(const aid of classActivities){
+    const actDoc = await db.collection('activitats').doc(aid).get();
+    const actName = actDoc.exists ? actDoc.data().nom : '';
+    if(!actName) continue;
+
+    const val = Number(notes[aid]) || 0; // notes de Firestore
+    const regex = new RegExp(actName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+    evalStr = evalStr.replace(regex, val);
+  }
+
+  try {
+    return Function('"use strict"; return (' + evalStr + ')')();
+  } catch(e){
+    console.error('Error evaluating formula:', formula, e);
+    return 0;
+  }
+}
+
+// ---------------- Marcar activitat com calculada ----------------
+async function markActivityAsCalculated(activityId){
+  if(!currentClassId) return;
+  await db.collection('classes').doc(currentClassId).update({
+    [`calculatedActivities.${activityId}`]: true
+  });
+}
 
 // ---------------- Construir botons de fórmules ----------------
 function buildFormulaButtons(){
