@@ -501,146 +501,108 @@ function renderStudentsList(){
   });
 }
 /* ---------------- Notes Grid amb menú activitats ---------------- */
-function renderNotesGrid(){
-  notesThead.innerHTML = '';
-  notesTbody.innerHTML = '';
-  notesTfoot.innerHTML = '';
+async function renderNotesGrid() {
+  const gridContainer = document.getElementById('notesGrid');
+  gridContainer.innerHTML = ''; // buidem la taula
 
-  const headRow = document.createElement('tr');
-  headRow.appendChild(th('Alumne'));
+  // Generem la capçalera amb activitats
+  const headerRow = document.createElement('div');
+  headerRow.className = 'grid grid-cols-[200px_repeat(auto-fill,_80px)] gap-1 font-bold';
+  
+  const firstHeader = document.createElement('div');
+  firstHeader.textContent = 'Alumne';
+  headerRow.appendChild(firstHeader);
 
-  db.collection('classes').doc(currentClassId).get().then(doc=>{
-    if(!doc.exists) return;
-    const classData = doc.data();
-    const calculatedActs = classData.calculatedActivities || {};
+  for (const actId of classActivities) {
+    const adoc = await db.collection('activitats').doc(actId).get();
+    const actName = adoc.exists ? adoc.data().nom : '???';
+    
+    const container = document.createElement('div');
+    container.className = 'flex items-center justify-between';
 
-    Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()))
-      .then(actDocs=>{
-        actDocs.forEach(adoc=>{
-          const id = adoc.id;
-          const name = adoc.exists ? (adoc.data().nom||'Sense nom') : 'Desconegut';
-          
-          const thEl = th('');
-          const container = document.createElement('div');
-          container.className = 'flex items-center justify-between';
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = actName;
+    container.appendChild(nameSpan);
 
-          const spanName = document.createElement('span');
-          spanName.textContent = name;
+    // Si és activitat de redondeig, afegim el botó 🔄
+    if (adoc.exists && adoc.data().calcType === 'rounding') {
+      const refreshBtn = document.createElement('button');
+      refreshBtn.type = 'button';
+      refreshBtn.className = 'ml-1 text-sm px-1 py-0.5 bg-gray-200 rounded hover:bg-gray-300';
+      refreshBtn.textContent = '🔄';
+      refreshBtn.title = 'Recalcular activitat redondeig';
+      refreshBtn.addEventListener('click', () => recalcRoundingActivity(actId));
+      container.appendChild(refreshBtn);
+    }
 
-          const menuDiv = document.createElement('div');
-          menuDiv.className = 'relative';
-          menuDiv.innerHTML = `
-            <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white tooltip">⋮</button>
-            <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10">
-              <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
-              <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>
-              <button class="calc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Càlcul</button>
-            </div>
-          `;
-          
-          container.appendChild(spanName);
-          container.appendChild(menuDiv);
-          thEl.appendChild(container);
-          headRow.appendChild(thEl);
+    headerRow.appendChild(container);
+  }
 
-          /* 🔴 NOVETAT: CAPÇALERA DE COLOR SI L’ACTIVITAT TÉ FÓRMULA / ARRODONIMENT */
-          if (calculatedActs[id]) {
-            thEl.style.backgroundColor = "#fecaca";   // vermell suau
-            thEl.style.borderBottom = "3px solid #dc2626";
-            thEl.style.color = "black";
-          }
+  gridContainer.appendChild(headerRow);
 
-          // Menú — igual que abans
-          const menuBtn = menuDiv.querySelector('.menu-btn');
-          const menu = menuDiv.querySelector('.menu');
+  // Generem les files d'alumnes
+  for (const sid of classStudents) {
+    const sdoc = await db.collection('alumnes').doc(sid).get();
+    const studentName = sdoc.exists ? sdoc.data().nom : '???';
+    const notes = sdoc.exists ? sdoc.data().notes || {} : {};
 
-          menuBtn.addEventListener('click', e=>{
-            e.stopPropagation();
-            document.querySelectorAll('.menu').forEach(m=> m.classList.add('hidden'));
-            menu.classList.toggle('hidden');
-          });
+    const row = document.createElement('div');
+    row.className = 'grid grid-cols-[200px_repeat(auto-fill,_80px)] gap-1';
 
-          menuDiv.querySelector('.edit-btn').addEventListener('click', ()=>{
-            const newName = prompt('Nou nom activitat:', name);
-            if(!newName || newName.trim()===name) return;
-            db.collection('activitats').doc(id).update({ nom: newName.trim() })
-              .then(()=> loadClassData());
-          });
+    const nameDiv = document.createElement('div');
+    nameDiv.textContent = studentName;
+    row.appendChild(nameDiv);
 
-          menuDiv.querySelector('.delete-btn').addEventListener('click', ()=> removeActivity(id));
-          menuDiv.querySelector('.calc-btn').addEventListener('click', ()=> openCalcModal(id));
+    for (const actId of classActivities) {
+      const cell = document.createElement('div');
+      cell.className = 'text-center p-1 border';
 
-        });
+      const val = notes[actId] !== undefined ? notes[actId] : '';
+      cell.textContent = val;
 
-        headRow.appendChild(th('Mitjana', 'text-right'));
-        notesThead.appendChild(headRow);
+      row.appendChild(cell);
+    }
 
-        enableActivityDrag();
-
-        if(classStudents.length===0){
-          notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivities.length+2}">No hi ha alumnes</td></tr>`;
-          renderAverages();
-          return;
-        }
-
-        Promise.all(classStudents.map(id => db.collection('alumnes').doc(id).get()))
-          .then(studentDocs=>{
-            studentDocs.forEach(sdoc=>{
-              const sid = sdoc.id;
-              const sdata = sdoc.exists ? sdoc.data() : { nom:'Desconegut', notes:{} };
-              const tr = document.createElement('tr');
-
-              const tdName = document.createElement('td');
-              tdName.className = 'border px-2 py-1';
-              tdName.textContent = sdata.nom;
-              tr.appendChild(tdName);
-
-              actDocs.forEach((actDoc, actIndex)=>{
-                const aid = actDoc.id;
-                const val = (sdata.notes && sdata.notes[aid]!==undefined) ? sdata.notes[aid] : '';
-
-                const td = document.createElement('td');
-                td.className = 'border px-2 py-1';
-
-                /* 🔴 NOVETAT: COLOR DE COLUMNA CALCULADA */
-                if (calculatedActs[aid]) {
-                  td.style.backgroundColor = "#ffe4e6";  // rosa suau
-                }
-
-                const input = document.createElement('input');
-                input.type='number';
-                input.min=0;
-                input.max=10;
-                input.value=val;
-                input.className='table-input text-center rounded border p-1';
-
-                if (calculatedActs[aid]) {
-                  input.disabled = true;
-                  input.style.backgroundColor = "#fca5a5"; // vermell cel·la calculada
-                } else {
-                  input.addEventListener('change', e=> saveNote(sid, aid, e.target.value));
-                  input.addEventListener('input', ()=> applyCellColor(input));
-                  applyCellColor(input);
-                }
-
-                td.appendChild(input);
-                tr.appendChild(td);
-              });
-
-              const avgTd = document.createElement('td');
-              avgTd.className = 'border px-2 py-1 text-right font-semibold';
-              avgTd.textContent = computeStudentAverageText(sdata);
-              tr.appendChild(avgTd);
-
-              notesTbody.appendChild(tr);
-            });
-
-            renderAverages();
-          });
-      });
-  });
+    gridContainer.appendChild(row);
+  }
 }
 
+// Funció que recalcula només l'activitat de redondeig seleccionada
+async function recalcRoundingActivity(activityId) {
+  if (!currentClassId) return;
+
+  const actRef = db.collection('activitats').doc(activityId);
+  const actDoc = await actRef.get();
+  if (!actDoc.exists) return;
+
+  const actData = actDoc.data();
+  if (actData.calcType !== 'rounding') return;
+
+  for (const sid of classStudents) {
+    const studentDoc = await db.collection('alumnes').doc(sid).get();
+    const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
+    let val = 0;
+
+    // Trobar activitat de referència
+    const refActivityName = actData.refActivityName || '';
+    const multiplier = Number(actData.formula) || 1;
+
+    for (const aid of classActivities) {
+      const aDoc = await db.collection('activitats').doc(aid).get();
+      if (aDoc.exists && aDoc.data().nom === refActivityName) {
+        val = Number(notes[aid] || 0);
+      }
+    }
+
+    // Aplicar redondeig
+    if (multiplier === 1) val = Math.round(val);
+    else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
+
+    await db.collection('alumnes').doc(sid).update({ [`notes.${activityId}`]: val });
+  }
+
+  renderNotesGrid(); // refresquem la taula després del recalcul
+}
 
 
 /* ---------------- Helpers Notes & Excel ---------------- */
@@ -1276,3 +1238,38 @@ async function recalculateActivities() {
     }
   }
 }
+
+async function recalcRoundingActivity(activityId) {
+  if (!currentClassId) return;
+  const actRef = db.collection('activitats').doc(activityId);
+  const actDoc = await actRef.get();
+  if (!actDoc.exists) return;
+
+  const actData = actDoc.data();
+  if (actData.calcType !== 'rounding') return;
+
+  for (const sid of classStudents) {
+    const studentDoc = await db.collection('alumnes').doc(sid).get();
+    const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
+    let val = 0;
+
+    // Trobar activitat de referència
+    const refActivityName = actData.refActivityName || '';
+    const multiplier = Number(actData.formula) || 1;
+
+    for (const aid of classActivities) {
+      const aDoc = await db.collection('activitats').doc(aid).get();
+      if (aDoc.exists && aDoc.data().nom === refActivityName) {
+        val = Number(notes[aid] || 0);
+      }
+    }
+
+    if (multiplier === 1) val = Math.round(val);
+    else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
+
+    await db.collection('alumnes').doc(sid).update({ [`notes.${activityId}`]: val });
+  }
+
+  renderNotesGrid();
+}
+
