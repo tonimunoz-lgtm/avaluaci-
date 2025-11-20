@@ -500,7 +500,7 @@ function renderStudentsList(){
   });
 }
 /* ---------------- Notes Grid amb menú activitats ---------------- */
-function renderNotesGrid(){
+function renderNotesGrid() {
   notesThead.innerHTML = '';
   notesTbody.innerHTML = '';
   notesTfoot.innerHTML = '';
@@ -508,17 +508,19 @@ function renderNotesGrid(){
   const headRow = document.createElement('tr');
   headRow.appendChild(th('Alumne'));
 
-  db.collection('classes').doc(currentClassId).get().then(doc=>{
-    if(!doc.exists) return;
+  db.collection('classes').doc(currentClassId).get().then(doc => {
+    if (!doc.exists) return;
     const classData = doc.data();
     const calculatedActs = classData.calculatedActivities || {};
 
     Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()))
-      .then(actDocs=>{
-        actDocs.forEach(adoc=>{
+      .then(actDocs => {
+
+        // Capçalera
+        actDocs.forEach(adoc => {
           const id = adoc.id;
-          const name = adoc.exists ? (adoc.data().nom||'Sense nom') : 'Desconegut';
-          
+          const name = adoc.exists ? (adoc.data().nom || 'Sense nom') : 'Desconegut';
+
           const thEl = th('');
           const container = document.createElement('div');
           container.className = 'flex items-center justify-between';
@@ -536,36 +538,37 @@ function renderNotesGrid(){
               <button class="calc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Càlcul</button>
             </div>
           `;
-          
+
           container.appendChild(spanName);
           container.appendChild(menuDiv);
           thEl.appendChild(container);
           headRow.appendChild(thEl);
 
+          // Capçalera color calculada
           if (calculatedActs[id]) {
             thEl.style.backgroundColor = "#fecaca";
             thEl.style.borderBottom = "3px solid #dc2626";
             thEl.style.color = "black";
           }
 
+          // Menú
           const menuBtn = menuDiv.querySelector('.menu-btn');
           const menu = menuDiv.querySelector('.menu');
-
-          menuBtn.addEventListener('click', e=>{
+          menuBtn.addEventListener('click', e => {
             e.stopPropagation();
-            document.querySelectorAll('.menu').forEach(m=> m.classList.add('hidden'));
+            document.querySelectorAll('.menu').forEach(m => m.classList.add('hidden'));
             menu.classList.toggle('hidden');
           });
 
-          menuDiv.querySelector('.edit-btn').addEventListener('click', ()=>{
+          menuDiv.querySelector('.edit-btn').addEventListener('click', () => {
             const newName = prompt('Nou nom activitat:', name);
-            if(!newName || newName.trim()===name) return;
+            if (!newName || newName.trim() === name) return;
             db.collection('activitats').doc(id).update({ nom: newName.trim() })
-              .then(()=> loadClassData());
+              .then(() => loadClassData());
           });
 
-          menuDiv.querySelector('.delete-btn').addEventListener('click', ()=> removeActivity(id));
-          menuDiv.querySelector('.calc-btn').addEventListener('click', ()=> openCalcModal(id));
+          menuDiv.querySelector('.delete-btn').addEventListener('click', () => removeActivity(id));
+          menuDiv.querySelector('.calc-btn').addEventListener('click', () => openCalcModal(id));
 
         });
 
@@ -574,61 +577,68 @@ function renderNotesGrid(){
 
         enableActivityDrag();
 
-        if(classStudents.length===0){
-          notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivities.length+2}">No hi ha alumnes</td></tr>`;
+        if (classStudents.length === 0) {
+          notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivities.length + 2}">No hi ha alumnes</td></tr>`;
           renderAverages();
           return;
         }
 
+        // Cos taula
         Promise.all(classStudents.map(id => db.collection('alumnes').doc(id).get()))
-          .then(studentDocs=>{
-            studentDocs.forEach(sdoc=>{
+          .then(studentDocs => {
+            studentDocs.forEach(sdoc => {
               const sid = sdoc.id;
-              const sdata = sdoc.exists ? sdoc.data() : { nom:'Desconegut', notes:{} };
-              const tr = document.createElement('tr');
+              const sdata = sdoc.exists ? sdoc.data() : { nom: 'Desconegut', notes: {} };
+              let tr = document.querySelector(`tr[data-student-id="${sid}"]`);
 
-              const tdName = document.createElement('td');
-              tdName.className = 'border px-2 py-1';
-              tdName.textContent = sdata.nom;
-              tr.appendChild(tdName);
+              if (!tr) {
+                tr = document.createElement('tr');
+                tr.dataset.studentId = sid;
 
-              actDocs.forEach((actDoc, actIndex)=>{
-                const aid = actDoc.id;
-                const val = (sdata.notes && sdata.notes[aid]!==undefined) ? sdata.notes[aid] : '';
+                const tdName = document.createElement('td');
+                tdName.className = 'border px-2 py-1';
+                tdName.textContent = sdata.nom;
+                tr.appendChild(tdName);
 
-                const td = document.createElement('td');
-                td.className = 'border px-2 py-1';
+                actDocs.forEach(actDoc => {
+                  const aid = actDoc.id;
+                  const val = (sdata.notes && sdata.notes[aid] !== undefined) ? sdata.notes[aid] : '';
 
-                if (calculatedActs[aid]) {
-                  td.style.backgroundColor = "#ffe4e6";
-                }
+                  const td = document.createElement('td');
+                  td.className = 'border px-2 py-1';
 
-                const input = document.createElement('input');
-                input.type='number';
-                input.min=0;
-                input.max=10;
-                input.value=val;
-                input.className='table-input text-center rounded border p-1';
+                  if (calculatedActs[aid]) {
+                    td.style.backgroundColor = "#ffe4e6";
+                  }
 
-                if (calculatedActs[aid]) {
-                  input.disabled = true;
-                  input.style.backgroundColor = "#fca5a5";
-                } else {
-                  input.addEventListener('change', e=> saveNote(sid, aid, e.target.value));
-                  input.addEventListener('input', ()=> applyCellColor(input));
-                  applyCellColor(input);
-                }
+                  const input = document.createElement('input');
+                  input.type = 'number';
+                  input.min = 0;
+                  input.max = 10;
+                  input.value = val;
+                  input.dataset.activityId = aid;
+                  input.className = 'table-input text-center rounded border p-1';
 
-                td.appendChild(input);
-                tr.appendChild(td);
-              });
+                  if (calculatedActs[aid]) {
+                    input.disabled = true;
+                    input.style.backgroundColor = "#fca5a5";
+                  } else {
+                    input.addEventListener('change', e => saveNote(sid, aid, e.target.value));
+                    input.addEventListener('input', () => applyCellColor(input));
+                    applyCellColor(input);
+                  }
 
-              const avgTd = document.createElement('td');
-              avgTd.className = 'border px-2 py-1 text-right font-semibold';
-              avgTd.textContent = computeStudentAverageText(sdata);
-              tr.appendChild(avgTd);
+                  td.appendChild(input);
+                  tr.appendChild(td);
+                });
 
-              notesTbody.appendChild(tr);
+                const avgTd = document.createElement('td');
+                avgTd.className = 'border px-2 py-1 text-right font-semibold';
+                avgTd.textContent = computeStudentAverageText(sdata);
+                tr.appendChild(avgTd);
+
+                notesTbody.appendChild(tr);
+              }
             });
 
             renderAverages();
@@ -637,6 +647,29 @@ function renderNotesGrid(){
   });
 }
 
+// Funció per actualitzar cel·les calculades sense recrear tota la taula
+function updateCalculatedCells() {
+  db.collection('classes').doc(currentClassId).get().then(doc => {
+    if (!doc.exists) return;
+    const calculatedActs = doc.data().calculatedActivities || {};
+
+    classStudents.forEach(sid => {
+      const row = document.querySelector(`tr[data-student-id="${sid}"]`);
+      if (!row) return;
+
+      classActivities.forEach(aid => {
+        if (!calculatedActs[aid]) return;
+        const input = row.querySelector(`input[data-activity-id="${aid}"]`);
+        if (!input) return;
+
+        const val = computeCalculatedNote(sid, aid); // funció que calcula nota
+        input.value = val;
+        input.disabled = true;
+        input.style.backgroundColor = "#fca5a5";
+      });
+    });
+  });
+}
 
 
 
