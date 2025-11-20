@@ -1174,58 +1174,73 @@ if (closeBtn) {
 // ---------------- Recalcular activitats calculades per tots els alumnes ----------------
 async function recalculateActivities() {
   if (!currentClassId) return;
+  if (classStudents.length === 0 || classActivities.length === 0) return;
 
+  // 🔹 Carregar totes les activitats de la classe d’una vegada
+  const actDocs = await Promise.all(classActivities.map(aid => db.collection('activitats').doc(aid).get()));
+  const activitiesData = {};
+  actDocs.forEach(doc => {
+    if (doc.exists) activitiesData[doc.id] = doc.data();
+  });
+
+  // 🔹 Carregar les activitats marcades com a calculades
+  const classDoc = await db.collection('classes').doc(currentClassId).get();
+  const calculatedActs = classDoc.exists ? classDoc.data().calculatedActivities || {} : {};
+
+  // 🔹 Processar cada alumne
   for (const studentId of classStudents) {
-    // Carregar notes de l'alumne
     const studentDoc = await db.collection('alumnes').doc(studentId).get();
     const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
+    const updates = {};
 
     for (const actId of classActivities) {
-      // Carregar informació de l'activitat
-      const actDoc = await db.collection('activitats').doc(actId).get();
-      if (!actDoc.exists) continue;
-      const actData = actDoc.data();
+      if (!calculatedActs[actId]) continue; // només recalcularem activitats marcades
 
-      // Només recalcularem si està marcada com a calculada
-      const classDoc = await db.collection('classes').doc(currentClassId).get();
-      const calcActs = classDoc.exists ? classDoc.data().calculatedActivities || {} : {};
-      if (!calcActs[actId]) continue;
+      const actData = activitiesData[actId];
+      if (!actData) continue;
 
       let result = 0;
 
       if (actData.calcType === 'formula' && actData.formula) {
-        // Substituir noms d'activitats per notes
         let formulaEval = actData.formula;
+        // Substituir tots els noms d’activitats per les notes actuals
         for (const aid of classActivities) {
-          const aDoc = await db.collection('activitats').doc(aid).get();
-          const aName = aDoc.exists ? aDoc.data().nom : '';
+          const name = activitiesData[aid]?.nom || '';
           const val = Number(notes[aid] || 0);
-          const regex = new RegExp(aName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+          const regex = new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
           formulaEval = formulaEval.replace(regex, val);
         }
         try { result = Function('"use strict"; return (' + formulaEval + ')')(); }
         catch(e){ result = 0; }
+
       } else if (actData.calcType === 'rounding' && actData.formula) {
-        // Redondeig segons multiplicador
+        // Redondeig segons multiplicador i activitat de referència
         const multiplier = Number(actData.formula) || 1;
         const refActivityName = actData.refActivityName || '';
         let val = 0;
-        // Trobar l'activitat de referència
+
         for (const aid of classActivities) {
-          const aDoc = await db.collection('activitats').doc(aid).get();
-          if (aDoc.exists && aDoc.data().nom === refActivityName) {
+          const aName = activitiesData[aid]?.nom || '';
+          if (aName === refActivityName) {
             val = Number(notes[aid] || 0);
+            break;
           }
         }
+
         if (multiplier === 1) val = Math.round(val);
         else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
         result = val;
       }
 
-      // Guardar nota recalculada
-      await db.collection('alumnes').doc(studentId).update({
-        [`notes.${actId}`]: result
-      });
+      updates[`notes.${actId}`] = result;
+    }
+
+    // 🔹 Actualitzar totes les notes d’aquest alumne amb un sol update
+    if (Object.keys(updates).length) {
+      await db.collection('alumnes').doc(studentId).update(updates);
     }
   }
+
+  // 🔹 Tornem a renderitzar la graella amb colors i bloqueig
+  renderNotesGrid();
 }
