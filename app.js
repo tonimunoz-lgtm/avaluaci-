@@ -1,5 +1,7 @@
 // app.js - lògica principal (modules)
 import { openModal, closeModal, confirmAction } from './modals.js';
+import { applyRounding } from './rounding.js';
+
 /* ---------------- FIREBASE CONFIG ---------------- */
 const firebaseConfig = {
   apiKey: "AIzaSyA0P7TWcEw9y9_13yqRhvsgWN5d3YKH7yo",
@@ -795,47 +797,37 @@ modalApplyCalcBtn.addEventListener('click', async ()=> {
         await saveNote(sid, currentCalcActivityId, result);
       }
 
-    } else if (calcType === 'rounding') {
-      const formula = formulaField.value.trim();
-      if (!formula) return alert('Selecciona activitat i multiplicador (0.5 o 1)');
+   else if (calcType === 'rounding') {
+  const multiplier = Number(formulaField.value); // 1 o 0.5
+  const refActivityName = selectedActivityName;
 
-      // Separar nom activitat i multiplicador
-      let selectedActivityName = '';
-      let multiplier = 1;
-      classActivities.forEach(aid => {
-        db.collection('activitats').doc(aid).get().then(doc => {
-          const actName = doc.exists ? doc.data().nom : '';
-          if (formula.startsWith(actName)) {
-            selectedActivityName = actName;
-            multiplier = Number(formula.slice(actName.length)) || 1;
-          }
-        });
-      });
+  for (const sid of classStudents) {
+    const studentDoc = await db.collection('alumnes').doc(sid).get();
+    const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
+    let val = 0;
 
-      // Guardar activitat de redondeig a Firestore
-      await actRef.update({
-        calcType: 'rounding',
-        formula: multiplier.toString(),       // multiplicador
-        refActivityName: selectedActivityName // activitat de referència
-      });
-
-      // Aplicar redondeig a tots els alumnes
-      for (const sid of classStudents) {
-        const studentDoc = await db.collection('alumnes').doc(sid).get();
-        const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
-        let val = 0;
-        for (const aid of classActivities) {
-          const adoc = await db.collection('activitats').doc(aid).get();
-          if (adoc.exists && adoc.data().nom === selectedActivityName) {
-            val = Number(notes[aid] || 0);
-          }
-        }
-        if (multiplier === 1) val = Math.round(val);
-        else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
-
-        await saveNote(sid, currentCalcActivityId, val);
+    // Trobar l’activitat de referència pel NOM
+    for (const aid of classActivities) {
+      const aDoc = await db.collection('activitats').doc(aid).get();
+      if (aDoc.exists && aDoc.data().nom === refActivityName) {
+        val = Number(notes[aid] || 0);
       }
     }
+
+    // 🟢 Nou: APLIQUEM EL MÒDUL INDEPENDENT
+    const roundedVal = applyRounding(val, multiplier);
+
+    await saveNote(sid, currentCalcActivityId, roundedVal);
+  }
+
+  // Guardar configuració al document de l’activitat
+  await db.collection('activitats').doc(currentCalcActivityId).update({
+    calcType: 'rounding',
+    formula: multiplier.toString(),
+    refActivityName
+  });
+}
+
 
     // Marcar activitat com calculada
     await classRef.update({
@@ -850,8 +842,6 @@ modalApplyCalcBtn.addEventListener('click', async ()=> {
     alert('Error aplicant càlcul: ' + e.message);
   }
 });
-
-
 
 
 // ---------------- Construir botons de fórmules ----------------
