@@ -501,63 +501,72 @@ function renderStudentsList(){
   });
 }
 /* ---------------- Notes Grid amb menú activitats ---------------- */
-function renderNotesGrid(){
-  notesThead.innerHTML = '';
-  notesTbody.innerHTML = '';
-  notesTfoot.innerHTML = '';
+async function renderNotesGrid() {
+  // Neteja la graella existent
+  const gridContainer = document.getElementById('notes-grid');
+  gridContainer.innerHTML = '';
 
   const headRow = document.createElement('tr');
-  headRow.appendChild(th('Alumne'));
 
-  db.collection('classes').doc(currentClassId).get().then(doc=>{
-    if(!doc.exists) return;
-    const classData = doc.data();
-    const calculatedActs = classData.calculatedActivities || {};
+  // Afegim headers (activitats)
+  actDocs.forEach(adoc => {
+    const id = adoc.id;
+    const name = adoc.exists ? (adoc.data().nom || 'Sense nom') : 'Desconegut';
 
-    Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()))
-      .then(actDocs=>{
-        actDocs.forEach(adoc=>{
-          const id = adoc.id;
-          const name = adoc.exists ? (adoc.data().nom||'Sense nom') : 'Desconegut';
-          
-          const thEl = th('');
-          const container = document.createElement('div');
-          container.className = 'flex items-center justify-between gap-1';
+    const thEl = document.createElement('th');
+    thEl.className = 'p-2 border-b border-gray-300';
 
-          const spanName = document.createElement('span');
-          spanName.textContent = name;
+    // Contenidor intern per mantenir layout i tres punts existents
+    const container = thEl.querySelector('.header-container') || document.createElement('div');
+    container.className = 'header-container flex items-center justify-between gap-1';
 
-          container.appendChild(spanName);
+    const spanName = document.createElement('span');
+    spanName.textContent = name;
 
-          if(calculatedActs[id]) {
-            // Afegim icona de refrescar per redondeig
-            const refreshBtn = document.createElement('button');
-            refreshBtn.textContent = '🔄';
-            refreshBtn.title = 'Refrescar redondeig';
-            refreshBtn.className = 'ml-2 text-sm';
-            refreshBtn.addEventListener('click', e => {
-              e.stopPropagation();
-              recalcRoundingActivity(id);
-            });
-            container.appendChild(refreshBtn);
+    container.appendChild(spanName);
 
-            thEl.style.backgroundColor = "#fecaca"; // vermell suau
-            thEl.style.borderBottom = "3px solid #dc2626";
-            thEl.style.color = "black";
-          }
-
-          thEl.appendChild(container);
-          headRow.appendChild(thEl);
-        });
-
-        headRow.appendChild(th('Mitjana', 'text-right'));
-        notesThead.appendChild(headRow);
-
-        // Renderitza la resta dels alumnes com abans...
-        // (mantenir el teu codi existent per inputs, colors, etc.)
+    // Si és activitat amb redondeig, afegim botó de refrescar
+    if (calculatedActs[id]) {
+      const refreshBtn = document.createElement('button');
+      refreshBtn.textContent = '🔄';
+      refreshBtn.title = 'Refrescar redondeig';
+      refreshBtn.className = 'ml-2 text-sm';
+      refreshBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        recalcRoundingActivity(id); // Funció que recalcula només aquesta activitat
       });
+      container.appendChild(refreshBtn);
+    }
+
+    // Només afegim container si no existia
+    if (!thEl.querySelector('.header-container')) thEl.appendChild(container);
+
+    // Afegim el th a la fila de headers
+    headRow.appendChild(thEl);
+  });
+
+  // Afegim la fila de headers a la graella
+  gridContainer.appendChild(headRow);
+
+  // Renderitzem les files amb notes
+  notesDocs.forEach(ndoc => {
+    const tr = document.createElement('tr');
+
+    actDocs.forEach(adoc => {
+      const td = document.createElement('td');
+      td.className = 'p-2 border-b border-gray-200 text-center';
+
+      const actId = adoc.id;
+      const note = ndoc.data()[actId];
+
+      td.textContent = note !== undefined ? note : '';
+      tr.appendChild(td);
+    });
+
+    gridContainer.appendChild(tr);
   });
 }
+
 // Funció que recalcula només l'activitat de redondeig seleccionada
 // ---------------- Recalcular una activitat de redondeig ----------------
 async function recalcRoundingActivity(activityId) {
