@@ -1215,30 +1215,45 @@ if (closeBtn) {
 
 // funció per actualitzar capçalera
 function updateActivityHeader(activityId) {
+  // Seleccionem el th pel id
   const headerCell = document.querySelector(`#th-${activityId}`);
   if (!headerCell) return;
+
+  // Eliminem info antiga
   const oldInfo = headerCell.querySelector(".activity-meta");
   if (oldInfo) oldInfo.remove();
 
   const activity = activitiesData[activityId];
+  if (!activity) return;
 
-  if (activity?.type === "formula") {
-    const info = document.createElement("small");
-    info.className = "activity-meta block text-xs text-gray-500 mt-1";
-    info.textContent = `Fórmula: ${activity.formula}`;
-    headerCell.appendChild(info);
-  } else if (activity?.type === "rounding") {
-    const info = document.createElement("small");
-    info.className = "activity-meta block text-xs text-gray-500 mt-1";
-    info.textContent = `Redondeig: ${activity.roundTo}`;
-    headerCell.appendChild(info);
+  let infoText = "";
+
+  switch (activity.type) {
+    case "numeric":
+      infoText = `Valor: ${activity.value}`;
+      break;
+    case "formula":
+      infoText = `Fórmula: ${activity.formula}`;
+      break;
+    case "rounding":
+      infoText = `Redondeig: ${activity.roundTo}`;
+      break;
+    default:
+      return; // si és un tipus desconegut no fem res
   }
+
+  const info = document.createElement("small");
+  info.className = "activity-meta block text-xs text-gray-500 mt-1";
+  info.textContent = infoText;
+  headerCell.appendChild(info);
 }
 
 // ------------------ MODAL CÀLCUL ------------------
 // aquí enganxa l'event listener del botó del modal
 document.getElementById("modalApplyCalcBtn").addEventListener("click", () => {
-  const activityId = currentActivityId; // assegura't que guardes l'activitat abans d'obrir el modal
+  const activityId = currentCalcActivityId; // ← aquí s’ha de usar currentCalcActivityId
+  if(!activityId) return;
+
   const calcType = document.getElementById("calcType").value;
 
   if (calcType === "numeric") {
