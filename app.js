@@ -381,7 +381,6 @@ function removeStudent(studentId) {
   );
 }
 
-
 function reorderStudents(fromIdx, toIdx){
   if(fromIdx===toIdx) return;
   const arr = Array.from(classStudents);
