@@ -665,7 +665,12 @@ async function saveNote(studentId, activityId, rawValue){
     }
 
     await db.collection('alumnes').doc(studentId).update(updateObj);
+
+    // 🔥 NOVETAT: recalcular tot quan canvia una nota base
+    await recalculateActivities();
+    renderNotesGrid();
 }
+
 
 
 function applyCellColor(inputEl){
@@ -1218,57 +1223,75 @@ if (closeBtn) {
 async function recalculateActivities() {
   if (!currentClassId) return;
 
+  // Carreguem dades de classe d’un sol cop
+  const classDoc = await db.collection('classes').doc(currentClassId).get();
+  const calcActs = classDoc.exists ? classDoc.data().calculatedActivities || {} : {};
+
+  // Carregar activitats només una vegada
+  const actDocs = {};
+  for (const actId of classActivities) {
+    const d = await db.collection('activitats').doc(actId).get();
+    if (d.exists) actDocs[actId] = d.data();
+  }
+
+  // Recalcular notes per cada alumne
   for (const studentId of classStudents) {
-    // Carregar notes de l'alumne
-    const studentDoc = await db.collection('alumnes').doc(studentId).get();
+    const studentRef = db.collection('alumnes').doc(studentId);
+    const studentDoc = await studentRef.get();
     const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
 
-    for (const actId of classActivities) {
-      // Carregar informació de l'activitat
-      const actDoc = await db.collection('activitats').doc(actId).get();
-      if (!actDoc.exists) continue;
-      const actData = actDoc.data();
+    let updates = {};
 
-      // Només recalcularem si està marcada com a calculada
-      const classDoc = await db.collection('classes').doc(currentClassId).get();
-      const calcActs = classDoc.exists ? classDoc.data().calculatedActivities || {} : {};
-      if (!calcActs[actId]) continue;
+    for (const actId of classActivities) {
+      if (!calcActs[actId]) continue; // només les calculades
+
+      const actData = actDocs[actId];
+      if (!actData || !actData.calcType) continue;
 
       let result = 0;
 
-      if (actData.calcType === 'formula' && actData.formula) {
-        // Substituir noms d'activitats per notes
-        let formulaEval = actData.formula;
+      /* ---------- FORMULA ---------- */
+      if (actData.calcType === 'formula') {
+        let evalStr = actData.formula;
+
+        // Substituir noms d’activitats per les notes
         for (const aid of classActivities) {
-          const aDoc = await db.collection('activitats').doc(aid).get();
-          const aName = aDoc.exists ? aDoc.data().nom : '';
+          const name = actDocs[aid]?.nom || "";
           const val = Number(notes[aid] || 0);
-          const regex = new RegExp(aName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-          formulaEval = formulaEval.replace(regex, val);
+          if (name) {
+            const regex = new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+            evalStr = evalStr.replace(regex, val);
+          }
         }
-        try { result = Function('"use strict"; return (' + formulaEval + ')')(); }
-        catch(e){ result = 0; }
-      } else if (actData.calcType === 'rounding' && actData.formula) {
-        // Redondeig segons multiplicador
+
+        try { result = Function('"use strict"; return (' + evalStr + ')')(); }
+        catch { result = 0; }
+      }
+
+      /* ---------- REDONEIG ---------- */
+      else if (actData.calcType === 'rounding') {
+        const refName = actData.refActivityName || "";
         const multiplier = Number(actData.formula) || 1;
-        const refActivityName = actData.refActivityName || '';
+
         let val = 0;
-        // Trobar l'activitat de referència
         for (const aid of classActivities) {
-          const aDoc = await db.collection('activitats').doc(aid).get();
-          if (aDoc.exists && aDoc.data().nom === refActivityName) {
+          if (actDocs[aid]?.nom === refName) {
             val = Number(notes[aid] || 0);
           }
         }
-        if (multiplier === 1) val = Math.round(val);
-        else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
+
+        if (multiplier === 1)       val = Math.round(val);
+        else if (multiplier === .5) val = Math.round(val * 2) / 2;
+
         result = val;
       }
 
-      // Guardar nota recalculada
-      await db.collection('alumnes').doc(studentId).update({
-        [`notes.${actId}`]: result
-      });
+      updates[`notes.${actId}`] = result;
+    }
+
+    // Actualitzar totes les notes de cop
+    if (Object.keys(updates).length > 0) {
+      await studentRef.update(updates);
     }
   }
 }
