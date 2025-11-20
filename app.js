@@ -653,19 +653,26 @@ function renderNotesGrid() {
 }
 
 // Funció per refrescar columna calculada
+// Funció per refrescar columna calculada automàticament
 function refreshActivityColumn(activityId) {
   db.collection('alumnes').where('classes', 'array-contains', currentClassId).get()
     .then(querySnapshot => {
       querySnapshot.forEach(sdoc => {
         const studentId = sdoc.id;
         const studentData = sdoc.data();
-        const val = (studentData.notes && studentData.notes[activityId] !== undefined)
-                    ? studentData.notes[activityId]
-                    : '';
 
-        const input = document.querySelector(`input[data-activity-id="${activityId}"][data-student-id="${studentId}"]`);
+        // Calcular nova nota
+        const newVal = computeCalculatedNote(studentData, activityId);
+
+        // Guardar-la a Firebase
+        db.collection('alumnes').doc(studentId).update({
+          [`notes.${activityId}`]: newVal
+        });
+
+        // Actualitzar input a la taula si existeix
+        const input = document.querySelector(`tr[data-student-id="${studentId}"] input[data-activity-id="${activityId}"]`);
         if (input) {
-          input.value = val;
+          input.value = newVal;
           applyCellColor(input);
         }
       });
@@ -674,6 +681,17 @@ function refreshActivityColumn(activityId) {
       renderAverages();
     });
 }
+
+// Exemple de funció de càlcul (personalitza segons la teva lògica)
+function computeCalculatedNote(studentData, activityId) {
+  // Suposem que la nota calculada és la mitjana de totes les altres notes
+  const notes = studentData.notes || {};
+  const values = Object.values(notes).filter(val => val !== '' && val !== undefined && val !== null);
+  if (values.length === 0) return 0;
+  const sum = values.reduce((a, b) => a + Number(b), 0);
+  return (sum / values.length).toFixed(2); // Retorna amb 2 decimals
+}
+
 
 
 // Funció per actualitzar cel·les calculades sense recrear tota la taula
