@@ -580,7 +580,6 @@ function renderNotesGrid() {
 
           menuDiv.querySelector('.delete-btn').addEventListener('click', () => removeActivity(id));
           menuDiv.querySelector('.calc-btn').addEventListener('click', () => openCalcModal(id));
-
         });
 
         headRow.appendChild(th('Mitjana', 'text-right'));
@@ -702,9 +701,6 @@ function applyFormulaToStudent(studentData, formula) {
       return 0;
   }
 }
-
-
-
 
 
 // Funció per actualitzar cel·les calculades sense recrear tota la taula
