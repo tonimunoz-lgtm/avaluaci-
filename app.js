@@ -1223,7 +1223,6 @@ if (closeBtn) {
 async function recalculateActivities() {
   if (!currentClassId) return;
 
-  // Carreguem dades de classe d’un sol cop
   const classDoc = await db.collection('classes').doc(currentClassId).get();
   const calcActs = classDoc.exists ? classDoc.data().calculatedActivities || {} : {};
 
@@ -1238,58 +1237,57 @@ async function recalculateActivities() {
   for (const studentId of classStudents) {
     const studentRef = db.collection('alumnes').doc(studentId);
     const studentDoc = await studentRef.get();
-    const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
+    let notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
 
     let updates = {};
 
+    // ---------- 1. Primer calcular fórmules ----------
     for (const actId of classActivities) {
-      if (!calcActs[actId]) continue; // només les calculades
-
+      if (!calcActs[actId]) continue;
       const actData = actDocs[actId];
-      if (!actData || !actData.calcType) continue;
+      if (!actData || actData.calcType !== 'formula') continue;
+
+      let evalStr = actData.formula;
+      for (const aid of classActivities) {
+        const name = actDocs[aid]?.nom || "";
+        const val = Number(notes[aid] || 0);
+        if (name) {
+          const regex = new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+          evalStr = evalStr.replace(regex, val);
+        }
+      }
 
       let result = 0;
-
-      /* ---------- FORMULA ---------- */
-      if (actData.calcType === 'formula') {
-        let evalStr = actData.formula;
-
-        // Substituir noms d’activitats per les notes
-        for (const aid of classActivities) {
-          const name = actDocs[aid]?.nom || "";
-          const val = Number(notes[aid] || 0);
-          if (name) {
-            const regex = new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-            evalStr = evalStr.replace(regex, val);
-          }
-        }
-
-        try { result = Function('"use strict"; return (' + evalStr + ')')(); }
-        catch { result = 0; }
-      }
-
-      /* ---------- REDONEIG ---------- */
-      else if (actData.calcType === 'rounding') {
-        const refName = actData.refActivityName || "";
-        const multiplier = Number(actData.formula) || 1;
-
-        let val = 0;
-        for (const aid of classActivities) {
-          if (actDocs[aid]?.nom === refName) {
-            val = Number(notes[aid] || 0);
-          }
-        }
-
-        if (multiplier === 1)       val = Math.round(val);
-        else if (multiplier === .5) val = Math.round(val * 2) / 2;
-
-        result = val;
-      }
+      try { result = Function('"use strict"; return (' + evalStr + ')')(); }
+      catch { result = 0; }
 
       updates[`notes.${actId}`] = result;
+      notes[actId] = result; // Important: actualitzar "notes" local
     }
 
-    // Actualitzar totes les notes de cop
+    // ---------- 2. Després calcular redondeigs ----------
+    for (const actId of classActivities) {
+      if (!calcActs[actId]) continue;
+      const actData = actDocs[actId];
+      if (!actData || actData.calcType !== 'rounding') continue;
+
+      const refName = actData.refActivityName || "";
+      const multiplier = Number(actData.formula) || 1;
+
+      let val = 0;
+      for (const aid of classActivities) {
+        if (actDocs[aid]?.nom === refName) {
+          val = Number(notes[aid] || 0); // Ara notes[aid] ja té el valor recalculat si és fórmula
+        }
+      }
+
+      if (multiplier === 1)       val = Math.round(val);
+      else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
+
+      updates[`notes.${actId}`] = val;
+      notes[actId] = val; // Important: actualitzar "notes" local
+    }
+
     if (Object.keys(updates).length > 0) {
       await studentRef.update(updates);
     }
