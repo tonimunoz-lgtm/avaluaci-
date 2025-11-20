@@ -757,7 +757,7 @@ calcTypeSelect.addEventListener('change', ()=>{
 });
 
 // Aplicar càlcul
-modalApplyCalcBtn.addEventListener('click', async ()=> {
+modalApplyCalcBtn.addEventListener('click', async () => {
   if (!currentCalcActivityId) return;
 
   const classRef = db.collection('classes').doc(currentClassId);
@@ -766,67 +766,87 @@ modalApplyCalcBtn.addEventListener('click', async ()=> {
   const calcType = calcTypeSelect.value;
 
   try {
+    /* ---------------- NUMERIC ---------------- */
     if (calcType === 'numeric') {
       const val = Number(numericField.value);
       if (isNaN(val)) return alert('Introdueix un número vàlid');
 
-      // Guardar tipus i fórmula (en aquest cas valor numèric)
       await actRef.update({
         calcType: 'numeric',
         formula: val.toString()
       });
 
-      // Assignar a tots els alumnes
       for (const sid of classStudents) {
         await saveNote(sid, currentCalcActivityId, val);
       }
+    }
 
-    } else if (calcType === 'formula') {
+    /* ---------------- FORMULA ---------------- */
+    else if (calcType === 'formula') {
       const formula = formulaField.value.trim();
       if (!formula) return alert('Formula buida');
 
-      // Guardar tipus i fórmula a Firestore
       await actRef.update({
         calcType: 'formula',
-        formula: formula
+        formula
       });
 
-      // Aplicar a tots els alumnes
       for (const sid of classStudents) {
         const result = await evalFormulaAsync(formula, sid);
         await saveNote(sid, currentCalcActivityId, result);
       }
-
-   else if (calcType === 'rounding') {
-  const multiplier = Number(formulaField.value); // 1 o 0.5
-  const refActivityName = selectedActivityName;
-
-  for (const sid of classStudents) {
-    const studentDoc = await db.collection('alumnes').doc(sid).get();
-    const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
-    let val = 0;
-
-    // Trobar l’activitat de referència pel NOM
-    for (const aid of classActivities) {
-      const aDoc = await db.collection('activitats').doc(aid).get();
-      if (aDoc.exists && aDoc.data().nom === refActivityName) {
-        val = Number(notes[aid] || 0);
-      }
     }
 
-    // 🟢 Nou: APLIQUEM EL MÒDUL INDEPENDENT
-    const roundedVal = applyRounding(val, multiplier);
+    /* ---------------- ROUNDING ---------------- */
+    else if (calcType === 'rounding') {
+      const parts = formulaField.value.trim().split(' ');
+      if (parts.length < 2) return alert("Format: <Activitat> <Multiplicador>");
 
-    await saveNote(sid, currentCalcActivityId, roundedVal);
+      const activityName = parts[0];
+      const multiplier = Number(parts[1]);
+
+      if (isNaN(multiplier)) return alert("Multiplicador incorrecte");
+
+      // Trobar ID de l’activitat de referència
+      let referenceActivityId = null;
+      for (const aid of classActivities) {
+        const doc = await db.collection('activitats').doc(aid).get();
+        if (doc.exists && doc.data().nom === activityName) {
+          referenceActivityId = aid;
+        }
+      }
+      if (!referenceActivityId) return alert("Activitat de referència no trobada");
+
+      // Aplicar rounding a tots els alumnes
+      for (const sid of classStudents) {
+        const studentDoc = await db.collection('alumnes').doc(sid).get();
+        const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
+        const base = Number(notes[referenceActivityId] || 0);
+
+        const roundedVal = applyRounding(base, multiplier);
+        await saveNote(sid, currentCalcActivityId, roundedVal);
+      }
+
+      await actRef.update({
+        calcType: 'rounding',
+        formula: multiplier.toString(),
+        refActivity: referenceActivityId
+      });
+    }
+
+    // marcar la columna de color
+    await classRef.update({
+      [`calculatedActivities.${currentCalcActivityId}`]: true
+    });
+
+    closeModal('modalCalc');
+    renderNotesGrid();
   }
-
-  // Guardar configuració al document de l’activitat
-  await db.collection('activitats').doc(currentCalcActivityId).update({
-    calcType: 'rounding',
-    formula: multiplier.toString(),
-    refActivityName
-  });
-}
+  catch (e) {
+    console.error(e);
+    alert("Error aplicant càlcul: " + e.message);
+  }
+});
 
 
     // Marcar activitat com calculada
