@@ -773,46 +773,34 @@ calcTypeSelect.addEventListener('change', ()=>{
   }
 });
 
-// Aplicar càlcul
 // ─────────── Helpers ───────────
 
 // Numeric
-async function applyNumeric(val) {
-  if (isNaN(val)) throw new Error('Introdueix un número vàlid');
-  await Promise.all(classStudents.map(sid => saveNote(sid, currentCalcActivityId, val)));
+function applyNumericToAll(val, students) {
+  return students.map(sid => ({ sid, val }));
 }
 
 // Formula
-async function applyFormula(formula) {
-  if (!formula.trim()) throw new Error('Formula buida');
-  await Promise.all(classStudents.map(async sid => {
+async function applyFormulaToAll(formula, students) {
+  const results = [];
+  for (const sid of students) {
     const result = await evalFormulaAsync(formula, sid);
-    await saveNote(sid, currentCalcActivityId, result);
-  }));
+    results.push({ sid, val: result });
+  }
+  return results;
 }
 
 // Rounding
-async function applyRounding(formula) {
-  if (!formula.trim()) throw new Error('Selecciona activitat i 0,5 o 1');
-
-  // Llegim totes les activitats
-  const activityDocs = await Promise.all(classActivities.map(aid => db.collection('activitats').doc(aid).get()));
-  const selectedActivityDoc = activityDocs.find(doc => doc.exists && formula.startsWith(doc.data().nom));
-  if (!selectedActivityDoc) throw new Error('Activitat no trobada');
-
-  const selectedActivityName = selectedActivityDoc.data().nom;
-  const multiplier = Number(formula.slice(selectedActivityName.length)) || 1;
-
-  await Promise.all(classStudents.map(async sid => {
-    const studentDoc = await db.collection('alumnes').doc(sid).get();
-    const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
-    let val = Number(notes[selectedActivityDoc.id]) || 0;
+function applyRoundingToAll(studentsData, selectedActivityId, multiplier, currentCalcActivityId) {
+  return studentsData.map(student => {
+    const valOriginal = Number(student.notes[selectedActivityId]) || 0;
+    let val = valOriginal;
 
     if (multiplier === 1) val = Math.round(val);
     else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
 
-    await saveNote(sid, currentCalcActivityId, val);
-  }));
+    return { sid: student.id, val };
+  });
 }
 
 // ─────────── Event Listener ───────────
@@ -821,19 +809,52 @@ modalApplyCalcBtn.addEventListener('click', async () => {
   if (!currentCalcActivityId) return;
 
   try {
+    let updates = [];
+
     switch (calcTypeSelect.value) {
-      case 'numeric':
-        await applyNumeric(Number(numericField.value));
+      case 'numeric': {
+        const val = Number(numericField.value);
+        if (isNaN(val)) throw new Error('Introdueix un número vàlid');
+        updates = applyNumericToAll(val, classStudents);
         break;
-      case 'formula':
-        await applyFormula(formulaField.value);
+      }
+
+      case 'formula': {
+        const formula = formulaField.value.trim();
+        if (!formula) throw new Error('Formula buida');
+        updates = await applyFormulaToAll(formula, classStudents);
         break;
-      case 'rounding':
-        await applyRounding(formulaField.value);
+      }
+
+      case 'rounding': {
+        const formula = formulaField.value.trim();
+        if (!formula) throw new Error('Selecciona activitat i 0,5 o 1');
+
+        // Llegim activitats de cop
+        const activityDocs = await Promise.all(classActivities.map(aid => db.collection('activitats').doc(aid).get()));
+        const selectedActivityDoc = activityDocs.find(doc => doc.exists && formula.startsWith(doc.data().nom));
+        if (!selectedActivityDoc) throw new Error('Activitat no trobada');
+
+        const selectedActivityId = selectedActivityDoc.id;
+        const multiplier = Number(formula.slice(selectedActivityDoc.data().nom.length)) || 1;
+
+        // Llegim totes les notes dels alumnes de cop
+        const studentDocs = await Promise.all(classStudents.map(sid => db.collection('alumnes').doc(sid).get()));
+        const studentsData = studentDocs.map(doc => ({
+          id: doc.id,
+          notes: doc.exists ? doc.data().notes || {} : {}
+        }));
+
+        updates = applyRoundingToAll(studentsData, selectedActivityId, multiplier, currentCalcActivityId);
         break;
+      }
+
       default:
         throw new Error('Tipus de càlcul desconegut');
     }
+
+    // Guardem totes les notes de cop
+    await Promise.all(updates.map(u => saveNote(u.sid, currentCalcActivityId, u.val)));
 
     await markActivityAsCalculated(currentCalcActivityId);
     closeModal('modalCalc');
