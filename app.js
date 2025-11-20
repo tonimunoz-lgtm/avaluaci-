@@ -510,14 +510,13 @@ function renderNotesGrid() {
 
   db.collection('classes').doc(currentClassId).get().then(doc => {
     if (!doc.exists) return;
-
     const classData = doc.data();
     const calculatedActs = classData.calculatedActivities || {};
 
     Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()))
       .then(actDocs => {
 
-        // Capçalera activitats amb icona refrescar
+        // Capçalera activitats
         actDocs.forEach(adoc => {
           const id = adoc.id;
           const name = adoc.exists ? (adoc.data().nom || 'Sense nom') : 'Desconegut';
@@ -529,10 +528,11 @@ function renderNotesGrid() {
           const spanName = document.createElement('span');
           spanName.textContent = name;
 
+          // Icona refrescar (només si és calculada)
           const refreshIcon = document.createElement('span');
           refreshIcon.innerHTML = '🔄';
           refreshIcon.title = 'Refrescar columna';
-          refreshIcon.className = 'ml-2 cursor-pointer hidden';
+          refreshIcon.className = 'ml-2 cursor-pointer hidden'; // ocult inicialment
 
           const menuDiv = document.createElement('div');
           menuDiv.className = 'relative';
@@ -551,16 +551,15 @@ function renderNotesGrid() {
           thEl.appendChild(container);
           headRow.appendChild(thEl);
 
+          // Capçalera color calculada
           if (calculatedActs[id]) {
             thEl.style.backgroundColor = "#fecaca";
             thEl.style.borderBottom = "3px solid #dc2626";
             thEl.style.color = "black";
             refreshIcon.classList.remove('hidden');
-
-            // Afegim funcionalitat a la icona refrescar
-            refreshIcon.addEventListener('click', () => refreshActivityColumn(id));
           }
 
+          // Menú
           const menuBtn = menuDiv.querySelector('.menu-btn');
           const menu = menuDiv.querySelector('.menu');
           menuBtn.addEventListener('click', e => {
@@ -578,6 +577,9 @@ function renderNotesGrid() {
 
           menuDiv.querySelector('.delete-btn').addEventListener('click', () => removeActivity(id));
           menuDiv.querySelector('.calc-btn').addEventListener('click', () => openCalcModal(id));
+
+          // Click icona refrescar
+          refreshIcon.addEventListener('click', () => refreshActivityColumn(id));
         });
 
         headRow.appendChild(th('Mitjana', 'text-right'));
@@ -591,44 +593,47 @@ function renderNotesGrid() {
           return;
         }
 
+        // Cos taula
         Promise.all(classStudents.map(id => db.collection('alumnes').doc(id).get()))
           .then(studentDocs => {
             studentDocs.forEach(sdoc => {
-              const studentId = sdoc.id;
-              const studentData = sdoc.exists ? sdoc.data() : { nom: 'Desconegut', notes: {} };
+              const sid = sdoc.id;
+              const sdata = sdoc.exists ? sdoc.data() : { nom: 'Desconegut', notes: {} };
+              let tr = document.querySelector(`tr[data-student-id="${sid}"]`);
 
-              let tr = document.querySelector(`tr[data-student-id="${studentId}"]`);
               if (!tr) {
                 tr = document.createElement('tr');
-                tr.dataset.studentId = studentId;
+                tr.dataset.studentId = sid;
 
                 const tdName = document.createElement('td');
                 tdName.className = 'border px-2 py-1';
-                tdName.textContent = studentData.nom;
+                tdName.textContent = sdata.nom;
                 tr.appendChild(tdName);
 
                 actDocs.forEach(actDoc => {
-                  const actId = actDoc.id;
-                  const val = (studentData.notes && studentData.notes[actId] !== undefined) ? studentData.notes[actId] : '';
+                  const aid = actDoc.id;
+                  const val = (sdata.notes && sdata.notes[aid] !== undefined) ? sdata.notes[aid] : '';
 
                   const td = document.createElement('td');
                   td.className = 'border px-2 py-1';
 
-                  if (calculatedActs[actId]) td.style.backgroundColor = "#ffe4e6";
+                  if (calculatedActs[aid]) {
+                    td.style.backgroundColor = "#ffe4e6";
+                  }
 
                   const input = document.createElement('input');
                   input.type = 'number';
                   input.min = 0;
                   input.max = 10;
                   input.value = val;
-                  input.dataset.activityId = actId;
+                  input.dataset.activityId = aid;
                   input.className = 'table-input text-center rounded border p-1';
 
-                  if (calculatedActs[actId]) {
+                  if (calculatedActs[aid]) {
                     input.disabled = true;
                     input.style.backgroundColor = "#fca5a5";
                   } else {
-                    input.addEventListener('change', e => saveNote(studentId, actId, e.target.value));
+                    input.addEventListener('change', e => saveNote(sid, aid, e.target.value));
                     input.addEventListener('input', () => applyCellColor(input));
                     applyCellColor(input);
                   }
@@ -639,7 +644,7 @@ function renderNotesGrid() {
 
                 const avgTd = document.createElement('td');
                 avgTd.className = 'border px-2 py-1 text-right font-semibold';
-                avgTd.textContent = computeStudentAverageText(studentData);
+                avgTd.textContent = computeStudentAverageText(sdata);
                 tr.appendChild(avgTd);
 
                 notesTbody.appendChild(tr);
@@ -652,7 +657,6 @@ function renderNotesGrid() {
   });
 }
 
-// Funció per refrescar columna calculada
 // Funció per refrescar columna calculada automàticament
 function refreshActivityColumn(activityId) {
   db.collection('alumnes').where('classes', 'array-contains', currentClassId).get()
@@ -684,13 +688,13 @@ function refreshActivityColumn(activityId) {
 
 // Exemple de funció de càlcul (personalitza segons la teva lògica)
 function computeCalculatedNote(studentData, activityId) {
-  // Suposem que la nota calculada és la mitjana de totes les altres notes
   const notes = studentData.notes || {};
   const values = Object.values(notes).filter(val => val !== '' && val !== undefined && val !== null);
   if (values.length === 0) return 0;
   const sum = values.reduce((a, b) => a + Number(b), 0);
-  return (sum / values.length).toFixed(2); // Retorna amb 2 decimals
+  return (sum / values.length).toFixed(2);
 }
+
 
 
 
