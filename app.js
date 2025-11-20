@@ -522,12 +522,19 @@ function renderNotesGrid() {
           const name = adoc.exists ? (adoc.data().nom || 'Sense nom') : 'Desconegut';
 
           const thEl = th('');
+          thEl.style.whiteSpace = 'nowrap';
+          thEl.style.verticalAlign = 'top';
+          thEl.classList.add('relative', 'px-1');
+
+          // Contingut amb flex horitzontal: nom + menu
           const container = document.createElement('div');
-          container.className = 'flex flex-col items-start justify-between';
+          container.style.display = 'flex';
+          container.style.justifyContent = 'space-between';
+          container.style.alignItems = 'center';
 
           const spanName = document.createElement('span');
           spanName.textContent = name;
-
+          spanName.style.fontWeight = 'bold';
           container.appendChild(spanName);
 
           // Menú activitat
@@ -543,22 +550,18 @@ function renderNotesGrid() {
           `;
           container.appendChild(menuDiv);
 
-          // Mostrar info de càlcul si existeix
-          const info = calculatedActs[id]; 
-          if(info){
-            const infoEl = document.createElement('small');
+          thEl.appendChild(container);
+
+          // Info càlcul
+          const info = calculatedActs[id];
+          if (info) {
+            const infoEl = document.createElement('div');
             infoEl.className = 'text-xs text-gray-700 dark:text-gray-200 mt-1';
             infoEl.textContent = info.type === 'formula' ? 'fórmula: ' + info.value
                                : info.type === 'rounding' ? 'redondeig: ' + info.value
                                : info.type === 'numeric' ? 'valor fix: ' + info.value
                                : '';
-            container.appendChild(infoEl);
-          }
-
-          thEl.appendChild(container);
-
-          // Color si està calculada
-          if(info){
+            thEl.appendChild(infoEl);
             thEl.style.backgroundColor = "#fecaca";
             thEl.style.borderBottom = "3px solid #dc2626";
             thEl.style.color = "black";
@@ -655,6 +658,7 @@ function renderNotesGrid() {
       });
   });
 }
+
 
 // Funció per actualitzar cel·les calculades sense recrear tota la taula
 function updateCalculatedCells() {
