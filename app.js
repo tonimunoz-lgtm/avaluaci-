@@ -534,9 +534,31 @@ function renderNotesGrid() {
           refreshBtn.type = 'button';
           refreshBtn.className = 'text-gray-500 hover:text-gray-700 dark:hover:text-white ml-2';
           refreshBtn.innerHTML = '🔄';
-          refreshBtn.addEventListener('click', e => {
+          refreshBtn.dataset.activityId = id;
+
+          refreshBtn.addEventListener('click', async e => {
             e.stopPropagation();
-            console.log('Refrescar activitat: ' + name);
+            if (!calculatedActs[id]) return alert('No hi ha càlcul guardat per aquesta activitat.');
+            const calcInfo = calculatedActs[id];
+            try {
+              switch(calcInfo.type){
+                case 'numeric':
+                  await applyNumeric(calcInfo.value);
+                  break;
+                case 'formula':
+                  await applyFormula(calcInfo.value);
+                  break;
+                case 'rounding':
+                  await applyRounding(calcInfo.value);
+                  break;
+                default:
+                  throw new Error('Tipus de càlcul desconegut');
+              }
+              renderNotesGrid();
+            } catch(err){
+              console.error(err);
+              alert('Error en tornar a aplicar el càlcul: ' + err.message);
+            }
           });
 
           // Menú tres puntets
@@ -576,7 +598,7 @@ function renderNotesGrid() {
             const newName = prompt('Nou nom activitat:', name);
             if (!newName || newName.trim() === name) return;
             db.collection('activitats').doc(id).update({ nom: newName.trim() })
-              .then(() => loadClassData());
+              .then(() => renderNotesGrid());
           });
 
           menuDiv.querySelector('.delete-btn').addEventListener('click', () => removeActivity(id));
@@ -826,30 +848,41 @@ modalApplyCalcBtn.addEventListener('click', async () => {
   if (!currentCalcActivityId) return;
 
   try {
+    let calcValue;
     switch (calcTypeSelect.value) {
       case 'numeric':
-        await applyNumeric(Number(numericField.value));
+        calcValue = Number(numericField.value);
+        await applyNumeric(calcValue);
         break;
       case 'formula':
-        await applyFormula(formulaField.value);
+        calcValue = formulaField.value;
+        await applyFormula(calcValue);
         break;
       case 'rounding':
-        await applyRounding(formulaField.value);
+        calcValue = formulaField.value;
+        await applyRounding(calcValue);
         break;
       default:
         throw new Error('Tipus de càlcul desconegut');
     }
 
-    await markActivityAsCalculated(currentCalcActivityId);
-    closeModal('modalCalc');
+    // Guardar info del càlcul a Firestore
+    await db.collection('classes').doc(currentClassId).update({
+      [`calculatedActivities.${currentCalcActivityId}`]: {
+        type: calcTypeSelect.value,
+        value: calcValue,
+        timestamp: new Date().toISOString(),
+        user: auth.currentUser?.uid || null
+      }
+    });
 
+    closeModal('modalCalc');
+    renderNotesGrid();
   } catch (e) {
     console.error(e);
     alert('Error en aplicar el càlcul: ' + e.message);
   }
 });
-
-
 
 
 // ---------------- Construir botons de fórmules ----------------
