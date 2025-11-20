@@ -962,31 +962,30 @@ function buildRoundingButtons(){
 
 
 // ---------------- Evaluar fórmula ----------------
-async function evalFormulaAsync(formula, studentId){
+async function evalFormulaAsync(formula, studentId) {
   let evalStr = formula;
 
-  // Primer carreguem totes les notes de l'alumne
   const studentDoc = await db.collection('alumnes').doc(studentId).get();
   const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
 
-  for(const aid of classActivities){
+  for (const aid of classActivities) {
     const actDoc = await db.collection('activitats').doc(aid).get();
-    const actName = actDoc.exists ? actDoc.data().nom : '';
-    if(!actName) continue;
+    const actName = actDoc.exists ? actDoc.data().nom : null;
+    if (!actName) continue;
 
-    const val = Number(notes[aid]) || 0; // Agafem directament les notes de Firestore
-
-    const regex = new RegExp(actName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-    evalStr = evalStr.replace(regex, val);
+    const val = Number(notes[aid] || 0);
+    const regex = new RegExp(actName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), "g");
+    evalStr = evalStr.replace(regex, val.toString());
   }
 
   try {
-    return Function('"use strict"; return (' + evalStr + ')')();
-  } catch(e){
-    console.error('Error evaluating formula:', formula, e);
+    return Function(`"use strict"; return (${evalStr})`)();
+  } catch (e) {
+    console.error("Error fórmula:", formula, evalStr);
     return 0;
   }
 }
+
 
 
 
