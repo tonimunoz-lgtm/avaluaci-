@@ -520,23 +520,26 @@ function renderNotesGrid(){
           const id = adoc.id;
           const name = adoc.exists ? (adoc.data().nom||'Sense nom') : 'Desconegut';
 
-          const refreshBtn = document.createElement('button');
-refreshBtn.type = 'button';
-refreshBtn.title = 'Refrescar arrodoniment';
-refreshBtn.className = 'ml-1 text-sm px-1 py-0.5 bg-blue-200 rounded hover:bg-blue-300';
-refreshBtn.textContent = '⟳';
-refreshBtn.addEventListener('click', () => recalcSingleActivity(adoc.id));
-
-container.appendChild(refreshBtn);
-
-          
+          // === Container principal ===
           const thEl = th('');
           const container = document.createElement('div');
           container.className = 'flex items-center justify-between';
 
+          // Nom de l'activitat
           const spanName = document.createElement('span');
           spanName.textContent = name;
+          container.appendChild(spanName);
 
+          // Botó de refrescar
+          const refreshBtn = document.createElement('button');
+          refreshBtn.type = 'button';
+          refreshBtn.title = 'Refrescar arrodoniment';
+          refreshBtn.className = 'ml-1 text-sm px-1 py-0.5 bg-blue-200 rounded hover:bg-blue-300';
+          refreshBtn.textContent = '⟳';
+          refreshBtn.addEventListener('click', () => recalcSingleActivity(adoc.id));
+          container.appendChild(refreshBtn);
+
+          // Menú desplegable
           const menuDiv = document.createElement('div');
           menuDiv.className = 'relative';
           menuDiv.innerHTML = `
@@ -547,20 +550,19 @@ container.appendChild(refreshBtn);
               <button class="calc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Càlcul</button>
             </div>
           `;
-          
-          container.appendChild(spanName);
           container.appendChild(menuDiv);
+
           thEl.appendChild(container);
           headRow.appendChild(thEl);
 
-          /* 🔴 NOVETAT: CAPÇALERA DE COLOR SI L’ACTIVITAT TÉ FÓRMULA / ARRODONIMENT */
+          // Color si activitat calculada
           if (calculatedActs[id]) {
             thEl.style.backgroundColor = "#fecaca";   // vermell suau
             thEl.style.borderBottom = "3px solid #dc2626";
             thEl.style.color = "black";
           }
 
-          // Menú — igual que abans
+          // Menú funcionalitat
           const menuBtn = menuDiv.querySelector('.menu-btn');
           const menu = menuDiv.querySelector('.menu');
 
@@ -612,7 +614,7 @@ container.appendChild(refreshBtn);
                 const td = document.createElement('td');
                 td.className = 'border px-2 py-1';
 
-                /* 🔴 NOVETAT: COLOR DE COLUMNA CALCULADA */
+                // Color de cel·la calculada
                 if (calculatedActs[aid]) {
                   td.style.backgroundColor = "#ffe4e6";  // rosa suau
                 }
@@ -650,8 +652,6 @@ container.appendChild(refreshBtn);
       });
   });
 }
-
-
 
 /* ---------------- Helpers Notes & Excel ---------------- */
 function th(txt, cls=''){
