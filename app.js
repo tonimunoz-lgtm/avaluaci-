@@ -1242,17 +1242,23 @@ async function recalculateActivities() {
         }
         try { result = Function('"use strict"; return (' + formulaEval + ')')(); }
         catch(e){ result = 0; }
-      } else if (actData.calcType === 'rounding' && actData.formula) {
-        // Redondeig segons multiplicador
-        const multiplier = Number(actData.formula) || 1;
-        const refActivityName = actData.refActivityName || '';
-        let val = 0;
-        // Trobar l'activitat de referència
-        for (const aid of classActivities) {
-          const aDoc = await db.collection('activitats').doc(aid).get();
-          if (aDoc.exists && aDoc.data().nom === refActivityName) {
-            val = Number(notes[aid] || 0);
-          }
+      else if (actData.calcType === 'rounding' && actData.formula) {
+  const multiplier = Number(actData.formula) || 1;
+  const refActivityName = actData.refActivityName || '';
+  let val = 0;
+
+  // Buscar l’activitat de referència pel NOM
+  for (const aid of classActivities) {
+    const aDoc = await db.collection('activitats').doc(aid).get();
+    if (aDoc.exists && aDoc.data().nom === refActivityName) {
+      val = Number(notes[aid] || 0);
+    }
+  }
+
+  // 🟢 Nou: APLIQUEM EL MÒDUL INDEPENDENT
+  result = applyRounding(val, multiplier);
+}
+
         }
         if (multiplier === 1) val = Math.round(val);
         else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
