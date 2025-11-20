@@ -20,6 +20,7 @@ let classStudents = [];
 let classActivities = [];
 let deleteMode = false;
 let currentCalcActivityId = null; // Activitat actual per fer càlculs
+let activitiesData = {};
 
 /* Elements */
 const loginScreen = document.getElementById('loginScreen');
@@ -1211,3 +1212,46 @@ if (closeBtn) {
     container.classList.remove('mobile-open');
   });
 }
+
+// funció per actualitzar capçalera
+function updateActivityHeader(activityId) {
+  const headerCell = document.querySelector(`#th-${activityId}`);
+  if (!headerCell) return;
+  const oldInfo = headerCell.querySelector(".activity-meta");
+  if (oldInfo) oldInfo.remove();
+
+  const activity = activitiesData[activityId];
+
+  if (activity?.type === "formula") {
+    const info = document.createElement("small");
+    info.className = "activity-meta block text-xs text-gray-500 mt-1";
+    info.textContent = `Fórmula: ${activity.formula}`;
+    headerCell.appendChild(info);
+  } else if (activity?.type === "rounding") {
+    const info = document.createElement("small");
+    info.className = "activity-meta block text-xs text-gray-500 mt-1";
+    info.textContent = `Redondeig: ${activity.roundTo}`;
+    headerCell.appendChild(info);
+  }
+}
+
+// ------------------ MODAL CÀLCUL ------------------
+// aquí enganxa l'event listener del botó del modal
+document.getElementById("modalApplyCalcBtn").addEventListener("click", () => {
+  const activityId = currentActivityId; // assegura't que guardes l'activitat abans d'obrir el modal
+  const calcType = document.getElementById("calcType").value;
+
+  if (calcType === "numeric") {
+    const value = Number(document.getElementById("numericField").value);
+    activitiesData[activityId] = { type: "numeric", value };
+  } else if (calcType === "formula") {
+    const formula = document.getElementById("formulaField").value;
+    activitiesData[activityId] = { type: "formula", formula };
+  } else if (calcType === "rounding") {
+    const roundTo = Number(document.getElementById("numericField").value);
+    activitiesData[activityId] = { type: "rounding", roundTo };
+  }
+
+  updateActivityHeader(activityId); // mostra la info a la capçalera
+  closeModal("modalCalc"); // tanquem modal
+});
