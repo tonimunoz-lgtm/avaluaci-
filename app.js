@@ -501,146 +501,112 @@ function renderStudentsList(){
   });
 }
 /* ---------------- Notes Grid amb menú activitats ---------------- */
-function renderNotesGrid(){
-  notesThead.innerHTML = '';
+function renderNotesGrid() {
   notesTbody.innerHTML = '';
-  notesTfoot.innerHTML = '';
 
-  const headRow = document.createElement('tr');
-  headRow.appendChild(th('Alumne'));
+  if (classStudents.length === 0) {
+    notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivities.length+2}">No hi ha alumnes</td></tr>`;
+    renderAverages();
+    return;
+  }
 
-  db.collection('classes').doc(currentClassId).get().then(doc=>{
-    if(!doc.exists) return;
-    const classData = doc.data();
-    const calculatedActs = classData.calculatedActivities || {};
+  Promise.all(classStudents.map(id => db.collection('alumnes').doc(id).get()))
+    .then(studentDocs => {
+      studentDocs.forEach(sdoc => {
+        const sid = sdoc.id;
+        const sdata = sdoc.exists ? sdoc.data() : { nom: 'Desconegut', notes: {} };
+        const tr = document.createElement('tr');
 
-    Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()))
-      .then(actDocs=>{
-        actDocs.forEach(adoc=>{
-          const id = adoc.id;
-          const name = adoc.exists ? (adoc.data().nom||'Sense nom') : 'Desconegut';
-          
-          const thEl = th('');
-          const container = document.createElement('div');
-          container.className = 'flex items-center justify-between';
+        // Nom alumne
+        const tdName = document.createElement('td');
+        tdName.className = 'border px-2 py-1';
+        tdName.textContent = sdata.nom;
+        tr.appendChild(tdName);
 
-          const spanName = document.createElement('span');
-          spanName.textContent = name;
+        actDocs.forEach((actDoc, actIndex) => {
+          const aid = actDoc.id;
+          let val = (sdata.notes && sdata.notes[aid] !== undefined) ? sdata.notes[aid] : '';
 
-          const menuDiv = document.createElement('div');
-          menuDiv.className = 'relative';
-          menuDiv.innerHTML = `
-            <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white tooltip">⋮</button>
-            <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10">
-              <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
-              <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>
-              <button class="calc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Càlcul</button>
-            </div>
-          `;
-          
-          container.appendChild(spanName);
-          container.appendChild(menuDiv);
-          thEl.appendChild(container);
-          headRow.appendChild(thEl);
+          // 🔹 Activitats calculades
+          if (calculatedActs[aid] && actDoc.exists) {
+            const actData = actDoc.data();
 
-          /* 🔴 NOVETAT: CAPÇALERA DE COLOR SI L’ACTIVITAT TÉ FÓRMULA / ARRODONIMENT */
-          if (calculatedActs[id]) {
-            thEl.style.backgroundColor = "#fecaca";   // vermell suau
-            thEl.style.borderBottom = "3px solid #dc2626";
-            thEl.style.color = "black";
+            if (actData.calcType === 'formula' && actData.formula) {
+              // Fórmula
+              val = 0;
+              try {
+                let evalStr = actData.formula;
+                for (const rAid of classActivities) {
+                  const refAct = actDocs.find(d => d.id === rAid);
+                  if (!refAct || !refAct.exists) continue;
+                  const refVal = Number(sdata.notes[rAid] || 0);
+                  const refName = refAct.data().nom;
+                  const regex = new RegExp(refName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+                  evalStr = evalStr.replace(regex, refVal);
+                }
+                val = Function('"use strict"; return (' + evalStr + ')')();
+              } catch (e) { val = 0; }
+            }
+            else if (actData.calcType === 'rounding') {
+              // Redondeig
+              const multiplier = Number(actData.formula) || 1;
+              const refName = actData.refActivityName || '';
+              let refVal = 0;
+
+              for (const rAid of classActivities) {
+                const refAct = actDocs.find(d => d.id === rAid);
+                if (!refAct || !refAct.exists) continue;
+                if (refAct.data().nom === refName) {
+                  refVal = Number(sdata.notes[rAid] || 0);
+                  break;
+                }
+              }
+
+              if (multiplier === 1) refVal = Math.round(refVal);
+              else if (multiplier === 0.5) refVal = Math.round(refVal * 2) / 2;
+              val = refVal;
+            }
           }
 
-          // Menú — igual que abans
-          const menuBtn = menuDiv.querySelector('.menu-btn');
-          const menu = menuDiv.querySelector('.menu');
+          const td = document.createElement('td');
+          td.className = 'border px-2 py-1';
 
-          menuBtn.addEventListener('click', e=>{
-            e.stopPropagation();
-            document.querySelectorAll('.menu').forEach(m=> m.classList.add('hidden'));
-            menu.classList.toggle('hidden');
-          });
+          // Color de columna calculada
+          if (calculatedActs[aid]) td.style.backgroundColor = "#ffe4e6";
 
-          menuDiv.querySelector('.edit-btn').addEventListener('click', ()=>{
-            const newName = prompt('Nou nom activitat:', name);
-            if(!newName || newName.trim()===name) return;
-            db.collection('activitats').doc(id).update({ nom: newName.trim() })
-              .then(()=> loadClassData());
-          });
+          const input = document.createElement('input');
+          input.type = 'number';
+          input.min = 0;
+          input.max = 10;
+          input.value = val;
+          input.className = 'table-input text-center rounded border p-1';
 
-          menuDiv.querySelector('.delete-btn').addEventListener('click', ()=> removeActivity(id));
-          menuDiv.querySelector('.calc-btn').addEventListener('click', ()=> openCalcModal(id));
+          if (calculatedActs[aid]) {
+            input.disabled = true;
+            input.style.backgroundColor = "#fca5a5";
+          } else {
+            input.addEventListener('change', e => saveNote(sid, aid, e.target.value).then(renderNotesGrid));
+            input.addEventListener('input', () => applyCellColor(input));
+            applyCellColor(input);
+          }
 
+          td.appendChild(input);
+          tr.appendChild(td);
         });
 
-        headRow.appendChild(th('Mitjana', 'text-right'));
-        notesThead.appendChild(headRow);
+        // Mitjana
+        const avgTd = document.createElement('td');
+        avgTd.className = 'border px-2 py-1 text-right font-semibold';
+        avgTd.textContent = computeStudentAverageText(sdata);
+        tr.appendChild(avgTd);
 
-        enableActivityDrag();
-
-        if(classStudents.length===0){
-          notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivities.length+2}">No hi ha alumnes</td></tr>`;
-          renderAverages();
-          return;
-        }
-
-        Promise.all(classStudents.map(id => db.collection('alumnes').doc(id).get()))
-          .then(studentDocs=>{
-            studentDocs.forEach(sdoc=>{
-              const sid = sdoc.id;
-              const sdata = sdoc.exists ? sdoc.data() : { nom:'Desconegut', notes:{} };
-              const tr = document.createElement('tr');
-
-              const tdName = document.createElement('td');
-              tdName.className = 'border px-2 py-1';
-              tdName.textContent = sdata.nom;
-              tr.appendChild(tdName);
-
-              actDocs.forEach((actDoc, actIndex)=>{
-                const aid = actDoc.id;
-                const val = (sdata.notes && sdata.notes[aid]!==undefined) ? sdata.notes[aid] : '';
-
-                const td = document.createElement('td');
-                td.className = 'border px-2 py-1';
-
-                /* 🔴 NOVETAT: COLOR DE COLUMNA CALCULADA */
-                if (calculatedActs[aid]) {
-                  td.style.backgroundColor = "#ffe4e6";  // rosa suau
-                }
-
-                const input = document.createElement('input');
-                input.type='number';
-                input.min=0;
-                input.max=10;
-                input.value=val;
-                input.className='table-input text-center rounded border p-1';
-
-                if (calculatedActs[aid]) {
-                  input.disabled = true;
-                  input.style.backgroundColor = "#fca5a5"; // vermell cel·la calculada
-                } else {
-                  input.addEventListener('change', e=> saveNote(sid, aid, e.target.value));
-                  input.addEventListener('input', ()=> applyCellColor(input));
-                  applyCellColor(input);
-                }
-
-                td.appendChild(input);
-                tr.appendChild(td);
-              });
-
-              const avgTd = document.createElement('td');
-              avgTd.className = 'border px-2 py-1 text-right font-semibold';
-              avgTd.textContent = computeStudentAverageText(sdata);
-              tr.appendChild(avgTd);
-
-              notesTbody.appendChild(tr);
-            });
-
-            renderAverages();
-          });
+        notesTbody.appendChild(tr);
       });
-  });
-}
 
+      renderAverages();
+      enableActivityDrag();
+    });
+}
 
 
 /* ---------------- Helpers Notes & Excel ---------------- */
