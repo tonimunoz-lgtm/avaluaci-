@@ -519,7 +519,9 @@ function renderNotesGrid() {
         // Capçalera activitats
         actDocs.forEach(adoc => {
           const id = adoc.id;
-          const name = adoc.exists ? (adoc.data().nom || 'Sense nom') : 'Desconegut';
+          const data = adoc.exists ? adoc.data() : {};
+          const name = data.nom || 'Sense nom';
+          const formula = data.formula || null;
 
           const thEl = th('');
           const container = document.createElement('div');
@@ -528,11 +530,13 @@ function renderNotesGrid() {
           const spanName = document.createElement('span');
           spanName.textContent = name;
 
-          // Icona refrescar (només si és calculada)
+          // Icona refrescar (només si hi ha fórmula)
           const refreshIcon = document.createElement('span');
           refreshIcon.innerHTML = '🔄';
           refreshIcon.title = 'Refrescar columna';
-          refreshIcon.className = 'ml-2 cursor-pointer hidden'; // ocult inicialment
+          refreshIcon.className = 'ml-2 cursor-pointer hidden';
+          if (formula) refreshIcon.classList.remove('hidden');
+          refreshIcon.addEventListener('click', () => refreshActivityColumn(id));
 
           const menuDiv = document.createElement('div');
           menuDiv.className = 'relative';
@@ -556,7 +560,6 @@ function renderNotesGrid() {
             thEl.style.backgroundColor = "#fecaca";
             thEl.style.borderBottom = "3px solid #dc2626";
             thEl.style.color = "black";
-            refreshIcon.classList.remove('hidden');
           }
 
           // Menú
@@ -578,8 +581,6 @@ function renderNotesGrid() {
           menuDiv.querySelector('.delete-btn').addEventListener('click', () => removeActivity(id));
           menuDiv.querySelector('.calc-btn').addEventListener('click', () => openCalcModal(id));
 
-          // Click icona refrescar
-          refreshIcon.addEventListener('click', () => refreshActivityColumn(id));
         });
 
         headRow.appendChild(th('Mitjana', 'text-right'));
@@ -612,14 +613,13 @@ function renderNotesGrid() {
 
                 actDocs.forEach(actDoc => {
                   const aid = actDoc.id;
+                  const actData = actDoc.exists ? actDoc.data() : {};
                   const val = (sdata.notes && sdata.notes[aid] !== undefined) ? sdata.notes[aid] : '';
 
                   const td = document.createElement('td');
                   td.className = 'border px-2 py-1';
 
-                  if (calculatedActs[aid]) {
-                    td.style.backgroundColor = "#ffe4e6";
-                  }
+                  if (calculatedActs[aid]) td.style.backgroundColor = "#ffe4e6";
 
                   const input = document.createElement('input');
                   input.type = 'number';
@@ -657,43 +657,52 @@ function renderNotesGrid() {
   });
 }
 
-// Funció per refrescar columna calculada automàticament
+// Funció per refrescar columna amb fórmula
 function refreshActivityColumn(activityId) {
-  db.collection('alumnes').where('classes', 'array-contains', currentClassId).get()
-    .then(querySnapshot => {
-      querySnapshot.forEach(sdoc => {
-        const studentId = sdoc.id;
-        const studentData = sdoc.data();
+  db.collection('activitats').doc(activityId).get().then(actDoc => {
+    if (!actDoc.exists) return;
+    const formula = actDoc.data().formula;
+    if (!formula) return;
 
-        // Calcular nova nota
-        const newVal = computeCalculatedNote(studentData, activityId);
+    db.collection('alumnes').where('classes', 'array-contains', currentClassId).get()
+      .then(querySnapshot => {
+        querySnapshot.forEach(sdoc => {
+          const studentId = sdoc.id;
+          const studentData = sdoc.data();
+          const newVal = applyFormulaToStudent(studentData, formula);
 
-        // Guardar-la a Firebase
-        db.collection('alumnes').doc(studentId).update({
-          [`notes.${activityId}`]: newVal
+          db.collection('alumnes').doc(studentId).update({
+            [`notes.${activityId}`]: newVal
+          });
+
+          const input = document.querySelector(`tr[data-student-id="${studentId}"] input[data-activity-id="${activityId}"]`);
+          if (input) {
+            input.value = newVal;
+            applyCellColor(input);
+          }
         });
 
-        // Actualitzar input a la taula si existeix
-        const input = document.querySelector(`tr[data-student-id="${studentId}"] input[data-activity-id="${activityId}"]`);
-        if (input) {
-          input.value = newVal;
-          applyCellColor(input);
-        }
+        renderAverages();
       });
-
-      // Recalcula mitjanes
-      renderAverages();
-    });
+  });
 }
 
-// Exemple de funció de càlcul (personalitza segons la teva lògica)
-function computeCalculatedNote(studentData, activityId) {
+// Funció per aplicar fórmula a un alumne
+function applyFormulaToStudent(studentData, formula) {
   const notes = studentData.notes || {};
-  const values = Object.values(notes).filter(val => val !== '' && val !== undefined && val !== null);
-  if (values.length === 0) return 0;
-  const sum = values.reduce((a, b) => a + Number(b), 0);
-  return (sum / values.length).toFixed(2);
+  const values = Object.values(notes).filter(v => v !== '' && v != null).map(Number);
+
+  switch(formula) {
+    case 'average':
+      if (values.length === 0) return 0;
+      return (values.reduce((a,b)=>a+b,0)/values.length).toFixed(2);
+    case 'sum':
+      return values.reduce((a,b)=>a+b,0).toFixed(2);
+    default:
+      return 0;
+  }
 }
+
 
 
 
