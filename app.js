@@ -1223,17 +1223,17 @@ if (closeBtn) {
 async function recalculateActivities() {
   if (!currentClassId) return;
 
+  // Carregar la classe i activitats només una vegada
   const classDoc = await db.collection('classes').doc(currentClassId).get();
   const calcActs = classDoc.exists ? classDoc.data().calculatedActivities || {} : {};
 
-  // Carregar activitats només una vegada
   const actDocs = {};
   for (const actId of classActivities) {
-    const d = await db.collection('activitats').doc(actId).get();
-    if (d.exists) actDocs[actId] = d.data();
+    const doc = await db.collection('activitats').doc(actId).get();
+    if (doc.exists) actDocs[actId] = doc.data();
   }
 
-  // Recalcular notes per cada alumne
+  // Recalcular per cada alumne
   for (const studentId of classStudents) {
     const studentRef = db.collection('alumnes').doc(studentId);
     const studentDoc = await studentRef.get();
@@ -1241,53 +1241,51 @@ async function recalculateActivities() {
 
     let updates = {};
 
-    // ---------- 1. Primer calcular fórmules ----------
+    // ---------- 1. Fórmules ----------
     for (const actId of classActivities) {
       if (!calcActs[actId]) continue;
       const actData = actDocs[actId];
-      if (!actData || actData.calcType !== 'formula') continue;
+      if (!actData) continue;
 
-      let evalStr = actData.formula;
-      for (const aid of classActivities) {
-        const name = actDocs[aid]?.nom || "";
-        const val = Number(notes[aid] || 0);
-        if (name) {
-          const regex = new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-          evalStr = evalStr.replace(regex, val);
+      if (actData.calcType === 'formula' && actData.formula) {
+        let formulaEval = actData.formula;
+        for (const aid of classActivities) {
+          const name = actDocs[aid]?.nom || '';
+          const val = Number(notes[aid] || 0);
+          if (name) formulaEval = formulaEval.replace(new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), val);
         }
+        let result = 0;
+        try { result = Function('"use strict"; return (' + formulaEval + ')')(); } 
+        catch(e){ result = 0; }
+        updates[`notes.${actId}`] = result;
+        notes[actId] = result; // Actualitzar localment per redondeig
       }
-
-      let result = 0;
-      try { result = Function('"use strict"; return (' + evalStr + ')')(); }
-      catch { result = 0; }
-
-      updates[`notes.${actId}`] = result;
-      notes[actId] = result; // Important: actualitzar "notes" local
     }
 
-    // ---------- 2. Després calcular redondeigs ----------
+    // ---------- 2. Redondeigs ----------
     for (const actId of classActivities) {
       if (!calcActs[actId]) continue;
       const actData = actDocs[actId];
-      if (!actData || actData.calcType !== 'rounding') continue;
+      if (!actData) continue;
 
-      const refName = actData.refActivityName || "";
-      const multiplier = Number(actData.formula) || 1;
+      if (actData.calcType === 'rounding') {
+        const refName = actData.refActivityName || '';
+        const multiplier = Number(actData.formula) || 1;
+        let val = 0;
 
-      let val = 0;
-      for (const aid of classActivities) {
-        if (actDocs[aid]?.nom === refName) {
-          val = Number(notes[aid] || 0); // Ara notes[aid] ja té el valor recalculat si és fórmula
+        for (const aid of classActivities) {
+          if (actDocs[aid]?.nom === refName) val = Number(notes[aid] || 0);
         }
+
+        if (multiplier === 1) val = Math.round(val);
+        else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
+
+        updates[`notes.${actId}`] = val;
+        notes[actId] = val;
       }
-
-      if (multiplier === 1)       val = Math.round(val);
-      else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
-
-      updates[`notes.${actId}`] = val;
-      notes[actId] = val; // Important: actualitzar "notes" local
     }
 
+    // ---------- Actualitzar Firestore d’una sola passada ----------
     if (Object.keys(updates).length > 0) {
       await studentRef.update(updates);
     }
