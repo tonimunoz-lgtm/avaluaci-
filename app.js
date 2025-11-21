@@ -539,6 +539,7 @@ function renderNotesGrid() {
           refreshIcon.title = 'Refrescar columna';
           refreshIcon.className = 'ml-2 cursor-pointer hidden';
 
+          // Menú activitat
           const menuDiv = document.createElement('div');
           menuDiv.className = 'relative';
           menuDiv.innerHTML = `
@@ -562,30 +563,6 @@ function renderNotesGrid() {
             thEl.style.borderBottom = "3px solid #dc2626";
             thEl.style.color = "black";
             refreshIcon.classList.remove('hidden');
-
-            // Funcionalitat refrescar
-            refreshIcon.addEventListener('click', async (e) => {
-              e.stopPropagation(); // evitar que s’obri el menú
-
-              // 1️⃣ Trobar la fila de fórmules
-              const formulaRow = notesTbody.querySelector('tr[data-formula-row]');
-              if (!formulaRow) return alert('No s’ha trobat la fila de fórmules');
-
-              // 2️⃣ Trobar la cel·la corresponent a aquesta columna
-              const ths = notesThead.querySelectorAll('tr:first-child th');
-              const colIdx = Array.from(ths).findIndex(th => th === thEl);
-              const formulaCell = formulaRow.querySelectorAll('td')[colIdx];
-              if (!formulaCell) return alert('No s’ha trobat la cel·la de fórmula');
-
-              const formula = formulaCell.textContent.trim();
-              if (!formula) return alert('No hi ha fórmula escrita');
-
-              // 3️⃣ Aplicar la fórmula
-              await applyFormula(formula, id);
-
-              // 4️⃣ Re-renderitzar només les cel·les calculades
-              updateCalculatedCells(id);
-            });
           }
 
           // Menú activitat
@@ -606,6 +583,17 @@ function renderNotesGrid() {
 
           menuDiv.querySelector('.delete-btn').addEventListener('click', () => removeActivity(id));
           menuDiv.querySelector('.calc-btn').addEventListener('click', () => openCalcModal(id));
+
+          // Funcionalitat refrescar columna
+          refreshIcon.addEventListener('click', () => {
+            const formulaRow = notesTfoot.querySelector('tr[data-row-type="formula"]');
+            if (!formulaRow) return;
+            const cellIndex = Array.from(formulaRow.parentElement.querySelectorAll('th, td')).findIndex(c => c.contains(container));
+            const formulaCell = formulaRow.cells[cellIndex];
+            if (!formulaCell) return;
+            const formula = formulaCell.textContent.trim();
+            if (formula) applyFormulaToColumn(id, formula);
+          });
         });
 
         headRow.appendChild(th('Mitjana', 'text-right'));
@@ -646,9 +634,7 @@ function renderNotesGrid() {
                   const td = document.createElement('td');
                   td.className = 'border px-2 py-1';
 
-                  if (calculatedActs[actId]) {
-                    td.style.backgroundColor = "#ffe4e6";
-                  }
+                  if (calculatedActs[actId]) td.style.backgroundColor = "#ffe4e6";
 
                   const input = document.createElement('input');
                   input.type = 'number';
@@ -681,32 +667,48 @@ function renderNotesGrid() {
               }
             });
 
-            // Afegir fila de fórmules a sota
-            const formulaTr = document.createElement('tr');
-            formulaTr.dataset.formulaRow = '1';
-            const tdLabel = document.createElement('td');
-            tdLabel.textContent = 'Fórmules';
-            tdLabel.className = 'font-semibold border px-2 py-1';
-            formulaTr.appendChild(tdLabel);
-
-            actDocs.forEach(() => {
-              const td = document.createElement('td');
-              td.className = 'border px-2 py-1';
-              td.contentEditable = true;
-              td.style.backgroundColor = "#fef3f3";
-              formulaTr.appendChild(td);
-            });
-
-            // Cel·la mitjana buida
-            formulaTr.appendChild(document.createElement('td'));
-
-            notesTbody.appendChild(formulaTr);
-
             renderAverages();
+            renderFormulaRow(actDocs, calculatedActs);
           });
       });
   });
 }
+
+// Fila de fórmules al peu de la taula
+function renderFormulaRow(actDocs, calculatedActs) {
+  const formulaRow = document.createElement('tr');
+  formulaRow.dataset.rowType = 'formula';
+  formulaRow.appendChild(td('Formules', 'font-semibold'));
+
+  actDocs.forEach(actDoc => {
+    const actId = actDoc.id;
+    const tdEl = document.createElement('td');
+    tdEl.contentEditable = true;
+    tdEl.className = 'border px-2 py-1 bg-gray-100';
+    if (calculatedActs[actId]) tdEl.style.backgroundColor = "#ffe4e6";
+    formulaRow.appendChild(tdEl);
+  });
+
+  formulaRow.appendChild(td('')); // Cel·la buida per mitjana
+  notesTfoot.appendChild(formulaRow);
+}
+
+// Aplica la fórmula a tota la columna
+function applyFormulaToColumn(activityId, formula) {
+  Array.from(notesTbody.querySelectorAll('tr')).forEach(tr => {
+    const input = Array.from(tr.querySelectorAll('input')).find(i => i.dataset.activityId === activityId);
+    if (input) {
+      try {
+        const result = eval(formula); // pots personalitzar l'entorn d'execució
+        input.value = result;
+        input.dispatchEvent(new Event('change'));
+      } catch (err) {
+        console.error('Error aplicant fórmula:', err);
+      }
+    }
+  });
+}
+
 
 // Funció per aplicar fórmula a tots els alumnes d'una activitat
 async function applyFormula(formula, activityId) {
