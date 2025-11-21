@@ -501,27 +501,22 @@ function renderStudentsList(){
 }
 /* ---------------- Notes Grid amb menú activitats ---------------- */
 function renderNotesGrid() {
-  // Neteja taula
   notesThead.innerHTML = '';
   notesTbody.innerHTML = '';
   notesTfoot.innerHTML = '';
 
-  // Capçalera alumne
   const headRow = document.createElement('tr');
   headRow.appendChild(th('Alumne'));
 
-  // Carrega classe
   db.collection('classes').doc(currentClassId).get().then(doc => {
     if (!doc.exists) return;
-
     const classData = doc.data();
     const calculatedActs = classData.calculatedActivities || {};
 
-    // Carrega activitats de la classe
     Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()))
       .then(actDocs => {
 
-        // Capçalera activitats amb icona refrescar si és calculada
+        // Capçalera
         actDocs.forEach(adoc => {
           const id = adoc.id;
           const name = adoc.exists ? (adoc.data().nom || 'Sense nom') : 'Desconegut';
@@ -532,12 +527,6 @@ function renderNotesGrid() {
 
           const spanName = document.createElement('span');
           spanName.textContent = name;
-
-          // Icona refrescar (només si és calculada)
-          const refreshIcon = document.createElement('span');
-          refreshIcon.innerHTML = '🔄';
-          refreshIcon.title = 'Refrescar columna';
-          refreshIcon.className = 'ml-2 cursor-pointer hidden';
 
           const menuDiv = document.createElement('div');
           menuDiv.className = 'relative';
@@ -551,7 +540,6 @@ function renderNotesGrid() {
           `;
 
           container.appendChild(spanName);
-          container.appendChild(refreshIcon);
           container.appendChild(menuDiv);
           thEl.appendChild(container);
           headRow.appendChild(thEl);
@@ -561,10 +549,9 @@ function renderNotesGrid() {
             thEl.style.backgroundColor = "#fecaca";
             thEl.style.borderBottom = "3px solid #dc2626";
             thEl.style.color = "black";
-            refreshIcon.classList.remove('hidden');
           }
 
-          // Menú activitat
+          // Menú
           const menuBtn = menuDiv.querySelector('.menu-btn');
           const menu = menuDiv.querySelector('.menu');
           menuBtn.addEventListener('click', e => {
@@ -582,6 +569,7 @@ function renderNotesGrid() {
 
           menuDiv.querySelector('.delete-btn').addEventListener('click', () => removeActivity(id));
           menuDiv.querySelector('.calc-btn').addEventListener('click', () => openCalcModal(id));
+
         });
 
         headRow.appendChild(th('Mitjana', 'text-right'));
@@ -589,40 +577,37 @@ function renderNotesGrid() {
 
         enableActivityDrag();
 
-        // Si no hi ha alumnes
         if (classStudents.length === 0) {
           notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivities.length + 2}">No hi ha alumnes</td></tr>`;
           renderAverages();
           return;
         }
 
-        // Cos taula alumnes
+        // Cos taula
         Promise.all(classStudents.map(id => db.collection('alumnes').doc(id).get()))
           .then(studentDocs => {
             studentDocs.forEach(sdoc => {
-              const studentId = sdoc.id;
-              const studentData = sdoc.exists ? sdoc.data() : { nom: 'Desconegut', notes: {} };
+              const sid = sdoc.id;
+              const sdata = sdoc.exists ? sdoc.data() : { nom: 'Desconegut', notes: {} };
+              let tr = document.querySelector(`tr[data-student-id="${sid}"]`);
 
-              let tr = document.querySelector(`tr[data-student-id="${studentId}"]`);
               if (!tr) {
                 tr = document.createElement('tr');
-                tr.dataset.studentId = studentId;
+                tr.dataset.studentId = sid;
 
-                // Nom alumne
                 const tdName = document.createElement('td');
                 tdName.className = 'border px-2 py-1';
-                tdName.textContent = studentData.nom;
+                tdName.textContent = sdata.nom;
                 tr.appendChild(tdName);
 
-                // Notes activitats
                 actDocs.forEach(actDoc => {
-                  const actId = actDoc.id;
-                  const val = (studentData.notes && studentData.notes[actId] !== undefined) ? studentData.notes[actId] : '';
+                  const aid = actDoc.id;
+                  const val = (sdata.notes && sdata.notes[aid] !== undefined) ? sdata.notes[aid] : '';
 
                   const td = document.createElement('td');
                   td.className = 'border px-2 py-1';
 
-                  if (calculatedActs[actId]) {
+                  if (calculatedActs[aid]) {
                     td.style.backgroundColor = "#ffe4e6";
                   }
 
@@ -631,14 +616,14 @@ function renderNotesGrid() {
                   input.min = 0;
                   input.max = 10;
                   input.value = val;
-                  input.dataset.activityId = actId;
+                  input.dataset.activityId = aid;
                   input.className = 'table-input text-center rounded border p-1';
 
-                  if (calculatedActs[actId]) {
+                  if (calculatedActs[aid]) {
                     input.disabled = true;
                     input.style.backgroundColor = "#fca5a5";
                   } else {
-                    input.addEventListener('change', e => saveNote(studentId, actId, e.target.value));
+                    input.addEventListener('change', e => saveNote(sid, aid, e.target.value));
                     input.addEventListener('input', () => applyCellColor(input));
                     applyCellColor(input);
                   }
@@ -647,10 +632,9 @@ function renderNotesGrid() {
                   tr.appendChild(td);
                 });
 
-                // Mitjana alumne
                 const avgTd = document.createElement('td');
                 avgTd.className = 'border px-2 py-1 text-right font-semibold';
-                avgTd.textContent = computeStudentAverageText(studentData);
+                avgTd.textContent = computeStudentAverageText(sdata);
                 tr.appendChild(avgTd);
 
                 notesTbody.appendChild(tr);
@@ -662,7 +646,6 @@ function renderNotesGrid() {
       });
   });
 }
-
 
 // Funció per actualitzar cel·les calculades sense recrear tota la taula
 function updateCalculatedCells() {
@@ -727,7 +710,6 @@ function computeStudentAverageText(studentData){
 }
 
 function renderAverages(){
-  // Actualitzar mitjanes alumnes
   Array.from(notesTbody.children).forEach(tr=>{
     const inputs = Array.from(tr.querySelectorAll('input')).map(i=> Number(i.value)).filter(v=> !isNaN(v));
     const lastTd = tr.querySelectorAll('td')[tr.querySelectorAll('td').length - 1];
@@ -736,17 +718,14 @@ function renderAverages(){
 
   const actCount = classActivities.length;
   notesTfoot.innerHTML = '';
-
-  // ----------------- Mitjana per activitat -----------------
-  const trAvg = document.createElement('tr');
-  trAvg.className = 'text-sm';
-  trAvg.appendChild(th('Mitjana activitat'));
+  const tr = document.createElement('tr');
+  tr.className = 'text-sm';
+  tr.appendChild(th('Mitjana activitat'));
   if(actCount === 0){
-    trAvg.appendChild(th('',''));
-    notesTfoot.appendChild(trAvg);
+    tr.appendChild(th('',''));
+    notesTfoot.appendChild(tr);
     return;
   }
-
   for(let i=0;i<actCount;i++){
     const inputs = Array.from(notesTbody.querySelectorAll('tr')).map(r => r.querySelectorAll('input')[i]).filter(Boolean);
     const vals = inputs.map(inp => Number(inp.value)).filter(v=> !isNaN(v));
@@ -754,43 +733,11 @@ function renderAverages(){
     const td = document.createElement('td');
     td.className = 'border px-2 py-1 text-center font-semibold';
     td.textContent = avg;
-    trAvg.appendChild(td);
+    tr.appendChild(td);
   }
-  trAvg.appendChild(th('',''));
-  notesTfoot.appendChild(trAvg);
-
-  // ----------------- Fila fórmules -----------------
-  const trForm = document.createElement('tr');
-  trForm.className = 'formulas-row text-sm bg-gray-100';
-  const td0 = document.createElement('td');
-  td0.textContent = 'Fórmula';
-  td0.className = 'border px-2 py-1 font-medium text-center';
-  trForm.appendChild(td0);
-
-  // Llegim fórmules de Firestore
-  db.collection('classes').doc(currentClassId).get().then(doc=>{
-    if(!doc.exists) return;
-    const calculatedActs = doc.data().calculatedActivities || {};
-
-    for(let i=0;i<actCount;i++){
-      const actId = classActivities[i];
-      const td = document.createElement('td');
-      td.className = 'border px-2 py-1 text-center font-medium';
-      td.textContent = calculatedActs[actId]?.formula || '';
-      trForm.appendChild(td);
-    }
-
-    const tdLast = document.createElement('td');
-    tdLast.textContent = '';
-    tdLast.className = 'border px-2 py-1 text-center font-medium';
-    trForm.appendChild(tdLast);
-
-    notesTfoot.appendChild(trForm);
-  });
+  tr.appendChild(th('',''));
+  notesTfoot.appendChild(tr);
 }
-
-
-
 
 /* ---------------- Open Calculation Modal ---------------- */
 function openCalcModal(activityId){
@@ -875,41 +822,30 @@ modalApplyCalcBtn.addEventListener('click', async () => {
   if (!currentCalcActivityId) return;
 
   try {
-    let formulaText = ''; // <-- guardarem la fórmula real
     switch (calcTypeSelect.value) {
       case 'numeric':
         await applyNumeric(Number(numericField.value));
-        formulaText = numericField.value;
         break;
       case 'formula':
         await applyFormula(formulaField.value);
-        formulaText = formulaField.value;
         break;
       case 'rounding':
         await applyRounding(formulaField.value);
-        formulaText = formulaField.value;
         break;
       default:
         throw new Error('Tipus de càlcul desconegut');
     }
 
-    // Guardar a Firestore la informació de fórmula a calculatedActivities
-    if(currentClassId){
-      await db.collection('classes').doc(currentClassId).update({
-        [`calculatedActivities.${currentCalcActivityId}`]: {
-          calculated: true,
-          formula: formulaText
-        }
-      });
-    }
-
+    await markActivityAsCalculated(currentCalcActivityId);
     closeModal('modalCalc');
-    renderNotesGrid(); // Re-render per actualitzar cel·les i fila fórmules
+
   } catch (e) {
     console.error(e);
     alert('Error en aplicar el càlcul: ' + e.message);
   }
 });
+
+
 
 
 // ---------------- Construir botons de fórmules ----------------
