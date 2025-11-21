@@ -538,8 +538,6 @@ function renderNotesGrid() {
           refreshIcon.innerHTML = '🔄';
           refreshIcon.title = 'Refrescar columna';
           refreshIcon.className = 'ml-2 cursor-pointer hidden';
-          refreshIcon.addEventListener('click', () => refreshActivityColumn(id));
-
 
           const menuDiv = document.createElement('div');
           menuDiv.className = 'relative';
@@ -1276,37 +1274,4 @@ if (closeBtn) {
     const container = document.getElementById('studentsListContainer');
     container.classList.remove('mobile-open');
   });
-}
-
-
-// ─────────── Funció per refrescar columna ───────────
-async function refreshActivityColumn(activityId) {
-  if (!currentClassId) return;
-
-  // 1. Llegim la fila de fórmules
-  const tfootRow = notesTfoot.querySelector('.formulas-row');
-  if (!tfootRow) return;
-
-  const ths = Array.from(tfootRow.children);
-  const actIdx = classActivities.findIndex(aid => aid === activityId);
-  if (actIdx === -1) return;
-
-  const formula = ths[actIdx + 1]?.textContent.trim(); // +1 per la columna 'Alumne'
-  if (!formula) return;
-
-  // 2. Recorrem totes les files de notes i apliquem la fórmula
-  for (let i = 0; i < notesData.length; i++) {
-    const row = notesData[i];
-    
-    try {
-      // Suposant que tens una funció que aplica fórmules a una fila:
-      row[activityId] = await evalFormulaAsync(formula, row);
-    } catch (e) {
-      console.error('Error aplicant fórmula a la fila', i, e);
-      row[activityId] = 'Error';
-    }
-  }
-
-  // 3. Tornem a renderitzar la taula amb els nous valors
-  renderNotesGrid();
 }
