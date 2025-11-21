@@ -875,30 +875,41 @@ modalApplyCalcBtn.addEventListener('click', async () => {
   if (!currentCalcActivityId) return;
 
   try {
+    let formulaText = ''; // <-- guardarem la fórmula real
     switch (calcTypeSelect.value) {
       case 'numeric':
         await applyNumeric(Number(numericField.value));
+        formulaText = numericField.value;
         break;
       case 'formula':
         await applyFormula(formulaField.value);
+        formulaText = formulaField.value;
         break;
       case 'rounding':
         await applyRounding(formulaField.value);
+        formulaText = formulaField.value;
         break;
       default:
         throw new Error('Tipus de càlcul desconegut');
     }
 
-    await markActivityAsCalculated(currentCalcActivityId);
-    closeModal('modalCalc');
+    // Guardar a Firestore la informació de fórmula a calculatedActivities
+    if(currentClassId){
+      await db.collection('classes').doc(currentClassId).update({
+        [`calculatedActivities.${currentCalcActivityId}`]: {
+          calculated: true,
+          formula: formulaText
+        }
+      });
+    }
 
+    closeModal('modalCalc');
+    renderNotesGrid(); // Re-render per actualitzar cel·les i fila fórmules
   } catch (e) {
     console.error(e);
     alert('Error en aplicar el càlcul: ' + e.message);
   }
 });
-
-
 
 
 // ---------------- Construir botons de fórmules ----------------
