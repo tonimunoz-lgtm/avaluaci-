@@ -539,33 +539,7 @@ function renderNotesGrid() {
           refreshIcon.title = 'Refrescar columna';
           refreshIcon.className = 'ml-2 cursor-pointer hidden';
 
-          // Funció per refrescar l'activitat
-          const refreshActivityCalculation = async (activityId) => {
-            try {
-              const actDoc = await db.collection('activitats').doc(activityId).get();
-              if (!actDoc.exists) return;
-
-              const formula = actDoc.data().formula || '';
-              if (!formula.trim()) return alert('No hi ha cap fórmula guardada per aquesta activitat.');
-
-              // Reaplica la fórmula (necessites la teva funció applyFormula adaptada)
-              await applyFormula(formula);
-
-              // Marca activitat com calculada i refresca la taula
-              await db.collection('classes').doc(currentClassId).update({
-                [`calculatedActivities.${activityId}`]: true
-              });
-
-              alert('Fórmula aplicada correctament!');
-              renderNotesGrid(); // recarrega la taula per veure els canvis
-            } catch (e) {
-              console.error('Error refrescant activitat:', e);
-              alert('Error aplicant la fórmula: ' + e.message);
-            }
-          };
-
-          refreshIcon.addEventListener('click', () => refreshActivityCalculation(id));
-
+          // Menú activitat
           const menuDiv = document.createElement('div');
           menuDiv.className = 'relative';
           menuDiv.innerHTML = `
@@ -604,11 +578,42 @@ function renderNotesGrid() {
             const newName = prompt('Nou nom activitat:', name);
             if (!newName || newName.trim() === name) return;
             db.collection('activitats').doc(id).update({ nom: newName.trim() })
-              .then(() => renderNotesGrid());
+              .then(() => loadClassData());
           });
 
           menuDiv.querySelector('.delete-btn').addEventListener('click', () => removeActivity(id));
           menuDiv.querySelector('.calc-btn').addEventListener('click', () => openCalcModal(id));
+
+          // REFRESH BOTÓ: recalcula segons fórmula guardada a última fila
+          refreshIcon.addEventListener('click', () => {
+            const allRows = Array.from(notesTbody.querySelectorAll('tr'));
+            if (allRows.length === 0) return;
+
+            // Última fila (on guardem la fórmula)
+            const formulaRow = allRows[allRows.length - 1];
+            const formulaCell = Array.from(formulaRow.children).find(td => td.dataset.activityId === id);
+            if (!formulaCell || !formulaCell.textContent.trim()) {
+              alert('No hi ha cap fórmula guardada per aquesta activitat!');
+              return;
+            }
+
+            const formula = formulaCell.textContent.trim();
+
+            // Aplica fórmula a cada alumne (excepte última fila)
+            allRows.slice(0, -1).forEach(row => {
+              const td = Array.from(row.children).find(td => td.dataset.activityId === id);
+              if (!td) return;
+              const input = td.querySelector('input');
+              if (!input) return;
+
+              try {
+                input.value = evalFormulaForStudent(formula, row).toFixed(2);
+                applyCellColor(input);
+              } catch(e) {
+                console.error('Error aplicant fórmula', e);
+              }
+            });
+          });
         });
 
         headRow.appendChild(th('Mitjana', 'text-right'));
@@ -648,6 +653,7 @@ function renderNotesGrid() {
 
                   const td = document.createElement('td');
                   td.className = 'border px-2 py-1';
+                  td.dataset.activityId = actId;
 
                   if (calculatedActs[actId]) {
                     td.style.backgroundColor = "#ffe4e6";
@@ -684,11 +690,57 @@ function renderNotesGrid() {
               }
             });
 
+            // Afegim fila fórmula si no existeix
+            const formulaRowExists = Array.from(notesTbody.querySelectorAll('tr')).some(r => r.dataset.formulaRow);
+            if (!formulaRowExists) {
+              const formulaTr = document.createElement('tr');
+              formulaTr.dataset.formulaRow = true;
+
+              // Cel·la nom (Mitjana)
+              const tdName = document.createElement('td');
+              tdName.textContent = 'Fórmules';
+              tdName.className = 'border px-2 py-1 font-semibold text-gray-700';
+              formulaTr.appendChild(tdName);
+
+              actDocs.forEach(actDoc => {
+                const td = document.createElement('td');
+                td.dataset.activityId = actDoc.id;
+                td.className = 'border px-2 py-1';
+                td.textContent = ''; // inicialment buida
+                formulaTr.appendChild(td);
+              });
+
+              // Mitjana columna buida
+              const tdAvg = document.createElement('td');
+              tdAvg.className = 'border px-2 py-1';
+              formulaTr.appendChild(tdAvg);
+
+              notesTbody.appendChild(formulaTr);
+            }
+
             renderAverages();
           });
       });
   });
 }
+
+/**
+ * Substitueix els IDs d'activitat de la fórmula pels valors de cada alumne
+ */
+function evalFormulaForStudent(formula, studentRow) {
+  let f = formula;
+
+  studentRow.querySelectorAll('td[data-activity-id]').forEach(td => {
+    const actId = td.dataset.activityId;
+    const val = parseFloat(td.querySelector('input')?.value || 0);
+    const re = new RegExp(`\\b${actId}\\b`, 'g');
+    f = f.replace(re, val);
+  });
+
+  // Avaluació segura
+  return Function('"use strict";return (' + f + ')')();
+}
+
 
 
 // Funció per actualitzar cel·les calculades sense recrear tota la taula
