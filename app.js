@@ -22,6 +22,7 @@ let deleteMode = false;
 let currentCalcActivityId = null; // Activitat actual per fer càlculs
 
 /* Elements */
+const formulas = {};
 const loginScreen = document.getElementById('loginScreen');
 const appRoot = document.getElementById('appRoot');
 const usuariNom = document.getElementById('usuariNom');
@@ -1228,3 +1229,40 @@ if (closeBtn) {
     container.classList.remove('mobile-open');
   });
 }
+
+function updateFormulaRow() {
+  const tbody = document.getElementById('notesTbody');
+
+  // Buscar fila existing 'formulaRow'
+  let formulaRow = document.getElementById('formulaRow');
+
+  if (!formulaRow) {
+    // Crear nova fila
+    formulaRow = document.createElement('tr');
+    formulaRow.id = 'formulaRow';
+    formulaRow.classList.add('bg-yellow-50', 'font-semibold'); // opcional: estil
+  } else {
+    // Si ja existeix, buidar-la
+    formulaRow.innerHTML = '';
+  }
+
+  // Primera cel·la: etiqueta
+  const firstCell = document.createElement('td');
+  firstCell.textContent = 'Formula';
+  formulaRow.appendChild(firstCell);
+
+  // Afegir cel·les de les activitats
+  const colCount = tbody.rows[0].cells.length; // suposem que totes les files tenen el mateix nombre de columnes
+
+  for (let i = 1; i < colCount; i++) {
+    const td = document.createElement('td');
+    // Mostra la fórmula si existeix
+    td.textContent = formulas[`Activity ${i}`] || '';
+    td.classList.add('text-center', 'italic', 'text-sm'); // estil opcional
+    formulaRow.appendChild(td);
+  }
+
+  // Afegir la fila al final del tbody
+  tbody.appendChild(formulaRow);
+}
+
