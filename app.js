@@ -752,16 +752,33 @@ function renderAverages() {
   tr.appendChild(th('',''));
   notesTfoot.appendChild(tr);
 
-  // Fila extra just després
+  // Fila extra amb una cel·la per cada columna
   const extraTr = document.createElement('tr');
-  extraTr.className = 'text-sm bg-gray-100'; // pots estilitzar
-  const extraTd = document.createElement('td');
-  extraTd.textContent = 'Fila extra';
-  extraTd.colSpan = actCount + 2; // cobreix totes les columnes
-  extraTd.className = 'text-center font-medium';
-  extraTr.appendChild(extraTd);
+  extraTr.className = 'text-sm bg-gray-100'; // estil opcional
+
+  // Cel·la primer alumne
+  const td0 = document.createElement('td');
+  td0.textContent = 'Extra';
+  td0.className = 'border px-2 py-1 font-medium text-center';
+  extraTr.appendChild(td0);
+
+  // Cel·les per cada activitat
+  for (let i = 0; i < actCount; i++) {
+    const td = document.createElement('td');
+    td.textContent = ''; // pots posar valor calculat aquí
+    td.className = 'border px-2 py-1 text-center';
+    extraTr.appendChild(td);
+  }
+
+  // Cel·la última (Mitjana)
+  const tdLast = document.createElement('td');
+  tdLast.textContent = ''; // valor si vols
+  tdLast.className = 'border px-2 py-1 text-center font-medium';
+  extraTr.appendChild(tdLast);
+
   notesTfoot.appendChild(extraTr);
 }
+
 
 
 /* ---------------- Open Calculation Modal ---------------- */
