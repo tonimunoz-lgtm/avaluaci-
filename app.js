@@ -538,6 +538,8 @@ function renderNotesGrid() {
           refreshIcon.innerHTML = '🔄';
           refreshIcon.title = 'Refrescar columna';
           refreshIcon.className = 'ml-2 cursor-pointer hidden';
+          refreshIcon.addEventListener('click', () => refreshActivityColumn(id));
+
 
           const menuDiv = document.createElement('div');
           menuDiv.className = 'relative';
@@ -1274,4 +1276,42 @@ if (closeBtn) {
     const container = document.getElementById('studentsListContainer');
     container.classList.remove('mobile-open');
   });
+}
+
+
+// ─────────── Funció per refrescar columna ───────────
+async function refreshActivityColumn(activityId) {
+  if (!currentClassId) return;
+
+  // Llegim classe
+  const classDoc = await db.collection('classes').doc(currentClassId).get();
+  if (!classDoc.exists) return;
+  const classData = classDoc.data();
+  const calcInfo = classData.calculatedActivities?.[activityId];
+  if (!calcInfo) return alert('Aquesta activitat no té cap càlcul assignat.');
+
+  const formula = calcInfo.formula || '';
+  let calcType = 'formula'; // per defecte
+  if (!isNaN(Number(formula))) calcType = 'numeric';
+  else if (formula === '0.5' || formula === '1') calcType = 'rounding'; // podries adaptar segons convenciència
+
+  try {
+    switch (calcType) {
+      case 'numeric':
+        await applyNumeric(Number(formula));
+        break;
+      case 'formula':
+        await applyFormula(formula);
+        break;
+      case 'rounding':
+        await applyRounding(formula);
+        break;
+    }
+    // Re-render cel·les calculades
+    updateCalculatedCells();
+    renderAverages();
+  } catch (e) {
+    console.error('Error refrescant columna:', e);
+    alert('Error refrescant columna: ' + e.message);
+  }
 }
