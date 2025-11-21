@@ -539,6 +539,33 @@ function renderNotesGrid() {
           refreshIcon.title = 'Refrescar columna';
           refreshIcon.className = 'ml-2 cursor-pointer hidden';
 
+          // Funció per refrescar l'activitat
+          const refreshActivityCalculation = async (activityId) => {
+            try {
+              const actDoc = await db.collection('activitats').doc(activityId).get();
+              if (!actDoc.exists) return;
+
+              const formula = actDoc.data().formula || '';
+              if (!formula.trim()) return alert('No hi ha cap fórmula guardada per aquesta activitat.');
+
+              // Reaplica la fórmula (necessites la teva funció applyFormula adaptada)
+              await applyFormula(formula);
+
+              // Marca activitat com calculada i refresca la taula
+              await db.collection('classes').doc(currentClassId).update({
+                [`calculatedActivities.${activityId}`]: true
+              });
+
+              alert('Fórmula aplicada correctament!');
+              renderNotesGrid(); // recarrega la taula per veure els canvis
+            } catch (e) {
+              console.error('Error refrescant activitat:', e);
+              alert('Error aplicant la fórmula: ' + e.message);
+            }
+          };
+
+          refreshIcon.addEventListener('click', () => refreshActivityCalculation(id));
+
           const menuDiv = document.createElement('div');
           menuDiv.className = 'relative';
           menuDiv.innerHTML = `
@@ -577,7 +604,7 @@ function renderNotesGrid() {
             const newName = prompt('Nou nom activitat:', name);
             if (!newName || newName.trim() === name) return;
             db.collection('activitats').doc(id).update({ nom: newName.trim() })
-              .then(() => loadClassData());
+              .then(() => renderNotesGrid());
           });
 
           menuDiv.querySelector('.delete-btn').addEventListener('click', () => removeActivity(id));
@@ -868,6 +895,32 @@ async function applyRounding(formula) {
     await saveNote(sid, currentCalcActivityId, val);
   }));
 }
+
+//-----------reaplicar formula
+async function refreshActivityCalculation(activityId) {
+  if (!activityId || !currentClassId) return;
+
+  try {
+    // Agafem l'activitat per obtenir la fórmula
+    const actDoc = await db.collection('activitats').doc(activityId).get();
+    if (!actDoc.exists) return;
+
+    const formula = actDoc.data().formula || '';
+    if (!formula.trim()) return alert('No hi ha cap fórmula guardada per aquesta activitat.');
+
+    // Reaplicar fórmula
+    await applyFormula(formula);
+
+    // Marcar activitat com calculada i actualitzar visualment la taula
+    await markActivityAsCalculated(activityId);
+
+    alert('Fórmula aplicada correctament!');
+  } catch (e) {
+    console.error('Error refrescant activitat:', e);
+    alert('Error aplicant la fórmula: ' + e.message);
+  }
+}
+
 
 // ─────────── Event Listener ───────────
 
@@ -1275,3 +1328,4 @@ if (closeBtn) {
     container.classList.remove('mobile-open');
   });
 }
+
