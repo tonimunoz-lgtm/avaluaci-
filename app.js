@@ -539,7 +539,6 @@ function renderNotesGrid() {
           refreshIcon.title = 'Refrescar columna';
           refreshIcon.className = 'ml-2 cursor-pointer hidden';
 
-          // Menú activitat
           const menuDiv = document.createElement('div');
           menuDiv.className = 'relative';
           menuDiv.innerHTML = `
@@ -583,17 +582,6 @@ function renderNotesGrid() {
 
           menuDiv.querySelector('.delete-btn').addEventListener('click', () => removeActivity(id));
           menuDiv.querySelector('.calc-btn').addEventListener('click', () => openCalcModal(id));
-
-          // Funcionalitat refrescar columna
-          refreshIcon.addEventListener('click', () => {
-            const formulaRow = notesTfoot.querySelector('tr[data-row-type="formula"]');
-            if (!formulaRow) return;
-            const cellIndex = Array.from(formulaRow.parentElement.querySelectorAll('th, td')).findIndex(c => c.contains(container));
-            const formulaCell = formulaRow.cells[cellIndex];
-            if (!formulaCell) return;
-            const formula = formulaCell.textContent.trim();
-            if (formula) applyFormulaToColumn(id, formula);
-          });
         });
 
         headRow.appendChild(th('Mitjana', 'text-right'));
@@ -634,7 +622,9 @@ function renderNotesGrid() {
                   const td = document.createElement('td');
                   td.className = 'border px-2 py-1';
 
-                  if (calculatedActs[actId]) td.style.backgroundColor = "#ffe4e6";
+                  if (calculatedActs[actId]) {
+                    td.style.backgroundColor = "#ffe4e6";
+                  }
 
                   const input = document.createElement('input');
                   input.type = 'number';
@@ -668,78 +658,8 @@ function renderNotesGrid() {
             });
 
             renderAverages();
-            renderFormulaRow(actDocs, calculatedActs);
           });
       });
-  });
-}
-
-// Fila de fórmules al peu de la taula
-function renderFormulaRow(actDocs, calculatedActs) {
-  const formulaRow = document.createElement('tr');
-  formulaRow.dataset.rowType = 'formula';
-  formulaRow.appendChild(td('Formules', 'font-semibold'));
-
-  actDocs.forEach(actDoc => {
-    const actId = actDoc.id;
-    const tdEl = document.createElement('td');
-    tdEl.contentEditable = true;
-    tdEl.className = 'border px-2 py-1 bg-gray-100';
-    if (calculatedActs[actId]) tdEl.style.backgroundColor = "#ffe4e6";
-    formulaRow.appendChild(tdEl);
-  });
-
-  formulaRow.appendChild(td('')); // Cel·la buida per mitjana
-  notesTfoot.appendChild(formulaRow);
-}
-
-// Aplica la fórmula a tota la columna
-function applyFormulaToColumn(activityId, formula) {
-  Array.from(notesTbody.querySelectorAll('tr')).forEach(tr => {
-    const input = Array.from(tr.querySelectorAll('input')).find(i => i.dataset.activityId === activityId);
-    if (input) {
-      try {
-        const result = eval(formula); // pots personalitzar l'entorn d'execució
-        input.value = result;
-        input.dispatchEvent(new Event('change'));
-      } catch (err) {
-        console.error('Error aplicant fórmula:', err);
-      }
-    }
-  });
-}
-
-
-// Funció per aplicar fórmula a tots els alumnes d'una activitat
-async function applyFormula(formula, activityId) {
-  if (!formula.trim()) return;
-  await Promise.all(classStudents.map(async sid => {
-    const result = await evalFormulaAsync(formula, sid); // defineix evalFormulaAsync segons les teves regles
-    await saveNote(sid, activityId, result);
-  }));
-}
-
-// Funció per actualitzar cel·les calculades després d'un refresh
-function updateCalculatedCells(activityId) {
-  classStudents.forEach(sid => {
-    const tr = notesTbody.querySelector(`tr[data-student-id="${sid}"]`);
-    if (!tr) return;
-
-    const idx = Array.from(notesThead.querySelectorAll('th')).findIndex(th => {
-      const container = th.querySelector('div');
-      if (!container) return false;
-      const actName = container.querySelector('span')?.textContent;
-      const refresh = container.querySelector('span');
-      return refresh && refresh.parentElement.parentElement === th && classActivities[idx] === activityId;
-    });
-
-    if (idx > 0) {
-      const td = tr.querySelectorAll('td')[idx];
-      db.collection('alumnes').doc(sid).get().then(sdoc => {
-        const val = sdoc.exists && sdoc.data().notes ? sdoc.data().notes[activityId] : '';
-        td.querySelector('input') ? td.querySelector('input').value = val : td.textContent = val;
-      });
-    }
   });
 }
 
