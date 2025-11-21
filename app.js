@@ -726,9 +726,10 @@ function computeStudentAverageText(studentData){
   return (vals.reduce((s,n)=> s+n,0)/vals.length).toFixed(2);
 }
 
-function renderAverages() {
-  Array.from(notesTbody.children).forEach(tr => {
-    const inputs = Array.from(tr.querySelectorAll('input')).map(i => Number(i.value)).filter(v => !isNaN(v));
+function renderAverages(){
+  // Actualitzar mitjanes alumnes
+  Array.from(notesTbody.children).forEach(tr=>{
+    const inputs = Array.from(tr.querySelectorAll('input')).map(i=> Number(i.value)).filter(v=> !isNaN(v));
     const lastTd = tr.querySelectorAll('td')[tr.querySelectorAll('td').length - 1];
     lastTd.textContent = inputs.length ? (inputs.reduce((a,b)=>a+b,0)/inputs.length).toFixed(2) : '';
   });
@@ -736,131 +737,59 @@ function renderAverages() {
   const actCount = classActivities.length;
   notesTfoot.innerHTML = '';
 
-  // Fila de mitjana activitats
-  const tr = document.createElement('tr');
-  tr.className = 'text-sm';
-  tr.appendChild(th('Mitjana activitat'));
+  // ----------------- Mitjana per activitat -----------------
+  const trAvg = document.createElement('tr');
+  trAvg.className = 'text-sm';
+  trAvg.appendChild(th('Mitjana activitat'));
+  if(actCount === 0){
+    trAvg.appendChild(th('',''));
+    notesTfoot.appendChild(trAvg);
+    return;
+  }
+
   for(let i=0;i<actCount;i++){
     const inputs = Array.from(notesTbody.querySelectorAll('tr')).map(r => r.querySelectorAll('input')[i]).filter(Boolean);
-    const vals = inputs.map(inp => Number(inp.value)).filter(v => !isNaN(v));
+    const vals = inputs.map(inp => Number(inp.value)).filter(v=> !isNaN(v));
     const avg = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2) : '';
     const td = document.createElement('td');
     td.className = 'border px-2 py-1 text-center font-semibold';
     td.textContent = avg;
-    tr.appendChild(td);
+    trAvg.appendChild(td);
   }
-  tr.appendChild(th('',''));
-  notesTfoot.appendChild(tr);
+  trAvg.appendChild(th('',''));
+  notesTfoot.appendChild(trAvg);
 
-  // Fila extra amb una cel·la per cada columna
-  const extraTr = document.createElement('tr');
-  extraTr.className = 'text-sm bg-gray-100'; // estil opcional
-
-  // Cel·la primer alumne
+  // ----------------- Fila fórmules -----------------
+  const trForm = document.createElement('tr');
+  trForm.className = 'formulas-row text-sm bg-gray-100';
   const td0 = document.createElement('td');
   td0.textContent = 'Fórmula';
   td0.className = 'border px-2 py-1 font-medium text-center';
-  extraTr.appendChild(td0);
+  trForm.appendChild(td0);
 
-  // Cel·les per cada activitat
-  for (let i = 0; i < actCount; i++) {
-    const td = document.createElement('td');
-    td.textContent = ''; // pots posar valor calculat aquí
-    td.className = 'border px-2 py-1 text-center';
-    extraTr.appendChild(td);
-  }
+  // Llegim fórmules de Firestore
+  db.collection('classes').doc(currentClassId).get().then(doc=>{
+    if(!doc.exists) return;
+    const calculatedActs = doc.data().calculatedActivities || {};
 
-  // Cel·la última (Mitjana)
-  const tdLast = document.createElement('td');
-  tdLast.textContent = ''; // valor si vols
-  tdLast.className = 'border px-2 py-1 text-center font-medium';
-  extraTr.appendChild(tdLast);
-
-  notesTfoot.appendChild(extraTr);
-}
-
-// ---------------- Render fila de fórmules ----------------
-async function renderFormulasRow() {
-  const classDoc = await db.collection('classes').doc(currentClassId).get();
-  if(!classDoc.exists) return;
-  const calculatedActs = classDoc.data().calculatedActivities || {};
-
-  const actCount = classActivities.length;
-
-  // Si no hi ha fila extra, la creem
-  let extraTr = notesTfoot.querySelector('.formulas-row');
-  if(!extraTr){
-    extraTr = document.createElement('tr');
-    extraTr.className = 'formulas-row text-sm bg-gray-100';
-    notesTfoot.appendChild(extraTr);
-  }
-  extraTr.innerHTML = '';
-
-  // Cel·la primer alumne
-  const td0 = document.createElement('td');
-  td0.textContent = 'Fórmula';
-  td0.className = 'border px-2 py-1 font-medium text-center';
-  extraTr.appendChild(td0);
-
-  // Cel·les activitats
-  for(let i = 0; i < actCount; i++){
-    const actId = classActivities[i];
-    const td = document.createElement('td');
-    td.className = 'border px-2 py-1 text-center font-medium';
-
-    // Si hi ha fórmula guardada, la mostrem
-    td.textContent = calculatedActs[actId]?.formula || '';
-    extraTr.appendChild(td);
-  }
-
-  // Cel·la última (Mitjana global de la fila de fórmules)
-  const tdLast = document.createElement('td');
-  tdLast.textContent = '';
-  tdLast.className = 'border px-2 py-1 text-center font-medium';
-  extraTr.appendChild(tdLast);
-}
-
-// ---------------- Marcar activitat com calculada amb fórmula ----------------
-async function markActivityAsCalculated(activityId, formula = '') {
-  if(!currentClassId) return;
-  await db.collection('classes').doc(currentClassId).update({
-    [`calculatedActivities.${activityId}`]: { formula: formula || true } // si no hi ha fórmula, guardem true
-  });
-  renderNotesGrid();
-  renderFormulasRow();
-}
-
-// ---------------- Aplicar càlcul amb fórmula ----------------
-modalApplyCalcBtn.addEventListener('click', async () => {
-  if (!currentCalcActivityId) return;
-
-  try {
-    let formula = '';
-    switch (calcTypeSelect.value) {
-      case 'numeric':
-        await applyNumeric(Number(numericField.value));
-        formula = numericField.value; // mostrar valor fix
-        break;
-      case 'formula':
-        formula = formulaField.value;
-        await applyFormula(formula);
-        break;
-      case 'rounding':
-        formula = formulaField.value;
-        await applyRounding(formula);
-        break;
-      default:
-        throw new Error('Tipus de càlcul desconegut');
+    for(let i=0;i<actCount;i++){
+      const actId = classActivities[i];
+      const td = document.createElement('td');
+      td.className = 'border px-2 py-1 text-center font-medium';
+      td.textContent = calculatedActs[actId]?.formula || '';
+      trForm.appendChild(td);
     }
 
-    await markActivityAsCalculated(currentCalcActivityId, formula);
-    closeModal('modalCalc');
+    const tdLast = document.createElement('td');
+    tdLast.textContent = '';
+    tdLast.className = 'border px-2 py-1 text-center font-medium';
+    trForm.appendChild(tdLast);
 
-  } catch (e) {
-    console.error(e);
-    alert('Error en aplicar el càlcul: ' + e.message);
-  }
-});
+    notesTfoot.appendChild(trForm);
+  });
+}
+
+
 
 
 /* ---------------- Open Calculation Modal ---------------- */
