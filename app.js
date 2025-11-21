@@ -758,7 +758,7 @@ function renderAverages() {
 
   // Cel·la primer alumne
   const td0 = document.createElement('td');
-  td0.textContent = 'Extra';
+  td0.textContent = 'Fórmula';
   td0.className = 'border px-2 py-1 font-medium text-center';
   extraTr.appendChild(td0);
 
