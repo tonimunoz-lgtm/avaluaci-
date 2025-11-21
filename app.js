@@ -726,26 +726,23 @@ function computeStudentAverageText(studentData){
   return (vals.reduce((s,n)=> s+n,0)/vals.length).toFixed(2);
 }
 
-function renderAverages(){
-  Array.from(notesTbody.children).forEach(tr=>{
-    const inputs = Array.from(tr.querySelectorAll('input')).map(i=> Number(i.value)).filter(v=> !isNaN(v));
+function renderAverages() {
+  Array.from(notesTbody.children).forEach(tr => {
+    const inputs = Array.from(tr.querySelectorAll('input')).map(i => Number(i.value)).filter(v => !isNaN(v));
     const lastTd = tr.querySelectorAll('td')[tr.querySelectorAll('td').length - 1];
     lastTd.textContent = inputs.length ? (inputs.reduce((a,b)=>a+b,0)/inputs.length).toFixed(2) : '';
   });
 
   const actCount = classActivities.length;
   notesTfoot.innerHTML = '';
+
+  // Fila de mitjana activitats
   const tr = document.createElement('tr');
   tr.className = 'text-sm';
   tr.appendChild(th('Mitjana activitat'));
-  if(actCount === 0){
-    tr.appendChild(th('',''));
-    notesTfoot.appendChild(tr);
-    return;
-  }
   for(let i=0;i<actCount;i++){
     const inputs = Array.from(notesTbody.querySelectorAll('tr')).map(r => r.querySelectorAll('input')[i]).filter(Boolean);
-    const vals = inputs.map(inp => Number(inp.value)).filter(v=> !isNaN(v));
+    const vals = inputs.map(inp => Number(inp.value)).filter(v => !isNaN(v));
     const avg = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2) : '';
     const td = document.createElement('td');
     td.className = 'border px-2 py-1 text-center font-semibold';
@@ -754,7 +751,18 @@ function renderAverages(){
   }
   tr.appendChild(th('',''));
   notesTfoot.appendChild(tr);
+
+  // Fila extra just després
+  const extraTr = document.createElement('tr');
+  extraTr.className = 'text-sm bg-gray-100'; // pots estilitzar
+  const extraTd = document.createElement('td');
+  extraTd.textContent = 'Fila extra';
+  extraTd.colSpan = actCount + 2; // cobreix totes les columnes
+  extraTd.className = 'text-center font-medium';
+  extraTr.appendChild(extraTd);
+  notesTfoot.appendChild(extraTr);
 }
+
 
 /* ---------------- Open Calculation Modal ---------------- */
 function openCalcModal(activityId){
