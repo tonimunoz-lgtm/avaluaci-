@@ -1283,35 +1283,30 @@ if (closeBtn) {
 async function refreshActivityColumn(activityId) {
   if (!currentClassId) return;
 
-  // Llegim classe
-  const classDoc = await db.collection('classes').doc(currentClassId).get();
-  if (!classDoc.exists) return;
-  const classData = classDoc.data();
-  const calcInfo = classData.calculatedActivities?.[activityId];
-  if (!calcInfo) return alert('Aquesta activitat no té cap càlcul assignat.');
+  // 1. Llegim la fila de fórmules
+  const tfootRow = notesTfoot.querySelector('.formulas-row');
+  if (!tfootRow) return;
 
-  const formula = calcInfo.formula || '';
-  let calcType = 'formula'; // per defecte
-  if (!isNaN(Number(formula))) calcType = 'numeric';
-  else if (formula === '0.5' || formula === '1') calcType = 'rounding'; // podries adaptar segons convenciència
+  const ths = Array.from(tfootRow.children);
+  const actIdx = classActivities.findIndex(aid => aid === activityId);
+  if (actIdx === -1) return;
 
-  try {
-    switch (calcType) {
-      case 'numeric':
-        await applyNumeric(Number(formula));
-        break;
-      case 'formula':
-        await applyFormula(formula);
-        break;
-      case 'rounding':
-        await applyRounding(formula);
-        break;
+  const formula = ths[actIdx + 1]?.textContent.trim(); // +1 per la columna 'Alumne'
+  if (!formula) return;
+
+  // 2. Recorrem totes les files de notes i apliquem la fórmula
+  for (let i = 0; i < notesData.length; i++) {
+    const row = notesData[i];
+    
+    try {
+      // Suposant que tens una funció que aplica fórmules a una fila:
+      row[activityId] = await evalFormulaAsync(formula, row);
+    } catch (e) {
+      console.error('Error aplicant fórmula a la fila', i, e);
+      row[activityId] = 'Error';
     }
-    // Re-render cel·les calculades
-    updateCalculatedCells();
-    renderAverages();
-  } catch (e) {
-    console.error('Error refrescant columna:', e);
-    alert('Error refrescant columna: ' + e.message);
   }
+
+  // 3. Tornem a renderitzar la taula amb els nous valors
+  renderNotesGrid();
 }
