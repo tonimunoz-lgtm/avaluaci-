@@ -538,6 +538,8 @@ function renderNotesGrid() {
           refreshIcon.innerHTML = '🔄';
           refreshIcon.title = 'Refrescar columna';
           refreshIcon.className = 'ml-2 cursor-pointer hidden';
+          refreshIcon.addEventListener('click', ()=> refreshCalculatedActivity(id));
+
 
           const menuDiv = document.createElement('div');
           menuDiv.className = 'relative';
@@ -1274,4 +1276,32 @@ if (closeBtn) {
     const container = document.getElementById('studentsListContainer');
     container.classList.remove('mobile-open');
   });
+}
+
+
+// Refrescar activitat calculada
+async function refreshCalculatedActivity(activityId){
+  if(!currentClassId) return;
+  
+  try {
+    const classDoc = await db.collection('classes').doc(currentClassId).get();
+    if(!classDoc.exists) return;
+
+    const calculatedActs = classDoc.data().calculatedActivities || {};
+    if(!calculatedActs[activityId] || !calculatedActs[activityId].formula) return;
+
+    const formula = calculatedActs[activityId].formula;
+
+    // Aplicar fórmula a tots els alumnes
+    await Promise.all(classStudents.map(async sid => {
+      const result = await evalFormulaAsync(formula, sid);
+      await saveNote(sid, activityId, result);
+    }));
+
+    // Actualitzar cel·les a la taula sense recrear tota
+    updateCalculatedCells();
+  } catch(e) {
+    console.error('Error refrescant activitat calculada:', e);
+    alert('Error refrescant activitat: ' + e.message);
+  }
 }
