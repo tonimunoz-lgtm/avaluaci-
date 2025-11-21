@@ -207,6 +207,27 @@
     </div>
   </div>
 
+<table id="notesTable" border="1" cellpadding="5">
+  <thead>
+    <tr>
+      <th>Alumne</th>
+      <th data-activity-id="a1">Activitat 1 <span class="refresh" data-activity-id="a1">🔄</span></th>
+      <th data-activity-id="a2">Activitat 2 <span class="refresh" data-activity-id="a2">🔄</span></th>
+      <th data-activity-id="a3">Total <span class="refresh" data-activity-id="a3">🔄</span></th>
+    </tr>
+  </thead>
+  <tbody id="notesBody"></tbody>
+  <tfoot>
+    <tr class="formulas-row">
+      <th>Fórmula</th>
+      <th>=a1*0.4</th>
+      <th>=a2*0.6</th>
+      <th>=a1*0.4 + a2*0.6</th>
+    </tr>
+  </tfoot>
+</table>
+
+  
   <!-- Modal Calcul -->
 <div id="modalCalc" class="modal hidden fixed inset-0 items-center justify-center z-50">
   <div class="bg-white p-6 rounded shadow-lg w-96 max-w-full flex flex-col gap-4">
