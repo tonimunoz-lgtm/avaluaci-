@@ -779,6 +779,88 @@ function renderAverages() {
   notesTfoot.appendChild(extraTr);
 }
 
+// ---------------- Render fila de fórmules ----------------
+async function renderFormulasRow() {
+  const classDoc = await db.collection('classes').doc(currentClassId).get();
+  if(!classDoc.exists) return;
+  const calculatedActs = classDoc.data().calculatedActivities || {};
+
+  const actCount = classActivities.length;
+
+  // Si no hi ha fila extra, la creem
+  let extraTr = notesTfoot.querySelector('.formulas-row');
+  if(!extraTr){
+    extraTr = document.createElement('tr');
+    extraTr.className = 'formulas-row text-sm bg-gray-100';
+    notesTfoot.appendChild(extraTr);
+  }
+  extraTr.innerHTML = '';
+
+  // Cel·la primer alumne
+  const td0 = document.createElement('td');
+  td0.textContent = 'Fórmula';
+  td0.className = 'border px-2 py-1 font-medium text-center';
+  extraTr.appendChild(td0);
+
+  // Cel·les activitats
+  for(let i = 0; i < actCount; i++){
+    const actId = classActivities[i];
+    const td = document.createElement('td');
+    td.className = 'border px-2 py-1 text-center font-medium';
+
+    // Si hi ha fórmula guardada, la mostrem
+    td.textContent = calculatedActs[actId]?.formula || '';
+    extraTr.appendChild(td);
+  }
+
+  // Cel·la última (Mitjana global de la fila de fórmules)
+  const tdLast = document.createElement('td');
+  tdLast.textContent = '';
+  tdLast.className = 'border px-2 py-1 text-center font-medium';
+  extraTr.appendChild(tdLast);
+}
+
+// ---------------- Marcar activitat com calculada amb fórmula ----------------
+async function markActivityAsCalculated(activityId, formula = '') {
+  if(!currentClassId) return;
+  await db.collection('classes').doc(currentClassId).update({
+    [`calculatedActivities.${activityId}`]: { formula: formula || true } // si no hi ha fórmula, guardem true
+  });
+  renderNotesGrid();
+  renderFormulasRow();
+}
+
+// ---------------- Aplicar càlcul amb fórmula ----------------
+modalApplyCalcBtn.addEventListener('click', async () => {
+  if (!currentCalcActivityId) return;
+
+  try {
+    let formula = '';
+    switch (calcTypeSelect.value) {
+      case 'numeric':
+        await applyNumeric(Number(numericField.value));
+        formula = numericField.value; // mostrar valor fix
+        break;
+      case 'formula':
+        formula = formulaField.value;
+        await applyFormula(formula);
+        break;
+      case 'rounding':
+        formula = formulaField.value;
+        await applyRounding(formula);
+        break;
+      default:
+        throw new Error('Tipus de càlcul desconegut');
+    }
+
+    await markActivityAsCalculated(currentCalcActivityId, formula);
+    closeModal('modalCalc');
+
+  } catch (e) {
+    console.error(e);
+    alert('Error en aplicar el càlcul: ' + e.message);
+  }
+});
 
 
 /* ---------------- Open Calculation Modal ---------------- */
