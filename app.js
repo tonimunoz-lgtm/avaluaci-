@@ -501,6 +501,9 @@ function renderStudentsList(){
   });
 }
 /* ---------------- Notes Grid amb menú activitats ---------------- */
+// Objecte global per guardar fórmules
+const formulas = {}; // clau = id activitat, valor = fórmula
+
 function renderNotesGrid() {
   // Neteja taula
   notesThead.innerHTML = '';
@@ -594,6 +597,7 @@ function renderNotesGrid() {
         if (classStudents.length === 0) {
           notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivities.length + 2}">No hi ha alumnes</td></tr>`;
           renderAverages();
+          addFormulaRow(actDocs); // Afegim fila fórmules encara que no hi hagi alumnes
           return;
         }
 
@@ -659,10 +663,52 @@ function renderNotesGrid() {
             });
 
             renderAverages();
+
+            // Afegim la fila de fórmules al final
+            addFormulaRow(actDocs);
           });
       });
   });
 }
+
+// Funció que afegeix la fila "Formula" al final de la taula
+function addFormulaRow(actDocs) {
+  // Neteja fila si ja existia
+  let formulaRow = document.getElementById('formulaRow');
+  if (!formulaRow) {
+    formulaRow = document.createElement('tr');
+    formulaRow.id = 'formulaRow';
+    formulaRow.className = 'bg-yellow-50 italic';
+  } else {
+    formulaRow.innerHTML = '';
+  }
+
+  // Primera cel·la amb etiqueta
+  const firstCell = document.createElement('td');
+  firstCell.textContent = 'Formula';
+  formulaRow.appendChild(firstCell);
+
+  // Cel·les per activitats
+  actDocs.forEach(actDoc => {
+    const td = document.createElement('td');
+    const actId = actDoc.id;
+    td.textContent = formulas[actId] || '';
+    td.className = 'text-center text-sm';
+    formulaRow.appendChild(td);
+  });
+
+  // Cel·la final buida per la columna Mitjana
+  formulaRow.appendChild(document.createElement('td'));
+
+  notesTbody.appendChild(formulaRow);
+}
+
+// Quan s'assigna una fórmula des del modal
+function setFormula(actId, formulaStr) {
+  formulas[actId] = formulaStr;
+  addFormulaRow(document.querySelectorAll('#notesThead th')); // actualitza fila
+}
+
 
 
 // Funció per actualitzar cel·les calculades sense recrear tota la taula
