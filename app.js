@@ -336,23 +336,69 @@ function createClassModal(){
 modalCreateClassBtn.addEventListener('click', createClassModal);
 
 /* ---------------- Open Class ---------------- */
-function openClass(id){
-  currentClassId = id;
+// Funció per obrir una classe
+function openClass(classId) {
+  db.collection('classes').doc(classId).get().then(doc => {
+    if (!doc.exists) {
+      alert('Classe no trobada');
+      return;
+    }
 
-  // Carregar la classe des de Firestore
-  db.collection('classes').doc(id).get().then(doc => {
-    if(!doc.exists) { alert('Classe no trobada'); return; }
     const classData = doc.data();
-    classData.id = doc.id; // afegim l'id
+    classData.id = doc.id;
 
-    // Amagar pantalla principal i mostrar intermedi
-    screenClasses.classList.add('hidden');
-    document.getElementById('intermediateWrapper').classList.remove('hidden');
+    // Agafem l'array d'alumnes (o buit si no existeix)
+    const alumnes = classData.alumnes || [];
 
-    // Cridem la pàgina intermèdia
-    intermediatePage.show(classData, classData.alumnes || []);
-  }).catch(e => console.error(e));
+    // Mostrem la pantalla intermèdia
+    intermediatePage.show(classData, alumnes);
+  }).catch(err => {
+    console.error('Error obtenint la classe:', err);
+  });
 }
+
+// Pantalla intermèdia
+const intermediatePage = {
+  show: function(classData, alumnes) {
+    const wrapper = document.getElementById('intermediateWrapper');
+    wrapper.innerHTML = ''; // netegem contingut
+
+    // --- Capçalera ---
+    const header = document.createElement('h2');
+    header.textContent = `Gestor d’avaluació - ${classData.nom || 'Sense nom'}`;
+    wrapper.appendChild(header);
+
+    // --- Llista d’alumnes ---
+    if (alumnes.length > 0) {
+      const list = document.createElement('ul');
+      alumnes.forEach(a => {
+        const li = document.createElement('li');
+        li.textContent = `${a.nom} ${a.cognoms || ''}`;
+        list.appendChild(li);
+      });
+      wrapper.appendChild(list);
+    } else {
+      const msg = document.createElement('p');
+      msg.textContent = 'No hi ha alumnes en aquesta classe.';
+      wrapper.appendChild(msg);
+    }
+
+    // --- Botó per continuar ---
+    const btn = document.createElement('button');
+    btn.textContent = 'Continuar a la graella';
+    btn.addEventListener('click', () => {
+      showClassScreen(classData.id); // Funció que carrega la graella d’avaluació
+    });
+    wrapper.appendChild(btn);
+  }
+}
+
+// Exemple de funció que podria carregar la graella (has de definir-la segons la teva app)
+function showClassScreen(classId) {
+  console.log('Carregant graella per la classe:', classId);
+  // Aquí aniries a la pantalla principal de la classe
+}
+
 
 
 btnBack.addEventListener('click', ()=> {
