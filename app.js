@@ -1,9 +1,5 @@
 // app.js - lògica principal (modules)
 import { openModal, closeModal, confirmAction } from './modals.js';
-
-
-
-
 /* ---------------- FIREBASE CONFIG ---------------- */
 const firebaseConfig = {
   apiKey: "AIzaSyA0P7TWcEw9y9_13yqRhvsgWN5d3YKH7yo",
@@ -24,8 +20,6 @@ let classStudents = [];
 let classActivities = [];
 let deleteMode = false;
 let currentCalcActivityId = null; // Activitat actual per fer càlculs
-
-
 
 /* Elements */
 const loginScreen = document.getElementById('loginScreen');
@@ -355,28 +349,6 @@ function loadClassData(){
     renderNotesGrid();
   }).catch(e=> console.error(e));
 }
-
-import { initTabs } from './activityTabs.js';
-
-async function openClass(id) {
-    currentClassId = id;
-    screenClasses.classList.add('hidden');
-    screenClass.classList.remove('hidden');
-
-    try {
-        await loadClassData();
-
-        const container = document.getElementById('tabsContainer');
-        if (container) {
-            await initTabs(id);
-        } else {
-            console.warn('tabsContainer no existeix encara. Pestanyes no inicialitzades.');
-        }
-    } catch (err) {
-        console.error('Error obrint classe:', err);
-    }
-}
-
 
 /* ---------------- Students ---------------- */
 btnAddStudent.addEventListener('click', ()=> openModal('modalAddStudent'));
