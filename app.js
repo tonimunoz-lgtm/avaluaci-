@@ -555,9 +555,19 @@ function renderNotesGrid() {
             if (!formulaText) return alert('No hi ha cap fórmula aplicada a aquesta activitat.');
 
             try {
+              // Recuperem si hi ha informació de redondeig des de calculatedActivities
+              const actCalc = calculatedActs[id];
+              const roundValue = actCalc && actCalc.round ? actCalc.round : null;
+
               // Aplicar fórmula a tots els alumnes
               await Promise.all(classStudents.map(async sid => {
-                const result = await evalFormulaAsync(formulaText, sid);
+                let result = await evalFormulaAsync(formulaText, sid);
+
+                // Aplicar redondeig si cal
+                if (roundValue) {
+                  result = applyRounding(result, roundValue);
+                }
+
                 await saveNote(sid, id, result);
               }));
 
@@ -692,7 +702,6 @@ function renderNotesGrid() {
       });
   });
 }
-
 
 
 // Funció per actualitzar cel·les calculades sense recrear tota la taula
