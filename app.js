@@ -907,19 +907,46 @@ modalApplyCalcBtn.addEventListener('click', async () => {
 
   try {
     let formulaText = ''; // <-- guardarem la fórmula real
+
     switch (calcTypeSelect.value) {
       case 'numeric':
         await applyNumeric(Number(numericField.value));
         formulaText = numericField.value;
         break;
+
       case 'formula':
         await applyFormula(formulaField.value);
         formulaText = formulaField.value;
         break;
+
       case 'rounding':
-        await applyRounding(formulaField.value);
-        formulaText = formulaField.value;
+        if (!formulaField.value.trim()) throw new Error('Selecciona activitat i 0,5 o 1');
+
+        // Trobar l'activitat seleccionada i el multiplicador (0.5 o 1)
+        const activityNameMatch = formulaField.value.match(/^(.+?)([0-9.]*)$/);
+        if (!activityNameMatch) throw new Error('Fórmula de redondeig no vàlida');
+
+        const selectedActivityName = activityNameMatch[1].trim();
+        const multiplier = Number(activityNameMatch[2]) || 1;
+
+        // Aplicar redondeig a cada alumne
+        await Promise.all(classStudents.map(async sid => {
+          const studentDoc = await db.collection('alumnes').doc(sid).get();
+          const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
+          let val = Number(notes[selectedActivityName]) || 0;
+
+          if (multiplier === 1) val = Math.round(val);
+          else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
+
+          await saveNote(sid, currentCalcActivityId, val);
+        }));
+
+        // Guardem la fórmula com a Math.round(...) a Firestore
+        formulaText = multiplier === 1
+          ? `Math.round(${selectedActivityName})`
+          : `Math.round(${selectedActivityName}*2)/2`;
         break;
+
       default:
         throw new Error('Tipus de càlcul desconegut');
     }
@@ -941,6 +968,7 @@ modalApplyCalcBtn.addEventListener('click', async () => {
     alert('Error en aplicar el càlcul: ' + e.message);
   }
 });
+
 
 
 // ---------------- Construir botons de fórmules ----------------
