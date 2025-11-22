@@ -236,6 +236,48 @@
   </div>
 </div>
 
+  <section id="screen-groups" class="hidden w-full max-w-6xl mx-auto p-6 rounded-xl shadow-lg bg-white">
+  <header class="flex items-center justify-between mb-6 p-4 rounded-xl shadow-md">
+    <div>
+      <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight">Gestor d'avaluació</h1>
+    </div>
+    <div id="userAreaGroups" class="flex items-center gap-2">
+      <span id="usuariNomGroups">usuari</span>
+      <button id="userMenuBtnGroups" class="text-gray-600 hover:text-gray-800">⋮</button>
+      <div id="userMenuGroups" class="hidden absolute bg-white border rounded shadow-md p-2">
+        <button id="changePasswordBtnGroups" class="w-full text-left px-2 py-1 hover:bg-gray-100">Canviar contrasenya</button>
+      </div>
+      <button id="btnLogoutGroups">Logout</button>
+    </div>
+  </header>
+
+  <div class="flex gap-4">
+    <!-- Sidebar alumnes -->
+    <aside id="studentsListContainerGroups" class="w-64">
+      <div id="studentsListContentGroups">
+        <h3 class="font-semibold mb-2">
+          Alumnes <span id="studentsCountGroups" class="text-sm text-gray-400"></span>
+        </h3>
+        <ul id="studentsListGroups" class="space-y-2"></ul>
+        <div class="flex gap-2 mt-2">
+          <button id="btnAddStudentGroups" class="bg-purple-600 text-white px-3 py-1 rounded">➕ Alumne</button>
+          <button id="btnDeleteGroupMode" class="bg-red-500 text-white px-3 py-1 rounded">🗑️ Eliminar grup</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Contingut principal: targetes grups d’activitats -->
+    <div class="flex-1">
+      <div class="flex gap-2 mb-4">
+        <button id="btnAddGroup" class="bg-indigo-500 text-white px-3 py-1 rounded">➕ Grup</button>
+      </div>
+      <div id="groupsContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <!-- Targetes de grups es generen dinàmicament -->
+      </div>
+    </div>
+  </div>
+</section>
+
 
   <!-- SCRIPT PRINCIPAL -->
   <script type="module" src="./app.js"></script>
