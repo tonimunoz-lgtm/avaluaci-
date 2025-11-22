@@ -1,8 +1,5 @@
 // app.js - lògica principal (modules)
 import { openModal, closeModal, confirmAction } from './modals.js';
-import { intermediatePage } from './intermediatePage.js';
-import { pageManager } from './pageManager.js';
-
 /* ---------------- FIREBASE CONFIG ---------------- */
 const firebaseConfig = {
   apiKey: "AIzaSyA0P7TWcEw9y9_13yqRhvsgWN5d3YKH7yo",
@@ -80,18 +77,6 @@ if (btnCloseStudentsMobile) {
     cont.classList.remove('mobile-open');
   });
 }
-
-document.addEventListener('goToEvaluation', e => {
-  const classData = e.detail.classData;
-  document.getElementById('intermediateWrapper').classList.add('hidden');
-  showClassScreen(classData); // la funció existent que mostra la graella i activitats
-});
-
-document.addEventListener('backToIntermediate', e => {
-  const classId = e.detail.classId;
-  const cls = classes.find(c => c.id === classId);
-  intermediatePage.show(cls, cls.students || []);
-});
 
 // També tancar si cliques a fora del card (overlay)
 // detectem clicks al container però fora de .students-card
@@ -336,70 +321,12 @@ function createClassModal(){
 modalCreateClassBtn.addEventListener('click', createClassModal);
 
 /* ---------------- Open Class ---------------- */
-// Funció per obrir una classe
-function openClass(classId) {
-  db.collection('classes').doc(classId).get().then(doc => {
-    if (!doc.exists) {
-      alert('Classe no trobada');
-      return;
-    }
-
-    const classData = doc.data();
-    classData.id = doc.id;
-
-    // Agafem l'array d'alumnes (o buit si no existeix)
-    const alumnes = classData.alumnes || [];
-
-    // Mostrem la pantalla intermèdia
-    intermediatePage.show(classData, alumnes);
-  }).catch(err => {
-    console.error('Error obtenint la classe:', err);
-  });
+function openClass(id){
+  currentClassId = id;
+  screenClasses.classList.add('hidden');
+  screenClass.classList.remove('hidden');
+  loadClassData();
 }
-
-// Pantalla intermèdia
-const intermediatePage = {
-  show: function(classData, alumnes) {
-    const wrapper = document.getElementById('intermediateWrapper');
-    wrapper.innerHTML = ''; // netegem contingut
-
-    // --- Capçalera ---
-    const header = document.createElement('h2');
-    header.textContent = `Gestor d’avaluació - ${classData.nom || 'Sense nom'}`;
-    wrapper.appendChild(header);
-
-    // --- Llista d’alumnes ---
-    if (alumnes.length > 0) {
-      const list = document.createElement('ul');
-      alumnes.forEach(a => {
-        const li = document.createElement('li');
-        li.textContent = `${a.nom} ${a.cognoms || ''}`;
-        list.appendChild(li);
-      });
-      wrapper.appendChild(list);
-    } else {
-      const msg = document.createElement('p');
-      msg.textContent = 'No hi ha alumnes en aquesta classe.';
-      wrapper.appendChild(msg);
-    }
-
-    // --- Botó per continuar ---
-    const btn = document.createElement('button');
-    btn.textContent = 'Continuar a la graella';
-    btn.addEventListener('click', () => {
-      showClassScreen(classData.id); // Funció que carrega la graella d’avaluació
-    });
-    wrapper.appendChild(btn);
-  }
-}
-
-// Exemple de funció que podria carregar la graella (has de definir-la segons la teva app)
-function showClassScreen(classId) {
-  console.log('Carregant graella per la classe:', classId);
-  // Aquí aniries a la pantalla principal de la classe
-}
-
-
 
 btnBack.addEventListener('click', ()=> {
   currentClassId = null;
