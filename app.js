@@ -901,7 +901,6 @@ async function applyRounding(formula) {
 }
 
 // ─────────── Event Listener ───────────
-
 modalApplyCalcBtn.addEventListener('click', async () => {
   if (!currentCalcActivityId) return;
 
@@ -968,7 +967,6 @@ modalApplyCalcBtn.addEventListener('click', async () => {
     alert('Error en aplicar el càlcul: ' + e.message);
   }
 });
-
 
 
 // ---------------- Construir botons de fórmules ----------------
