@@ -916,37 +916,43 @@ modalApplyCalcBtn.addEventListener('click', async () => {
 
   try {
     let formulaText = ''; // <-- guardarem la fórmula real
-    let roundValue = null; // <-- per guardar valor de redondeig
 
     switch (calcTypeSelect.value) {
       case 'numeric':
         await applyNumeric(Number(numericField.value));
         formulaText = numericField.value;
         break;
+
       case 'formula':
         await applyFormula(formulaField.value);
         formulaText = formulaField.value;
         break;
+
       case 'rounding':
-        // Obtenir valor del redondeig des del camp o input del modal
-        roundValue = Number(roundField.value); // <-- pot ser 1 o 0.5 segons configuració
-        await applyRounding(formulaField.value, roundValue); // <-- modificat per passar roundValue
-        formulaText = formulaField.value;
+        // Llegim el valor del redondeig (1 per enter més proper, 0.5 per mig punt)
+        const roundField = document.getElementById('roundField');
+        if (!roundField) throw new Error('No s’ha trobat el camp de redondeig (roundField).');
+
+        const roundValue = Number(roundField.value);
+        if (![0.5, 1].includes(roundValue)) throw new Error('Valor de redondeig no vàlid. Ha de ser 1 o 0.5.');
+
+        await applyRounding(formulaField.value, roundValue);
+
+        // Guardem la fórmula amb indicació del redondeig per poder refrescar correctament després
+        formulaText = formulaField.value + (roundValue === 1 ? '1' : '0.5');
         break;
+
       default:
         throw new Error('Tipus de càlcul desconegut');
     }
 
     // Guardar a Firestore la informació de fórmula a calculatedActivities
     if (currentClassId) {
-      const updateData = {
-        calculated: true,
-        formula: formulaText
-      };
-      if (roundValue) updateData.round = roundValue; // <-- guardem el redondeig
-
       await db.collection('classes').doc(currentClassId).update({
-        [`calculatedActivities.${currentCalcActivityId}`]: updateData
+        [`calculatedActivities.${currentCalcActivityId}`]: {
+          calculated: true,
+          formula: formulaText
+        }
       });
     }
 
