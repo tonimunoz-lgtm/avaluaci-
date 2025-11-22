@@ -78,29 +78,6 @@ if (btnCloseStudentsMobile) {
   });
 }
 
-const numericInputDiv = document.getElementById('numericInput');
-const formulaInputsDiv = document.getElementById('formulaInputs');
-const roundingInputDiv = document.getElementById('roundingInput'); // aquest l'has d'afegir a l'HTML també
-
-calcTypeSelect.addEventListener('change', () => {
-  numericInputDiv.classList.add('hidden');
-  formulaInputsDiv.classList.add('hidden');
-  roundingInputDiv.classList.add('hidden');
-
-  switch(calcTypeSelect.value){
-    case 'numeric':
-      numericInputDiv.classList.remove('hidden');
-      break;
-    case 'formula':
-      formulaInputsDiv.classList.remove('hidden');
-      break;
-    case 'rounding':
-      roundingInputDiv.classList.remove('hidden');
-      break;
-  }
-});
-
-
 // També tancar si cliques a fora del card (overlay)
 // detectem clicks al container però fora de .students-card
 document.getElementById('studentsListContainer')?.addEventListener('click', (e) => {
@@ -578,19 +555,9 @@ function renderNotesGrid() {
             if (!formulaText) return alert('No hi ha cap fórmula aplicada a aquesta activitat.');
 
             try {
-              // Recuperem si hi ha informació de redondeig des de calculatedActivities
-              const actCalc = calculatedActs[id];
-              const roundValue = actCalc && actCalc.round ? actCalc.round : null;
-
               // Aplicar fórmula a tots els alumnes
               await Promise.all(classStudents.map(async sid => {
-                let result = await evalFormulaAsync(formulaText, sid);
-
-                // Aplicar redondeig si cal
-                if (roundValue) {
-                  result = applyRounding(result, roundValue);
-                }
-
+                const result = await evalFormulaAsync(formulaText, sid);
                 await saveNote(sid, id, result);
               }));
 
@@ -725,6 +692,7 @@ function renderNotesGrid() {
       });
   });
 }
+
 
 
 // Funció per actualitzar cel·les calculades sense recrear tota la taula
@@ -933,46 +901,31 @@ async function applyRounding(formula) {
 }
 
 // ─────────── Event Listener ───────────
+
 modalApplyCalcBtn.addEventListener('click', async () => {
   if (!currentCalcActivityId) return;
 
   try {
     let formulaText = ''; // <-- guardarem la fórmula real
-
     switch (calcTypeSelect.value) {
       case 'numeric':
         await applyNumeric(Number(numericField.value));
         formulaText = numericField.value;
         break;
-
       case 'formula':
         await applyFormula(formulaField.value);
         formulaText = formulaField.value;
         break;
-
       case 'rounding':
-        // Comprovem que existeix el selector de redondeig
-        const roundField = document.getElementById('roundField');
-        if (!roundField) {
-          throw new Error('No s’ha trobat el camp de redondeig (roundField).');
-        }
-
-        const roundValue = parseFloat(roundField.value);
-        if (isNaN(roundValue)) {
-          throw new Error('El valor de redondeig no és vàlid.');
-        }
-
-        // Aplicar el redondeig
-        await applyRounding(formulaField.value, roundValue);
-        formulaText = formulaField.value + (roundValue !== 1 ? `_${roundValue}` : '');
+        await applyRounding(formulaField.value);
+        formulaText = formulaField.value;
         break;
-
       default:
         throw new Error('Tipus de càlcul desconegut');
     }
 
     // Guardar a Firestore la informació de fórmula a calculatedActivities
-    if (currentClassId) {
+    if(currentClassId){
       await db.collection('classes').doc(currentClassId).update({
         [`calculatedActivities.${currentCalcActivityId}`]: {
           calculated: true,
@@ -988,7 +941,6 @@ modalApplyCalcBtn.addEventListener('click', async () => {
     alert('Error en aplicar el càlcul: ' + e.message);
   }
 });
-
 
 
 // ---------------- Construir botons de fórmules ----------------
