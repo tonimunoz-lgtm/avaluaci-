@@ -1308,17 +1308,3 @@ if (closeBtn) {
     container.classList.remove('mobile-open');
   });
 }
-
-
-import "./js/firebase.js";
-import { initRouter } from "./js/router.js";
-import { initStudents } from "./js/students.js";
-import { initGroups } from "./js/groups.js";
-import { initGrid } from "./js/grid.js";
-
-window.addEventListener("DOMContentLoaded", () => {
-  initRouter();
-  initStudents();
-  initGroups();
-  initGrid();
-});
