@@ -1,5 +1,11 @@
 // app.js - lògica principal (modules)
 import { openModal, closeModal, confirmAction } from './modals.js';
+import { initPageManager } from './pageManager.js';
+
+// containerSelector -> on es renderitzarà la graella
+// buttonsContainerSelector -> on es mostraran els botons de pàgina
+initPageManager('#gridContainer', '#pagesButtonsContainer');
+
 /* ---------------- FIREBASE CONFIG ---------------- */
 const firebaseConfig = {
   apiKey: "AIzaSyA0P7TWcEw9y9_13yqRhvsgWN5d3YKH7yo",
