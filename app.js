@@ -1,10 +1,8 @@
 // app.js - lògica principal (modules)
 import { openModal, closeModal, confirmAction } from './modals.js';
 import { initPageManager } from './pageManager.js';
+initPageManager();
 
-// Passa aquí els alumnes inicials
-const alumnesInicials = ['Maria Pérez', 'Joan García', 'Laura Rodríguez'];
-initPageManager(alumnesInicials);
 
 /* ---------------- FIREBASE CONFIG ---------------- */
 const firebaseConfig = {
