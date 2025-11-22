@@ -916,6 +916,8 @@ modalApplyCalcBtn.addEventListener('click', async () => {
 
   try {
     let formulaText = ''; // <-- guardarem la fórmula real
+    let roundValue = null; // <-- per guardar valor de redondeig
+
     switch (calcTypeSelect.value) {
       case 'numeric':
         await applyNumeric(Number(numericField.value));
@@ -926,7 +928,9 @@ modalApplyCalcBtn.addEventListener('click', async () => {
         formulaText = formulaField.value;
         break;
       case 'rounding':
-        await applyRounding(formulaField.value);
+        // Obtenir valor del redondeig des del camp o input del modal
+        roundValue = Number(roundField.value); // <-- pot ser 1 o 0.5 segons configuració
+        await applyRounding(formulaField.value, roundValue); // <-- modificat per passar roundValue
         formulaText = formulaField.value;
         break;
       default:
@@ -934,12 +938,15 @@ modalApplyCalcBtn.addEventListener('click', async () => {
     }
 
     // Guardar a Firestore la informació de fórmula a calculatedActivities
-    if(currentClassId){
+    if (currentClassId) {
+      const updateData = {
+        calculated: true,
+        formula: formulaText
+      };
+      if (roundValue) updateData.round = roundValue; // <-- guardem el redondeig
+
       await db.collection('classes').doc(currentClassId).update({
-        [`calculatedActivities.${currentCalcActivityId}`]: {
-          calculated: true,
-          formula: formulaText
-        }
+        [`calculatedActivities.${currentCalcActivityId}`]: updateData
       });
     }
 
