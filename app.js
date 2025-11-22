@@ -2,9 +2,9 @@
 import { openModal, closeModal, confirmAction } from './modals.js';
 import { initPageManager } from './pageManager.js';
 
-// containerSelector -> on es renderitzarà la graella
-// buttonsContainerSelector -> on es mostraran els botons de pàgina
-initPageManager('#gridContainer', '#pagesButtonsContainer');
+// Passa aquí els alumnes inicials
+const alumnesInicials = ['Maria Pérez', 'Joan García', 'Laura Rodríguez'];
+initPageManager(alumnesInicials);
 
 /* ---------------- FIREBASE CONFIG ---------------- */
 const firebaseConfig = {
