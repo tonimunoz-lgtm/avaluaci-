@@ -1,8 +1,9 @@
 // pageManager.js
-export const pages = {}; // Objecte global per guardar pàgines
+export const pages = {}; // Objecte de pàgines
 export let currentPage = ''; // Pàgina activa
+export const sharedStudents = []; // Alumnes compartits
 
-export function initPageManager(alumnesInicials = []) {
+export function initPageManager() {
   const container = document.getElementById('pagesButtonsContainer');
   if (!container) {
     console.error('No existeix el contenidor pagesButtonsContainer');
@@ -26,16 +27,16 @@ export function initPageManager(alumnesInicials = []) {
       activeBtn.classList.remove('bg-gray-200', 'text-black');
     }
 
-    // Renderitzar alumnes
+    // Renderitzar alumnes (compartits)
     const studentsList = document.getElementById('studentsList');
     studentsList.innerHTML = '';
-    page.students.forEach(alumne => {
+    sharedStudents.forEach(alumne => {
       const li = document.createElement('li');
       li.textContent = alumne;
       studentsList.appendChild(li);
     });
 
-    // Renderitzar activitats
+    // Renderitzar activitats (propietat de la pàgina)
     const notesThead = document.getElementById('notesThead');
     const notesTbody = document.getElementById('notesTbody');
     notesThead.innerHTML = '';
@@ -51,7 +52,7 @@ export function initPageManager(alumnesInicials = []) {
     notesThead.appendChild(trHead);
 
     // Filres buides per alumnes
-    page.students.forEach(() => {
+    sharedStudents.forEach(() => {
       const tr = document.createElement('tr');
       page.activities.forEach(() => {
         const td = document.createElement('td');
@@ -71,7 +72,6 @@ export function initPageManager(alumnesInicials = []) {
   addButton.addEventListener('click', () => {
     const pageName = prompt('Nom de la nova pàgina:', `Pàgina ${Object.keys(pages).length + 1}`);
     if (!pageName) return;
-
     if (pages[pageName]) {
       alert('Ja existeix una pàgina amb aquest nom!');
       return;
@@ -83,19 +83,16 @@ export function initPageManager(alumnesInicials = []) {
     newPageBtn.className = 'bg-gray-200 text-black px-2 py-1 rounded hover:bg-gray-300';
     container.insertBefore(newPageBtn, addButton);
 
-    // Guardar pàgina nova: alumnes copiats, activitats buides
+    // Crear pàgina nova clonant només els alumnes compartits
     pages[pageName] = {
-      students: [...alumnesInicials],
-      activities: []
+      activities: [] // Activitats noves i independents
     };
 
     newPageBtn.addEventListener('click', () => renderPage(pageName));
-
-    // Mostrar la pàgina nova immediatament
     renderPage(pageName);
   });
 
-  // Crear la primera pàgina “Avaluacions”
+  // Crear primera pàgina Avaluacions
   const firstPageName = 'Avaluacions';
   const firstBtn = document.createElement('button');
   firstBtn.textContent = firstPageName;
@@ -103,16 +100,15 @@ export function initPageManager(alumnesInicials = []) {
   container.insertBefore(firstBtn, addButton);
 
   pages[firstPageName] = {
-    students: [...alumnesInicials],
-    activities: []
+    activities: [] // Inicialment buides
   };
 
   firstBtn.addEventListener('click', () => renderPage(firstPageName));
 
-  // Mostrar la primera pàgina al iniciar
+  // Mostrar primera pàgina
   renderPage(firstPageName);
 
-  // Integració amb "Afegir activitat"
+  // Integració botó “Afegir activitat” → només afegeix a la pàgina activa
   const addActivityBtn = document.getElementById('btnAddActivity');
   if (addActivityBtn) {
     addActivityBtn.addEventListener('click', () => {
@@ -121,6 +117,19 @@ export function initPageManager(alumnesInicials = []) {
       if (!actName) return;
 
       pages[currentPage].activities.push(actName);
+      renderPage(currentPage);
+    });
+  }
+
+  // Integració botó “Afegir alumne” → afegeix a totes les pàgines
+  const addStudentBtn = document.getElementById('btnAddStudent');
+  if (addStudentBtn) {
+    addStudentBtn.addEventListener('click', () => {
+      const studentName = prompt('Nom de l’alumne:');
+      if (!studentName) return;
+
+      sharedStudents.push(studentName);
+      // Renderitzar la pàgina activa per actualitzar graella
       renderPage(currentPage);
     });
   }
