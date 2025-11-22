@@ -25,6 +25,8 @@ let classActivities = [];
 let deleteMode = false;
 let currentCalcActivityId = null; // Activitat actual per fer càlculs
 
+
+
 /* Elements */
 const loginScreen = document.getElementById('loginScreen');
 const appRoot = document.getElementById('appRoot');
@@ -353,6 +355,28 @@ function loadClassData(){
     renderNotesGrid();
   }).catch(e=> console.error(e));
 }
+
+import { initTabs } from './activityTabs.js';
+
+async function openClass(id) {
+    currentClassId = id;
+    screenClasses.classList.add('hidden');
+    screenClass.classList.remove('hidden');
+
+    try {
+        await loadClassData();
+
+        const container = document.getElementById('tabsContainer');
+        if (container) {
+            await initTabs(id);
+        } else {
+            console.warn('tabsContainer no existeix encara. Pestanyes no inicialitzades.');
+        }
+    } catch (err) {
+        console.error('Error obrint classe:', err);
+    }
+}
+
 
 /* ---------------- Students ---------------- */
 btnAddStudent.addEventListener('click', ()=> openModal('modalAddStudent'));
