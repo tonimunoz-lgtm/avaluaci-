@@ -81,6 +81,18 @@ if (btnCloseStudentsMobile) {
   });
 }
 
+document.addEventListener('goToEvaluation', e => {
+  const classData = e.detail.classData;
+  document.getElementById('intermediateWrapper').classList.add('hidden');
+  showClassScreen(classData); // la funció existent que mostra la graella i activitats
+});
+
+document.addEventListener('backToIntermediate', e => {
+  const classId = e.detail.classId;
+  const cls = classes.find(c => c.id === classId);
+  intermediatePage.show(cls, cls.students || []);
+});
+
 // També tancar si cliques a fora del card (overlay)
 // detectem clicks al container però fora de .students-card
 document.getElementById('studentsListContainer')?.addEventListener('click', (e) => {
