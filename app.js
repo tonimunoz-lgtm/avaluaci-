@@ -1096,15 +1096,25 @@ async function evalFormulaAsync(formula, studentId){
   const studentDoc = await db.collection('alumnes').doc(studentId).get();
   const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
 
+  // 1) Substituir marcadors per ID (ex: __ACT__<actId>)
+  for(const aid of classActivities){
+    const marker = `__ACT__${aid}`;
+    const val = Number(notes[aid]);
+    const safeVal = isNaN(val) ? 0 : val;
+    const reMarker = new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+    evalStr = evalStr.replace(reMarker, safeVal);
+  }
+
+  // 2) Substituir noms d'activitat per valors (compatibilitat amb fórmules antigues)
   for(const aid of classActivities){
     const actDoc = await db.collection('activitats').doc(aid).get();
     const actName = actDoc.exists ? actDoc.data().nom : '';
     if(!actName) continue;
-
-    const val = Number(notes[aid]) || 0; // Agafem directament les notes de Firestore
+    const val = Number(notes[aid]);
+    const safeVal = isNaN(val) ? 0 : val;
 
     const regex = new RegExp(actName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-    evalStr = evalStr.replace(regex, val);
+    evalStr = evalStr.replace(regex, safeVal);
   }
 
   try {
@@ -1114,6 +1124,7 @@ async function evalFormulaAsync(formula, studentId){
     return 0;
   }
 }
+
 
 
 
