@@ -78,6 +78,29 @@ if (btnCloseStudentsMobile) {
   });
 }
 
+const numericInputDiv = document.getElementById('numericInput');
+const formulaInputsDiv = document.getElementById('formulaInputs');
+const roundingInputDiv = document.getElementById('roundingInput'); // aquest l'has d'afegir a l'HTML també
+
+calcTypeSelect.addEventListener('change', () => {
+  numericInputDiv.classList.add('hidden');
+  formulaInputsDiv.classList.add('hidden');
+  roundingInputDiv.classList.add('hidden');
+
+  switch(calcTypeSelect.value){
+    case 'numeric':
+      numericInputDiv.classList.remove('hidden');
+      break;
+    case 'formula':
+      formulaInputsDiv.classList.remove('hidden');
+      break;
+    case 'rounding':
+      roundingInputDiv.classList.remove('hidden');
+      break;
+  }
+});
+
+
 // També tancar si cliques a fora del card (overlay)
 // detectem clicks al container però fora de .students-card
 document.getElementById('studentsListContainer')?.addEventListener('click', (e) => {
