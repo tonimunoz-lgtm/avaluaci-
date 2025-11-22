@@ -55,6 +55,7 @@
           </div>
           <button id="btnLogout">Logout</button>
         </div>
+
       </header>
 
       <main>
@@ -73,7 +74,6 @@
 
         <!-- SCREEN: class view -->
         <section id="screen-class" class="hidden mt-4">
-
           <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-3">
             <div>
               <button id="btnBack" class="text-sm text-gray-600 mr-3">← Tornar</button>
@@ -90,33 +90,35 @@
             </div>
           </div>
 
-          <!-- CONTENIDOR PESTANYES -->
-          <div id="tabsContainer" class="flex mb-2 overflow-x-auto"></div>
-
           <div id="classScreenWrapper">
-            <!-- students col -->
-            <aside id="studentsListContainer">
-              <div id="studentsListContent">
-                <button id="closeStudentsMobile" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 font-bold text-xl">&times;</button>
-                <h3 class="font-semibold mb-2">
-                  Alumnes <span id="studentsCount" class="text-sm text-gray-400"></span>
-                </h3>
-                <ul id="studentsList" class="space-y-2"></ul>
-                <p class="mt-3 text-xs text-gray-400">Arrossega per ordenar</p>
-              </div>
-            </aside>
 
-            <!-- notes grid -->
-            <div id="notesTable-wrapper" class="flex-grow bg-white rounded-xl shadow p-3 overflow-x-auto">
-              <div id="gridWrapper" class="w-full">
-                <table id="notesTable" class="min-w-full border-collapse">
-                  <thead id="notesThead" class="bg-gray-100"></thead>
-                  <tbody id="notesTbody"></tbody>
-                  <tfoot id="notesTfoot" class="bg-gray-50"></tfoot>
-                </table>
-              </div>
-            </div>
-          </div>
+  <!-- students col -->
+ <aside id="studentsListContainer">
+  <div id="studentsListContent">
+  <!-- Botó de tancament mòbil -->
+  <button id="closeStudentsMobile" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 font-bold text-xl">&times;</button>
+
+  <h3 class="font-semibold mb-2">
+    Alumnes <span id="studentsCount" class="text-sm text-gray-400"></span>
+  </h3>
+
+  <ul id="studentsList" class="space-y-2"></ul>
+  <p class="mt-3 text-xs text-gray-400">Arrossega per ordenar</p>
+</div>
+</aside>
+
+  <!-- notes grid -->
+  <div id="notesTable-wrapper" class="flex-grow bg-white rounded-xl shadow p-3 overflow-x-auto">
+    <div id="gridWrapper" class="w-full">
+      <table id="notesTable" class="min-w-full border-collapse">
+        <thead id="notesThead" class="bg-gray-100"></thead>
+        <tbody id="notesTbody"></tbody>
+        <tfoot id="notesTfoot" class="bg-gray-50"></tfoot>
+      </table>
+    </div>
+  </div>
+
+</div>
 
         </section>
 
@@ -125,29 +127,34 @@
   </div>
 
   <!-- ---------- MODALS ---------- -->
-  <!-- Modal Importar Alumnes -->
-  <div id="modalImportAL" class="fixed inset-0 hidden items-center justify-center z-50">
-    <div class="modal-backdrop absolute inset-0"></div>
-    <div class="bg-white rounded shadow-lg z-10 w-full max-w-md p-4">
-      <h3 class="text-lg font-semibold mb-2">Importar alumnes</h3>
-      <div class="text-sm text-gray-700 dark:text-gray-300 mb-4 p-2 bg-gray-100 dark:bg-gray-900 rounded">
-        <strong>Instruccions:</strong>
-        <ul class="list-disc list-inside mt-1">
-          <li>Prepara un fitxer <code>.xlsx</code> o <code>.csv</code>.</li>
-          <li>Escriu els <strong>noms i cognoms dels alumnes</strong> a <strong>la primera columna</strong>, sense cap fila de capçalera.</li>
-          <li>Cada alumne ha d’estar en una fila diferent.</li>
-          <li>Desa el fitxer i selecciona’l aquí per importar-lo.</li>
-        </ul>
-        <p class="mt-1 text-xs text-gray-500">Exemple: una columna amb Maria Pérez, Joan García, Laura Rodríguez, etc. Un a sota de l'altre</p>
-      </div>
-      <input type="file" id="fileImport" accept=".csv,.xlsx" class="w-full mb-3" />
-      <div class="flex justify-end gap-2">
-        <button data-modal-close="modalImportAL" class="modal-close px-3 py-1 rounded bg-gray-200">Cancel·lar</button>
-        <button id="btnImportALConfirm" class="px-3 py-1 rounded bg-green-500 text-white">Importa</button>
-      </div>
+
+<!-- Modal Importar Alumnes -->
+<div id="modalImportAL" class="fixed inset-0 hidden items-center justify-center z-50">
+  <div class="modal-backdrop absolute inset-0"></div>
+  <div class="bg-white rounded shadow-lg z-10 w-full max-w-md p-4">
+    <h3 class="text-lg font-semibold mb-2">Importar alumnes</h3>
+
+    <!-- 📝 Instruccions -->
+    <div class="text-sm text-gray-700 dark:text-gray-300 mb-4 p-2 bg-gray-100 dark:bg-gray-900 rounded">
+      <strong>Instruccions:</strong>
+      <ul class="list-disc list-inside mt-1">
+        <li>Prepara un fitxer <code>.xlsx</code> o <code>.csv</code>.</li>
+        <li>Escriu els <strong>noms i cognoms dels alumnes</strong> a <strong>la primera columna</strong>, sense cap fila de capçalera.</li>
+        <li>Cada alumne ha d’estar en una fila diferent.</li>
+        <li>Desa el fitxer i selecciona’l aquí per importar-lo.</li>
+      </ul>
+      <p class="mt-1 text-xs text-gray-500">Exemple: una columna amb Maria Pérez, Joan García, Laura Rodríguez, etc. Un a sota de l'altre</p>
+    </div>
+    
+    <input type="file" id="fileImport" accept=".csv,.xlsx" class="w-full mb-3" />
+    <div class="flex justify-end gap-2">
+      <button data-modal-close="modalImportAL" class="modal-close px-3 py-1 rounded bg-gray-200">Cancel·lar</button>
+      <button id="btnImportALConfirm" class="px-3 py-1 rounded bg-green-500 text-white">Importa</button>
     </div>
   </div>
+</div>
 
+  
   <!-- Create Class Modal -->
   <div id="modalCreateClass" class="fixed inset-0 hidden items-center justify-center z-50">
     <div class="modal-backdrop absolute inset-0"></div>
@@ -201,64 +208,34 @@
   </div>
 
   <!-- Modal Calcul -->
-  <div id="modalCalc" class="modal hidden fixed inset-0 items-center justify-center z-50">
-    <div class="bg-white p-6 rounded shadow-lg w-96 max-w-full flex flex-col gap-4">
-      <button class="modal-close self-end" data-modal-close="modalCalc">✖</button>
-      <h2 class="text-lg font-bold">Calcul activitat</h2>
-      <label for="calcType">Tipus de càlcul:</label>
-      <select id="calcType" class="border rounded p-1">
-        <option value="numeric">Numeric</option>
-        <option value="formula">Fórmula</option>
-        <option value="rounding">Redondeig</option>
-      </select>
-      <div id="numericInput">
-        <label for="numericField">Valor:</label>
-        <input type="number" id="numericField" min="0" max="10" class="border rounded p-1 w-full">
-      </div>
-      <div id="formulaInputs" class="hidden flex flex-col gap-2">
-        <input type="text" id="formulaField" readonly class="border rounded p-1 w-full" placeholder="Construeix la fórmula">
-        <div id="formulaButtons" class="flex flex-wrap gap-1"></div>
-      </div>
-      <button id="modalApplyCalcBtn" class="bg-indigo-500 text-white p-2 rounded font-semibold">Aplica</button>
-    </div>
-  </div>
+<div id="modalCalc" class="modal hidden fixed inset-0 items-center justify-center z-50">
+  <div class="bg-white p-6 rounded shadow-lg w-96 max-w-full flex flex-col gap-4">
+    <button class="modal-close self-end" data-modal-close="modalCalc">✖</button>
+    <h2 class="text-lg font-bold">Calcul activitat</h2>
 
-  <!-- SCREEN GROUPS -->
-  <section id="screen-groups" class="hidden w-full max-w-6xl mx-auto p-6 rounded-xl shadow-lg bg-white">
-    <header class="flex items-center justify-between mb-6 p-4 rounded-xl shadow-md">
-      <div>
-        <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight">Gestor d'avaluació</h1>
-      </div>
-      <div id="userAreaGroups" class="flex items-center gap-2">
-        <span id="usuariNomGroups">usuari</span>
-        <button id="userMenuBtnGroups" class="text-gray-600 hover:text-gray-800">⋮</button>
-        <div id="userMenuGroups" class="hidden absolute bg-white border rounded shadow-md p-2">
-          <button id="changePasswordBtnGroups" class="w-full text-left px-2 py-1 hover:bg-gray-100">Canviar contrasenya</button>
-        </div>
-        <button id="btnLogoutGroups">Logout</button>
-      </div>
-    </header>
-    <div class="flex gap-4">
-      <aside id="studentsListContainerGroups" class="w-64">
-        <div id="studentsListContentGroups">
-          <h3 class="font-semibold mb-2">
-            Alumnes <span id="studentsCountGroups" class="text-sm text-gray-400"></span>
-          </h3>
-          <ul id="studentsListGroups" class="space-y-2"></ul>
-          <div class="flex gap-2 mt-2">
-            <button id="btnAddStudentGroups" class="bg-purple-600 text-white px-3 py-1 rounded">➕ Alumne</button>
-            <button id="btnDeleteGroupMode" class="bg-red-500 text-white px-3 py-1 rounded">🗑️ Eliminar grup</button>
-          </div>
-        </div>
-      </aside>
-      <div class="flex-1">
-        <div class="flex gap-2 mb-4">
-          <button id="btnAddGroup" class="bg-indigo-500 text-white px-3 py-1 rounded">➕ Grup</button>
-        </div>
-        <div id="groupsContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
-      </div>
+    <label for="calcType">Tipus de càlcul:</label>
+    <select id="calcType" class="border rounded p-1">
+      <option value="numeric">Numeric</option>
+      <option value="formula">Fórmula</option>
+      <option value="rounding">Redondeig</option>
+    </select>
+
+    <!-- Numeric -->
+    <div id="numericInput">
+      <label for="numericField">Valor:</label>
+      <input type="number" id="numericField" min="0" max="10" class="border rounded p-1 w-full">
     </div>
-  </section>
+
+    <!-- Fórmula -->
+    <div id="formulaInputs" class="hidden flex flex-col gap-2">
+      <input type="text" id="formulaField" readonly class="border rounded p-1 w-full" placeholder="Construeix la fórmula">
+      <div id="formulaButtons" class="flex flex-wrap gap-1"></div>
+    </div>
+
+    <button id="modalApplyCalcBtn" class="bg-indigo-500 text-white p-2 rounded font-semibold">Aplica</button>
+  </div>
+</div>
+
 
   <!-- SCRIPT PRINCIPAL -->
   <script type="module" src="./app.js"></script>
