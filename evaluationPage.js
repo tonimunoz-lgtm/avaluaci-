@@ -1,4 +1,16 @@
 // evaluationPage.js
+firebase.auth().onAuthStateChanged(user => {
+    if (user) {
+        // Usuari loguejat, podem obrir la pàgina
+        openEvaluationPage(currentClassId, currentEvalId);
+    } else {
+        // Usuari NO loguejat, redirigir al login
+        alert('Cal iniciar sessió abans d’accedir a aquesta pàgina.');
+        window.location.href = 'login.html'; // Canvia-ho si el teu login és en un altre fitxer
+    }
+});
+
+
 let currentClassId = null;
 let currentEvalId = null;
 let students = [];
