@@ -905,34 +905,45 @@ modalApplyCalcBtn.addEventListener('click', async () => {
   if (!currentCalcActivityId) return;
 
   try {
-    let formulaText = ''; // <-- guardarem la fórmula real
+    let formulaText = ''; // fórmula de codi (amb marcador per id)
+    let displayFormulaText = ''; // fórmula per mostrar (amb nom activitat)
 
     switch (calcTypeSelect.value) {
       case 'numeric':
         await applyNumeric(Number(numericField.value));
         formulaText = numericField.value;
+        displayFormulaText = numericField.value;
         break;
 
       case 'formula':
         await applyFormula(formulaField.value);
+        // Guardem la mateixa cadena tant per codi com per visualització
         formulaText = formulaField.value;
+        displayFormulaText = formulaField.value;
         break;
 
       case 'rounding':
         if (!formulaField.value.trim()) throw new Error('Selecciona activitat i 0,5 o 1');
 
-        // Trobar l'activitat seleccionada i el multiplicador (0.5 o 1)
-        const activityNameMatch = formulaField.value.match(/^(.+?)([0-9.]*)$/);
-        if (!activityNameMatch) throw new Error('Fórmula de redondeig no vàlida');
+        // Trobar l'activitat seleccionada per nom (nom complet) entre les activitats de la classe
+        const activityDocs = await Promise.all(classActivities.map(aid => db.collection('activitats').doc(aid).get()));
+        // Busquem el document que coincideixi amb l'inici del string de formulaField (com feies abans)
+        const selectedActivityDoc = activityDocs.find(doc => doc.exists && formulaField.value.startsWith(doc.data().nom));
+        if (!selectedActivityDoc) throw new Error('Activitat no trobada');
 
-        const selectedActivityName = activityNameMatch[1].trim();
-        const multiplier = Number(activityNameMatch[2]) || 1;
+        const selectedActivityName = selectedActivityDoc.data().nom;
+        const selectedActivityId = selectedActivityDoc.id;
 
-        // Aplicar redondeig a cada alumne
+        // Extraiem multiplicador (si hi ha) — p.ex. "Tema1" + "0.5" o "1"
+        const multiplierStr = formulaField.value.slice(selectedActivityName.length).trim();
+        const multiplier = multiplierStr === '' ? 1 : Number(multiplierStr);
+
+        // Aplicar arrodoniment a cada alumne (usar sempre l'ID per llegir la nota)
         await Promise.all(classStudents.map(async sid => {
           const studentDoc = await db.collection('alumnes').doc(sid).get();
           const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
-          let val = Number(notes[selectedActivityName]) || 0;
+          let val = Number(notes[selectedActivityId]);
+          if (isNaN(val)) val = 0;
 
           if (multiplier === 1) val = Math.round(val);
           else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
@@ -940,10 +951,19 @@ modalApplyCalcBtn.addEventListener('click', async () => {
           await saveNote(sid, currentCalcActivityId, val);
         }));
 
-        // Guardem la fórmula com a Math.round(...) a Firestore
-        formulaText = multiplier === 1
-          ? `Math.round(${selectedActivityName})`
-          : `Math.round(${selectedActivityName}*2)/2`;
+        // Guardem la fórmula de codi amb un marcador únic per l'ID (evita ambigüitats)
+        if (multiplier === 1) {
+          formulaText = `Math.round(__ACT__${selectedActivityId})`;
+          displayFormulaText = `Math.round(${selectedActivityName})`;
+        } else if (multiplier === 0.5) {
+          formulaText = `Math.round(__ACT__${selectedActivityId}*2)/2`;
+          displayFormulaText = `Math.round(${selectedActivityName}*2)/2`;
+        } else {
+          // cas inesperat: guardem la fórmula simple amb marcador
+          formulaText = `__ACT__${selectedActivityId}`;
+          displayFormulaText = `${selectedActivityName}`;
+        }
+
         break;
 
       default:
@@ -951,11 +971,13 @@ modalApplyCalcBtn.addEventListener('click', async () => {
     }
 
     // Guardar a Firestore la informació de fórmula a calculatedActivities
-    if(currentClassId){
+    if (currentClassId) {
+      // Guardem tant formula (codi) com displayFormula (text per mostrar)
       await db.collection('classes').doc(currentClassId).update({
         [`calculatedActivities.${currentCalcActivityId}`]: {
           calculated: true,
-          formula: formulaText
+          formula: formulaText,
+          displayFormula: displayFormulaText
         }
       });
     }
