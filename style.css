@@ -50,6 +50,15 @@ p, span, td {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+.cell-formula {
+  font-size: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 70px; /* pots ajustar-ho */
+}
+
+
 .class-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 8px 16px rgba(0,0,0,0.25);
