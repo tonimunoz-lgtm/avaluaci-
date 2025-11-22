@@ -785,6 +785,7 @@ function renderAverages(){
     const td = document.createElement('td');
     td.className = 'border px-2 py-1 text-center font-semibold';
     td.textContent = avg;
+    td.classList.add("cell-formula");
     trAvg.appendChild(td);
   }
   trAvg.appendChild(th('',''));
