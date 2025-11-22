@@ -1,5 +1,8 @@
 // app.js - lògica principal (modules)
 import { openModal, closeModal, confirmAction } from './modals.js';
+import { openStudentsPage } from './pages/studentsPage.js';
+import { openEvaluationPage } from './pages/evaluationPage.js';
+import { renderEvaluationTags } from './pages/evaluationTag.js';
 /* ---------------- FIREBASE CONFIG ---------------- */
 const firebaseConfig = {
   apiKey: "AIzaSyA0P7TWcEw9y9_13yqRhvsgWN5d3YKH7yo",
@@ -323,9 +326,7 @@ modalCreateClassBtn.addEventListener('click', createClassModal);
 /* ---------------- Open Class ---------------- */
 function openClass(id){
   currentClassId = id;
-  screenClasses.classList.add('hidden');
-  screenClass.classList.remove('hidden');
-  loadClassData();
+  openStudentsPage(currentClassId);
 }
 
 btnBack.addEventListener('click', ()=> {
