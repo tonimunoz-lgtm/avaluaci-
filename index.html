@@ -207,7 +207,7 @@
     </div>
   </div>
 
-  <!-- Modal Calcul -->
+ <!-- Modal Calcul -->
 <div id="modalCalc" class="modal hidden fixed inset-0 items-center justify-center z-50">
   <div class="bg-white p-6 rounded shadow-lg w-96 max-w-full flex flex-col gap-4">
     <button class="modal-close self-end" data-modal-close="modalCalc">✖</button>
@@ -230,6 +230,13 @@
     <div id="formulaInputs" class="hidden flex flex-col gap-2">
       <input type="text" id="formulaField" readonly class="border rounded p-1 w-full" placeholder="Construeix la fórmula">
       <div id="formulaButtons" class="flex flex-wrap gap-1"></div>
+    </div>
+
+    <!-- Redondeig -->
+    <div id="roundingInput" class="hidden flex flex-col gap-1">
+      <label for="roundField">Redondeig:</label>
+      <input type="number" id="roundField" value="1" step="0.5" min="0.5" max="10" class="border rounded p-1 w-full">
+      <small class="text-gray-500">1 = al nombre enter més proper, 0.5 = al mig punt més proper</small>
     </div>
 
     <button id="modalApplyCalcBtn" class="bg-indigo-500 text-white p-2 rounded font-semibold">Aplica</button>
