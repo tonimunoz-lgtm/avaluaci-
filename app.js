@@ -338,10 +338,22 @@ modalCreateClassBtn.addEventListener('click', createClassModal);
 /* ---------------- Open Class ---------------- */
 function openClass(id){
   currentClassId = id;
-  screenClasses.classList.add('hidden');
-  screenClass.classList.remove('hidden');
-  loadClassData();
+
+  // Carregar la classe des de Firestore
+  db.collection('classes').doc(id).get().then(doc => {
+    if(!doc.exists) { alert('Classe no trobada'); return; }
+    const classData = doc.data();
+    classData.id = doc.id; // afegim l'id
+
+    // Amagar pantalla principal i mostrar intermedi
+    screenClasses.classList.add('hidden');
+    document.getElementById('intermediateWrapper').classList.remove('hidden');
+
+    // Cridem la pàgina intermèdia
+    intermediatePage.show(classData, classData.alumnes || []);
+  }).catch(e => console.error(e));
 }
+
 
 btnBack.addEventListener('click', ()=> {
   currentClassId = null;
