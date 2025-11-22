@@ -1,136 +1,138 @@
 // pageManager.js
-export const pages = {}; // Objecte de pàgines
-export let currentPage = ''; // Pàgina activa
-export const sharedStudents = []; // Alumnes compartits
 
-export function initPageManager() {
-  const container = document.getElementById('pagesButtonsContainer');
-  if (!container) {
-    console.error('No existeix el contenidor pagesButtonsContainer');
-    return;
+// Elements
+const container = document.getElementById('pagesButtonsContainer');
+const btnAddPage = document.createElement('button');
+btnAddPage.textContent = '+';
+btnAddPage.className = 'bg-green-500 text-white px-3 py-1 rounded font-bold';
+container.prepend(btnAddPage);
+
+// Dades globals
+let pages = {}; // Clau: nom pàgina, Valor: {activities: []}
+let sharedStudents = []; // alumnes compartits
+let currentPage = 'Avaluació'; // pàgina inicial
+
+// Inicialitza pàgina principal
+pages['Avaluació'] = { activities: [] };
+
+// RENDER GENERAL
+function renderPage(pageName) {
+  const page = pages[pageName];
+  if (!page) return;
+
+  currentPage = pageName;
+
+  // Marcar botó actiu
+  Array.from(container.children).forEach(btn => {
+    btn.classList.remove('bg-blue-500', 'text-white');
+    btn.classList.add('bg-gray-200', 'text-black');
+  });
+  const activeBtn = Array.from(container.children).find(btn => btn.textContent === pageName);
+  if (activeBtn) {
+    activeBtn.classList.add('bg-blue-500', 'text-white');
+    activeBtn.classList.remove('bg-gray-200', 'text-black');
   }
 
-  function renderPage(pageName) {
-    const page = pages[pageName];
-    if (!page) return;
+  // Mostrar nom de la pàgina
+  const classTitle = document.getElementById('classTitle');
+  if (classTitle) classTitle.textContent = pageName;
 
-    currentPage = pageName;
-
-    // Marcar botó actiu
-    Array.from(container.children).forEach(btn => {
-      btn.classList.remove('bg-blue-500', 'text-white');
-      btn.classList.add('bg-gray-200', 'text-black');
-    });
-    const activeBtn = Array.from(container.children).find(btn => btn.textContent === pageName);
-    if (activeBtn) {
-      activeBtn.classList.add('bg-blue-500', 'text-white');
-      activeBtn.classList.remove('bg-gray-200', 'text-black');
-    }
-
-    // Renderitzar alumnes (compartits)
-    const studentsList = document.getElementById('studentsList');
-    studentsList.innerHTML = '';
-    sharedStudents.forEach(alumne => {
-      const li = document.createElement('li');
-      li.textContent = alumne;
-      studentsList.appendChild(li);
-    });
-
-    // Renderitzar activitats (propietat de la pàgina)
-    const notesThead = document.getElementById('notesThead');
-    const notesTbody = document.getElementById('notesTbody');
-    notesThead.innerHTML = '';
-    notesTbody.innerHTML = '';
-
-    // Capçalera activitats
-    const trHead = document.createElement('tr');
-    page.activities.forEach(act => {
-      const th = document.createElement('th');
-      th.textContent = act;
-      trHead.appendChild(th);
-    });
-    notesThead.appendChild(trHead);
-
-    // Filres buides per alumnes
-    sharedStudents.forEach(() => {
-      const tr = document.createElement('tr');
-      page.activities.forEach(() => {
-        const td = document.createElement('td');
-        td.textContent = '';
-        tr.appendChild(td);
-      });
-      notesTbody.appendChild(tr);
-    });
-  }
-
-  // Botó + per afegir pàgina
-  const addButton = document.createElement('button');
-  addButton.textContent = '+';
-  addButton.className = 'bg-green-500 text-white px-2 py-1 rounded font-bold hover:bg-green-600';
-  container.appendChild(addButton);
-
-  addButton.addEventListener('click', () => {
-    const pageName = prompt('Nom de la nova pàgina:', `Pàgina ${Object.keys(pages).length + 1}`);
-    if (!pageName) return;
-    if (pages[pageName]) {
-      alert('Ja existeix una pàgina amb aquest nom!');
-      return;
-    }
-
-    // Crear botó pàgina nova abans del +
-    const newPageBtn = document.createElement('button');
-    newPageBtn.textContent = pageName;
-    newPageBtn.className = 'bg-gray-200 text-black px-2 py-1 rounded hover:bg-gray-300';
-    container.insertBefore(newPageBtn, addButton);
-
-    // Crear pàgina nova clonant només els alumnes compartits
-    pages[pageName] = {
-      activities: [] // Activitats noves i independents
-    };
-
-    newPageBtn.addEventListener('click', () => renderPage(pageName));
-    renderPage(pageName);
+  // Render alumnes a la llista lateral
+  const studentsList = document.getElementById('studentsList');
+  studentsList.innerHTML = '';
+  sharedStudents.forEach(alumne => {
+    const li = document.createElement('li');
+    li.textContent = alumne;
+    studentsList.appendChild(li);
   });
 
-  // Crear primera pàgina Avaluacions
-  const firstPageName = 'Avaluacions';
-  const firstBtn = document.createElement('button');
-  firstBtn.textContent = firstPageName;
-  firstBtn.className = 'bg-gray-200 text-black px-2 py-1 rounded hover:bg-gray-300';
-  container.insertBefore(firstBtn, addButton);
+  // Render capçalera i cos de la graella
+  const notesThead = document.getElementById('notesThead');
+  const notesTbody = document.getElementById('notesTbody');
+  notesThead.innerHTML = '';
+  notesTbody.innerHTML = '';
 
-  pages[firstPageName] = {
-    activities: [] // Inicialment buides
-  };
+  const trHead = document.createElement('tr');
+  const thEmpty = document.createElement('th');
+  thEmpty.textContent = 'Alumnes';
+  thEmpty.className = 'border px-2 py-1 bg-gray-100 text-gray-700';
+  trHead.appendChild(thEmpty);
 
-  firstBtn.addEventListener('click', () => renderPage(firstPageName));
+  page.activities.forEach(act => {
+    const th = document.createElement('th');
+    th.textContent = act;
+    th.className = 'border px-2 py-1 bg-gray-100 text-gray-700';
+    trHead.appendChild(th);
+  });
+  notesThead.appendChild(trHead);
 
-  // Mostrar primera pàgina
-  renderPage(firstPageName);
+  sharedStudents.forEach(alumne => {
+    const tr = document.createElement('tr');
 
-  // Integració botó “Afegir activitat” → només afegeix a la pàgina activa
-  const addActivityBtn = document.getElementById('btnAddActivity');
-  if (addActivityBtn) {
-    addActivityBtn.addEventListener('click', () => {
-      if (!currentPage) return;
-      const actName = prompt('Nom de la nova activitat:');
-      if (!actName) return;
+    const tdName = document.createElement('td');
+    tdName.textContent = alumne;
+    tdName.className = 'border px-2 py-1 bg-gray-50';
+    tr.appendChild(tdName);
 
-      pages[currentPage].activities.push(actName);
-      renderPage(currentPage);
+    page.activities.forEach(() => {
+      const td = document.createElement('td');
+      td.textContent = '';
+      td.className = 'border px-2 py-1';
+      tr.appendChild(td);
     });
-  }
 
-  // Integració botó “Afegir alumne” → afegeix a totes les pàgines
-  const addStudentBtn = document.getElementById('btnAddStudent');
-  if (addStudentBtn) {
-    addStudentBtn.addEventListener('click', () => {
-      const studentName = prompt('Nom de l’alumne:');
-      if (!studentName) return;
-
-      sharedStudents.push(studentName);
-      // Renderitzar la pàgina activa per actualitzar graella
-      renderPage(currentPage);
-    });
-  }
+    notesTbody.appendChild(tr);
+  });
 }
+
+// CREAR BOTONS PÀGINES EXISTENTS
+function renderPageButtons() {
+  // Esborra tots menys el "+"
+  Array.from(container.children).forEach(btn => {
+    if (btn !== btnAddPage) btn.remove();
+  });
+
+  Object.keys(pages).forEach(pageName => {
+    const btn = document.createElement('button');
+    btn.textContent = pageName;
+    btn.className = 'bg-gray-200 text-black px-3 py-1 rounded';
+    btn.addEventListener('click', () => renderPage(pageName));
+    container.appendChild(btn);
+  });
+
+  renderPage(currentPage);
+}
+
+// AFEGIR PÀGINA NOVA
+btnAddPage.addEventListener('click', () => {
+  const newPageName = prompt('Nom de la nova pàgina:');
+  if (!newPageName || pages[newPageName]) return;
+
+  // Clonar només alumnes, activitats buides
+  pages[newPageName] = { activities: [] };
+  renderPageButtons();
+});
+
+// AFEGIR ALUMNE (compartit a totes les pàgines)
+const btnAddStudent = document.getElementById('btnAddStudent');
+btnAddStudent.addEventListener('click', () => {
+  const nom = prompt('Nom de l’alumne:');
+  if (!nom) return;
+
+  sharedStudents.push(nom);
+  // Re-render totes les pàgines (per mantenir l’alumne visible a totes)
+  renderPage(currentPage);
+});
+
+// AFEGIR ACTIVITAT (només a la pàgina actual)
+const btnAddActivity = document.getElementById('btnAddActivity');
+btnAddActivity.addEventListener('click', () => {
+  const nomAct = prompt('Nom de la nova activitat:');
+  if (!nomAct) return;
+
+  pages[currentPage].activities.push(nomAct);
+  renderPage(currentPage);
+});
+
+// Inicialització inicial
+renderPageButtons();
