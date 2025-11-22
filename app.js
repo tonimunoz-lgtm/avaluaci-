@@ -1,6 +1,15 @@
 // app.js - lògica principal (modules)
 import { openModal, closeModal, confirmAction } from './modals.js';
 
+import { initTabs } from './activityTabs.js';
+
+function openClass(id){
+    currentClassId = id;
+    screenClasses.classList.add('hidden');
+    screenClass.classList.remove('hidden');
+    loadClassData().then(() => initTabs(id)); // 🔹 nova crida
+}
+
 
 /* ---------------- FIREBASE CONFIG ---------------- */
 const firebaseConfig = {
