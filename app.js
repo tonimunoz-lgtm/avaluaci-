@@ -912,27 +912,20 @@ modalApplyCalcBtn.addEventListener('click', async () => {
         await applyNumeric(Number(numericField.value));
         formulaText = numericField.value;
         break;
-
       case 'formula':
         await applyFormula(formulaField.value);
         formulaText = formulaField.value;
         break;
-
       case 'rounding':
-        // Obtenir tipus de redondeig (1 = enter més proper, 0.5 = mig enter)
-        const roundType = Number(formulaField.value); 
-        await applyRounding(currentCalcActivityId, roundType);
-
-        // Guardar fórmula semàntica amb activitat + tipus de redondeig
-        formulaText = currentCalcActivityId + (roundType === 1 ? '1' : '0.5');
+        await applyRounding(formulaField.value);
+        formulaText = formulaField.value;
         break;
-
       default:
         throw new Error('Tipus de càlcul desconegut');
     }
 
     // Guardar a Firestore la informació de fórmula a calculatedActivities
-    if (currentClassId) {
+    if(currentClassId){
       await db.collection('classes').doc(currentClassId).update({
         [`calculatedActivities.${currentCalcActivityId}`]: {
           calculated: true,
@@ -948,6 +941,7 @@ modalApplyCalcBtn.addEventListener('click', async () => {
     alert('Error en aplicar el càlcul: ' + e.message);
   }
 });
+
 
 // ---------------- Construir botons de fórmules ----------------
 function buildFormulaButtons(){
@@ -1312,42 +1306,3 @@ if (closeBtn) {
     container.classList.remove('mobile-open');
   });
 }
-
-async function applyRounding(activityId, roundType) {
-  if (!activityId) throw new Error("No s'ha seleccionat cap activitat per redondejar.");
-
-  // Obtenim la llista de notes originals
-  const notes = originalNotes[activityId] || [];
-  if (!notes.length) return;
-
-  // Aplicar redondeig segons el tipus
-  const roundedNotes = notes.map(note => {
-    if (roundType === 1) {
-      return Math.round(note);       // Redondeig al número enter més proper
-    } else if (roundType === 0.5) {
-      return Math.round(note * 2) / 2; // Redondeig al mig enter més proper
-    } else {
-      return note; // fallback
-    }
-  });
-
-  // Actualitzar les notes calculades localment
-  calculatedNotes[activityId] = roundedNotes;
-
-  // Construir la fórmula semàntica
-  const formulaText = activityId + (roundType === 1 ? "1" : "0.5");
-
-  // Guardar a Firestore
-  if (currentClassId) {
-    await db.collection('classes').doc(currentClassId).update({
-      [`calculatedActivities.${activityId}`]: {
-        calculated: true,
-        formula: formulaText
-      }
-    });
-  }
-
-  // Re-render de la taula de notes
-  renderNotesGrid();
-}
-
