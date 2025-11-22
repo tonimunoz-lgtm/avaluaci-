@@ -910,7 +910,6 @@ async function applyRounding(formula) {
 }
 
 // ─────────── Event Listener ───────────
-
 modalApplyCalcBtn.addEventListener('click', async () => {
   if (!currentCalcActivityId) return;
 
@@ -929,17 +928,20 @@ modalApplyCalcBtn.addEventListener('click', async () => {
         break;
 
       case 'rounding':
-        // Llegim el valor del redondeig (1 per enter més proper, 0.5 per mig punt)
+        // Comprovem que existeix el selector de redondeig
         const roundField = document.getElementById('roundField');
-        if (!roundField) throw new Error('No s’ha trobat el camp de redondeig (roundField).');
+        if (!roundField) {
+          throw new Error('No s’ha trobat el camp de redondeig (roundField).');
+        }
 
-        const roundValue = Number(roundField.value);
-        if (![0.5, 1].includes(roundValue)) throw new Error('Valor de redondeig no vàlid. Ha de ser 1 o 0.5.');
+        const roundValue = parseFloat(roundField.value);
+        if (isNaN(roundValue)) {
+          throw new Error('El valor de redondeig no és vàlid.');
+        }
 
+        // Aplicar el redondeig
         await applyRounding(formulaField.value, roundValue);
-
-        // Guardem la fórmula amb indicació del redondeig per poder refrescar correctament després
-        formulaText = formulaField.value + (roundValue === 1 ? '1' : '0.5');
+        formulaText = formulaField.value + (roundValue !== 1 ? `_${roundValue}` : '');
         break;
 
       default:
@@ -963,6 +965,7 @@ modalApplyCalcBtn.addEventListener('click', async () => {
     alert('Error en aplicar el càlcul: ' + e.message);
   }
 });
+
 
 
 // ---------------- Construir botons de fórmules ----------------
