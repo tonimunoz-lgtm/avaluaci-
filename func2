@@ -539,6 +539,36 @@ function renderNotesGrid() {
           refreshIcon.title = 'Refrescar columna';
           refreshIcon.className = 'ml-2 cursor-pointer hidden';
 
+          // Afegim event listener per refrescar la columna
+          refreshIcon.addEventListener('click', async (e) => {
+            e.stopPropagation();
+
+            // Busquem la fila de fórmules a l'últim peu de la taula
+            const formulasRow = notesTfoot.querySelector('.formulas-row');
+            if (!formulasRow) return;
+
+            const idx = Array.from(headRow.children).indexOf(thEl);
+            const formulaTd = formulasRow.children[idx];
+            if (!formulaTd) return;
+
+            const formulaText = formulaTd.textContent.trim();
+            if (!formulaText) return alert('No hi ha cap fórmula aplicada a aquesta activitat.');
+
+            try {
+              // Aplicar fórmula a tots els alumnes
+              await Promise.all(classStudents.map(async sid => {
+                const result = await evalFormulaAsync(formulaText, sid);
+                await saveNote(sid, id, result);
+              }));
+
+              // Actualitzar taula visualment
+              renderNotesGrid();
+            } catch(err) {
+              console.error('Error recalculant fórmula:', err);
+              alert('Error recalculant la fórmula: ' + err.message);
+            }
+          });
+
           const menuDiv = document.createElement('div');
           menuDiv.className = 'relative';
           menuDiv.innerHTML = `
@@ -662,6 +692,7 @@ function renderNotesGrid() {
       });
   });
 }
+
 
 
 // Funció per actualitzar cel·les calculades sense recrear tota la taula
