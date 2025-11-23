@@ -1,20 +1,6 @@
 // app.js - lògica principal (modules)
 import { openModal, closeModal, confirmAction } from './modals.js';
 
-import { loadGrupsPage } from './grupsPage.js';
-
-// Després de seleccionar classe:
-async function onClassSelected(classId) {
-  currentClassId = classId;
-
-  // Carreguem pantalla de grups
-  await loadGrupsPage();
-
-  // Amaguem la graella de notes fins que s’obri un grup
-  document.getElementById('notesGridContainer').classList.add('hidden');
-}
-
-
 /* ---------------- FIREBASE CONFIG ---------------- */
 const firebaseConfig = {
   apiKey: "AIzaSyA0P7TWcEw9y9_13yqRhvsgWN5d3YKH7yo",
@@ -118,6 +104,20 @@ cont?.addEventListener("click", (e) => {
     cont.classList.remove("mobile-open");
   }
 });
+
+import { loadGrupsPage } from './grupsPage.js';
+
+// Després de seleccionar classe:
+async function onClassSelected(classId) {
+  currentClassId = classId;
+
+  // Carreguem pantalla de grups
+  await loadGrupsPage();
+
+  // Amaguem la graella de notes fins que s’obri un grup
+  document.getElementById('notesGridContainer').classList.add('hidden');
+}
+
 
 /* ---------- UTILS ---------- */
 function showLogin() {
