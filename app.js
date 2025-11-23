@@ -681,22 +681,24 @@ function renderNotesGrid() {
                     td.style.backgroundColor = "#ffe4e6";
                   }
 
-                  const input = document.createElement('input');
-                  input.type = 'number';
-                  input.min = 0;
-                  input.max = 10;
-                  input.value = val;
-                  input.dataset.activityId = actId;
-                  input.className = 'table-input text-center rounded border p-1';
+                 const input = document.createElement('input');
+input.type = 'number';
+input.min = 0;
+input.max = 10;
+input.value = val;
+input.dataset.activityId = actId;
+input.className = 'table-input text-center rounded border p-1';
 
-                  if (calculatedActs[actId]) {
-                    input.disabled = true;
-                    input.style.backgroundColor = "#fca5a5";
-                  } else {
-                    input.addEventListener('change', e => saveNote(studentId, actId, e.target.value));
-                    input.addEventListener('input', () => applyCellColor(input));
-                    applyCellColor(input);
-                 input.addEventListener('keydown', e => {
+if (calculatedActs[actId]) {
+  input.disabled = true;
+  input.style.backgroundColor = "#fca5a5";
+} else {
+  input.addEventListener('change', e => saveNote(studentId, actId, e.target.value));
+  input.addEventListener('input', () => applyCellColor(input));
+  applyCellColor(input);
+
+  // Saltar a la fila de sota quan premem Enter
+  input.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
       e.preventDefault(); // evita que la web interpreti Enter com un submit
       const currentRow = input.closest('tr');
