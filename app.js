@@ -592,8 +592,8 @@ function renderNotesGrid() {
 
           // Capçalera color calculada
           if (calculatedActs[id]) {
-            thEl.style.backgroundColor = "#fecaca";
-            thEl.style.borderBottom = "3px solid #dc2626";
+            thEl.style.backgroundColor = "#dbeafe";
+            thEl.style.borderBottom = "3px solid #1d4ed8";
             thEl.style.color = "black";
             refreshIcon.classList.remove('hidden');
           }
