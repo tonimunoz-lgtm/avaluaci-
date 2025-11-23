@@ -795,8 +795,7 @@ function renderAverages(){
   trForm.className = 'formulas-row text-sm bg-gray-100';
   const td0 = document.createElement('td');
   td0.textContent = 'Fórmula';
-  td0.classList.add("cell-formula");
- 
+  td0.className = 'border px-2 py-1 font-medium text-center';
   trForm.appendChild(td0);
 
   // Llegim fórmules de Firestore
@@ -1221,7 +1220,7 @@ async function exportExcel(){
     const header = ['Alumne', ...actDocs.map(a => a.exists ? a.data().nom : 'Sense nom'), 'Mitjana'];
     ws_data.push(header);
 
-    // Files alumnes.
+    // Files alumnes
     studentDocs.forEach(sdoc => {
       const notes = sdoc.exists ? sdoc.data().notes || {} : {};
       const row = [sdoc.exists ? sdoc.data().nom : 'Desconegut'];
