@@ -791,36 +791,65 @@ function renderAverages(){
   notesTfoot.appendChild(trAvg);
 
   // ----------------- Fila fórmules -----------------
-  const trForm = document.createElement('tr');
-  trForm.className = 'formulas-row text-sm bg-gray-100';
-  const td0 = document.createElement('td');
-  td0.textContent = 'Fórmula';
-  td0.className = 'border px-2 py-1 font-medium text-center';
-  trForm.appendChild(td0);
+const trForm = document.createElement('tr');
+trForm.className = 'formulas-row text-sm bg-gray-100';
+trForm.style.fontSize = "8px";        // <-- Fila més petita
+trForm.style.whiteSpace = "nowrap";   // <-- Evita que la columna s'eixampli
 
-  // Llegim fórmules de Firestore
-  db.collection('classes').doc(currentClassId).get().then(doc=>{
-    if(!doc.exists) return;
-    const calculatedActs = doc.data().calculatedActivities || {};
+const td0 = document.createElement('td');
+td0.textContent = 'Fórmula';
+td0.className = 'border px-2 py-1 font-medium text-center';
+trForm.appendChild(td0);
 
-    for(let i=0;i<actCount;i++){
-      const actId = classActivities[i];
-      const td = document.createElement('td');
-      td.className = 'border px-2 py-1 text-center font-medium';
-      td.textContent = calculatedActs[actId]?.formula || '';
-      trForm.appendChild(td);
+// Llegim fórmules de Firestore
+db.collection('classes').doc(currentClassId).get().then(doc=>{
+  if(!doc.exists) return;
+
+  const calculatedActs = doc.data().calculatedActivities || {};
+
+  // 🔥 Preparem map ID → Nom d’activitat per mostrar fórmules curtes
+  const actDocsMap = {};
+  classActivities.forEach(id => {
+    const act = allActivitiesCache[id]; // <- si tens cache de activitats
+    if (act) actDocsMap[id] = act;
+  });
+
+  for(let i = 0; i < actCount; i++){
+    const actId = classActivities[i];
+    const td = document.createElement('td');
+    td.className = 'border px-2 py-1 text-center font-medium';
+
+    let formula = calculatedActs[actId]?.formula || '';
+    let displayFormula = formula;
+
+    // ---------- Fórmula curta per REDONDEIG ----------
+    if (formula.startsWith("Math.round(")) {
+
+      // Extreure l’ID d’activitat dins la fórmula
+      const actIdInside = formula.match(/__ACT__(.*?)\)/)?.[1];
+
+      // Localitzar el nom de l’activitat original
+      let actName = "…";
+      if (actIdInside && actDocsMap[actIdInside]) {
+        actName = actDocsMap[actIdInside].nom || "Activitat";
+      }
+
+      // Fórmula curta visual
+      displayFormula = `Round(${actName})`;
     }
 
-    const tdLast = document.createElement('td');
-    tdLast.textContent = '';
-    tdLast.className = 'border px-2 py-1 text-center font-medium';
-    trForm.appendChild(tdLast);
+    td.textContent = displayFormula;
+    trForm.appendChild(td);
+  }
 
-    notesTfoot.appendChild(trForm);
-  });
-}
+  // Última cel·la (column mitjana)
+  const tdLast = document.createElement('td');
+  tdLast.textContent = '';
+  tdLast.className = 'border px-2 py-1 text-center font-medium';
+  trForm.appendChild(tdLast);
 
-
+  notesTfoot.appendChild(trForm);
+});
 
 
 /* ---------------- Open Calculation Modal ---------------- */
