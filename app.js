@@ -682,14 +682,14 @@ function renderNotesGrid() {
                   }
 
                   const input = document.createElement('input');
-                  input.type = 'number';
-                  input.min = 0;
-                  input.max = 10;
-                  input.value = val;
-                  input.dataset.activityId = actId;
-                  input.className = 'table-input text-center rounded border p-1';
+input.type = 'number';
+input.min = 0;
+input.max = 10;
+input.value = val;
+input.dataset.activityId = actId;
+input.className = 'table-input text-center rounded border p-1';
 
-                 if (calculatedActs[actId]) {
+if (calculatedActs[actId]) {
   input.disabled = true;
   input.style.backgroundColor = "#fca5a5";
 } else {
@@ -697,25 +697,19 @@ function renderNotesGrid() {
   input.addEventListener('input', () => applyCellColor(input));
   applyCellColor(input);
 
-  // 👉 mínim canvi: mou el focus al Enter dins la mateixa fila
- input.addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-
-    const td = input.parentElement;
-    const tr = td.parentElement;
-    const idx = Array.from(tr.children).indexOf(td); // Índex de la columna
-    const nextTr = tr.nextElementSibling; // següent fila
-
-    if (nextTr) {
-      const nextTd = nextTr.children[idx]; // mateixa columna
-      if (nextTd) {
-        const nextInput = nextTd.querySelector('input');
+  // Saltar a la fila de sota quan premem Enter
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault(); // evita que la web interpreti Enter com un submit
+      const currentRow = input.closest('tr');
+      const nextRow = currentRow.nextElementSibling;
+      if (nextRow) {
+        const nextInput = nextRow.querySelector(`input[data-activity-id="${actId}"]`);
         if (nextInput) nextInput.focus();
       }
     }
-  }
-});
+  });
+}
 
                   td.appendChild(input);
                   tr.appendChild(td);
