@@ -794,7 +794,21 @@ function renderAverages(){
   const trForm = document.createElement('tr');
   trForm.className = 'formulas-row text-sm bg-gray-100';
   const td0 = document.createElement('td');
-  td0.textContent = 'Fórmula';
+  // Formula original per càlcul
+let displayFormula = formula;
+
+// Si és un rounding, fer-la curta
+if (formula.startsWith("Math.round(")) {
+    const actId = formula.match(/__ACT__(.*?)\)/)?.[1];
+    if (actId && actDocsMap[actId]) {
+        displayFormula = "Round(" + actDocsMap[actId].nom + ")";
+    } else {
+        displayFormula = "Round(...)";
+    }
+}
+
+formulaTd.textContent = displayFormula;
+
   td0.className = 'border px-2 py-1 font-medium text-center';
   trForm.appendChild(td0);
 
