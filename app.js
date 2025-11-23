@@ -105,19 +105,6 @@ cont?.addEventListener("click", (e) => {
   }
 });
 
-import { loadGrupsPage } from './grupsPage.js';
-
-// Després de seleccionar classe:
-async function onClassSelected(classId) {
-  currentClassId = classId;
-
-  // Carreguem pantalla de grups
-  await loadGrupsPage();
-
-  // Amaguem la graella de notes fins que s’obri un grup
-  document.getElementById('notesGridContainer').classList.add('hidden');
-}
-
 
 /* ---------- UTILS ---------- */
 function showLogin() {
