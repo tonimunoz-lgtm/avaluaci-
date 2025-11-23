@@ -20,8 +20,13 @@ let classStudents = [];
 let classActivities = [];
 let deleteMode = false;
 let currentCalcActivityId = null; // Activitat actual per fer càlculs
+let copiedStructure = null; // Guarda l'estructura copiada
 
 /* Elements */
+const btnStructure = document.getElementById('btnStructure');
+const structureDropdown = document.getElementById('structureDropdown');
+const copyStructureBtn = document.getElementById('copyStructure');
+const pasteStructureBtn = document.getElementById('pasteStructure');
 const loginScreen = document.getElementById('loginScreen');
 const appRoot = document.getElementById('appRoot');
 const usuariNom = document.getElementById('usuariNom');
@@ -59,6 +64,10 @@ btnImportAL.addEventListener('click', () => {
   openModal('modalImportAL');
 });
 
+btnStructure.addEventListener('click', () => {
+  structureDropdown.classList.toggle('hidden');
+});
+
 // Mobile: toggle students overlay
 const btnToggleStudentsMobile = document.getElementById('btnToggleStudentsMobile');
 const btnCloseStudentsMobile = document.getElementById('btnCloseStudentsMobile');
@@ -86,6 +95,25 @@ document.getElementById('studentsListContainer')?.addEventListener('click', (e) 
     document.getElementById('studentsListContainer').classList.remove('mobile-open');
   }
 });
+
+// funció copiar i enganxar
+copyStructureBtn.addEventListener('click', () => {
+  // Suposem que la funció getCurrentClassStructure() retorna l'estructura actual de la classe
+  copiedStructure = getCurrentClassStructure();
+  alert('Estructura copiada!');
+  structureDropdown.classList.add('hidden');
+});
+
+pasteStructureBtn.addEventListener('click', () => {
+  if (copiedStructure) {
+    applyStructureToCurrentClass(copiedStructure);
+    alert('Estructura enganxada!');
+  } else {
+    alert('Primer has de copiar una estructura!');
+  }
+  structureDropdown.classList.add('hidden');
+});
+
 
 // MOBILE — OBRIR LLISTA ALUMNES
 const btnMobile = document.getElementById("btnToggleStudentsMobile");
