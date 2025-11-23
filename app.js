@@ -1369,3 +1369,16 @@ if (closeBtn) {
     container.classList.remove('mobile-open');
   });
 }
+
+
+// Després de seleccionar classe
+async function onClassSelected(classId) {
+  currentClassId = classId;
+
+  // Import dinàmic del mòdul només quan cal
+  const { loadGrupsPage } = await import('./grupsPage.js');
+  await loadGrupsPage();
+
+  // Amaguem la graella de notes fins que s’obri un grup
+  document.getElementById('notesGridContainer')?.classList.add('hidden');
+}
