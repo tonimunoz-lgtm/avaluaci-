@@ -113,7 +113,7 @@
       <table id="notesTable" class="min-w-full border-collapse">
         <thead id="notesThead" class="bg-gray-100"></thead>
         <tbody id="notesTbody"></tbody>
-        <tfoot id="notesTfoot" class="bg-gray-50"></tfoot>
+        <tfoot id="notesTfoot" class="bg-gray-50 hidden"></tfoot>
       </table>
     </div>
   </div>
