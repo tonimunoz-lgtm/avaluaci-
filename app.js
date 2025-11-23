@@ -544,7 +544,7 @@ function renderNotesGrid() {
             e.stopPropagation();
 
             // Busquem la fila de fórmules a l'últim peu de la taula
-            const formulasRow = notesTfoot.querySelector('.formulas-row');
+            const formulasRow = formulaTfoot.querySelector('.formulas-row');
             if (!formulasRow) return;
 
             const idx = Array.from(headRow.children).indexOf(thEl);
