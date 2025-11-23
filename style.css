@@ -50,15 +50,6 @@ p, span, td {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.cell-formula {
-  font-size: 8px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 70px; /* pots ajustar-ho */
-}
-
-
 .class-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 8px 16px rgba(0,0,0,0.25);
@@ -259,20 +250,3 @@ button:hover { transform: scale(1.03); }
     width: 100% !important;
   }
 }
-
-/* ---------------- Activitat Redondeig (visual) ---------------- */
-.rounding-label {
-  display: inline-block;
-  padding: 2px 6px;
-  background-color: #e0f2fe; /* blau clar */
-  color: #0369a1;
-  border-radius: 4px;
-  font-size: 0.875rem;
-  text-align: center;
-  cursor: default;
-  white-space: nowrap;
-  max-width: 60px; /* evita que la columna s'ampliï massa */
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
