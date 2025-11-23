@@ -20,15 +20,6 @@ let classStudents = [];
 let classActivities = [];
 let deleteMode = false;
 let currentCalcActivityId = null; // Activitat actual per fer càlculs
-let currentCategory = 'examen'; // categoria per defecte
-
-document.querySelectorAll('#activityTabs .tab-btn').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    currentCategory = btn.dataset.cat;
-    renderNotesGrid(); // tornem a renderitzar la taula amb la nova categoria
-  });
-});
-
 
 /* Elements */
 const loginScreen = document.getElementById('loginScreen');
@@ -529,10 +520,6 @@ function renderNotesGrid() {
     const calculatedActs = classData.calculatedActivities || {};
 
     // Carrega activitats de la classe
-    // Filtrar activitats per categoria
-const filteredActs = await Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()));
-const actsToRender = filteredActs.filter(doc => doc.exists && doc.data().category === currentCategory);
-
     Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()))
       .then(actDocs => {
 
@@ -1380,25 +1367,3 @@ if (closeBtn) {
     container.classList.remove('mobile-open');
   });
 }
-
-function createActivityModal(){
-  const name = document.getElementById('modalActivityName').value.trim();
-  const category = document.getElementById('modalActivityCategory').value; // nova select
-  if(!name) return alert('Posa un nom');
-  
-  const ref = db.collection('activitats').doc();
-  ref.set({ 
-    nom: name, 
-    category: category || 'altres', // categoria per defecte
-    data: new Date().toISOString().split('T')[0], 
-    calcType:'numeric', 
-    formula:'' 
-  })
-  .then(()=> db.collection('classes').doc(currentClassId).update({ activitats: firebase.firestore.FieldValue.arrayUnion(ref.id) }))
-  .then(()=> {
-    closeModal('modalAddActivity');
-    document.getElementById('modalActivityName').value = '';
-    loadClassData();
-  }).catch(e=> alert('Error: '+e.message));
-}
-
