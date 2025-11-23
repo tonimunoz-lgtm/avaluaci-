@@ -1,6 +1,5 @@
 // app.js - lògica principal (modules)
 import { openModal, closeModal, confirmAction } from './modals.js';
-
 /* ---------------- FIREBASE CONFIG ---------------- */
 const firebaseConfig = {
   apiKey: "AIzaSyA0P7TWcEw9y9_13yqRhvsgWN5d3YKH7yo",
@@ -104,7 +103,6 @@ cont?.addEventListener("click", (e) => {
     cont.classList.remove("mobile-open");
   }
 });
-
 
 /* ---------- UTILS ---------- */
 function showLogin() {
@@ -1368,17 +1366,4 @@ if (closeBtn) {
     const container = document.getElementById('studentsListContainer');
     container.classList.remove('mobile-open');
   });
-}
-
-
-// Després de seleccionar classe
-async function onClassSelected(classId) {
-  currentClassId = classId;
-
-  // Import dinàmic del mòdul només quan cal
-  const { loadGrupsPage } = await import('./grupsPage.js');
-  await loadGrupsPage();
-
-  // Amaguem la graella de notes fins que s’obri un grup
-  document.getElementById('notesGridContainer')?.classList.add('hidden');
 }
