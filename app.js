@@ -681,40 +681,26 @@ function renderNotesGrid() {
                     td.style.backgroundColor = "#ffe4e6";
                   }
 
-              const input = document.createElement('input');
-input.type = 'number';
-input.min = 0;
-input.max = 10;
-input.value = val;
-input.dataset.activityId = actId;
-input.className = 'table-input text-center rounded border p-1';
+                  const input = document.createElement('input');
+                  input.type = 'number';
+                  input.min = 0;
+                  input.max = 10;
+                  input.value = val;
+                  input.dataset.activityId = actId;
+                  input.className = 'table-input text-center rounded border p-1';
 
-if (calculatedActs[actId]) {
-  input.disabled = true;
-  input.style.backgroundColor = "#fca5a5";
-} else {
-  input.addEventListener('change', e => saveNote(studentId, actId, e.target.value));
-  input.addEventListener('input', () => applyCellColor(input));
-  applyCellColor(input);
+                  if (calculatedActs[actId]) {
+                    input.disabled = true;
+                    input.style.backgroundColor = "#fca5a5";
+                  } else {
+                    input.addEventListener('change', e => saveNote(studentId, actId, e.target.value));
+                    input.addEventListener('input', () => applyCellColor(input));
+                    applyCellColor(input);
+                  }
 
-  // AFEGIM EL EVENT LISTENER D'ENTER AQUÍ
-  input.addEventListener('keydown', async e => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-
-      // Guardem la nota abans de moure el focus
-      await saveNote(studentId, actId, e.target.value);
-
-      const currentRow = input.closest('tr');
-      const nextRow = currentRow.nextElementSibling;
-      if (nextRow) {
-        const nextInput = nextRow.querySelector(`input[data-activity-id="${actId}"]`);
-        if (nextInput) nextInput.focus();
-      }
-    }
-  });
-}
-
+                  td.appendChild(input);
+                  tr.appendChild(td);
+                });
 
                 // Mitjana alumne
                 const avgTd = document.createElement('td');
@@ -1233,6 +1219,7 @@ async function markActivityAsCalculated(activityId){
   // Re-render per assegurar bloqueig i color
   renderNotesGrid();
 }
+
 
 
 /* ---------------- Export Excel ---------------- */
