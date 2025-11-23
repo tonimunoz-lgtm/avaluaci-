@@ -1232,7 +1232,6 @@ async function markActivityAsCalculated(activityId){
 }
 
 
-
 /* ---------------- Export Excel ---------------- */
 btnExport.addEventListener('click', exportExcel);
 async function exportExcel(){
