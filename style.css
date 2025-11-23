@@ -250,3 +250,22 @@ button:hover { transform: scale(1.03); }
     width: 100% !important;
   }
 }
+
+#structureDropdown {
+  min-width: 120px;
+  display: none; /* JavaScript controlarà show/hide */
+  flex-direction: column;
+  z-index: 50;
+}
+
+#structureDropdown button {
+  background: white;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+#structureDropdown button:hover {
+  background: #f3f4f6;
+}
+
