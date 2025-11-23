@@ -617,6 +617,28 @@ function renderNotesGrid() {
           menuDiv.querySelector('.calc-btn').addEventListener('click', () => openCalcModal(id));
         });
 
+        menuDiv.querySelector('.clear-btn').addEventListener('click', async () => {
+  const confirmClear = confirm('Segur que vols esborrar totes les notes d’aquesta activitat?');
+  if (!confirmClear) return;
+
+  try {
+    await Promise.all(classStudents.map(sid => {
+      return saveNote(sid, id, ''); // buidem la nota
+    }));
+
+    // També eliminem la fórmula si existia
+    await db.collection('classes').doc(currentClassId).update({
+      [`calculatedActivities.${id}`]: firebase.firestore.FieldValue.delete()
+    });
+
+    renderNotesGrid(); // re-render per veure-ho
+  } catch(e) {
+    console.error('Error netejant notes:', e);
+    alert('Error netejant les notes: ' + e.message);
+  }
+});
+
+
         headRow.appendChild(th('Mitjana', 'text-right'));
         notesThead.appendChild(headRow);
 
