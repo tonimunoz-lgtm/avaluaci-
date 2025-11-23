@@ -697,14 +697,10 @@ if (calculatedActs[actId]) {
   input.addEventListener('input', () => applyCellColor(input));
   applyCellColor(input);
 
-  // AFEGIM EL EVENT LISTENER D'ENTER AQUÍ
-  input.addEventListener('keydown', async e => {
+  // Saltar a la fila de sota quan premem Enter
+  input.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
-      e.preventDefault();
-
-      // Guardem la nota abans de moure el focus
-      await saveNote(studentId, actId, e.target.value);
-
+      e.preventDefault(); // evita que la web interpreti Enter com un submit
       const currentRow = input.closest('tr');
       const nextRow = currentRow.nextElementSibling;
       if (nextRow) {
@@ -714,6 +710,7 @@ if (calculatedActs[actId]) {
     }
   });
 }
+
 
 
                 // Mitjana alumne
