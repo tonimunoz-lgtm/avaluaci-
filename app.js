@@ -816,7 +816,7 @@ function renderAverages(){
     tdLast.className = 'border px-2 py-1 text-center font-medium';
     trForm.appendChild(tdLast);
 
-    notesTfoot.appendChild(trForm);
+    formulaTfoot.appendChild(trForm);
   });
 }
 
