@@ -795,6 +795,7 @@ function renderAverages(){
   trForm.className = 'formulas-row text-sm bg-gray-100';
   const td0 = document.createElement('td');
   td0.textContent = 'Fórmula';
+  td0.classList.add("cell-formula");
   td0.className = 'border px-2 py-1 font-medium text-center';
   trForm.appendChild(td0);
 
