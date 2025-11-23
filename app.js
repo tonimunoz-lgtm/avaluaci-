@@ -698,19 +698,24 @@ function renderNotesGrid() {
   applyCellColor(input);
 
   // 👉 mínim canvi: mou el focus al Enter dins la mateixa fila
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
+ input.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
 
-      const td = input.parentElement;
-      const nextTd = td.nextElementSibling;
+    const td = input.parentElement;
+    const tr = td.parentElement;
+    const idx = Array.from(tr.children).indexOf(td); // Índex de la columna
+    const nextTr = tr.nextElementSibling; // següent fila
+
+    if (nextTr) {
+      const nextTd = nextTr.children[idx]; // mateixa columna
       if (nextTd) {
         const nextInput = nextTd.querySelector('input');
         if (nextInput) nextInput.focus();
       }
     }
-  });
-}
+  }
+});
 
                   td.appendChild(input);
                   tr.appendChild(td);
