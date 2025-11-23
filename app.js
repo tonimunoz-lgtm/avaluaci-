@@ -1371,14 +1371,13 @@ function renderCell(activity) {
   const td = document.createElement('td');
 
   if (activity.type === 'rounding') {
-    // Només visual: etiqueta amb valor arrodonit
-    const roundedValue = Math.round(activity.value * 100) / 100; // 2 decimals
+    // Mostra només etiqueta curta
     const span = document.createElement('span');
     span.className = 'rounding-label';
-    span.textContent = roundedValue;
+    span.textContent = 'Redondeig'; // només la paraula, no el valor real
     td.appendChild(span);
   } else if (activity.type === 'formula') {
-    td.textContent = activity.formula; // mostra fórmula normal
+    td.textContent = activity.formula; // mostra fórmula completa
   } else {
     td.textContent = activity.value; // numeric simple
   }
