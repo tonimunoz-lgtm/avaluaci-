@@ -20,6 +20,15 @@ let classStudents = [];
 let classActivities = [];
 let deleteMode = false;
 let currentCalcActivityId = null; // Activitat actual per fer càlculs
+let currentCategory = 'examen'; // categoria per defecte
+
+document.querySelectorAll('#activityTabs .tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    currentCategory = btn.dataset.cat;
+    renderNotesGrid(); // tornem a renderitzar la taula amb la nova categoria
+  });
+});
+
 
 /* Elements */
 const loginScreen = document.getElementById('loginScreen');
