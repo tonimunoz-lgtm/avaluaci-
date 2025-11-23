@@ -506,6 +506,7 @@ function renderNotesGrid() {
   notesThead.innerHTML = '';
   notesTbody.innerHTML = '';
   notesTfoot.innerHTML = '';
+  formulaTfoot.innerHTML = '';
 
   // Capçalera alumne
   const headRow = document.createElement('tr');
