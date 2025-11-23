@@ -681,7 +681,7 @@ function renderNotesGrid() {
                     td.style.backgroundColor = "#ffe4e6";
                   }
 
-                 const input = document.createElement('input');
+               const input = document.createElement('input');
 input.type = 'number';
 input.min = 0;
 input.max = 10;
@@ -697,10 +697,14 @@ if (calculatedActs[actId]) {
   input.addEventListener('input', () => applyCellColor(input));
   applyCellColor(input);
 
-  // Saltar a la fila de sota quan premem Enter
-  input.addEventListener('keydown', e => {
+  // AFEGIM EL EVENT LISTENER D'ENTER AQUÍ
+  input.addEventListener('keydown', async e => {
     if (e.key === 'Enter') {
-      e.preventDefault(); // evita que la web interpreti Enter com un submit
+      e.preventDefault();
+
+      // Guardem la nota abans de moure el focus
+      await saveNote(studentId, actId, e.target.value);
+
       const currentRow = input.closest('tr');
       const nextRow = currentRow.nextElementSibling;
       if (nextRow) {
@@ -710,6 +714,7 @@ if (calculatedActs[actId]) {
     }
   });
 }
+
 
                 // Mitjana alumne
                 const avgTd = document.createElement('td');
