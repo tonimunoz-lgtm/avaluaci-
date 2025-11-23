@@ -48,7 +48,6 @@ const studentsCount = document.getElementById('studentsCount');
 const notesThead = document.getElementById('notesThead');
 const notesTbody = document.getElementById('notesTbody');
 const notesTfoot = document.getElementById('notesTfoot');
-const notesTfoot = document.getElementById('formulaTfoot');
 
 const modalCreateClassBtn = document.getElementById('modalCreateClassBtn');
 const modalAddStudentBtn = document.getElementById('modalAddStudentBtn');
@@ -506,7 +505,6 @@ function renderNotesGrid() {
   notesThead.innerHTML = '';
   notesTbody.innerHTML = '';
   notesTfoot.innerHTML = '';
-  formulaTfoot.innerHTML = '';
 
   // Capçalera alumne
   const headRow = document.createElement('tr');
@@ -546,7 +544,7 @@ function renderNotesGrid() {
             e.stopPropagation();
 
             // Busquem la fila de fórmules a l'últim peu de la taula
-            const formulasRow = formulaTfoot.querySelector('.formulas-row');
+            const formulasRow = notesTfoot.querySelector('.formulas-row');
             if (!formulasRow) return;
 
             const idx = Array.from(headRow.children).indexOf(thEl);
@@ -818,7 +816,7 @@ function renderAverages(){
     tdLast.className = 'border px-2 py-1 text-center font-medium';
     trForm.appendChild(tdLast);
 
-    formulaTfoot.appendChild(trForm);
+    notesTfoot.appendChild(trForm);
   });
 }
 
