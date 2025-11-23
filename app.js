@@ -766,12 +766,18 @@ function renderAverages(){
   });
 
   const actCount = classActivities.length;
-
-  // ---------- NotesTfoot: Mitjana ----------
   notesTfoot.innerHTML = '';
+
+  // ----------------- Mitjana per activitat -----------------
   const trAvg = document.createElement('tr');
   trAvg.className = 'text-sm';
   trAvg.appendChild(th('Mitjana activitat'));
+  if(actCount === 0){
+    trAvg.appendChild(th('',''));
+    notesTfoot.appendChild(trAvg);
+    return;
+  }
+
   for(let i=0;i<actCount;i++){
     const inputs = Array.from(notesTbody.querySelectorAll('tr')).map(r => r.querySelectorAll('input')[i]).filter(Boolean);
     const vals = inputs.map(inp => Number(inp.value)).filter(v=> !isNaN(v));
@@ -784,8 +790,7 @@ function renderAverages(){
   trAvg.appendChild(th('',''));
   notesTfoot.appendChild(trAvg);
 
-  // ---------- formulaTfoot: Fórmules ----------
-  formulaTfoot.innerHTML = '';
+  // ----------------- Fila fórmules -----------------
   const trForm = document.createElement('tr');
   trForm.className = 'formulas-row text-sm bg-gray-100';
   const td0 = document.createElement('td');
@@ -797,6 +802,7 @@ function renderAverages(){
   db.collection('classes').doc(currentClassId).get().then(doc=>{
     if(!doc.exists) return;
     const calculatedActs = doc.data().calculatedActivities || {};
+
     for(let i=0;i<actCount;i++){
       const actId = classActivities[i];
       const td = document.createElement('td');
@@ -804,15 +810,15 @@ function renderAverages(){
       td.textContent = calculatedActs[actId]?.formula || '';
       trForm.appendChild(td);
     }
+
     const tdLast = document.createElement('td');
     tdLast.textContent = '';
     tdLast.className = 'border px-2 py-1 text-center font-medium';
     trForm.appendChild(tdLast);
 
-    formulaTfoot.appendChild(trForm);
+    notesTfoot.appendChild(trForm);
   });
 }
-
 
 
 
