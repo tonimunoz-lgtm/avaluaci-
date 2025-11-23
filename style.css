@@ -250,20 +250,3 @@ button:hover { transform: scale(1.03); }
     width: 100% !important;
   }
 }
-
-/* Amaga el contingut real i mostra només "redondeig" */
-.redondeig {
-  position: relative;
-  color: transparent; /* amaga la fórmula real */
-}
-
-.redondeig::after {
-  content: "redondeig"; /* text visual */
-  color: #111827; /* color visible */
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-}
-
-
