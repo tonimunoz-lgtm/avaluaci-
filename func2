@@ -48,6 +48,7 @@ const studentsCount = document.getElementById('studentsCount');
 const notesThead = document.getElementById('notesThead');
 const notesTbody = document.getElementById('notesTbody');
 const notesTfoot = document.getElementById('notesTfoot');
+const formulaTfoot = document.getElementById('formulaTfoot');
 
 const modalCreateClassBtn = document.getElementById('modalCreateClassBtn');
 const modalAddStudentBtn = document.getElementById('modalAddStudentBtn');
@@ -505,6 +506,7 @@ function renderNotesGrid() {
   notesThead.innerHTML = '';
   notesTbody.innerHTML = '';
   notesTfoot.innerHTML = '';
+  formulaTfoot.innerHTML = '';
 
   // Capçalera alumne
   const headRow = document.createElement('tr');
@@ -544,7 +546,7 @@ function renderNotesGrid() {
             e.stopPropagation();
 
             // Busquem la fila de fórmules a l'últim peu de la taula
-            const formulasRow = notesTfoot.querySelector('.formulas-row');
+            const formulasRow = formulaTfoot.querySelector('.formulas-row');
             if (!formulasRow) return;
 
             const idx = Array.from(headRow.children).indexOf(thEl);
@@ -577,6 +579,7 @@ function renderNotesGrid() {
               <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
               <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>
               <button class="calc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Càlcul</button>
+              <button class="clear-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Netejar</button>
             </div>
           `;
 
@@ -595,6 +598,7 @@ function renderNotesGrid() {
           }
 
           // Menú activitat
+          
           const menuBtn = menuDiv.querySelector('.menu-btn');
           const menu = menuDiv.querySelector('.menu');
           menuBtn.addEventListener('click', e => {
@@ -609,6 +613,27 @@ function renderNotesGrid() {
             db.collection('activitats').doc(id).update({ nom: newName.trim() })
               .then(() => loadClassData());
           });
+
+          menuDiv.querySelector('.clear-btn').addEventListener('click', async () => {
+  const confirmClear = confirm('Segur que vols esborrar totes les notes d’aquesta activitat?');
+  if (!confirmClear) return;
+
+  try {
+    await Promise.all(classStudents.map(sid => {
+      return saveNote(sid, id, ''); // buidem la nota
+    }));
+
+    // També eliminem la fórmula si existia
+    await db.collection('classes').doc(currentClassId).update({
+      [`calculatedActivities.${id}`]: firebase.firestore.FieldValue.delete()
+    });
+
+    renderNotesGrid(); // re-render per veure-ho
+  } catch(e) {
+    console.error('Error netejant notes:', e);
+    alert('Error netejant les notes: ' + e.message);
+  }
+});
 
           menuDiv.querySelector('.delete-btn').addEventListener('click', () => removeActivity(id));
           menuDiv.querySelector('.calc-btn').addEventListener('click', () => openCalcModal(id));
@@ -816,7 +841,7 @@ function renderAverages(){
     tdLast.className = 'border px-2 py-1 text-center font-medium';
     trForm.appendChild(tdLast);
 
-    notesTfoot.appendChild(trForm);
+    formulaTfoot.appendChild(trForm);
   });
 }
 
@@ -901,35 +926,83 @@ async function applyRounding(formula) {
 }
 
 // ─────────── Event Listener ───────────
-
 modalApplyCalcBtn.addEventListener('click', async () => {
   if (!currentCalcActivityId) return;
 
   try {
-    let formulaText = ''; // <-- guardarem la fórmula real
+    let formulaText = ''; // fórmula de codi (amb marcador per id)
+    let displayFormulaText = ''; // fórmula per mostrar (amb nom activitat)
+
     switch (calcTypeSelect.value) {
       case 'numeric':
         await applyNumeric(Number(numericField.value));
         formulaText = numericField.value;
+        displayFormulaText = numericField.value;
         break;
+
       case 'formula':
         await applyFormula(formulaField.value);
+        // Guardem la mateixa cadena tant per codi com per visualització
         formulaText = formulaField.value;
+        displayFormulaText = formulaField.value;
         break;
+
       case 'rounding':
-        await applyRounding(formulaField.value);
-        formulaText = formulaField.value;
+        if (!formulaField.value.trim()) throw new Error('Selecciona activitat i 0,5 o 1');
+
+        // Trobar l'activitat seleccionada per nom (nom complet) entre les activitats de la classe
+        const activityDocs = await Promise.all(classActivities.map(aid => db.collection('activitats').doc(aid).get()));
+        // Busquem el document que coincideixi amb l'inici del string de formulaField (com feies abans)
+        const selectedActivityDoc = activityDocs.find(doc => doc.exists && formulaField.value.startsWith(doc.data().nom));
+        if (!selectedActivityDoc) throw new Error('Activitat no trobada');
+
+        const selectedActivityName = selectedActivityDoc.data().nom;
+        const selectedActivityId = selectedActivityDoc.id;
+
+        // Extraiem multiplicador (si hi ha) — p.ex. "Tema1" + "0.5" o "1"
+        const multiplierStr = formulaField.value.slice(selectedActivityName.length).trim();
+        const multiplier = multiplierStr === '' ? 1 : Number(multiplierStr);
+
+        // Aplicar arrodoniment a cada alumne (usar sempre l'ID per llegir la nota)
+        await Promise.all(classStudents.map(async sid => {
+          const studentDoc = await db.collection('alumnes').doc(sid).get();
+          const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
+          let val = Number(notes[selectedActivityId]);
+          if (isNaN(val)) val = 0;
+
+          if (multiplier === 1) val = Math.round(val);
+          else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
+
+          await saveNote(sid, currentCalcActivityId, val);
+        }));
+
+        // Guardem la fórmula de codi amb un marcador únic per l'ID (evita ambigüitats)
+        if (multiplier === 1) {
+          formulaText = `Math.round(__ACT__${selectedActivityId})`;
+          displayFormulaText = `Math.round(${selectedActivityName})`;
+        } else if (multiplier === 0.5) {
+          formulaText = `Math.round(__ACT__${selectedActivityId}*2)/2`;
+          displayFormulaText = `Math.round(${selectedActivityName}*2)/2`;
+        } else {
+          // cas inesperat: guardem la fórmula simple amb marcador
+          formulaText = `__ACT__${selectedActivityId}`;
+          displayFormulaText = `${selectedActivityName}`;
+        }
+
         break;
+
       default:
         throw new Error('Tipus de càlcul desconegut');
     }
 
     // Guardar a Firestore la informació de fórmula a calculatedActivities
-    if(currentClassId){
+    if (currentClassId) {
+      // Guardem tant formula (codi) com displayFormula (text per mostrar)
       await db.collection('classes').doc(currentClassId).update({
         [`calculatedActivities.${currentCalcActivityId}`]: {
           calculated: true,
-          formula: formulaText
+          formula: formulaText,
+          displayFormula: displayFormulaText
         }
       });
     }
@@ -1048,15 +1121,25 @@ async function evalFormulaAsync(formula, studentId){
   const studentDoc = await db.collection('alumnes').doc(studentId).get();
   const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
 
+  // 1) Substituir marcadors per ID (ex: __ACT__<actId>)
+  for(const aid of classActivities){
+    const marker = `__ACT__${aid}`;
+    const val = Number(notes[aid]);
+    const safeVal = isNaN(val) ? 0 : val;
+    const reMarker = new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+    evalStr = evalStr.replace(reMarker, safeVal);
+  }
+
+  // 2) Substituir noms d'activitat per valors (compatibilitat amb fórmules antigues)
   for(const aid of classActivities){
     const actDoc = await db.collection('activitats').doc(aid).get();
     const actName = actDoc.exists ? actDoc.data().nom : '';
     if(!actName) continue;
-
-    const val = Number(notes[aid]) || 0; // Agafem directament les notes de Firestore
+    const val = Number(notes[aid]);
+    const safeVal = isNaN(val) ? 0 : val;
 
     const regex = new RegExp(actName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-    evalStr = evalStr.replace(regex, val);
+    evalStr = evalStr.replace(regex, safeVal);
   }
 
   try {
@@ -1066,6 +1149,7 @@ async function evalFormulaAsync(formula, studentId){
     return 0;
   }
 }
+
 
 
 
