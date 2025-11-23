@@ -598,26 +598,7 @@ function renderNotesGrid() {
           }
 
           // Menú activitat
-          const menuBtn = menuDiv.querySelector('.menu-btn');
-          const menu = menuDiv.querySelector('.menu');
-          menuBtn.addEventListener('click', e => {
-            e.stopPropagation();
-            document.querySelectorAll('.menu').forEach(m => m.classList.add('hidden'));
-            menu.classList.toggle('hidden');
-          });
-
-          menuDiv.querySelector('.edit-btn').addEventListener('click', () => {
-            const newName = prompt('Nou nom activitat:', name);
-            if (!newName || newName.trim() === name) return;
-            db.collection('activitats').doc(id).update({ nom: newName.trim() })
-              .then(() => loadClassData());
-          });
-
-          menuDiv.querySelector('.delete-btn').addEventListener('click', () => removeActivity(id));
-          menuDiv.querySelector('.calc-btn').addEventListener('click', () => openCalcModal(id));
-        });
-
-        menuDiv.querySelector('.clear-btn').addEventListener('click', async () => {
+            menuDiv.querySelector('.clear-btn').addEventListener('click', async () => {
   const confirmClear = confirm('Segur que vols esborrar totes les notes d’aquesta activitat?');
   if (!confirmClear) return;
 
@@ -637,7 +618,25 @@ function renderNotesGrid() {
     alert('Error netejant les notes: ' + e.message);
   }
 });
+          
+          const menuBtn = menuDiv.querySelector('.menu-btn');
+          const menu = menuDiv.querySelector('.menu');
+          menuBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            document.querySelectorAll('.menu').forEach(m => m.classList.add('hidden'));
+            menu.classList.toggle('hidden');
+          });
 
+          menuDiv.querySelector('.edit-btn').addEventListener('click', () => {
+            const newName = prompt('Nou nom activitat:', name);
+            if (!newName || newName.trim() === name) return;
+            db.collection('activitats').doc(id).update({ nom: newName.trim() })
+              .then(() => loadClassData());
+          });
+
+          menuDiv.querySelector('.delete-btn').addEventListener('click', () => removeActivity(id));
+          menuDiv.querySelector('.calc-btn').addEventListener('click', () => openCalcModal(id));
+        });
 
         headRow.appendChild(th('Mitjana', 'text-right'));
         notesThead.appendChild(headRow);
