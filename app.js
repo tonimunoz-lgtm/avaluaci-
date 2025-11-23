@@ -689,14 +689,28 @@ function renderNotesGrid() {
                   input.dataset.activityId = actId;
                   input.className = 'table-input text-center rounded border p-1';
 
-                  if (calculatedActs[actId]) {
-                    input.disabled = true;
-                    input.style.backgroundColor = "#fca5a5";
-                  } else {
-                    input.addEventListener('change', e => saveNote(studentId, actId, e.target.value));
-                    input.addEventListener('input', () => applyCellColor(input));
-                    applyCellColor(input);
-                  }
+                 if (calculatedActs[actId]) {
+  input.disabled = true;
+  input.style.backgroundColor = "#fca5a5";
+} else {
+  input.addEventListener('change', e => saveNote(studentId, actId, e.target.value));
+  input.addEventListener('input', () => applyCellColor(input));
+  applyCellColor(input);
+
+  // 👉 mínim canvi: mou el focus al Enter dins la mateixa fila
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+
+      const td = input.parentElement;
+      const nextTd = td.nextElementSibling;
+      if (nextTd) {
+        const nextInput = nextTd.querySelector('input');
+        if (nextInput) nextInput.focus();
+      }
+    }
+  });
+}
 
                   td.appendChild(input);
                   tr.appendChild(td);
