@@ -803,13 +803,22 @@ function renderAverages(){
     if(!doc.exists) return;
     const calculatedActs = doc.data().calculatedActivities || {};
 
-    for(let i=0;i<actCount;i++){
-      const actId = classActivities[i];
-      const td = document.createElement('td');
-      td.className = 'border px-2 py-1 text-center font-medium';
-      td.textContent = calculatedActs[actId]?.formula || '';
-      trForm.appendChild(td);
-    }
+   for(let i=0;i<actCount;i++){
+  const actId = classActivities[i];
+  const formulaFull = calculatedActs[actId]?.formula || '';
+
+  const td = document.createElement('td');
+  td.className = 'border px-2 py-1 text-center font-medium';
+
+  // Mostrar nom amigable a la taula
+  td.textContent = formulaFull.includes('Math.round') ? 'Redondeig' : 'Fórmula';
+
+  // Guardar la fórmula completa per càlculs
+  td.dataset.formula = formulaFull;
+
+  trForm.appendChild(td);
+}
+
 
     const tdLast = document.createElement('td');
     tdLast.textContent = '';
