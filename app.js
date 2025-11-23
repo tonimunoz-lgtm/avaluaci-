@@ -64,10 +64,6 @@ btnImportAL.addEventListener('click', () => {
   openModal('modalImportAL');
 });
 
-btnStructure.addEventListener('click', () => {
-  structureDropdown.classList.toggle('hidden');
-});
-
 // Mobile: toggle students overlay
 const btnToggleStudentsMobile = document.getElementById('btnToggleStudentsMobile');
 const btnCloseStudentsMobile = document.getElementById('btnCloseStudentsMobile');
@@ -95,6 +91,31 @@ document.getElementById('studentsListContainer')?.addEventListener('click', (e) 
     document.getElementById('studentsListContainer').classList.remove('mobile-open');
   }
 });
+
+
+// Toggle desplegable al click del botó
+  btnStructure.addEventListener('click', (e) => {
+    e.stopPropagation(); // Important: evita que el document click tanqui immediatament
+    structureDropdown.classList.toggle('hidden');
+  });
+
+  // Tancar si es clic fora del dropdown
+  document.addEventListener('click', (e) => {
+    if (!structureDropdown.contains(e.target) && !btnStructure.contains(e.target)) {
+      structureDropdown.classList.add('hidden');
+    }
+  });
+
+  // Funcions de copiar/enganxar
+  document.getElementById('copyStructure').addEventListener('click', () => {
+    alert('Estructura copiada!');
+    structureDropdown.classList.add('hidden');
+  });
+
+  document.getElementById('pasteStructure').addEventListener('click', () => {
+    alert('Estructura enganxada!');
+    structureDropdown.classList.add('hidden');
+  });
 
 // funció copiar i enganxar
 copyStructureBtn.addEventListener('click', () => {
