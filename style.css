@@ -259,3 +259,20 @@ button:hover { transform: scale(1.03); }
     width: 100% !important;
   }
 }
+
+/* ---------------- Activitat Redondeig (visual) ---------------- */
+.rounding-label {
+  display: inline-block;
+  padding: 2px 6px;
+  background-color: #e0f2fe; /* blau clar */
+  color: #0369a1;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  text-align: center;
+  cursor: default;
+  white-space: nowrap;
+  max-width: 60px; /* evita que la columna s'ampliï massa */
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
