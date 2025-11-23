@@ -803,13 +803,23 @@ function renderAverages(){
     if(!doc.exists) return;
     const calculatedActs = doc.data().calculatedActivities || {};
 
-    for(let i=0;i<actCount;i++){
-      const actId = classActivities[i];
-      const td = document.createElement('td');
-      td.className = 'border px-2 py-1 text-center font-medium';
-      td.textContent = calculatedActs[actId]?.formula || '';
-      trForm.appendChild(td);
-    }
+   for (let i = 0; i < actCount; i++) {
+  const actId = classActivities[i];
+  const td = document.createElement('td');
+  td.className = 'border px-2 py-1 text-center font-medium';
+
+  const actData = calculatedActs[actId];
+
+  td.textContent = actData?.formula || '';
+
+  // Només a nivell visual mostrem "redondeig"
+  if (actData?.redondeig) {
+    td.classList.add('redondeig');
+  }
+
+  trForm.appendChild(td);
+}
+
 
     const tdLast = document.createElement('td');
     tdLast.textContent = '';
