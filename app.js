@@ -1,6 +1,5 @@
 // app.js - lògica principal (modules)
 import { openModal, closeModal, confirmAction } from './modals.js';
-import { createStructureButton } from './js/classStructure.js';
 
 /* ---------------- FIREBASE CONFIG ---------------- */
 const firebaseConfig = {
