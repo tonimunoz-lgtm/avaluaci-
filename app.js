@@ -529,6 +529,10 @@ function renderNotesGrid() {
     const calculatedActs = classData.calculatedActivities || {};
 
     // Carrega activitats de la classe
+    // Filtrar activitats per categoria
+const filteredActs = await Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()));
+const actsToRender = filteredActs.filter(doc => doc.exists && doc.data().category === currentCategory);
+
     Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()))
       .then(actDocs => {
 
