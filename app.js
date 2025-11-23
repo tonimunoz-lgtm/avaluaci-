@@ -1365,3 +1365,41 @@ if (closeBtn) {
     container.classList.remove('mobile-open');
   });
 }
+
+// ---------- Funció per renderitzar una cel·la segons tipus d'activitat ----------
+function renderCell(activity) {
+  const td = document.createElement('td');
+
+  if (activity.type === 'rounding') {
+    // Només visual: etiqueta amb valor arrodonit
+    const roundedValue = Math.round(activity.value * 100) / 100; // 2 decimals
+    const span = document.createElement('span');
+    span.className = 'rounding-label';
+    span.textContent = roundedValue;
+    td.appendChild(span);
+  } else if (activity.type === 'formula') {
+    td.textContent = activity.formula; // mostra fórmula normal
+  } else {
+    td.textContent = activity.value; // numeric simple
+  }
+
+  return td;
+}
+
+// ---------- Exemple: ús dins de la funció que pinta la taula ----------
+function renderNotesTable(students, activities) {
+  const notesTbody = document.getElementById('notesTbody');
+  notesTbody.innerHTML = '';
+
+  students.forEach(student => {
+    const tr = document.createElement('tr');
+
+    activities.forEach(activity => {
+      // cridem la nova funció
+      const td = renderCell(activity);
+      tr.appendChild(td);
+    });
+
+    notesTbody.appendChild(tr);
+  });
+}
