@@ -1367,3 +1367,25 @@ if (closeBtn) {
     container.classList.remove('mobile-open');
   });
 }
+
+function createActivityModal(){
+  const name = document.getElementById('modalActivityName').value.trim();
+  const category = document.getElementById('modalActivityCategory').value; // nova select
+  if(!name) return alert('Posa un nom');
+  
+  const ref = db.collection('activitats').doc();
+  ref.set({ 
+    nom: name, 
+    category: category || 'altres', // categoria per defecte
+    data: new Date().toISOString().split('T')[0], 
+    calcType:'numeric', 
+    formula:'' 
+  })
+  .then(()=> db.collection('classes').doc(currentClassId).update({ activitats: firebase.firestore.FieldValue.arrayUnion(ref.id) }))
+  .then(()=> {
+    closeModal('modalAddActivity');
+    document.getElementById('modalActivityName').value = '';
+    loadClassData();
+  }).catch(e=> alert('Error: '+e.message));
+}
+
