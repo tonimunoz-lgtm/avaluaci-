@@ -696,11 +696,18 @@ function renderNotesGrid() {
                     input.addEventListener('change', e => saveNote(studentId, actId, e.target.value));
                     input.addEventListener('input', () => applyCellColor(input));
                     applyCellColor(input);
-                  }
-
-                  td.appendChild(input);
-                  tr.appendChild(td);
-                });
+                 input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault(); // evita que la web interpreti Enter com un submit
+      const currentRow = input.closest('tr');
+      const nextRow = currentRow.nextElementSibling;
+      if (nextRow) {
+        const nextInput = nextRow.querySelector(`input[data-activity-id="${actId}"]`);
+        if (nextInput) nextInput.focus();
+      }
+    }
+  });
+}
 
                 // Mitjana alumne
                 const avgTd = document.createElement('td');
