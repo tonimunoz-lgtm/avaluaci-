@@ -1221,7 +1221,7 @@ async function exportExcel(){
     const header = ['Alumne', ...actDocs.map(a => a.exists ? a.data().nom : 'Sense nom'), 'Mitjana'];
     ws_data.push(header);
 
-    // Files alumnes
+    // Files alumnes.
     studentDocs.forEach(sdoc => {
       const notes = sdoc.exists ? sdoc.data().notes || {} : {};
       const row = [sdoc.exists ? sdoc.data().nom : 'Desconegut'];
