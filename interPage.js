@@ -1,12 +1,12 @@
 // interPage.js
 import React from "react";
-import { useNavigate } from "react-router-dom"; // si utilitzes react-router
+import { useNavigate } from "react-router-dom"; // assegura't de tenir react-router-dom
 
 const InterPage = () => {
   const navigate = useNavigate();
 
   const handleClick = () => {
-    navigate("/graella"); // Canvia "/graella" per la ruta real de la graella d'avaluació
+    navigate("/graella"); // Canvia aquesta ruta per la de la teva graella
   };
 
   return (
@@ -24,20 +24,21 @@ const styles = {
     justifyContent: "center",
     alignItems: "center",
     height: "100vh",
-    backgroundColor: "#fff",
+    backgroundColor: "#fff", // fons blanc
   },
   button: {
-    padding: "16px 32px",
-    fontSize: "18px",
-    fontWeight: "bold",
-    borderRadius: "12px",
-    border: "none",
-    cursor: "pointer",
-    backgroundColor: "#4f46e5", // exemple color
+    padding: "12px 24px",
+    fontSize: "16px",
+    fontWeight: "600",
+    borderRadius: "10px",
+    border: "2px solid #3b82f6", // blau similar als botons de classe
+    backgroundColor: "#3b82f6",
     color: "#fff",
+    cursor: "pointer",
     boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
     transition: "all 0.2s ease-in-out",
   },
 };
 
 export default InterPage;
+
