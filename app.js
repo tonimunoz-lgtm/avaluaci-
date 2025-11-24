@@ -21,7 +21,6 @@ let classStudents = [];
 let classActivities = [];
 let deleteMode = false;
 let currentCalcActivityId = null; // Activitat actual per fer càlculs
-let classConditionsFormula = ''; // guardar la fórmula de condicions globalment
 
 /* Elements */
 const loginScreen = document.getElementById('loginScreen');
@@ -503,6 +502,8 @@ function renderStudentsList(){
   });
 }
 /* ---------------- Notes Grid amb menú activitats ---------------- */
+let classConditionsFormula = ''; // guardar la fórmula de condicions globalment
+
 async function renderNotesGrid() {
   // Neteja taula
   notesThead.innerHTML = '';
