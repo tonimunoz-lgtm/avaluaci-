@@ -661,7 +661,7 @@ if (calculatedActs[id]?.calculated) {
 
   });
 
-  headRow.appendChild(th('Mitjana', 'text-right'));
+  headRow.appendChild(th('Condicions', 'text-right'));
   notesThead.appendChild(headRow);
 
   enableActivityDrag();
