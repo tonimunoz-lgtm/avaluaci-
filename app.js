@@ -679,7 +679,7 @@ function renderNotesGrid() {
                   td.className = 'border px-2 py-1';
 
                   if (calculatedActs[actId]) {
-                    td.style.backgroundColor = "#ffe4e6";
+                    td.style.backgroundColor = "#dbeafe";
                   }
 
                   const input = document.createElement('input');
