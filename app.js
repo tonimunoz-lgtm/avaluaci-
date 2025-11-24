@@ -547,9 +547,7 @@ if (calculatedActs[id]?.calculated) {
 
 lockIcon.addEventListener('click', async () => {
   try {
-    // Assegura que l'objecte existeixi abans d'assignar
     if (!calculatedActs[id]) calculatedActs[id] = { locked: false, calculated: false };
-
     const newLockState = !calculatedActs[id].locked;
 
     // Guardar a Firestore
@@ -561,24 +559,31 @@ lockIcon.addEventListener('click', async () => {
     lockIcon.innerHTML = newLockState ? '🔒' : '🔓';
     lockIcon.title = newLockState ? 'Activitat bloquejada' : 'Activitat desbloquejada';
 
-    // Bloquejar/desbloquejar inputs i reaplicar colors
+    calculatedActs[id].locked = newLockState;
+
+    // Actualitza cel·les manualment sense perdre colors ni valors
     document.querySelectorAll(`tr[data-student-id]`).forEach(tr => {
       const input = tr.querySelector(`input[data-activity-id="${id}"]`);
-      if(input) {
-        input.disabled = newLockState || calculatedActs[id].calculated;
-        applyCellColor(input); // Manté el color correcte segons la nota
+      if (!input) return;
+
+      // Bloquejar només si està bloquejat i no és calculada
+      input.disabled = newLockState && !calculatedActs[id].calculated;
+
+      // Reaplica color segons valor actual
+      applyCellColor(input);
+
+      // Si vols, pots actualitzar el valor calculat aquí
+      if (calculatedActs[id].calculated) {
+        // input.value = computeCalculatedNote(tr.dataset.studentId, id);
+        // applyCellColor(input);
       }
     });
-
-    // Actualitzar objecte local
-    calculatedActs[id].locked = newLockState;
 
   } catch(e) {
     console.error('Error canviant bloqueig:', e);
     alert('Error canviant bloqueig: ' + e.message);
   }
 });
-
 
     // Icona refrescar (només si és calculada)
     const refreshIcon = document.createElement('span');
