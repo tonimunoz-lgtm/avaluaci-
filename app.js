@@ -522,7 +522,7 @@ async function renderNotesGrid() {
   // Carrega activitats
   const actDocs = await Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()));
 
-  // --- Capçalera activitats amb candau i refresh ---
+  // Capçalera activitats amb candau i refresc
   actDocs.forEach(adoc => {
     const id = adoc.id;
     const name = adoc.exists ? (adoc.data().nom || 'Sense nom') : 'Desconegut';
@@ -544,35 +544,32 @@ async function renderNotesGrid() {
     lockIcon.addEventListener('click', async () => {
       try {
         const newLockState = !calculatedActs[id]?.locked;
-
         await db.collection('classes').doc(currentClassId).update({
           [`calculatedActivities.${id}.locked`]: newLockState
         });
-
         lockIcon.innerHTML = newLockState ? '🔒' : '🔓';
         lockIcon.title = newLockState ? 'Activitat bloquejada' : 'Activitat desbloquejada';
 
-        // Actualitza només l'atribut disabled, sense canviar colors
         document.querySelectorAll(`tr[data-student-id]`).forEach(tr => {
           const input = tr.querySelector(`input[data-activity-id="${id}"]`);
-          if(input) input.disabled = newLockState || calculatedActs[id]?.calculated;
+          if (input) input.disabled = newLockState || calculatedActs[id]?.calculated;
         });
 
         calculatedActs[id].locked = newLockState;
-
-      } catch(e) {
+      } catch (e) {
         console.error('Error canviant bloqueig:', e);
         alert('Error canviant bloqueig: ' + e.message);
       }
     });
 
-    // Icona refresh (només per calculades)
+    // Icona refresc per activitats calculades
     const refreshIcon = document.createElement('span');
     refreshIcon.innerHTML = '🔄';
     refreshIcon.title = 'Refrescar columna';
     refreshIcon.className = 'ml-2 cursor-pointer hidden';
     if (calculatedActs[id]?.calculated) refreshIcon.classList.remove('hidden');
-    refreshIcon.addEventListener('click', async (e) => {
+
+    refreshIcon.addEventListener('click', async e => {
       e.stopPropagation();
       const formulasRow = formulaTfoot.querySelector('.formulas-row');
       if (!formulasRow) return;
@@ -581,18 +578,20 @@ async function renderNotesGrid() {
       if (!formulaTd) return;
       const formulaText = formulaTd.textContent.trim();
       if (!formulaText) return alert('No hi ha cap fórmula aplicada a aquesta activitat.');
+
       try {
         await Promise.all(classStudents.map(async sid => {
           const result = await evalFormulaAsync(formulaText, sid);
           await saveNote(sid, id, result);
         }));
         renderNotesGrid();
-      } catch(err) {
+      } catch (err) {
         console.error('Error recalculant fórmula:', err);
         alert('Error recalculant la fórmula: ' + err.message);
       }
     });
 
+    // Menú activitats
     const menuDiv = document.createElement('div');
     menuDiv.className = 'relative';
     menuDiv.innerHTML = `
@@ -640,7 +639,7 @@ async function renderNotesGrid() {
           [`calculatedActivities.${id}`]: firebase.firestore.FieldValue.delete()
         });
         renderNotesGrid();
-      } catch(e) {
+      } catch (e) {
         console.error('Error netejant notes:', e);
         alert('Error netejant les notes: ' + e.message);
       }
@@ -669,7 +668,7 @@ async function renderNotesGrid() {
   notesThead.appendChild(headRow);
   enableActivityDrag();
 
-  if (classStudents.length === 0) {
+  if (!classStudents || classStudents.length === 0) {
     notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivities.length + 2}">No hi ha alumnes</td></tr>`;
     renderAverages();
     return;
@@ -681,7 +680,7 @@ async function renderNotesGrid() {
     const studentId = sdoc.id;
     const studentData = sdoc.exists ? sdoc.data() : { nom: 'Desconegut', notes: {} };
 
-    let tr = document.createElement('tr');
+    const tr = document.createElement('tr');
     tr.dataset.studentId = studentId;
 
     const tdName = document.createElement('td');
@@ -689,6 +688,7 @@ async function renderNotesGrid() {
     tdName.textContent = studentData.nom;
     tr.appendChild(tdName);
 
+    // Notes activitats
     actDocs.forEach(actDoc => {
       const actId = actDoc.id;
       const val = (studentData.notes && studentData.notes[actId] !== undefined) ? studentData.notes[actId] : '';
@@ -706,6 +706,8 @@ async function renderNotesGrid() {
 
       const isLocked = calculatedActs[actId]?.locked || calculatedActs[actId]?.calculated;
       input.disabled = isLocked;
+
+      // Manté colors segons valor
       applyCellColor(input);
 
       if (!isLocked) {
@@ -732,13 +734,19 @@ async function renderNotesGrid() {
     const condTd = document.createElement('td');
     condTd.className = 'border px-2 py-1 text-center font-semibold';
     condTd.dataset.studentId = studentId;
-    condTd.textContent = computeConditionForStudent(studentData); // Retorna text segons condicions
+    condTd.textContent = computeConditionForStudent(studentData); // Placeholder
     tr.appendChild(condTd);
 
     notesTbody.appendChild(tr);
   });
 
   renderAverages();
+}
+
+// --- Placeholder de condicions ---
+function computeConditionForStudent(studentData) {
+  // Retorna text buit temporalment
+  return '';
 }
 
 
