@@ -536,6 +536,44 @@ function renderNotesGrid() {
           const spanName = document.createElement('span');
           spanName.textContent = name;
 
+          // Candau
+  const lockIcon = document.createElement('span');
+  lockIcon.className = 'lock-icon cursor-pointer mr-1';
+  lockIcon.innerHTML = calculatedActs[id]?.locked ? '🔒' : '🔓';
+  lockIcon.title = calculatedActs[id]?.locked ? 'Activitat bloquejada' : 'Activitat desbloquejada';
+
+  lockIcon.addEventListener('click', async () => {
+    try {
+      const newLockState = !calculatedActs[id]?.locked;
+
+      // Guardar a Firestore
+      await db.collection('classes').doc(currentClassId).update({
+        [`calculatedActivities.${id}.locked`]: newLockState
+      });
+
+      // Actualitzar icona
+      lockIcon.innerHTML = newLockState ? '🔒' : '🔓';
+      lockIcon.title = newLockState ? 'Activitat bloquejada' : 'Activitat desbloquejada';
+
+      // Bloquejar/desbloquejar inputs
+      document.querySelectorAll(`tr[data-student-id]`).forEach(tr => {
+        const input = tr.querySelector(`input[data-activity-id="${id}"]`);
+        if(input) {
+          input.disabled = newLockState || calculatedActs[id]?.calculated;
+          input.style.backgroundColor = newLockState ? '#f0f0f0' : (calculatedActs[id]?.calculated ? '#a5c8ff' : 'white');
+        }
+      });
+
+      calculatedActs[id].locked = newLockState;
+
+    } catch(e) {
+      console.error('Error canviant bloqueig:', e);
+      alert('Error canviant bloqueig: ' + e.message);
+    }
+  });
+
+
+
           // Icona refrescar (només si és calculada)
           const refreshIcon = document.createElement('span');
           refreshIcon.innerHTML = '🔄';
@@ -583,7 +621,7 @@ function renderNotesGrid() {
               <button class="clear-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Netejar</button>
             </div>
           `;
-
+          container.prepend(lockIcon);
           container.appendChild(spanName);
           container.appendChild(refreshIcon);
           container.appendChild(menuDiv);
