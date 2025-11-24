@@ -1,5 +1,6 @@
 // app.js - lògica principal (modules)
 import { openModal, closeModal, confirmAction } from './modals.js';
+
 /* ---------------- FIREBASE CONFIG ---------------- */
 const firebaseConfig = {
   apiKey: "AIzaSyA0P7TWcEw9y9_13yqRhvsgWN5d3YKH7yo",
@@ -591,8 +592,8 @@ function renderNotesGrid() {
 
           // Capçalera color calculada
           if (calculatedActs[id]) {
-            thEl.style.backgroundColor = "#fecaca";
-            thEl.style.borderBottom = "3px solid #dc2626";
+            thEl.style.backgroundColor = "#dbeafe";
+            thEl.style.borderBottom = "3px solid #1d4ed8";
             thEl.style.color = "black";
             refreshIcon.classList.remove('hidden');
           }
@@ -678,25 +679,38 @@ function renderNotesGrid() {
                   td.className = 'border px-2 py-1';
 
                   if (calculatedActs[actId]) {
-                    td.style.backgroundColor = "#ffe4e6";
+                    td.style.backgroundColor = "#dbeafe";
                   }
 
                   const input = document.createElement('input');
-                  input.type = 'number';
-                  input.min = 0;
-                  input.max = 10;
-                  input.value = val;
-                  input.dataset.activityId = actId;
-                  input.className = 'table-input text-center rounded border p-1';
+input.type = 'number';
+input.min = 0;
+input.max = 10;
+input.value = val;
+input.dataset.activityId = actId;
+input.className = 'table-input text-center rounded border p-1';
 
-                  if (calculatedActs[actId]) {
-                    input.disabled = true;
-                    input.style.backgroundColor = "#fca5a5";
-                  } else {
-                    input.addEventListener('change', e => saveNote(studentId, actId, e.target.value));
-                    input.addEventListener('input', () => applyCellColor(input));
-                    applyCellColor(input);
-                  }
+if (calculatedActs[actId]) {
+  input.disabled = true;
+  input.style.backgroundColor = "#a5c8ff";
+} else {
+  input.addEventListener('change', e => saveNote(studentId, actId, e.target.value));
+  input.addEventListener('input', () => applyCellColor(input));
+  applyCellColor(input);
+
+  // Saltar a la fila de sota quan premem Enter
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault(); // evita que la web interpreti Enter com un submit
+      const currentRow = input.closest('tr');
+      const nextRow = currentRow.nextElementSibling;
+      if (nextRow) {
+        const nextInput = nextRow.querySelector(`input[data-activity-id="${actId}"]`);
+        if (nextInput) nextInput.focus();
+      }
+    }
+  });
+}
 
                   td.appendChild(input);
                   tr.appendChild(td);
@@ -768,10 +782,11 @@ function saveNote(studentId, activityId, value){
 
 function applyCellColor(inputEl){
   const v = Number(inputEl.value);
-  inputEl.classList.remove('bg-red-100','bg-yellow-100','bg-green-100');
+  inputEl.classList.remove('bg-purple-100','bg-red-100','bg-yellow-100','bg-green-100');
   if(inputEl.value === '' || isNaN(v)) return;
-  if(v < 5) inputEl.classList.add('bg-red-100');
-  else if(v < 7) inputEl.classList.add('bg-yellow-100');
+  if(v < 2.5) inputEl.classList.add('bg-red-100');
+  else if(v < 5) inputEl.classList.add('bg-yellow-100');  
+  else if(v < 7) inputEl.classList.add('bg-purple-100');
   else inputEl.classList.add('bg-green-100');
 }
 
