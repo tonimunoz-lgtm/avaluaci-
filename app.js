@@ -661,7 +661,23 @@ if (calculatedActs[id]?.calculated) {
 
   });
 
-  headRow.appendChild(th('Condicions', 'text-right'));
+  // --- Capçalera Condicions ---
+const condTh = th('');
+const condContainer = document.createElement('div');
+condContainer.className = 'flex items-center justify-between cursor-pointer';
+condContainer.textContent = 'Condicions';
+
+// Botó per obrir la calculadora
+const calcBtn = document.createElement('span');
+calcBtn.innerHTML = '⚙️';
+calcBtn.className = 'ml-2 cursor-pointer';
+calcBtn.title = 'Editar condicions';
+calcBtn.addEventListener('click', () => openConditionsCalculator());
+
+condContainer.appendChild(calcBtn);
+condTh.appendChild(condContainer);
+headRow.appendChild(condTh);
+
   notesThead.appendChild(headRow);
 
   enableActivityDrag();
