@@ -540,6 +540,10 @@ async function renderNotesGrid() {
     lockIcon.innerHTML = calculatedActs[id]?.locked ? '🔒' : '🔓';
     lockIcon.title = calculatedActs[id]?.locked ? 'Activitat bloquejada' : 'Activitat desbloquejada';
 
+if (calculatedActs[id]?.calculated) {
+  lockIcon.classList.add('hidden');
+}
+    
     lockIcon.addEventListener('click', async () => {
       try {
         const newLockState = !calculatedActs[id]?.locked;
