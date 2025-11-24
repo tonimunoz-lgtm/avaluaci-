@@ -692,7 +692,7 @@ input.className = 'table-input text-center rounded border p-1';
 
 if (calculatedActs[actId]) {
   input.disabled = true;
-  input.style.backgroundColor = "#1d4ed8";
+  input.style.backgroundColor = "#a5c8ff";
 } else {
   input.addEventListener('change', e => saveNote(studentId, actId, e.target.value));
   input.addEventListener('input', () => applyCellColor(input));
