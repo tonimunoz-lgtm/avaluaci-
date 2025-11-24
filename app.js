@@ -708,7 +708,7 @@ if (calculatedActs[id]?.calculated) {
       const isLocked = calculatedActs[actId]?.locked || calculatedActs[actId]?.calculated;
       if (isLocked) {
         input.disabled = true;
-        input.style.backgroundColor = calculatedActs[actId]?.locked ? '#f0f0f0' : '#a5c8ff';
+        applyCellColor(input);
       } else {
         input.addEventListener('change', e => saveNote(studentId, actId, e.target.value));
         input.addEventListener('input', () => applyCellColor(input));
