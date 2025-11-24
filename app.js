@@ -791,11 +791,11 @@ function saveNote(studentId, activityId, value){
 
 function applyCellColor(inputEl){
   const v = Number(inputEl.value);
-  inputEl.classList.remove('bg-purple-100','bg-red-100','bg-yellow-100','bg-green-100');
+  inputEl.classList.remove('bg-red-200','bg-red-100','bg-yellow-100','bg-green-100');
   if(inputEl.value === '' || isNaN(v)) return;
-  if(v < 2.5) inputEl.classList.add('bg-red-100');
-  else if(v < 5) inputEl.classList.add('bg-yellow-100');  
-  else if(v < 7) inputEl.classList.add('bg-purple-100');
+  if(v < 2.5) inputEl.classList.add('bg-red-200');
+  else if(v < 5) inputEl.classList.add('bg-red-100');  
+  else if(v < 7) inputEl.classList.add('bg-yellow-100');
   else inputEl.classList.add('bg-green-100');
 }
 
