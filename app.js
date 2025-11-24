@@ -705,26 +705,33 @@ if (calculatedActs[id]?.calculated) {
       input.dataset.activityId = actId;
       input.className = 'table-input text-center rounded border p-1';
 
-      const isLocked = calculatedActs[actId]?.locked || calculatedActs[actId]?.calculated;
-      if (isLocked) {
-        input.disabled = true;
-        applyCellColor(input);
-      } else {
-        input.addEventListener('change', e => saveNote(studentId, actId, e.target.value));
-        input.addEventListener('input', () => applyCellColor(input));
-        applyCellColor(input);
-        input.addEventListener('keydown', e => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            const currentRow = input.closest('tr');
-            const nextRow = currentRow.nextElementSibling;
-            if (nextRow) {
-              const nextInput = nextRow.querySelector(`input[data-activity-id="${actId}"]`);
-              if (nextInput) nextInput.focus();
-            }
-          }
-        });
+     const isLocked = calculatedActs[actId]?.locked || calculatedActs[actId]?.calculated;
+input.disabled = isLocked;
+
+// aplicar color inicial
+applyCellColor(input);
+
+if (!isLocked) {
+  input.addEventListener('change', async e => {
+    const value = e.target.value;
+    await saveNote(studentId, actId, value);
+    applyCellColor(input); // assegurem que el color s'actualitza després de guardar
+  });
+
+  input.addEventListener('input', () => applyCellColor(input));
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const currentRow = input.closest('tr');
+      const nextRow = currentRow.nextElementSibling;
+      if (nextRow) {
+        const nextInput = nextRow.querySelector(`input[data-activity-id="${actId}"]`);
+        if (nextInput) nextInput.focus();
       }
+    }
+  });
+}
 
       td.appendChild(input);
       tr.appendChild(td);
