@@ -562,7 +562,6 @@ if (calculatedActs[id]?.calculated) {
           const input = tr.querySelector(`input[data-activity-id="${id}"]`);
           if(input) {
             input.disabled = newLockState || calculatedActs[id]?.calculated;
-            input.style.backgroundColor = newLockState ? '#f0f0f0' : (calculatedActs[id]?.calculated ? '#a5c8ff' : 'white');
           }
         });
 
