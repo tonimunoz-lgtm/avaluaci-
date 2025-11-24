@@ -502,6 +502,7 @@ function renderStudentsList(){
   });
 }
 /* ---------------- Notes Grid amb menú activitats ---------------- */
+let classConditionsFormula = ''; // guardar la fórmula de condicions globalment
 async function renderNotesGrid() {
   // Neteja taula
   notesThead.innerHTML = '';
