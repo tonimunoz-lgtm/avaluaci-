@@ -51,11 +51,6 @@ const notesTbody = document.getElementById('notesTbody');
 const notesTfoot = document.getElementById('notesTfoot');
 const formulaTfoot = document.getElementById('formulaTfoot');
 
-const classData = classDoc.data();
-const calculatedActs = classData.calculatedActivities || {};
-const classConditionsFormula = classData.conditionsFormula || '';
-
-
 const modalCreateClassBtn = document.getElementById('modalCreateClassBtn');
 const modalAddStudentBtn = document.getElementById('modalAddStudentBtn');
 const modalAddActivityBtn = document.getElementById('modalAddActivityBtn');
@@ -1490,3 +1485,6 @@ function openConditionsCalculator() {
   });
 }
 
+const classData = classDoc.data();
+const calculatedActs = classData.calculatedActivities || {};
+const classConditionsFormula = classData.conditionsFormula || '';
