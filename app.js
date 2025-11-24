@@ -502,6 +502,8 @@ function renderStudentsList(){
   });
 }
 /* ---------------- Notes Grid amb menú activitats ---------------- */
+let classConditionsFormula = ''; // guardar la fórmula de condicions globalment
+
 async function renderNotesGrid() {
   // Neteja taula
   notesThead.innerHTML = '';
@@ -518,6 +520,7 @@ async function renderNotesGrid() {
   if (!classDoc.exists) return;
   const classData = classDoc.data();
   const calculatedActs = classData.calculatedActivities || {};
+  classConditionsFormula = classData.conditionsFormula || '';
 
   // Carrega activitats
   const actDocs = await Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()));
@@ -540,67 +543,56 @@ async function renderNotesGrid() {
     lockIcon.innerHTML = calculatedActs[id]?.locked ? '🔒' : '🔓';
     lockIcon.title = calculatedActs[id]?.locked ? 'Activitat bloquejada' : 'Activitat desbloquejada';
 
-if (calculatedActs[id]?.calculated) {
-  lockIcon.classList.add('hidden');
-}
-    
+    if (calculatedActs[id]?.calculated) lockIcon.classList.add('hidden');
+
     lockIcon.addEventListener('click', async () => {
       try {
         const newLockState = !calculatedActs[id]?.locked;
-
-        // Guardar a Firestore
         await db.collection('classes').doc(currentClassId).update({
           [`calculatedActivities.${id}.locked`]: newLockState
         });
-
-        // Actualitzar icona
         lockIcon.innerHTML = newLockState ? '🔒' : '🔓';
         lockIcon.title = newLockState ? 'Activitat bloquejada' : 'Activitat desbloquejada';
-
-        // Bloquejar/desbloquejar inputs
         document.querySelectorAll(`tr[data-student-id]`).forEach(tr => {
           const input = tr.querySelector(`input[data-activity-id="${id}"]`);
-          if(input) {
-            input.disabled = newLockState || calculatedActs[id]?.calculated;
-          }
+          if(input) input.disabled = newLockState || calculatedActs[id]?.calculated;
         });
-
-        // Actualitzar objecte local
         calculatedActs[id].locked = newLockState;
-
       } catch(e) {
         console.error('Error canviant bloqueig:', e);
         alert('Error canviant bloqueig: ' + e.message);
       }
     });
 
-    // Icona refrescar (només si és calculada)
+    // Icona refrescar
     const refreshIcon = document.createElement('span');
     refreshIcon.innerHTML = '🔄';
     refreshIcon.title = 'Refrescar columna';
     refreshIcon.className = 'ml-2 cursor-pointer hidden';
 
-    refreshIcon.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const formulasRow = formulaTfoot.querySelector('.formulas-row');
-      if (!formulasRow) return;
-      const idx = Array.from(headRow.children).indexOf(thEl);
-      const formulaTd = formulasRow.children[idx];
-      if (!formulaTd) return;
-      const formulaText = formulaTd.textContent.trim();
-      if (!formulaText) return alert('No hi ha cap fórmula aplicada a aquesta activitat.');
-
-      try {
-        await Promise.all(classStudents.map(async sid => {
-          const result = await evalFormulaAsync(formulaText, sid);
-          await saveNote(sid, id, result);
-        }));
-        renderNotesGrid();
-      } catch(err) {
-        console.error('Error recalculant fórmula:', err);
-        alert('Error recalculant la fórmula: ' + err.message);
-      }
-    });
+    if (calculatedActs[id]?.calculated) {
+      refreshIcon.classList.remove('hidden');
+      refreshIcon.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const formulasRow = formulaTfoot.querySelector('.formulas-row');
+        if (!formulasRow) return;
+        const idx = Array.from(headRow.children).indexOf(thEl);
+        const formulaTd = formulasRow.children[idx];
+        if (!formulaTd) return;
+        const formulaText = formulaTd.textContent.trim();
+        if (!formulaText) return alert('No hi ha cap fórmula aplicada a aquesta activitat.');
+        try {
+          await Promise.all(classStudents.map(async sid => {
+            const result = await evalFormulaAsync(formulaText, sid);
+            await saveNote(sid, id, result);
+          }));
+          renderNotesGrid();
+        } catch(err) {
+          console.error('Error recalculant fórmula:', err);
+          alert('Error recalculant la fórmula: ' + err.message);
+        }
+      });
+    }
 
     const menuDiv = document.createElement('div');
     menuDiv.className = 'relative';
@@ -625,7 +617,6 @@ if (calculatedActs[id]?.calculated) {
       thEl.style.backgroundColor = "#dbeafe";
       thEl.style.borderBottom = "3px solid #1d4ed8";
       thEl.style.color = "black";
-      refreshIcon.classList.remove('hidden');
     }
 
     const menuBtn = menuDiv.querySelector('.menu-btn');
@@ -658,26 +649,23 @@ if (calculatedActs[id]?.calculated) {
 
     menuDiv.querySelector('.delete-btn').addEventListener('click', () => removeActivity(id));
     menuDiv.querySelector('.calc-btn').addEventListener('click', () => openCalcModal(id));
-
   });
 
   // --- Capçalera Condicions ---
-const condTh = th('');
-const condContainer = document.createElement('div');
-condContainer.className = 'flex items-center justify-between cursor-pointer';
-condContainer.textContent = 'Condicions';
+  const condTh = th('');
+  const condContainer = document.createElement('div');
+  condContainer.className = 'flex items-center justify-between cursor-pointer';
+  condContainer.textContent = 'Condicions';
 
-// Botó per obrir la calculadora
-const calcBtn = document.createElement('span');
-calcBtn.innerHTML = '⚙️';
-calcBtn.className = 'ml-2 cursor-pointer';
-calcBtn.title = 'Editar condicions';
-calcBtn.addEventListener('click', () => openConditionsCalculator());
+  const calcBtn = document.createElement('span');
+  calcBtn.innerHTML = '⚙️';
+  calcBtn.className = 'ml-2 cursor-pointer';
+  calcBtn.title = 'Editar condicions';
+  calcBtn.addEventListener('click', () => openConditionsCalculatorVisual());
 
-condContainer.appendChild(calcBtn);
-condTh.appendChild(condContainer);
-headRow.appendChild(condTh);
-
+  condContainer.appendChild(calcBtn);
+  condTh.appendChild(condContainer);
+  headRow.appendChild(condTh);
   notesThead.appendChild(headRow);
 
   enableActivityDrag();
@@ -694,7 +682,7 @@ headRow.appendChild(condTh);
     const studentId = sdoc.id;
     const studentData = sdoc.exists ? sdoc.data() : { nom: 'Desconegut', notes: {} };
 
-    let tr = document.createElement('tr');
+    const tr = document.createElement('tr');
     tr.dataset.studentId = studentId;
 
     const tdName = document.createElement('td');
@@ -705,13 +693,10 @@ headRow.appendChild(condTh);
     actDocs.forEach(actDoc => {
       const actId = actDoc.id;
       const val = (studentData.notes && studentData.notes[actId] !== undefined) ? studentData.notes[actId] : '';
-
       const td = document.createElement('td');
       td.className = 'border px-2 py-1';
 
-      if (calculatedActs[actId]?.calculated) {
-        td.style.backgroundColor = "#dbeafe";
-      }
+      if (calculatedActs[actId]?.calculated) td.style.backgroundColor = "#dbeafe";
 
       const input = document.createElement('input');
       input.type = 'number';
@@ -722,38 +707,23 @@ headRow.appendChild(condTh);
       input.className = 'table-input text-center rounded border p-1';
 
       const isLocked = calculatedActs[actId]?.locked || calculatedActs[actId]?.calculated;
-      if (isLocked) {
-        input.disabled = true;
-        applyCellColor(input);
-      } else {
+      if (isLocked) input.disabled = true;
+      else {
         input.addEventListener('change', e => saveNote(studentId, actId, e.target.value));
         input.addEventListener('input', () => applyCellColor(input));
         applyCellColor(input);
-        input.addEventListener('keydown', e => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            const currentRow = input.closest('tr');
-            const nextRow = currentRow.nextElementSibling;
-            if (nextRow) {
-              const nextInput = nextRow.querySelector(`input[data-activity-id="${actId}"]`);
-              if (nextInput) nextInput.focus();
-            }
-          }
-        });
       }
 
       td.appendChild(input);
       tr.appendChild(td);
     });
 
+    // Cel·la Condicions
     const condTd = document.createElement('td');
-condTd.className = 'border px-2 py-1 text-center font-semibold';
-condTd.dataset.studentId = studentId;
-
-// Aquesta funció retornarà el text segons les condicions
-condTd.textContent = applyStudentConditions(studentData); 
-
-tr.appendChild(condTd);
+    condTd.className = 'border px-2 py-1 text-center font-semibold';
+    condTd.dataset.studentId = studentId;
+    condTd.textContent = applyStudentConditions(studentData);
+    tr.appendChild(condTd);
 
     notesTbody.appendChild(tr);
   });
@@ -761,6 +731,59 @@ tr.appendChild(condTd);
   renderAverages();
 }
 
+// --- Calculadora visual de condicions ---
+function openConditionsCalculatorVisual() {
+  const modal = document.createElement('div');
+  modal.className = 'fixed inset-0 bg-black bg-opacity-30 flex justify-center items-center z-50';
+  modal.innerHTML = `
+    <div class="bg-white p-4 rounded shadow w-96">
+      <h2 class="font-bold mb-2">Calculadora de condicions</h2>
+      <textarea id="conditionsInput" class="border p-2 w-full h-32 mb-2"></textarea>
+      <div class="grid grid-cols-5 gap-1 mb-2">
+        <button class="btn">+</button>
+        <button class="btn">-</button>
+        <button class="btn">i</button>
+        <button class="btn">o</button>
+        <button class="btn"><</button>
+        <button class="btn">></button>
+        <button class="btn">=</button>
+      </div>
+      <div class="mt-2 flex justify-end">
+        <button id="saveConditionsBtn" class="bg-blue-500 text-white px-3 py-1 rounded">Desar</button>
+        <button id="cancelConditionsBtn" class="ml-2 bg-gray-300 px-3 py-1 rounded">Cancel·lar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  const input = modal.querySelector('#conditionsInput');
+  input.value = classConditionsFormula || '';
+
+  modal.querySelectorAll('.btn').forEach(btn => {
+    btn.addEventListener('click', () => input.value += btn.textContent);
+  });
+
+  modal.querySelector('#saveConditionsBtn').addEventListener('click', async () => {
+    classConditionsFormula = input.value.trim();
+    await db.collection('classes').doc(currentClassId).update({ conditionsFormula: classConditionsFormula });
+    renderNotesGrid();
+    document.body.removeChild(modal);
+  });
+
+  modal.querySelector('#cancelConditionsBtn').addEventListener('click', () => document.body.removeChild(modal));
+}
+
+// --- Aplica condicions per cada alumne ---
+function applyStudentConditions(studentData) {
+  if (!classConditionsFormula) return '';
+  try {
+    const notes = studentData.notes || {};
+    return new Function('notes', `return ${classConditionsFormula};`)(notes);
+  } catch(e) {
+    console.error('Error aplicant condicions', e);
+    return '';
+  }
+}
 
 
 // Funció per actualitzar cel·les calculades sense recrear tota la taula
@@ -1434,57 +1457,3 @@ if (closeBtn) {
     container.classList.remove('mobile-open');
   });
 }
-
-//--------------funcio per aplicar condicions
-function applyStudentConditions(studentData) {
-  if (!classConditionsFormula) return ''; // classConditionsFormula: string amb la condició
-
-  try {
-    const notes = studentData.notes || {};
-    // Exemple: classConditionsFormula = "(notes.tema1 <= 2.5 || notes.tema2 <= 2.5) ? 'No fa mitjana' : ''"
-    const result = new Function('notes', `return ${classConditionsFormula};`)(notes);
-    return result;
-  } catch(e) {
-    console.error('Error aplicant condicions', e);
-    return '';
-  }
-}
-
-//----------crear calculadora de condicions
-function openConditionsCalculator() {
-  // Exemple senzill de modal
-  const modal = document.createElement('div');
-  modal.className = 'fixed inset-0 bg-black bg-opacity-30 flex justify-center items-center z-50';
-  modal.innerHTML = `
-    <div class="bg-white p-4 rounded shadow w-96">
-      <h2 class="font-bold mb-2">Calculadora de condicions</h2>
-      <textarea id="conditionsInput" class="border p-2 w-full h-32"></textarea>
-      <div class="mt-2 flex justify-end">
-        <button id="saveConditionsBtn" class="bg-blue-500 text-white px-3 py-1 rounded">Desar</button>
-        <button id="cancelConditionsBtn" class="ml-2 bg-gray-300 px-3 py-1 rounded">Cancel·lar</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(modal);
-
-  const input = modal.querySelector('#conditionsInput');
-  input.value = classConditionsFormula || '';
-
-  modal.querySelector('#saveConditionsBtn').addEventListener('click', async () => {
-    classConditionsFormula = input.value.trim();
-    // Guardar a Firestore
-    await db.collection('classes').doc(currentClassId).update({
-      conditionsFormula: classConditionsFormula
-    });
-    renderNotesGrid();
-    document.body.removeChild(modal);
-  });
-
-  modal.querySelector('#cancelConditionsBtn').addEventListener('click', () => {
-    document.body.removeChild(modal);
-  });
-}
-
-const classData = classDoc.data();
-const calculatedActs = classData.calculatedActivities || {};
-const classConditionsFormula = classData.conditionsFormula || '';
