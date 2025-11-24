@@ -51,6 +51,11 @@ const notesTbody = document.getElementById('notesTbody');
 const notesTfoot = document.getElementById('notesTfoot');
 const formulaTfoot = document.getElementById('formulaTfoot');
 
+const classData = classDoc.data();
+const calculatedActs = classData.calculatedActivities || {};
+const classConditionsFormula = classData.conditionsFormula || '';
+
+
 const modalCreateClassBtn = document.getElementById('modalCreateClassBtn');
 const modalAddStudentBtn = document.getElementById('modalAddStudentBtn');
 const modalAddActivityBtn = document.getElementById('modalAddActivityBtn');
@@ -746,10 +751,14 @@ headRow.appendChild(condTh);
       tr.appendChild(td);
     });
 
-    const avgTd = document.createElement('td');
-    avgTd.className = 'border px-2 py-1 text-right font-semibold';
-    avgTd.textContent = computeStudentAverageText(studentData);
-    tr.appendChild(avgTd);
+    const condTd = document.createElement('td');
+condTd.className = 'border px-2 py-1 text-center font-semibold';
+condTd.dataset.studentId = studentId;
+
+// Aquesta funció retornarà el text segons les condicions
+condTd.textContent = applyStudentConditions(studentData); 
+
+tr.appendChild(condTd);
 
     notesTbody.appendChild(tr);
   });
@@ -1430,3 +1439,54 @@ if (closeBtn) {
     container.classList.remove('mobile-open');
   });
 }
+
+//--------------funcio per aplicar condicions
+function applyStudentConditions(studentData) {
+  if (!classConditionsFormula) return ''; // classConditionsFormula: string amb la condició
+
+  try {
+    const notes = studentData.notes || {};
+    // Exemple: classConditionsFormula = "(notes.tema1 <= 2.5 || notes.tema2 <= 2.5) ? 'No fa mitjana' : ''"
+    const result = new Function('notes', `return ${classConditionsFormula};`)(notes);
+    return result;
+  } catch(e) {
+    console.error('Error aplicant condicions', e);
+    return '';
+  }
+}
+
+//----------crear calculadora de condicions
+function openConditionsCalculator() {
+  // Exemple senzill de modal
+  const modal = document.createElement('div');
+  modal.className = 'fixed inset-0 bg-black bg-opacity-30 flex justify-center items-center z-50';
+  modal.innerHTML = `
+    <div class="bg-white p-4 rounded shadow w-96">
+      <h2 class="font-bold mb-2">Calculadora de condicions</h2>
+      <textarea id="conditionsInput" class="border p-2 w-full h-32"></textarea>
+      <div class="mt-2 flex justify-end">
+        <button id="saveConditionsBtn" class="bg-blue-500 text-white px-3 py-1 rounded">Desar</button>
+        <button id="cancelConditionsBtn" class="ml-2 bg-gray-300 px-3 py-1 rounded">Cancel·lar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  const input = modal.querySelector('#conditionsInput');
+  input.value = classConditionsFormula || '';
+
+  modal.querySelector('#saveConditionsBtn').addEventListener('click', async () => {
+    classConditionsFormula = input.value.trim();
+    // Guardar a Firestore
+    await db.collection('classes').doc(currentClassId).update({
+      conditionsFormula: classConditionsFormula
+    });
+    renderNotesGrid();
+    document.body.removeChild(modal);
+  });
+
+  modal.querySelector('#cancelConditionsBtn').addEventListener('click', () => {
+    document.body.removeChild(modal);
+  });
+}
+
