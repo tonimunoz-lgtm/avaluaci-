@@ -522,7 +522,7 @@ async function renderNotesGrid() {
   // Carrega activitats
   const actDocs = await Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()));
 
-  // --- Capçalera activitats amb icona refresh i candau ---
+  // Capçalera activitats amb icona refresh i candau
   actDocs.forEach(adoc => {
     const id = adoc.id;
     const name = adoc.exists ? (adoc.data().nom || 'Sense nom') : 'Desconegut';
@@ -539,8 +539,11 @@ async function renderNotesGrid() {
     lockIcon.className = 'lock-icon cursor-pointer mr-1';
     lockIcon.innerHTML = calculatedActs[id]?.locked ? '🔒' : '🔓';
     lockIcon.title = calculatedActs[id]?.locked ? 'Activitat bloquejada' : 'Activitat desbloquejada';
-    if (calculatedActs[id]?.calculated) lockIcon.classList.add('hidden');
 
+if (calculatedActs[id]?.calculated) {
+  lockIcon.classList.add('hidden');
+}
+    
     lockIcon.addEventListener('click', async () => {
       try {
         const newLockState = !calculatedActs[id]?.locked;
@@ -557,11 +560,12 @@ async function renderNotesGrid() {
         // Bloquejar/desbloquejar inputs
         document.querySelectorAll(`tr[data-student-id]`).forEach(tr => {
           const input = tr.querySelector(`input[data-activity-id="${id}"]`);
-          if (input) input.disabled = newLockState || calculatedActs[id]?.calculated;
+          if(input) {
+            input.disabled = newLockState || calculatedActs[id]?.calculated;
+          }
         });
 
-        // **Assegurar objecte existent**
-        if (!calculatedActs[id]) calculatedActs[id] = {};
+        // Actualitzar objecte local
         calculatedActs[id].locked = newLockState;
 
       } catch(e) {
@@ -570,12 +574,11 @@ async function renderNotesGrid() {
       }
     });
 
-    // Icona refrescar (només per calculades)
+    // Icona refrescar (només si és calculada)
     const refreshIcon = document.createElement('span');
     refreshIcon.innerHTML = '🔄';
     refreshIcon.title = 'Refrescar columna';
     refreshIcon.className = 'ml-2 cursor-pointer hidden';
-    if (calculatedActs[id]?.calculated) refreshIcon.classList.remove('hidden');
 
     refreshIcon.addEventListener('click', async (e) => {
       e.stopPropagation();
@@ -592,7 +595,7 @@ async function renderNotesGrid() {
           const result = await evalFormulaAsync(formulaText, sid);
           await saveNote(sid, id, result);
         }));
-        updateCalculatedCells(); // només actualitza cel·les calculades sense recrear tota la taula
+        renderNotesGrid();
       } catch(err) {
         console.error('Error recalculant fórmula:', err);
         alert('Error recalculant la fórmula: ' + err.message);
@@ -622,6 +625,7 @@ async function renderNotesGrid() {
       thEl.style.backgroundColor = "#dbeafe";
       thEl.style.borderBottom = "3px solid #1d4ed8";
       thEl.style.color = "black";
+      refreshIcon.classList.remove('hidden');
     }
 
     const menuBtn = menuDiv.querySelector('.menu-btn');
@@ -654,6 +658,7 @@ async function renderNotesGrid() {
 
     menuDiv.querySelector('.delete-btn').addEventListener('click', () => removeActivity(id));
     menuDiv.querySelector('.calc-btn').addEventListener('click', () => openCalcModal(id));
+
   });
 
   headRow.appendChild(th('Mitjana', 'text-right'));
@@ -673,7 +678,7 @@ async function renderNotesGrid() {
     const studentId = sdoc.id;
     const studentData = sdoc.exists ? sdoc.data() : { nom: 'Desconegut', notes: {} };
 
-    const tr = document.createElement('tr');
+    let tr = document.createElement('tr');
     tr.dataset.studentId = studentId;
 
     const tdName = document.createElement('td');
@@ -688,6 +693,10 @@ async function renderNotesGrid() {
       const td = document.createElement('td');
       td.className = 'border px-2 py-1';
 
+      if (calculatedActs[actId]?.calculated) {
+        td.style.backgroundColor = "#dbeafe";
+      }
+
       const input = document.createElement('input');
       input.type = 'number';
       input.min = 0;
@@ -697,12 +706,13 @@ async function renderNotesGrid() {
       input.className = 'table-input text-center rounded border p-1';
 
       const isLocked = calculatedActs[actId]?.locked || calculatedActs[actId]?.calculated;
-      input.disabled = isLocked;
-      applyCellColor(input); // mantenim colors segons valor
-
-      if (!isLocked) {
+      if (isLocked) {
+        input.disabled = true;
+        input.style.backgroundColor = calculatedActs[actId]?.locked ? '#f0f0f0' : '#a5c8ff';
+      } else {
         input.addEventListener('change', e => saveNote(studentId, actId, e.target.value));
         input.addEventListener('input', () => applyCellColor(input));
+        applyCellColor(input);
         input.addEventListener('keydown', e => {
           if (e.key === 'Enter') {
             e.preventDefault();
@@ -731,6 +741,8 @@ async function renderNotesGrid() {
   renderAverages();
 }
 
+
+
 // Funció per actualitzar cel·les calculades sense recrear tota la taula
 function updateCalculatedCells() {
   db.collection('classes').doc(currentClassId).get().then(doc => {
@@ -749,12 +761,11 @@ function updateCalculatedCells() {
         const val = computeCalculatedNote(sid, aid); // funció que calcula nota
         input.value = val;
         input.disabled = true;
-        applyCellColor(input); // mantenim colors
+        input.style.backgroundColor = "#fca5a5";
       });
     });
   });
 }
-
 
 
 
@@ -780,11 +791,11 @@ function saveNote(studentId, activityId, value){
 
 function applyCellColor(inputEl){
   const v = Number(inputEl.value);
-  inputEl.classList.remove('bg-pink-100','bg-red-100','bg-yellow-100','bg-green-100');
+  inputEl.classList.remove('bg-purple-100','bg-red-100','bg-yellow-100','bg-green-100');
   if(inputEl.value === '' || isNaN(v)) return;
   if(v < 2.5) inputEl.classList.add('bg-red-100');
-  else if(v < 5) inputEl.classList.add('bg-pink-100');  
-  else if(v < 7) inputEl.classList.add('bg-yellow-100');
+  else if(v < 5) inputEl.classList.add('bg-yellow-100');  
+  else if(v < 7) inputEl.classList.add('bg-purple-100');
   else inputEl.classList.add('bg-green-100');
 }
 
