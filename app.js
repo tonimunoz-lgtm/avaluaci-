@@ -534,56 +534,45 @@ async function renderNotesGrid() {
     const spanName = document.createElement('span');
     spanName.textContent = name;
 
-   // Candau
-const lockIcon = document.createElement('span');
-lockIcon.className = 'lock-icon cursor-pointer mr-1';
-lockIcon.innerHTML = calculatedActs[id]?.locked ? '🔒' : '🔓';
-lockIcon.title = calculatedActs[id]?.locked ? 'Activitat bloquejada' : 'Activitat desbloquejada';
+    // Candau
+    const lockIcon = document.createElement('span');
+    lockIcon.className = 'lock-icon cursor-pointer mr-1';
+    lockIcon.innerHTML = calculatedActs[id]?.locked ? '🔒' : '🔓';
+    lockIcon.title = calculatedActs[id]?.locked ? 'Activitat bloquejada' : 'Activitat desbloquejada';
 
-// Si és activitat calculada, amaga el candau
 if (calculatedActs[id]?.calculated) {
   lockIcon.classList.add('hidden');
 }
+    
+    lockIcon.addEventListener('click', async () => {
+      try {
+        const newLockState = !calculatedActs[id]?.locked;
 
-lockIcon.addEventListener('click', async () => {
-  try {
-    if (!calculatedActs[id]) calculatedActs[id] = { locked: false, calculated: false };
-    const newLockState = !calculatedActs[id].locked;
+        // Guardar a Firestore
+        await db.collection('classes').doc(currentClassId).update({
+          [`calculatedActivities.${id}.locked`]: newLockState
+        });
 
-    // Guardar a Firestore
-    await db.collection('classes').doc(currentClassId).update({
-      [`calculatedActivities.${id}.locked`]: newLockState
-    });
+        // Actualitzar icona
+        lockIcon.innerHTML = newLockState ? '🔒' : '🔓';
+        lockIcon.title = newLockState ? 'Activitat bloquejada' : 'Activitat desbloquejada';
 
-    // Actualitzar icona
-    lockIcon.innerHTML = newLockState ? '🔒' : '🔓';
-    lockIcon.title = newLockState ? 'Activitat bloquejada' : 'Activitat desbloquejada';
+        // Bloquejar/desbloquejar inputs
+        document.querySelectorAll(`tr[data-student-id]`).forEach(tr => {
+          const input = tr.querySelector(`input[data-activity-id="${id}"]`);
+          if(input) {
+            input.disabled = newLockState || calculatedActs[id]?.calculated;
+          }
+        });
 
-    calculatedActs[id].locked = newLockState;
+        // Actualitzar objecte local
+        calculatedActs[id].locked = newLockState;
 
-    // Actualitza cel·les manualment sense perdre colors ni valors
-    document.querySelectorAll(`tr[data-student-id]`).forEach(tr => {
-      const input = tr.querySelector(`input[data-activity-id="${id}"]`);
-      if (!input) return;
-
-      // Bloquejar només si està bloquejat i no és calculada
-      input.disabled = newLockState && !calculatedActs[id].calculated;
-
-      // Reaplica color segons valor actual
-      applyCellColor(input);
-
-      // Si vols, pots actualitzar el valor calculat aquí
-      if (calculatedActs[id].calculated) {
-        // input.value = computeCalculatedNote(tr.dataset.studentId, id);
-        // applyCellColor(input);
+      } catch(e) {
+        console.error('Error canviant bloqueig:', e);
+        alert('Error canviant bloqueig: ' + e.message);
       }
     });
-
-  } catch(e) {
-    console.error('Error canviant bloqueig:', e);
-    alert('Error canviant bloqueig: ' + e.message);
-  }
-});
 
     // Icona refrescar (només si és calculada)
     const refreshIcon = document.createElement('span');
@@ -716,33 +705,26 @@ lockIcon.addEventListener('click', async () => {
       input.dataset.activityId = actId;
       input.className = 'table-input text-center rounded border p-1';
 
-     const isLocked = calculatedActs[actId]?.locked || calculatedActs[actId]?.calculated;
-input.disabled = isLocked;
-
-// aplicar color inicial
-applyCellColor(input);
-
-if (!isLocked) {
-  input.addEventListener('change', async e => {
-    const value = e.target.value;
-    await saveNote(studentId, actId, value);
-    applyCellColor(input); // assegurem que el color s'actualitza després de guardar
-  });
-
-  input.addEventListener('input', () => applyCellColor(input));
-
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const currentRow = input.closest('tr');
-      const nextRow = currentRow.nextElementSibling;
-      if (nextRow) {
-        const nextInput = nextRow.querySelector(`input[data-activity-id="${actId}"]`);
-        if (nextInput) nextInput.focus();
+      const isLocked = calculatedActs[actId]?.locked || calculatedActs[actId]?.calculated;
+      if (isLocked) {
+        input.disabled = true;
+        applyCellColor(input);
+      } else {
+        input.addEventListener('change', e => saveNote(studentId, actId, e.target.value));
+        input.addEventListener('input', () => applyCellColor(input));
+        applyCellColor(input);
+        input.addEventListener('keydown', e => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            const currentRow = input.closest('tr');
+            const nextRow = currentRow.nextElementSibling;
+            if (nextRow) {
+              const nextInput = nextRow.querySelector(`input[data-activity-id="${actId}"]`);
+              if (nextInput) nextInput.focus();
+            }
+          }
+        });
       }
-    }
-  });
-}
 
       td.appendChild(input);
       tr.appendChild(td);
