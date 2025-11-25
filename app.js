@@ -742,6 +742,12 @@ await renderNotesGrid();
       // Estat bloquejat si és calculada o hi ha lock
       const isLocked = !!(calculatedActs[actId]?.locked) || !!(calculatedActs[actId]?.calculated);
       input.disabled = isLocked;
+      // 🔥 IMPORTANT: Afegir la classe visual persistent
+if (isLocked) {
+    input.classList.add('blocked-cell');
+} else {
+    input.classList.remove('blocked-cell');
+}
 
       // Reaplica color sempre (això evita que quedi en gris)
       applyCellColor(input);
