@@ -693,7 +693,7 @@ await renderNotesGrid();
 
   });
 
-  headRow.appendChild(th('Mitjana', 'text-right'));
+ 
   notesThead.appendChild(headRow);
 
   enableActivityDrag();
