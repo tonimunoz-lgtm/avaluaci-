@@ -534,47 +534,57 @@ async function renderNotesGrid() {
     const spanName = document.createElement('span');
     spanName.textContent = name;
 
-    // Candau
-    const lockIcon = document.createElement('span');
-    lockIcon.className = 'lock-icon cursor-pointer mr-1';
-    lockIcon.innerHTML = calculatedActs[id]?.locked ? '🔒' : '🔓';
-    lockIcon.title = calculatedActs[id]?.locked ? 'Activitat bloquejada' : 'Activitat desbloquejada';
-    if (calculatedActs[id]?.calculated) lockIcon.classList.add('hidden');
+   // Candau
+const lockIcon = document.createElement('span');
+lockIcon.className = 'lock-icon cursor-pointer mr-1';
+lockIcon.innerHTML = calculatedActs[id]?.locked ? '🔒' : '🔓';
+lockIcon.title = calculatedActs[id]?.locked ? 'Activitat bloquejada' : 'Activitat desbloquejada';
 
-    lockIcon.addEventListener('click', async () => {
-      try {
-        // assegura objecte existeixi per evitar "undefined"
-        if (!calculatedActs[id]) calculatedActs[id] = {};
+// Amaguem el candau si és una activitat calculada
+if (calculatedActs[id]?.calculated) {
+    lockIcon.classList.add('hidden');
+}
 
-        const newLockState = !calculatedActs[id].locked;
+lockIcon.addEventListener('click', async () => {
+    try {
+        const newLockState = !calculatedActs[id]?.locked;
 
-        // Guardar a Firestore (await per sincronitzar)
+        // Guardar a Firestore
         await db.collection('classes').doc(currentClassId).update({
-          [`calculatedActivities.${id}.locked`]: newLockState
+            [`calculatedActivities.${id}.locked`]: newLockState
         });
 
-        // Actualitzar objecte local i icona
-        calculatedActs[id].locked = newLockState;
+        // Actualitzar icona
         lockIcon.innerHTML = newLockState ? '🔒' : '🔓';
         lockIcon.title = newLockState ? 'Activitat bloquejada' : 'Activitat desbloquejada';
 
-        // Actualitza inputs: canviem només disabled, no toquem classes de color
-        document.querySelectorAll(`tr[data-student-id]`).forEach(tr => {
-          const input = tr.querySelector(`input[data-activity-id="${id}"]`);
-          if (!input) return;
-          // Si activitat és calculada, sempre ha d'estar disabled; altrament, depèn del lock
-          const shouldBeDisabled = !!(calculatedActs[id].calculated) || !!newLockState;
-          input.disabled = shouldBeDisabled;
+        // Estat de bloqueig real
+        const locked = newLockState || calculatedActs[id]?.calculated;
 
-          // Reaplica el color segons el valor actual (així no perdem l'estat visual)
-          applyCellColor(input);
+        // Aplicar bloqueig (sense disabled!)
+        document.querySelectorAll(`tr[data-student-id]`).forEach(tr => {
+            const input = tr.querySelector(`input[data-activity-id="${id}"]`);
+            if (input) {
+                // ❗IMPORTANT: ja no fem disabled
+                input.readOnly = locked;
+
+                if (locked) {
+                    input.classList.add('blocked-cell');
+                } else {
+                    input.classList.remove('blocked-cell');
+                }
+            }
         });
 
-      } catch(e) {
+        // Actualitzar objecte local
+        calculatedActs[id].locked = newLockState;
+
+    } catch (e) {
         console.error('Error canviant bloqueig:', e);
         alert('Error canviant bloqueig: ' + e.message);
-      }
-    });
+    }
+});
+
 
     // Icona refrescar (només si és calculada)
     const refreshIcon = document.createElement('span');
