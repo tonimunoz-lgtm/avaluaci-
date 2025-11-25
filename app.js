@@ -348,6 +348,7 @@ function loadClassData(){
     classActivities = data.activitats || [];
     document.getElementById('classTitle').textContent = data.nom || 'Sense nom';
     document.getElementById('classSub').textContent = `ID: ${doc.id}`;
+    initTerms(currentClassId);
     renderStudentsList();
     renderNotesGrid();
   }).catch(e=> console.error(e));
