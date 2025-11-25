@@ -1,5 +1,6 @@
 // terms.js
-export function initTerms({ db, renderNotesGrid, currentClassId, currentTermId }) {
+// ----------------- DEFINICIÓ GLOBAL -----------------
+window.initTerms = async function({ db, renderNotesGrid, currentClassId, currentTermId }) {
   const container = document.createElement('div');
   container.id = 'termsControls';
   container.className = 'flex gap-2 items-center mb-4';
@@ -17,7 +18,7 @@ export function initTerms({ db, renderNotesGrid, currentClassId, currentTermId }
   const wrapper = document.getElementById('classScreenWrapper');
   if (wrapper) wrapper.prepend(container);
 
-  loadTerms();
+  await loadTerms();
 
   select.addEventListener('change', async () => {
     const termId = select.value;
@@ -79,4 +80,4 @@ export function initTerms({ db, renderNotesGrid, currentClassId, currentTermId }
     await newTermRef.set(data);
     window.currentTermId = newTermRef.id;
   }
-}
+};
