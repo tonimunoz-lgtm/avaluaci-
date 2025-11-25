@@ -546,44 +546,54 @@ if (calculatedActs[id]?.calculated) {
 }
 
 lockIcon.addEventListener('click', async () => {
-    try {
-        const newLockState = !calculatedActs[id]?.locked;
+  try {
+    const newLockState = !calculatedActs[id]?.locked;
 
-        // Guardar a Firestore
-        await db.collection('classes').doc(currentClassId).update({
-            [`calculatedActivities.${id}.locked`]: newLockState
-        });
+    // Guardar a Firestore
+    await db.collection('classes').doc(currentClassId).update({
+      // assegurem que l'objecte existeixi i calculem la propietat
+      [`calculatedActivities.${id}.locked`]: newLockState
+    });
 
-        // Actualitzar icona
-        lockIcon.innerHTML = newLockState ? '🔒' : '🔓';
-        lockIcon.title = newLockState ? 'Activitat bloquejada' : 'Activitat desbloquejada';
+    // Si no existia l'entrada a local, la creem per evitar undefined errors
+    if (!calculatedActs[id]) calculatedActs[id] = {};
+    calculatedActs[id].locked = newLockState;
 
-        // Estat de bloqueig real
-        const locked = newLockState || calculatedActs[id]?.calculated;
+    // Actualitzar icona
+    lockIcon.innerHTML = newLockState ? '🔒' : '🔓';
+    lockIcon.title = newLockState ? 'Activitat bloquejada' : 'Activitat desbloquejada';
 
-        // Aplicar bloqueig (sense disabled!)
-        document.querySelectorAll(`tr[data-student-id]`).forEach(tr => {
-            const input = tr.querySelector(`input[data-activity-id="${id}"]`);
-            if (input) {
-                // ❗IMPORTANT: ja no fem disabled
-                input.readOnly = locked;
+    // Estat de bloqueig real (si és calculada, també bloquejada)
+    const locked = newLockState || Boolean(calculatedActs[id]?.calculated);
 
-                if (locked) {
-                    input.classList.add('blocked-cell');
-                } else {
-                    input.classList.remove('blocked-cell');
-                }
-            }
-        });
+    // Actualitzar inputs IMMEDIATAMENT (sense esperar un render complet)
+    document.querySelectorAll(`tr[data-student-id]`).forEach(tr => {
+      const input = tr.querySelector(`input[data-activity-id="${id}"]`);
+      if (!input) return;
 
-        // Actualitzar objecte local
-        calculatedActs[id].locked = newLockState;
+      // Usem readOnly en lloc de disabled per no trencar reactivitat/estils
+      input.readOnly = locked;
 
-    } catch (e) {
-        console.error('Error canviant bloqueig:', e);
-        alert('Error canviant bloqueig: ' + e.message);
-    }
+      // mantenim els colors de fons CRÍTIC: no sobreescrivim si ja té classes de color
+      // si vols marcar visualment bloquejat, afegeix una classe mínima que no sobreescrigui colors
+      if (locked) {
+        input.classList.add('blocked-cell');
+      } else {
+        input.classList.remove('blocked-cell');
+      }
+
+      // Reapliquem la coloració basada en valor (applyCellColor) perquè no es perdin estils
+      applyCellColor(input);
+    });
+
+    // Opcional: si vols re-renderitzar tota la taula per altres canvis, crida renderNotesGrid()
+    // renderNotesGrid();
+  } catch (e) {
+    console.error('Error canviant bloqueig:', e);
+    alert('Error canviant bloqueig: ' + e.message);
+  }
 });
+
 
 
     // Icona refrescar (només si és calculada)
