@@ -1,33 +1,50 @@
 // terms.js
-export async function initTerms({ db, renderNotesGrid, currentClassId, currentTermId: initialTermId }) {
-  if (!currentClassId) {
-    console.error('No hi ha currentClassId definit per inicialitzar termes.');
-    return;
-  }
+// Definim initTerms global per evitar l'import ES6
+window.initTerms = function({ db, renderNotesGrid, currentClassId, currentTermId }) {
 
-  // ----------------- Crea contenidor -----------------
   const container = document.createElement('div');
   container.id = 'termsControls';
   container.className = 'flex gap-2 items-center mb-4';
 
+  // Selector de trimestres
   const select = document.createElement('select');
   select.id = 'termSelector';
   select.className = 'border rounded p-1';
   container.appendChild(select);
 
+  // Botó "+" per crear un nou trimestre
   const addBtn = document.createElement('button');
   addBtn.textContent = '+';
   addBtn.className = 'bg-green-500 text-white px-3 py-1 rounded';
   container.appendChild(addBtn);
 
+  // Insertem abans de la graella
   const wrapper = document.getElementById('classScreenWrapper');
   if (wrapper) wrapper.prepend(container);
 
-  // Estat local temporal
-  let currentTermId = initialTermId || null;
+  // Carrega trimestres existents
+  loadTerms();
 
-  // ----------------- Funció per carregar termes -----------------
+  // Selector change
+  select.addEventListener('change', async () => {
+    const termId = select.value;
+    if (!termId) return;
+    window.currentTermId = termId;
+    await renderNotesGrid();
+  });
+
+  // Botó per crear un nou trimestre
+  addBtn.addEventListener('click', async () => {
+    const name = prompt('Nom del nou trimestre:');
+    if (!name) return;
+    await createTerm(name);
+    await loadTerms();
+  });
+
+  // ---------------- Funcions internes -----------------
   async function loadTerms() {
+    if (!select || !currentClassId) return;
+
     const snapshot = await db.collection('classes')
       .doc(currentClassId)
       .collection('terms')
@@ -41,26 +58,26 @@ export async function initTerms({ db, renderNotesGrid, currentClassId, currentTe
       select.appendChild(opt);
     });
 
-    // Si no hi ha currentTermId definit, seleccionem el primer
-    if (!currentTermId && snapshot.docs.length) {
-      currentTermId = snapshot.docs[0].id;
+    // Selecciona el primer si no hi ha cap definit
+    if (!window.currentTermId && snapshot.docs.length) {
+      window.currentTermId = snapshot.docs[0].id;
     }
 
+    // Marquem l’actual
     Array.from(select.options).forEach(opt => {
-      opt.selected = opt.value === currentTermId;
+      opt.selected = opt.value === window.currentTermId;
     });
-
-    return currentTermId;
   }
 
-  // ----------------- Funció per crear nou terme -----------------
   async function createTerm(name) {
+    if (!currentClassId) return;
+
     const newTermRef = db.collection('classes')
       .doc(currentClassId)
       .collection('terms')
-      .doc();
+      .doc(); // genera ID automàtic
 
-    // Clonar alumnes i activitats de l’últim terme si existeix
+    // Clonem alumnes i activitats de l'últim trimestre si existeix
     const lastTermSnap = await db.collection('classes')
       .doc(currentClassId)
       .collection('terms')
@@ -76,28 +93,7 @@ export async function initTerms({ db, renderNotesGrid, currentClassId, currentTe
     }
 
     await newTermRef.set(data);
-    currentTermId = newTermRef.id;
+    window.currentTermId = newTermRef.id;
   }
 
-  // ----------------- Event handlers -----------------
-  select.addEventListener('change', async () => {
-    const termId = select.value;
-    if (!termId) return;
-    currentTermId = termId;
-    window.currentTermId = termId; // global per compatibilitat
-    await renderNotesGrid();
-  });
-
-  addBtn.addEventListener('click', async () => {
-    const name = prompt('Nom del nou trimestre:');
-    if (!name) return;
-    await createTerm(name);
-    await loadTerms();
-    await renderNotesGrid();
-  });
-
-  // ----------------- Inicialitza -----------------
-  await loadTerms();
-  window.currentTermId = currentTermId; // guardem a global
-  return currentTermId; // opcional per app.js
-}
+};
