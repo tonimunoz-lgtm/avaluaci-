@@ -580,10 +580,12 @@ await renderNotesGrid();
       // mantenim els colors de fons CRÍTIC: no sobreescrivim si ja té classes de color
       // si vols marcar visualment bloquejat, afegeix una classe mínima que no sobreescrigui colors
       if (locked) {
-        input.classList.add('blocked-cell');
-      } else {
-        input.classList.remove('blocked-cell');
-      }
+  input.disabled = true;
+  input.classList.add('blocked-cell');
+} else {
+  input.disabled = false;
+  input.classList.remove('blocked-cell');
+}
 
       // Reapliquem la coloració basada en valor (applyCellColor) perquè no es perdin estils
       applyCellColor(input);
@@ -740,6 +742,12 @@ await renderNotesGrid();
       // Estat bloquejat si és calculada o hi ha lock
       const isLocked = !!(calculatedActs[actId]?.locked) || !!(calculatedActs[actId]?.calculated);
       input.disabled = isLocked;
+      // 🔥 IMPORTANT: Afegir la classe visual persistent
+if (isLocked) {
+    input.classList.add('blocked-cell');
+} else {
+    input.classList.remove('blocked-cell');
+}
 
       // Reaplica color sempre (això evita que quedi en gris)
       applyCellColor(input);
