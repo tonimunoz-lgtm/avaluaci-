@@ -522,7 +522,34 @@ async function renderNotesGrid() {
   const calculatedActs = classData.calculatedActivities || {};
 
   // Carrega activitats
-  const actDocs = await Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()));
+  // -------------------------
+// 🔥 NOVA GESTIÓ PER TRIMESTRES
+// -------------------------
+
+// 1) Obtenim tots els trimestres de la classe
+const terms = classData.terms || [];
+
+// 2) Quin trimestre està seleccionat actualment?
+let activeTermId = classData.activeTermId;
+
+// Si no existeix, agafem el primer
+if (!activeTermId && terms.length > 0) {
+  activeTermId = terms[0].id;
+  await db.collection("classes").doc(currentClassId).update({
+    activeTermId
+  });
+}
+
+// 3) Busquem el trimestre actiu
+const activeTerm = terms.find(t => t.id === activeTermId);
+
+// Si no el trobem → no mostrem activitats
+const termActivities = activeTerm?.activities || [];
+
+// 4) Carreguem només les activitats del trimestre
+const actDocs = await Promise.all(
+  termActivities.map(id => db.collection("activitats").doc(id).get())
+);
 
   // Capçalera activitats amb icona refresh i candau
   actDocs.forEach(adoc => {
