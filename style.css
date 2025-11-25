@@ -250,3 +250,8 @@ button:hover { transform: scale(1.03); }
     width: 100% !important;
   }
 }
+
+.blocked-cell {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
