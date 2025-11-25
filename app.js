@@ -1,5 +1,9 @@
 // app.js - lògica principal (modules)
 import { openModal, closeModal, confirmAction } from './modals.js';
+import { initTermsUI } from './terms.js';
+
+initTermsUI('#termsContainer', renderNotesGrid);
+
 
 /* ---------------- FIREBASE CONFIG ---------------- */
 const firebaseConfig = {
