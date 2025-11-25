@@ -2,7 +2,50 @@
 import { openModal, closeModal, confirmAction } from './modals.js';
 import { initTermsUI } from './terms.js';
 
-initTermsUI('#termsContainer', renderNotesGrid);
+document.addEventListener('DOMContentLoaded', () => {
+  const controlsContainer = document.querySelector('#tableControls');
+  
+  // Botó "+" per crear un nou trimestre
+  const addTermBtn = document.createElement('button');
+  addTermBtn.textContent = '+';
+  addTermBtn.className = 'px-2 py-1 border rounded hover:bg-gray-100';
+  addTermBtn.title = 'Crear nou trimestre';
+  
+  controlsContainer.appendChild(addTermBtn);
+
+  // Dropdown de trimestres
+  const termsDropdown = document.createElement('select');
+  termsDropdown.className = 'border px-2 py-1 rounded mr-2';
+  controlsContainer.insertBefore(termsDropdown, addTermBtn);
+
+  // Inicialitzem la UI de trimestres amb la funció de render
+  initTermsUI('#tableControls', renderNotesGrid);
+
+  // Opcional: es pot afegir event listener al botó "+" si vols més control addicional
+  addTermBtn.addEventListener('click', async () => {
+    // Això crida la mateixa lògica que a initTermsUI
+    const termName = prompt('Nom del nou trimestre:');
+    if (!termName) return;
+
+    try {
+      const newTermRef = await db.collection('classes')
+                                 .doc(currentClassId)
+                                 .collection('terms')
+                                 .add({
+                                      nom: termName,
+                                      classActivities: [],
+                                      calculatedActivities: {}
+                                 });
+      // Seleccionem automàticament el nou trimestre
+      termsDropdown.value = newTermRef.id;
+      await renderNotesGrid(newTermRef.id);
+    } catch(e) {
+      console.error('Error creant trimestre:', e);
+      alert('Error creant trimestre: ' + e.message);
+    }
+  });
+});
+
 
 
 /* ---------------- FIREBASE CONFIG ---------------- */
@@ -506,7 +549,16 @@ function renderStudentsList(){
   });
 }
 /* ---------------- Notes Grid amb menú activitats ---------------- */
-async function renderNotesGrid() {
+async function renderNotesGrid(termId) {
+    const termDoc = await db.collection('classes')
+                            .doc(currentClassId)
+                            .collection('terms')
+                            .doc(termId)
+                            .get();
+    if (!termDoc.exists) return;
+    const termData = termDoc.data();
+    const calculatedActs = termData.calculatedActivities || {};
+    const classActivities = termData.classActivities || [];
   // Neteja taula
   notesThead.innerHTML = '';
   notesTbody.innerHTML = '';
