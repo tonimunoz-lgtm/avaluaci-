@@ -1,6 +1,11 @@
 // terms.js
-// ----------------- DEFINICIÓ GLOBAL -----------------
-window.initTerms = async function({ db, renderNotesGrid, currentClassId, currentTermId }) {
+export async function initTerms({ db, renderNotesGrid, currentClassId, currentTermId: initialTermId }) {
+  if (!currentClassId) {
+    console.error('No hi ha currentClassId definit per inicialitzar termes.');
+    return;
+  }
+
+  // ----------------- Crea contenidor -----------------
   const container = document.createElement('div');
   container.id = 'termsControls';
   container.className = 'flex gap-2 items-center mb-4';
@@ -18,22 +23,10 @@ window.initTerms = async function({ db, renderNotesGrid, currentClassId, current
   const wrapper = document.getElementById('classScreenWrapper');
   if (wrapper) wrapper.prepend(container);
 
-  await loadTerms();
+  // Estat local temporal
+  let currentTermId = initialTermId || null;
 
-  select.addEventListener('change', async () => {
-    const termId = select.value;
-    if (!termId) return;
-    window.currentTermId = termId;
-    await renderNotesGrid();
-  });
-
-  addBtn.addEventListener('click', async () => {
-    const name = prompt('Nom del nou trimestre:');
-    if (!name) return;
-    await createTerm(name);
-    await loadTerms();
-  });
-
+  // ----------------- Funció per carregar termes -----------------
   async function loadTerms() {
     const snapshot = await db.collection('classes')
       .doc(currentClassId)
@@ -48,21 +41,26 @@ window.initTerms = async function({ db, renderNotesGrid, currentClassId, current
       select.appendChild(opt);
     });
 
-    if (!window.currentTermId && snapshot.docs.length) {
-      window.currentTermId = snapshot.docs[0].id;
+    // Si no hi ha currentTermId definit, seleccionem el primer
+    if (!currentTermId && snapshot.docs.length) {
+      currentTermId = snapshot.docs[0].id;
     }
 
     Array.from(select.options).forEach(opt => {
-      opt.selected = opt.value === window.currentTermId;
+      opt.selected = opt.value === currentTermId;
     });
+
+    return currentTermId;
   }
 
+  // ----------------- Funció per crear nou terme -----------------
   async function createTerm(name) {
     const newTermRef = db.collection('classes')
       .doc(currentClassId)
       .collection('terms')
       .doc();
 
+    // Clonar alumnes i activitats de l’últim terme si existeix
     const lastTermSnap = await db.collection('classes')
       .doc(currentClassId)
       .collection('terms')
@@ -78,6 +76,28 @@ window.initTerms = async function({ db, renderNotesGrid, currentClassId, current
     }
 
     await newTermRef.set(data);
-    window.currentTermId = newTermRef.id;
+    currentTermId = newTermRef.id;
   }
-};
+
+  // ----------------- Event handlers -----------------
+  select.addEventListener('change', async () => {
+    const termId = select.value;
+    if (!termId) return;
+    currentTermId = termId;
+    window.currentTermId = termId; // global per compatibilitat
+    await renderNotesGrid();
+  });
+
+  addBtn.addEventListener('click', async () => {
+    const name = prompt('Nom del nou trimestre:');
+    if (!name) return;
+    await createTerm(name);
+    await loadTerms();
+    await renderNotesGrid();
+  });
+
+  // ----------------- Inicialitza -----------------
+  await loadTerms();
+  window.currentTermId = currentTermId; // guardem a global
+  return currentTermId; // opcional per app.js
+}
