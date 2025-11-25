@@ -559,6 +559,9 @@ lockIcon.addEventListener('click', async () => {
     if (!calculatedActs[id]) calculatedActs[id] = {};
     calculatedActs[id].locked = newLockState;
 
+    // 🔥 Afegir aquesta línia perquè la UI es torni a generar amb l’estat correcte
+await renderNotesGrid();
+
     // Actualitzar icona
     lockIcon.innerHTML = newLockState ? '🔒' : '🔓';
     lockIcon.title = newLockState ? 'Activitat bloquejada' : 'Activitat desbloquejada';
