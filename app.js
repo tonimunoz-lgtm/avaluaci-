@@ -795,20 +795,12 @@ if (isLocked) {
       tr.appendChild(td);
     });
 
-    // Mitjana alumne
-    const avgTd = document.createElement('td');
-    avgTd.className = 'border px-2 py-1 text-right font-semibold';
-    avgTd.textContent = computeStudentAverageText(studentData);
-    tr.appendChild(avgTd);
-
     notesTbody.appendChild(tr);
   });
 
   // Final: recalculs de mitjanes i fila fórmules (igual que abans)
   renderAverages();
 }
-
-
 
 
 // Funció per actualitzar cel·les calculades sense recrear tota la taula
