@@ -1,6 +1,6 @@
 // app.js - lògica principal (modules)
 import { openModal, closeModal, confirmAction } from './modals.js';
-import { initTerms } from "./terms.js";
+//import { initTerms } from "./terms.js";
 
 /* ---------------- FIREBASE CONFIG ---------------- */
 const firebaseConfig = {
