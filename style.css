@@ -251,8 +251,11 @@ button:hover { transform: scale(1.03); }
   }
 }
 
-input.blocked-cell {
-  opacity: 0.92;           /* lleu transparència */
-  cursor: not-allowed;     /* cursor indicatiu */
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.03); /* lleu bordó */
+input.blocked-cell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.08); /* lleu capa blanca transparent */
+  pointer-events: none;
+  border-radius: inherit;
 }
