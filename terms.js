@@ -1,85 +1,127 @@
-// terms.js
-import { db } from './firebase.js';
-import { renderNotesGrid } from './app.js';
+// terms.js — gestor de trimestres
 
-window.initTerms = function() {
-   console.log("terms carregat");
-};
+window.initTerms = function () {
+    console.log("initTerms OK");
 
+    if (!window.currentClassId) return;
 
-export async function initTerms(currentClassId) {
-  const selector = document.getElementById("termSelector");
-  const btnAdd = document.getElementById("btnAddTerm");
-  if (!selector || !btnAdd) return;
+    const classTitle = document.getElementById("classTitle");
+    const classSub = document.getElementById("classSub");
 
-  // Carregar trimestres existents
-  async function loadTerms() {
-    selector.innerHTML = "";
-
-    const snap = await db.collection("classes")
-                         .doc(currentClassId)
-                         .collection("terms")
-                         .get();
-
-    if (snap.empty) {
-      // Crear automàticament Primer trimestre si no n'hi ha cap
-      const first = await db.collection("classes")
-                            .doc(currentClassId)
-                            .collection("terms")
-                            .add({
-                              nom: "Primer trimestre",
-                              classActivities: [],
-                              calculatedActivities: {}
-                            });
-
-      const opt = document.createElement("option");
-      opt.value = first.id;
-      opt.textContent = "Primer trimestre";
-      selector.appendChild(opt);
-
-      selector.value = first.id;
-      renderNotesGrid(first.id);
-      return;
+    // -----------------------------
+    // 1) Afegir botó "+"
+    // -----------------------------
+    if (!document.getElementById("btnAddTerm")) {
+        const btn = document.createElement("button");
+        btn.id = "btnAddTerm";
+        btn.className = "bg-green-500 text-white px-3 py-1 rounded ml-3";
+        btn.textContent = "➕ Trimestre";
+        btn.addEventListener("click", createNewTerm);
+        classTitle.insertAdjacentElement("afterend", btn);
     }
 
-    snap.forEach(doc => {
-      const opt = document.createElement("option");
-      opt.value = doc.id;
-      opt.textContent = doc.data().nom;
-      selector.appendChild(opt);
+    // -----------------------------
+    // 2) Afegir selector de trimestre
+    // -----------------------------
+    if (!document.getElementById("termSelector")) {
+        const sel = document.createElement("select");
+        sel.id = "termSelector";
+        sel.className = "border px-2 py-1 rounded ml-3";
+        sel.addEventListener("change", loadSelectedTerm);
+        classTitle.insertAdjacentElement("afterend", sel);
+    }
+
+    loadTermsList();
+};
+
+// --------------------------------------------------
+// Llista de trimestres existents
+// --------------------------------------------------
+async function loadTermsList() {
+    const sel = document.getElementById("termSelector");
+    if (!sel || !window.currentClassId) return;
+
+    sel.innerHTML = "";
+
+    const snap = await db
+        .collection("classes")
+        .doc(window.currentClassId)
+        .collection("trimestres")
+        .get();
+
+    if (snap.empty) {
+        sel.innerHTML = `<option value="">Sense trimestres</option>`;
+        return;
+    }
+
+    snap.forEach((doc) => {
+        const opt = document.createElement("option");
+        opt.value = doc.id;
+        opt.textContent = doc.data().nom;
+        sel.appendChild(opt);
     });
 
-    selector.value = selector.value || snap.docs[0].id;
-    renderNotesGrid(selector.value);
-  }
+    // Carreguem el primer trimestre si cap està seleccionat
+    if (!window.currentTermId && sel.options.length > 0) {
+        window.currentTermId = sel.options[0].value;
+        sel.value = window.currentTermId;
+        loadTermData();
+    } else {
+        sel.value = window.currentTermId;
+    }
+}
 
-  await loadTerms();
+// --------------------------------------------------
+// Crear trimestre nou
+// --------------------------------------------------
+async function createNewTerm() {
+    if (!window.currentClassId) return;
 
-  // Canviar de trimestre
-  selector.addEventListener("change", () => {
-    renderNotesGrid(selector.value);
-  });
-
-  // Crear nou trimestre
-  btnAdd.addEventListener("click", async () => {
-    const nom = prompt("Nom del nou trimestre:");
+    const nom = prompt("Nom del nou trimestre:", "Segon trimestre");
     if (!nom) return;
 
-    const newTerm = await db.collection("classes")
-                            .doc(currentClassId)
-                            .collection("terms")
-                            .add({
-                              nom,
-                              classActivities: [],
-                              calculatedActivities: {}
-                            });
+    const docRef = await db
+        .collection("classes")
+        .doc(window.currentClassId)
+        .collection("trimestres")
+        .add({
+            nom,
+            activitats: []
+        });
 
-    const opt = document.createElement("option");
-    opt.value = newTerm.id;
-    opt.textContent = nom;
-    selector.appendChild(opt);
+    window.currentTermId = docRef.id;
+    loadTermsList();
+    loadTermData();
+}
 
-    selector.value = newTerm.id;
-    renderNotesGrid(newTerm.id);
-  });
+// --------------------------------------------------
+// Quan canvies de trimestre al selector
+// --------------------------------------------------
+function loadSelectedTerm(e) {
+    window.currentTermId = e.target.value;
+    loadTermData();
+}
+
+// --------------------------------------------------
+// Carrega les ACTIVITATS del trimestre
+// --------------------------------------------------
+async function loadTermData() {
+    if (!window.currentClassId || !window.currentTermId) return;
+
+    const termDoc = await db
+        .collection("classes")
+        .doc(window.currentClassId)
+        .collection("trimestres")
+        .doc(window.currentTermId)
+        .get();
+
+    if (!termDoc.exists) return;
+
+    const d = termDoc.data();
+
+    // Actualitzar array global d’activitats
+    window.classActivities = d.activitats || [];
+
+    // Tornem a dibuixar la graella
+    if (window.renderNotesGrid) renderNotesGrid();
 }
