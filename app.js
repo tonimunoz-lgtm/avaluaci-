@@ -1511,3 +1511,7 @@ if (closeBtn) {
     container.classList.remove('mobile-open');
   });
 }
+
+loadClassData().then(() => {
+   if (window.initTerms) window.initTerms();
+});
