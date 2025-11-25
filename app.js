@@ -513,25 +513,11 @@ async function renderNotesGrid() {
   const headRow = document.createElement('tr');
   headRow.appendChild(th('Alumne'));
 
- // Carrega terme actual
-if (!window.currentTermId) return;
-const termDoc = await db
-  .collection('classes')
-  .doc(currentClassId)
-  .collection('terms')
-  .doc(window.currentTermId)
-  .get();
-
-if (!termDoc.exists) return;
-
-const termData = termDoc.data();
-
-// Alumnes i activitats del terme
-const classStudents = termData.alumnes || [];
-const classActivities = termData.activitats || [];
-
-// Calculated activities (poden ser guardades a nivell de terme)
-const calculatedActs = termData.calculatedActivities || {};
+  // Carrega classe
+  const classDoc = await db.collection('classes').doc(currentClassId).get();
+  if (!classDoc.exists) return;
+  const classData = classDoc.data();
+  const calculatedActs = classData.calculatedActivities || {};
 
   // Carrega activitats
   const actDocs = await Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()));
@@ -849,7 +835,6 @@ function updateCalculatedCells() {
   });
 }
 
-initTerms({ db, renderNotesGrid, currentClassId, currentTermId });
 
 
 /* ---------------- Helpers Notes & Excel ---------------- */
@@ -1497,7 +1482,3 @@ if (closeBtn) {
     container.classList.remove('mobile-open');
   });
 }
-// exportem el que necessitem fora
-export { db, renderNotesGrid, currentClassId, currentTermId };
-
-// ... tot el teu codi de app.js continua igual ...
