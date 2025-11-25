@@ -250,3 +250,17 @@ button:hover { transform: scale(1.03); }
     width: 100% !important;
   }
 }
+
+input.blocked-cell {
+  position: relative;
+  cursor: not-allowed;
+  opacity: 0.95; /* ajustable */
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
+
+  /* Afegim una capa blanca suau damunt del color original */
+  background-image: linear-gradient(
+    rgba(255,255,255,0.35),
+    rgba(255,255,255,0.35)
+  );
+  background-blend-mode: lighten; /* combina sense eliminar color */
+}
