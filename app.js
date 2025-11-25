@@ -1,6 +1,6 @@
 // app.js - lògica principal (modules)
 import { openModal, closeModal, confirmAction } from './modals.js';
-//import { initTerms } from "./terms.js";
+import { initTerms } from "./terms.js";
 
 /* ---------------- FIREBASE CONFIG ---------------- */
 const firebaseConfig = {
@@ -1514,5 +1514,5 @@ if (closeBtn) {
 
 
 loadClassData().then(() => {
-   if (window.initTerms) window.initTerms();
+  initTerms(); // inicialitza controls de trimestre
 });
