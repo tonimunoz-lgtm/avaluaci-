@@ -1496,3 +1496,7 @@ if (closeBtn) {
     container.classList.remove('mobile-open');
   });
 }
+// exportem el que necessitem fora
+export { db, renderNotesGrid, currentClassId, currentTermId };
+
+// ... tot el teu codi de app.js continua igual ...
