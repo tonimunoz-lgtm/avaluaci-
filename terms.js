@@ -1,127 +1,101 @@
-// terms.js — gestor de trimestres
+// terms.js
+import { db } from './app.js'; // o exporta db des de app.js si és module
+import { renderNotesGrid } from './app.js';
 
-window.initTerms = function () {
-    console.log("initTerms OK");
+export function initTerms() {
+  const container = document.createElement('div');
+  container.id = 'termsControls';
+  container.className = 'flex gap-2 items-center mb-4';
 
-    if (!window.currentClassId) return;
+  // Selector de trimestres
+  const select = document.createElement('select');
+  select.id = 'termSelector';
+  select.className = 'border rounded p-1';
+  container.appendChild(select);
 
-    const classTitle = document.getElementById("classTitle");
-    const classSub = document.getElementById("classSub");
+  // Botó "+" per crear un nou trimestre
+  const addBtn = document.createElement('button');
+  addBtn.textContent = '+';
+  addBtn.className = 'bg-green-500 text-white px-3 py-1 rounded';
+  container.appendChild(addBtn);
 
-    // -----------------------------
-    // 1) Afegir botó "+"
-    // -----------------------------
-    if (!document.getElementById("btnAddTerm")) {
-        const btn = document.createElement("button");
-        btn.id = "btnAddTerm";
-        btn.className = "bg-green-500 text-white px-3 py-1 rounded ml-3";
-        btn.textContent = "➕ Trimestre";
-        btn.addEventListener("click", createNewTerm);
-        classTitle.insertAdjacentElement("afterend", btn);
-    }
+  // Insertem abans de la graella
+  const wrapper = document.getElementById('classScreenWrapper');
+  if (wrapper) wrapper.prepend(container);
 
-    // -----------------------------
-    // 2) Afegir selector de trimestre
-    // -----------------------------
-    if (!document.getElementById("termSelector")) {
-        const sel = document.createElement("select");
-        sel.id = "termSelector";
-        sel.className = "border px-2 py-1 rounded ml-3";
-        sel.addEventListener("change", loadSelectedTerm);
-        classTitle.insertAdjacentElement("afterend", sel);
-    }
-
-    loadTermsList();
-};
-
-// --------------------------------------------------
-// Llista de trimestres existents
-// --------------------------------------------------
-async function loadTermsList() {
-    const sel = document.getElementById("termSelector");
-    if (!sel || !window.currentClassId) return;
-
-    sel.innerHTML = "";
-
-    const snap = await db
-        .collection("classes")
-        .doc(window.currentClassId)
-        .collection("trimestres")
-        .get();
-
-    if (snap.empty) {
-        sel.innerHTML = `<option value="">Sense trimestres</option>`;
-        return;
-    }
-
-    snap.forEach((doc) => {
-        const opt = document.createElement("option");
-        opt.value = doc.id;
-        opt.textContent = doc.data().nom;
-        sel.appendChild(opt);
+  // Carrega trimestres existents
+  loadTerms().then(() => {
+    select.addEventListener('change', async () => {
+      const termId = select.value;
+      if (!termId) return;
+      window.currentTermId = termId; // global temporal
+      await renderNotesGrid(); // renderitza graella amb el trimestre seleccionat
     });
+  });
 
-    // Carreguem el primer trimestre si cap està seleccionat
-    if (!window.currentTermId && sel.options.length > 0) {
-        window.currentTermId = sel.options[0].value;
-        sel.value = window.currentTermId;
-        loadTermData();
-    } else {
-        sel.value = window.currentTermId;
-    }
+  // Crear un nou trimestre
+  addBtn.addEventListener('click', async () => {
+    const name = prompt('Nom del nou trimestre:');
+    if (!name) return;
+    await createTerm(name);
+    await loadTerms();
+  });
 }
 
-// --------------------------------------------------
-// Crear trimestre nou
-// --------------------------------------------------
-async function createNewTerm() {
-    if (!window.currentClassId) return;
+// ---------------- Funcions internes -----------------
+async function loadTerms() {
+  const select = document.getElementById('termSelector');
+  if (!select || !window.currentClassId) return;
 
-    const nom = prompt("Nom del nou trimestre:", "Segon trimestre");
-    if (!nom) return;
+  // Obtenim tots els trimestres de la classe
+  const snapshot = await db.collection('classes')
+    .doc(window.currentClassId)
+    .collection('terms')
+    .get();
 
-    const docRef = await db
-        .collection("classes")
-        .doc(window.currentClassId)
-        .collection("trimestres")
-        .add({
-            nom,
-            activitats: []
-        });
+  select.innerHTML = ''; // neteja
 
-    window.currentTermId = docRef.id;
-    loadTermsList();
-    loadTermData();
+  snapshot.forEach(doc => {
+    const opt = document.createElement('option');
+    opt.value = doc.id;
+    opt.textContent = doc.data().name || doc.id;
+    select.appendChild(opt);
+  });
+
+  // Selecciona el primer si no hi ha cap definit
+  if (!window.currentTermId && snapshot.docs.length) {
+    window.currentTermId = snapshot.docs[0].id;
+  }
+
+  // Marquem l’actual
+  Array.from(select.options).forEach(opt => {
+    opt.selected = opt.value === window.currentTermId;
+  });
 }
 
-// --------------------------------------------------
-// Quan canvies de trimestre al selector
-// --------------------------------------------------
-function loadSelectedTerm(e) {
-    window.currentTermId = e.target.value;
-    loadTermData();
-}
+async function createTerm(name) {
+  if (!window.currentClassId) return;
 
-// --------------------------------------------------
-// Carrega les ACTIVITATS del trimestre
-// --------------------------------------------------
-async function loadTermData() {
-    if (!window.currentClassId || !window.currentTermId) return;
+  const newTermRef = db.collection('classes')
+    .doc(window.currentClassId)
+    .collection('terms')
+    .doc(); // genera ID automàtic
 
-    const termDoc = await db
-        .collection("classes")
-        .doc(window.currentClassId)
-        .collection("trimestres")
-        .doc(window.currentTermId)
-        .get();
+  // Clonem alumnes i activitats de l'últim trimestre si existeix
+  const lastTermSnap = await db.collection('classes')
+    .doc(window.currentClassId)
+    .collection('terms')
+    .orderBy('createdAt', 'desc')
+    .limit(1)
+    .get();
 
-    if (!termDoc.exists) return;
+  let data = { name, createdAt: Date.now(), alumnes: [], activitats: [] };
+  if (!lastTermSnap.empty) {
+    const lastData = lastTermSnap.docs[0].data();
+    data.alumnes = lastData.alumnes || [];
+    data.activitats = lastData.activitats || [];
+  }
 
-    const d = termDoc.data();
-
-    // Actualitzar array global d’activitats
-    window.classActivities = d.activitats || [];
-
-    // Tornem a dibuixar la graella
-    if (window.renderNotesGrid) renderNotesGrid();
+  await newTermRef.set(data);
+  window.currentTermId = newTermRef.id; // seleccionem automàticament el nou trimestre
 }
