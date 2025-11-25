@@ -1512,6 +1512,7 @@ if (closeBtn) {
   });
 }
 
+
 loadClassData().then(() => {
    if (window.initTerms) window.initTerms();
 });
