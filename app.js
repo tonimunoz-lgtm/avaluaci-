@@ -1,4 +1,10 @@
 // app.js - lògica principal (modules)
+import { initTerms } from './terms.js';
+
+// ... tota la resta del teu codi app.js ...
+// Després de carregar la classe i tenir currentClassId definit:
+initTerms({ db, renderNotesGrid, currentClassId, currentTermId });
+
 import { openModal, closeModal, confirmAction } from './modals.js';
 
 /* ---------------- FIREBASE CONFIG ---------------- */
