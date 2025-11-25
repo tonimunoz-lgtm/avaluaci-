@@ -599,6 +599,7 @@ await renderNotesGrid();
   }
 });
 
+initTerms({ db, renderNotesGrid, currentClassId, currentTermId });
 
 
     // Icona refrescar (només si és calculada)
