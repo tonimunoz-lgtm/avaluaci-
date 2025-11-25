@@ -1,11 +1,5 @@
 // app.js - lògica principal (modules)
 import { openModal, closeModal, confirmAction } from './modals.js';
-import { initTermsUI } from './terms.js';
-
-document.addEventListener('DOMContentLoaded', async () => {
-  await initTermsUI('#tableControls'); // container amb el botó A-Z i el nou botó "+"
-  await renderNotesGrid(); // render inicial
-});
 
 /* ---------------- FIREBASE CONFIG ---------------- */
 const firebaseConfig = {
@@ -508,16 +502,7 @@ function renderStudentsList(){
   });
 }
 /* ---------------- Notes Grid amb menú activitats ---------------- */
-async function renderNotesGrid(termId) {
-    const termDoc = await db.collection('classes')
-                            .doc(currentClassId)
-                            .collection('terms')
-                            .doc(termId)
-                            .get();
-    if (!termDoc.exists) return;
-    const termData = termDoc.data();
-    const calculatedActs = termData.calculatedActivities || {};
-    const classActivities = termData.classActivities || [];
+async function renderNotesGrid() {
   // Neteja taula
   notesThead.innerHTML = '';
   notesTbody.innerHTML = '';
