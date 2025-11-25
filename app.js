@@ -307,29 +307,36 @@ function confirmDeleteSelected(){
   );
 }
 
+/* ---------------- Globals ---------------- */
+let currentClassId = null;
+let currentTermId = null;
+let classStudents = [];
+let classActivities = [];
+
 /* ---------------- Create Class ---------------- */
 function createClassModal(){
   const name = document.getElementById('modalClassName').value.trim();
   if(!name) return alert('Posa un nom');
   const ref = db.collection('classes').doc();
   ref.set({ nom: name, alumnes: [], activitats: [] })
-    .then(()=> db.collection('professors').doc(professorUID).update({ classes: firebase.firestore.FieldValue.arrayUnion(ref.id) }))
+    .then(()=> db.collection('professors').doc(professorUID)
+      .update({ classes: firebase.firestore.FieldValue.arrayUnion(ref.id) }))
     .then(()=> {
       closeModal('modalCreateClass');
       document.getElementById('modalClassName').value = '';
       loadClassesScreen();
-    }).catch(e=> alert('Error: ' + e.message));
+    })
+    .catch(e=> alert('Error: ' + e.message));
 }
 modalCreateClassBtn.addEventListener('click', createClassModal);
 
-/* ---------------- Open Class ---------------- */
+/* ---------------- Open / Back Class ---------------- */
 function openClass(id){
   currentClassId = id;
   screenClasses.classList.add('hidden');
   screenClass.classList.remove('hidden');
   loadClassData();
 }
-
 btnBack.addEventListener('click', ()=> {
   currentClassId = null;
   screenClass.classList.add('hidden');
@@ -338,18 +345,21 @@ btnBack.addEventListener('click', ()=> {
 });
 
 /* ---------------- Load Class Data ---------------- */
-function loadClassData(){
+async function loadClassData(){
   if(!currentClassId) return;
-  db.collection('classes').doc(currentClassId).get().then(doc=>{
-    if(!doc.exists) { alert('Classe no trobada'); return; }
+  try {
+    const doc = await db.collection('classes').doc(currentClassId).get();
+    if(!doc.exists) return alert('Classe no trobada');
     const data = doc.data();
     classStudents = data.alumnes || [];
     classActivities = data.activitats || [];
     document.getElementById('classTitle').textContent = data.nom || 'Sense nom';
     document.getElementById('classSub').textContent = `ID: ${doc.id}`;
     renderStudentsList();
-    renderNotesGrid();
-  }).catch(e=> console.error(e));
+    await renderNotesGrid();
+  } catch(e){
+    console.error(e);
+  }
 }
 
 /* ---------------- Students ---------------- */
@@ -361,26 +371,24 @@ function createStudentModal(){
   if(!name) return alert('Posa un nom');
   const ref = db.collection('alumnes').doc();
   ref.set({ nom: name, notes: {} })
-    .then(()=> db.collection('classes').doc(currentClassId).update({ alumnes: firebase.firestore.FieldValue.arrayUnion(ref.id) }))
+    .then(()=> db.collection('classes').doc(currentClassId)
+      .update({ alumnes: firebase.firestore.FieldValue.arrayUnion(ref.id) }))
     .then(()=> {
       closeModal('modalAddStudent');
       document.getElementById('modalStudentName').value = '';
       loadClassData();
-    }).catch(e=> alert('Error: '+e.message));
+    })
+    .catch(e=> alert('Error: '+e.message));
 }
 
 function removeStudent(studentId) {
-  confirmAction(
-    'Eliminar alumne',
-    'Estàs segur que vols eliminar aquest alumne?',
-    () => {
-      db.collection('classes').doc(currentClassId)
-        .update({ alumnes: firebase.firestore.FieldValue.arrayRemove(studentId) })
-        .then(() => db.collection('alumnes').doc(studentId).delete())
-        .then(() => loadClassData())
-        .catch(e => alert('Error eliminant alumne: ' + e.message));
-    }
-  );
+  confirmAction('Eliminar alumne','Estàs segur que vols eliminar aquest alumne?',()=>{
+    db.collection('classes').doc(currentClassId)
+      .update({ alumnes: firebase.firestore.FieldValue.arrayRemove(studentId) })
+      .then(()=> db.collection('alumnes').doc(studentId).delete())
+      .then(()=> loadClassData())
+      .catch(e=> alert('Error eliminant alumne: '+e.message));
+  });
 }
 
 function reorderStudents(fromIdx, toIdx){
@@ -401,9 +409,11 @@ function sortStudentsAlpha(){
       pairs.sort((a,b)=> a.name.localeCompare(b.name, 'ca'));
       const newOrder = pairs.map(p=> p.id);
       return db.collection('classes').doc(currentClassId).update({ alumnes: newOrder });
-    }).then(()=> loadClassData())
+    })
+    .then(()=> loadClassData())
     .catch(e=> console.error(e));
 }
+
 /* ---------------- Activities ---------------- */
 btnAddActivity.addEventListener('click', ()=> openModal('modalAddActivity'));
 modalAddActivityBtn.addEventListener('click', createActivityModal);
@@ -413,12 +423,14 @@ function createActivityModal(){
   if(!name) return alert('Posa un nom');
   const ref = db.collection('activitats').doc();
   ref.set({ nom: name, data: new Date().toISOString().split('T')[0], calcType:'numeric', formula:'' })
-    .then(()=> db.collection('classes').doc(currentClassId).update({ activitats: firebase.firestore.FieldValue.arrayUnion(ref.id) }))
+    .then(()=> db.collection('classes').doc(currentClassId)
+      .update({ activitats: firebase.firestore.FieldValue.arrayUnion(ref.id) }))
     .then(()=> {
       closeModal('modalAddActivity');
       document.getElementById('modalActivityName').value = '';
       loadClassData();
-    }).catch(e=> alert('Error: '+e.message));
+    })
+    .catch(e=> alert('Error: '+e.message));
 }
 
 function removeActivity(actId){
@@ -440,18 +452,15 @@ function removeActivity(actId){
 function renderStudentsList(){
   studentsList.innerHTML = '';
   studentsCount.textContent = `(${classStudents.length})`;
-
   if(classStudents.length === 0){
     studentsList.innerHTML = '<li class="text-sm text-gray-400">No hi ha alumnes</li>';
     return;
   }
-
   classStudents.forEach((stuId, idx)=>{
     db.collection('alumnes').doc(stuId).get().then(doc=>{
       const name = doc.exists ? doc.data().nom : 'Desconegut';
       const li = document.createElement('li');
       li.className = 'flex items-center justify-between bg-gray-50 dark:bg-gray-900 p-2 rounded';
-
       li.innerHTML = `
         <div class="flex items-center gap-3">
           <span draggable="true" title="Arrossega per reordenar" class="cursor-move text-sm text-gray-500">☰</span>
@@ -465,27 +474,20 @@ function renderStudentsList(){
           </div>
         </div>
       `;
-
       const menuBtn = li.querySelector('.menu-btn');
       const menu = li.querySelector('.menu');
-
       menuBtn.addEventListener('click', e=>{
         e.stopPropagation();
         document.querySelectorAll('.menu').forEach(m=> m.classList.add('hidden'));
         menu.classList.toggle('hidden');
       });
-
       li.querySelector('.edit-btn').addEventListener('click', ()=>{
         const newName = prompt('Introdueix el nou nom:', name);
         if(!newName || newName.trim()===name) return;
-        db.collection('alumnes').doc(stuId).update({ nom: newName.trim() })
-          .then(()=> loadClassData())
+        db.collection('alumnes').doc(stuId).update({ nom: newName.trim() }).then(()=> loadClassData())
           .catch(e=> alert('Error editant alumne: '+e.message));
       });
-
       li.querySelector('.delete-btn').addEventListener('click', ()=> removeStudent(stuId));
-
-      // Drag handle
       const dragHandle = li.querySelector('[draggable]');
       dragHandle.addEventListener('dragstart', e=>{
         e.dataTransfer.setData('text/plain', idx.toString());
@@ -496,286 +498,160 @@ function renderStudentsList(){
         const fromIdx = Number(e.dataTransfer.getData('text/plain'));
         reorderStudents(fromIdx, idx);
       });
-
       studentsList.appendChild(li);
     });
   });
 }
-/* ---------------- Notes Grid amb menú activitats ---------------- */
-/* ---------------- Notes Grid amb menú activitats ---------------- */
-async function renderNotesGrid() {
-  // Neteja taula
-  notesThead.innerHTML = '';
-  notesTbody.innerHTML = '';
-  notesTfoot.innerHTML = '';
-  formulaTfoot.innerHTML = '';
 
-  // Capçalera alumne
+/* ---------------- Render Notes Grid ---------------- */
+async function renderNotesGrid() {
+  if (!currentClassId || !currentTermId) return;
+  notesThead.innerHTML = ''; notesTbody.innerHTML = ''; notesTfoot.innerHTML = ''; formulaTfoot.innerHTML = '';
+
+  // Carrega trimestre
+  const termDoc = await db.collection('classes').doc(currentClassId)
+    .collection('terms').doc(currentTermId).get();
+  if (!termDoc.exists) return;
+  const termData = termDoc.data();
+  const classStudentsTerm = termData.alumnes || [];
+  const classActivitiesTerm = termData.activitats || [];
+  const calculatedActs = termData.calculatedActivities || {};
+
+  // Capçalera
   const headRow = document.createElement('tr');
   headRow.appendChild(th('Alumne'));
 
-  // ---------------- Carrega dades del trimestre actual ----------------
-  if (!currentClassId || !currentTermId) return;
-
-  const termDoc = await db.collection('classes')
-    .doc(currentClassId)
-    .collection('terms')
-    .doc(currentTermId)
-    .get();
-
-  if (!termDoc.exists) return;
-
-  const termData = termDoc.data();
-  const classStudents = termData.alumnes || [];
-  const classActivities = termData.activitats || [];
-
-  // Calculated activities (locks, fórmules)
-  const calculatedActs = termData.calculatedActivities || {};
-
-  // ---------------- Capçalera activitats ----------------
-  const actDocs = await Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()));
-
+  const actDocs = await Promise.all(classActivitiesTerm.map(id => db.collection('activitats').doc(id).get()));
   actDocs.forEach(adoc => {
     const id = adoc.id;
     const name = adoc.exists ? (adoc.data().nom || 'Sense nom') : 'Desconegut';
-
     const thEl = th('');
-    const container = document.createElement('div');
-    container.className = 'flex items-center justify-between';
-
-    const spanName = document.createElement('span');
-    spanName.textContent = name;
-
-    // Candau
-    const lockIcon = document.createElement('span');
-    lockIcon.className = 'lock-icon cursor-pointer mr-1';
-    lockIcon.innerHTML = calculatedActs[id]?.locked ? '🔒' : '🔓';
-    lockIcon.title = calculatedActs[id]?.locked ? 'Activitat bloquejada' : 'Activitat desbloquejada';
-    if (calculatedActs[id]?.calculated) lockIcon.classList.add('hidden');
-
+    const container = document.createElement('div'); container.className='flex items-center justify-between';
+    const spanName = document.createElement('span'); spanName.textContent = name;
+    const lockIcon = document.createElement('span'); lockIcon.className='lock-icon cursor-pointer mr-1';
+    lockIcon.innerHTML = calculatedActs[id]?.locked ? '🔒':'🔓';
+    lockIcon.title = calculatedActs[id]?.locked ? 'Activitat bloquejada':'Activitat desbloquejada';
     lockIcon.addEventListener('click', async () => {
       try {
         const newLockState = !calculatedActs[id]?.locked;
-        await db.collection('classes').doc(currentClassId).collection('terms').doc(currentTermId).update({
-          [`calculatedActivities.${id}.locked`]: newLockState
-        });
-        if (!calculatedActs[id]) calculatedActs[id] = {};
+        await db.collection('classes').doc(currentClassId)
+          .collection('terms').doc(currentTermId)
+          .update({ [`calculatedActivities.${id}.locked`]: newLockState });
+        calculatedActs[id] = calculatedActs[id] || {};
         calculatedActs[id].locked = newLockState;
-        await renderNotesGrid();
-      } catch (e) {
-        console.error('Error canviant bloqueig:', e);
-        alert('Error canviant bloqueig: ' + e.message);
-      }
+        renderNotesGrid();
+      } catch(e){ console.error(e); alert('Error canviant bloqueig'); }
     });
 
-    // Icona refrescar (només si és calculada)
     const refreshIcon = document.createElement('span');
-    refreshIcon.innerHTML = '🔄';
-    refreshIcon.title = 'Refrescar columna';
-    refreshIcon.className = 'ml-2 cursor-pointer hidden';
+    refreshIcon.innerHTML = '🔄'; refreshIcon.title='Refrescar columna'; refreshIcon.className='ml-2 cursor-pointer hidden';
     if (calculatedActs[id]?.calculated) refreshIcon.classList.remove('hidden');
-
-    refreshIcon.addEventListener('click', async (e) => {
+    refreshIcon.addEventListener('click', async e => {
       e.stopPropagation();
-      const formulasRow = formulaTfoot.querySelector('.formulas-row');
-      if (!formulasRow) return;
+      const formulasRow = formulaTfoot.querySelector('.formulas-row'); if(!formulasRow) return;
       const idx = Array.from(headRow.children).indexOf(thEl);
-      const formulaTd = formulasRow.children[idx];
-      if (!formulaTd) return;
-      const formulaText = formulaTd.textContent.trim();
-      if (!formulaText) return alert('No hi ha cap fórmula aplicada a aquesta activitat.');
-      try {
-        await Promise.all(classStudents.map(async sid => {
-          const result = await evalFormulaAsync(formulaText, sid);
-          await saveNote(sid, id, result, currentTermId);
-        }));
-        await renderNotesGrid();
-      } catch(err) {
-        console.error('Error recalculant fórmula:', err);
-        alert('Error recalculant la fórmula: ' + err.message);
-      }
+      const formulaTd = formulasRow.children[idx]; if(!formulaTd) return;
+      const formulaText = formulaTd.textContent.trim(); if(!formulaText) return alert('No hi ha cap fórmula aplicada.');
+      try { await Promise.all(classStudentsTerm.map(async sid=>{
+        const result = await evalFormulaAsync(formulaText,sid);
+        await saveNote(sid,id,result,currentTermId);
+      })); renderNotesGrid(); } catch(err){ console.error(err); alert('Error recalculant fórmula'); }
     });
 
-    // Menú activitat
-    const menuDiv = document.createElement('div');
-    menuDiv.className = 'relative';
-    menuDiv.innerHTML = `
+    const menuDiv = document.createElement('div'); menuDiv.className='relative';
+    menuDiv.innerHTML=`
       <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white tooltip">⋮</button>
       <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10">
         <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
         <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>
         <button class="calc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Càlcul</button>
         <button class="clear-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Netejar</button>
-      </div>
-    `;
+      </div>`;
 
-    container.prepend(lockIcon);
-    container.appendChild(spanName);
-    container.appendChild(refreshIcon);
-    container.appendChild(menuDiv);
+    container.prepend(lockIcon); container.appendChild(spanName); container.appendChild(refreshIcon); container.appendChild(menuDiv);
     thEl.appendChild(container);
     headRow.appendChild(thEl);
 
-    if (calculatedActs[id]?.calculated) {
-      thEl.style.backgroundColor = "#dbeafe";
-      thEl.style.borderBottom = "3px solid #1d4ed8";
-      thEl.style.color = "black";
-    }
+    if(calculatedActs[id]?.calculated){ thEl.style.backgroundColor="#dbeafe"; thEl.style.borderBottom="3px solid #1d4ed8"; thEl.style.color="black"; }
 
-    const menuBtn = menuDiv.querySelector('.menu-btn');
-    const menu = menuDiv.querySelector('.menu');
-    menuBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      document.querySelectorAll('.menu').forEach(m => m.classList.add('hidden'));
-      menu.classList.toggle('hidden');
+    const menuBtn = menuDiv.querySelector('.menu-btn'); const menu = menuDiv.querySelector('.menu');
+    menuBtn.addEventListener('click', e=> { e.stopPropagation(); document.querySelectorAll('.menu').forEach(m=> m.classList.add('hidden')); menu.classList.toggle('hidden'); });
+    menuDiv.querySelector('.edit-btn').addEventListener('click', ()=> {
+      const newName = prompt('Nou nom activitat:',name); if(!newName || newName.trim()===name) return;
+      db.collection('activitats').doc(id).update({nom:newName.trim()}).then(()=> renderNotesGrid());
     });
-
-    menuDiv.querySelector('.edit-btn').addEventListener('click', () => {
-      const newName = prompt('Nou nom activitat:', name);
-      if (!newName || newName.trim() === name) return;
-      db.collection('activitats').doc(id).update({ nom: newName.trim() }).then(() => renderNotesGrid());
-    });
-
-    menuDiv.querySelector('.clear-btn').addEventListener('click', async () => {
-      if (!confirm('Segur que vols esborrar totes les notes d’aquesta activitat?')) return;
+    menuDiv.querySelector('.clear-btn').addEventListener('click', async ()=> {
+      if(!confirm('Segur que vols esborrar totes les notes d’aquesta activitat?')) return;
       try {
-        await Promise.all(classStudents.map(sid => saveNote(sid, id, '', currentTermId)));
-        const calcPath = `calculatedActivities.${id}`;
-        await db.collection('classes').doc(currentClassId).collection('terms').doc(currentTermId).update({
-          [calcPath]: firebase.firestore.FieldValue.delete()
-        });
+        await Promise.all(classStudentsTerm.map(sid=>saveNote(sid,id,'',currentTermId)));
+        await db.collection('classes').doc(currentClassId).collection('terms').doc(currentTermId)
+          .update({ [`calculatedActivities.${id}`]: firebase.firestore.FieldValue.delete() });
         renderNotesGrid();
-      } catch(e) {
-        console.error('Error netejant notes:', e);
-        alert('Error netejant les notes: ' + e.message);
-      }
+      } catch(e){ console.error(e); alert('Error netejant notes'); }
     });
-
-    menuDiv.querySelector('.delete-btn').addEventListener('click', () => removeActivity(id));
-    menuDiv.querySelector('.calc-btn').addEventListener('click', () => openCalcModal(id));
+    menuDiv.querySelector('.delete-btn').addEventListener('click', ()=> removeActivity(id));
+    menuDiv.querySelector('.calc-btn').addEventListener('click', ()=> openCalcModal(id));
   });
-
-  headRow.appendChild(th('Mitjana', 'text-right'));
+  headRow.appendChild(th('Mitjana','text-right'));
   notesThead.appendChild(headRow);
 
   enableActivityDrag();
 
-  if (classStudents.length === 0) {
-    notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivities.length + 2}">No hi ha alumnes</td></tr>`;
-    renderAverages();
-    return;
-  }
+  if(classStudentsTerm.length===0){ notesTbody.innerHTML=`<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivitiesTerm.length+2}">No hi ha alumnes</td></tr>`; renderAverages(); return; }
 
-  // ---------------- Carrega alumnes ----------------
-  const studentDocs = await Promise.all(classStudents.map(id => db.collection('alumnes').doc(id).get()));
-
-  studentDocs.forEach(sdoc => {
-    const studentId = sdoc.id;
-    const studentData = sdoc.exists ? sdoc.data() : { nom: 'Desconegut', notes: {} };
-    const tr = document.createElement('tr');
-    tr.dataset.studentId = studentId;
-
-    const tdName = document.createElement('td');
-    tdName.className = 'border px-2 py-1';
-    tdName.textContent = studentData.nom;
-    tr.appendChild(tdName);
-
-    actDocs.forEach(actDoc => {
-      const actId = actDoc.id;
-      const val = (studentData.notes && studentData.notes[actId] !== undefined) ? studentData.notes[actId] : '';
-
-      const td = document.createElement('td');
-      td.className = 'border px-2 py-1';
-
-      if (calculatedActs[actId]?.calculated) {
-        td.style.backgroundColor = "#dbeafe";
-      }
-
-      const input = document.createElement('input');
-      input.type = 'number';
-      input.min = 0;
-      input.max = 10;
-      input.value = val;
-      input.dataset.activityId = actId;
-      input.className = 'table-input text-center rounded border p-1';
-
-      const isLocked = !!(calculatedActs[actId]?.locked) || !!(calculatedActs[actId]?.calculated);
-      input.disabled = isLocked;
-      if (isLocked) input.classList.add('blocked-cell'); else input.classList.remove('blocked-cell');
-
+  const studentDocs = await Promise.all(classStudentsTerm.map(id=>db.collection('alumnes').doc(id).get()));
+  studentDocs.forEach(sdoc=>{
+    const studentId = sdoc.id; const studentData = sdoc.exists?sdoc.data():{nom:'Desconegut',notes:{}};
+    const tr = document.createElement('tr'); tr.dataset.studentId=studentId;
+    const tdName = document.createElement('td'); tdName.className='border px-2 py-1'; tdName.textContent=studentData.nom; tr.appendChild(tdName);
+    actDocs.forEach(actDoc=>{
+      const actId = actDoc.id; const val = (studentData.notes && studentData.notes[actId]!==undefined)?studentData.notes[actId]:'';
+      const td = document.createElement('td'); td.className='border px-2 py-1';
+      if(calculatedActs[actId]?.calculated) td.style.backgroundColor="#dbeafe";
+      const input = document.createElement('input'); input.type='number'; input.min=0; input.max=10; input.value=val;
+      input.dataset.activityId=actId; input.className='table-input text-center rounded border p-1';
+      const isLocked = !!(calculatedActs[actId]?.locked)||!!(calculatedActs[actId]?.calculated);
+      input.disabled = isLocked; if(isLocked) input.classList.add('blocked-cell'); else input.classList.remove('blocked-cell');
       applyCellColor(input);
-
-      if (!isLocked) {
-        input.addEventListener('input', () => applyCellColor(input));
-        input.addEventListener('change', async (e) => {
+      if(!isLocked){
+        input.addEventListener('input',()=>applyCellColor(input));
+        input.addEventListener('change', async e=>{
           const newVal = e.target.value;
-          try {
-            input.disabled = true;
-            await saveNote(studentId, actId, newVal, currentTermId);
-            applyCellColor(input);
-            renderAverages();
-          } catch (err) {
-            console.error('Error guardant nota:', err);
-            alert('Error guardant la nota: ' + err.message);
-          } finally {
-            const nowLocked = !!(calculatedActs[actId]?.locked) || !!(calculatedActs[actId]?.calculated);
-            input.disabled = nowLocked;
-          }
+          try { input.disabled=true; await saveNote(studentId,actId,newVal,currentTermId); applyCellColor(input); renderAverages(); }
+          catch(err){ console.error(err); alert('Error guardant la nota: '+err.message); }
+          finally{ input.disabled = !!(calculatedActs[actId]?.locked)||!!(calculatedActs[actId]?.calculated); }
         });
       }
-
-      td.appendChild(input);
-      tr.appendChild(td);
+      td.appendChild(input); tr.appendChild(td);
     });
-
-    const avgTd = document.createElement('td');
-    avgTd.className = 'border px-2 py-1 text-right font-semibold';
-    avgTd.textContent = computeStudentAverageText(studentData);
-    tr.appendChild(avgTd);
-
+    const avgTd = document.createElement('td'); avgTd.className='border px-2 py-1 text-right font-semibold';
+    avgTd.textContent = computeStudentAverageText(studentData); tr.appendChild(avgTd);
     notesTbody.appendChild(tr);
   });
-
   renderAverages();
 
-  // ---------------- Inicialitza el selector de termes i botó "+" ----------------
-  // Aquesta línia només s’ha de cridar després que #classScreenWrapper existeixi
   await initTerms({ db, renderNotesGrid, currentClassId, currentTermId });
-
-  // Actualitza el nom del trimestre al costat del nom de la classe
-  const classSub = document.getElementById('classSub');
-  classSub.textContent = termData.name || 'Avaluació';
+  const classSub = document.getElementById('classSub'); classSub.textContent = termData.name||'Avaluació';
 }
 
-
-
-
-
-// Funció per actualitzar cel·les calculades sense recrear tota la taula
+/* ---------------- Update Calculated Cells ---------------- */
 function updateCalculatedCells() {
-  db.collection('classes').doc(currentClassId).get().then(doc => {
-    if (!doc.exists) return;
+  db.collection('classes').doc(currentClassId).get().then(doc=>{
+    if(!doc.exists) return;
     const calculatedActs = doc.data().calculatedActivities || {};
-
-    classStudents.forEach(sid => {
+    classStudents.forEach(sid=>{
       const row = document.querySelector(`tr[data-student-id="${sid}"]`);
-      if (!row) return;
-
-      classActivities.forEach(aid => {
-        if (!calculatedActs[aid]) return;
+      if(!row) return;
+      classActivities.forEach(aid=>{
+        if(!calculatedActs[aid]) return;
         const input = row.querySelector(`input[data-activity-id="${aid}"]`);
-        if (!input) return;
-
-        const val = computeCalculatedNote(sid, aid); // funció que calcula nota
-        input.value = val;
-        input.disabled = true;
-        input.style.backgroundColor = "#fca5a5";
+        if(!input) return;
+        const val = computeCalculatedNote(sid,aid);
+        input.value=val; input.disabled=true; input.style.backgroundColor="#fca5a5";
       });
     });
   });
 }
-
-
 
 /* ---------------- Helpers Notes & Excel ---------------- */
 function th(txt, cls=''){
