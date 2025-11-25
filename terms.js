@@ -2,6 +2,11 @@
 import { db } from './firebase.js';
 import { renderNotesGrid } from './app.js';
 
+window.initTerms = function() {
+   console.log("terms carregat");
+};
+
+
 export async function initTerms(currentClassId) {
   const selector = document.getElementById("termSelector");
   const btnAdd = document.getElementById("btnAddTerm");
