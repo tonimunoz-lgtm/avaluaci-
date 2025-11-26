@@ -1315,10 +1315,12 @@ function enableActivityDrag(){
 
       // 🔥 Guardar el nou ordre a Firestore
       if(currentClassId){
-        db.collection('classes').doc(currentClassId).update({ activitats: classActivities })
-          .then(() => console.log('Ordre d’activitats actualitzat a Firestore'))
-          .catch(e => console.error('Error guardant ordre activitats', e));
-      }
+  const path = `terms.${Terms.getActiveTerm()}.activities`;
+  db.collection('classes').doc(currentClassId).update({ [path]: classActivities })
+    .then(() => console.log('Ordre d’activitats actualitzat a Firestore'))
+    .catch(e => console.error('Error guardant ordre activitats', e));
+}
+
 
       renderNotesGrid();
     });
