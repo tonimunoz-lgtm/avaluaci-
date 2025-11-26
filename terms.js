@@ -137,6 +137,24 @@ export async function renameTerm(termId, newName) {
   renderDropdown();
 }
 
+// Obtenir totes les activitats de tots els termes amb informació del terme
+export function getAllTermActivities() {
+  const all = [];
+  const terms = _classData.terms || {};
+  Object.keys(terms).forEach(termId => {
+    const term = terms[termId];
+    term.activities.forEach(actId => {
+      all.push({
+        termId,
+        termName: term.name,
+        actId
+      });
+    });
+  });
+  return all;
+}
+
+
 // ------------------------ Eliminar terme complet ------------------------
 export async function deleteTerm(termId) {
   if (!_db || !_currentClassId || !_classData?.terms?.[termId]) return;
