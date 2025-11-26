@@ -463,16 +463,6 @@ async function createActivityModal() {
 }
 
 
-async function removeActivityFromTermWithConfirm(actId) {
-  if (!confirm('Segur que vols eliminar aquesta activitat del terme actiu?')) return;
-  try {
-    await Terms.removeActivityFromActiveTerm(actId);
-    buildActivityHeaders(); // refresca capçaleres
-    renderNotesGrid();      // refresca graella
-  } catch(e) {
-    alert('Error eliminant activitat: ' + e.message);
-  }
-}
 
 
 /* ---------------- Render Students List amb menú ---------------- */
@@ -1587,16 +1577,17 @@ async function buildActivityHeaders() {
     // Botó Eliminar activitat
     const deleteBtn = menuDiv.querySelector('button');
     deleteBtn.addEventListener('click', async () => {
-      try {
-        await Terms.removeActivityFromActiveTerm(aid); // elimina del terme actiu
-        await buildActivityHeaders(); // refresca capçaleres
-        renderNotesGrid();           // refresca graella
-        menuDiv.classList.add('hidden');
-      } catch(e) {
-        console.error('Error eliminant activitat:', e);
-        alert('Error eliminant activitat: ' + e.message);
-      }
-    });
+  if (!confirm('Segur que vols eliminar aquesta activitat del terme actiu?')) return;
+
+  try {
+    await Terms.removeActivityFromActiveTerm(aid); // elimina del terme actiu
+    buildActivityHeaders(); // refresca capçaleres
+    renderNotesGrid();      // refresca graella
+  } catch(e) {
+    alert('Error eliminant activitat: ' + e.message);
+  }
+});
+
 
     tr.appendChild(th);
   }
