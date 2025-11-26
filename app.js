@@ -405,10 +405,6 @@ function sortStudentsAlpha(){
     .catch(e=> console.error(e));
 }
 
-// Després de carregar classData i alumnes:
-initTerms(classData);
-
-
 /* ---------------- Activities ---------------- */
 btnAddActivity.addEventListener('click', ()=> openModal('modalAddActivity'));
 modalAddActivityBtn.addEventListener('click', createActivityModal);
@@ -811,6 +807,9 @@ if (isLocked) {
 
   // Final: recalculs de mitjanes i fila fórmules (igual que abans)
   renderAverages();
+  // Després de carregar classData i alumnes
+initTerms(classData);
+
 }
 
 
