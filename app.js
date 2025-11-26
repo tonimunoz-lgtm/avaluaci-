@@ -432,6 +432,7 @@ function sortStudentsAlpha(){
 btnAddActivity.addEventListener('click', ()=> openModal('modalAddActivity'));
 modalAddActivityBtn.addEventListener('click', createActivityModal);
 
+/* ---------------- Crear nova activitat modal ---------------- */
 async function createActivityModal() {
     const name = document.getElementById("modalActivityName").value.trim();
     if (!name) return;
@@ -452,15 +453,12 @@ async function createActivityModal() {
         console.error("❌ Terms no està carregat. Revisa l'import a app.js");
     }
 
-    // 🔥 Actualitzar array d'activitats del terme actiu i renderitzar la taula
+    // Actualitzar array d'activitats i renderitzar la taula sense duplicar capçalera
     if (window.Terms && Terms.getActiveTermActivities) {
-        classActivities = Terms.getActiveTermActivities(); // només activitats del terme actiu
-        await renderNotesGrid(); // renderitzar sense tocar tota la classe
-    } else {
-        console.warn("⚠️ getActiveTermActivities no disponible, la taula pot no actualitzar-se correctament");
+        classActivities = Terms.getActiveTermActivities();
+        await renderNotesGrid();
     }
 
-    // Tancar modal i netejar input
     closeModal("modalAddActivity");
     document.getElementById("modalActivityName").value = "";
 }
@@ -482,378 +480,226 @@ function removeActivity(actId){
 }
 
 /* ---------------- Render Students List amb menú ---------------- */
-function renderStudentsList(){
-  studentsList.innerHTML = '';
-  studentsCount.textContent = `(${classStudents.length})`;
-
-  if(classStudents.length === 0){
-    studentsList.innerHTML = '<li class="text-sm text-gray-400">No hi ha alumnes</li>';
-    return;
-  }
-
-  classStudents.forEach((stuId, idx)=>{
-    db.collection('alumnes').doc(stuId).get().then(doc=>{
-      const name = doc.exists ? doc.data().nom : 'Desconegut';
-      const li = document.createElement('li');
-      li.className = 'flex items-center justify-between bg-gray-50 dark:bg-gray-900 p-2 rounded';
-
-      li.innerHTML = `
-        <div class="flex items-center gap-3">
-          <span draggable="true" title="Arrossega per reordenar" class="cursor-move text-sm text-gray-500">☰</span>
-          <span class="stu-name font-medium">${name}</span>
-        </div>
-        <div class="relative">
-          <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white tooltip">⋮</button>
-          <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10 transition-opacity duration-200 opacity-0">
-            <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
-            <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>
-          </div>
-        </div>
-      `;
-
-      const menuBtn = li.querySelector('.menu-btn');
-      const menu = li.querySelector('.menu');
-
-      menuBtn.addEventListener('click', e=>{
-        e.stopPropagation();
-        document.querySelectorAll('.menu').forEach(m=> m.classList.add('hidden'));
-        menu.classList.toggle('hidden');
-      });
-
-      li.querySelector('.edit-btn').addEventListener('click', ()=>{
-        const newName = prompt('Introdueix el nou nom:', name);
-        if(!newName || newName.trim()===name) return;
-        db.collection('alumnes').doc(stuId).update({ nom: newName.trim() })
-          .then(()=> loadClassData())
-          .catch(e=> alert('Error editant alumne: '+e.message));
-      });
-
-      li.querySelector('.delete-btn').addEventListener('click', ()=> removeStudent(stuId));
-
-      // Drag handle
-      const dragHandle = li.querySelector('[draggable]');
-      dragHandle.addEventListener('dragstart', e=>{
-        e.dataTransfer.setData('text/plain', idx.toString());
-      });
-      li.addEventListener('dragover', e=> e.preventDefault());
-      li.addEventListener('drop', e=>{
-        e.preventDefault();
-        const fromIdx = Number(e.dataTransfer.getData('text/plain'));
-        reorderStudents(fromIdx, idx);
-      });
-
-      studentsList.appendChild(li);
-    });
-  });
-}
 /* ---------------- Notes Grid amb menú activitats ---------------- */
 async function renderNotesGrid() {
-  // Neteja taula
-  notesThead.innerHTML = '';
-  notesTbody.innerHTML = '';
-  notesTfoot.innerHTML = '';
-  formulaTfoot.innerHTML = '';
+    // Neteja taula
+    notesThead.innerHTML = '';
+    notesTbody.innerHTML = '';
+    notesTfoot.innerHTML = '';
+    formulaTfoot.innerHTML = '';
 
-  // Capçalera alumne
-  const headRow = document.createElement('tr');
-  headRow.appendChild(th('Alumne'));
+    // Capçalera alumne
+    const headRow = document.createElement('tr');
+    headRow.appendChild(th('Alumne'));
 
-  // Carrega classe
-  const classDoc = await db.collection('classes').doc(currentClassId).get();
-  if (!classDoc.exists) return;
-  const classData = classDoc.data();
-  const calculatedActs = classData.calculatedActivities || {};
+    // Carrega classe i activitats
+    const classDoc = await db.collection('classes').doc(currentClassId).get();
+    if (!classDoc.exists) return;
+    const classData = classDoc.data();
+    const calculatedActs = classData.calculatedActivities || {};
+    const actDocs = await Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()));
 
-  // Carrega activitats
-  const actDocs = await Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()));
+    // Capçalera activitats
+    actDocs.forEach(adoc => {
+        const id = adoc.id;
+        const name = adoc.exists ? (adoc.data().nom || 'Sense nom') : 'Desconegut';
 
-  // Capçalera activitats amb icona refresh i candau
-  actDocs.forEach(adoc => {
-    const id = adoc.id;
-    const name = adoc.exists ? (adoc.data().nom || 'Sense nom') : 'Desconegut';
+        const thEl = th('');
+        const container = document.createElement('div');
+        container.className = 'flex items-center justify-between';
 
-    const thEl = th('');
-    const container = document.createElement('div');
-    container.className = 'flex items-center justify-between';
+        const spanName = document.createElement('span');
+        spanName.textContent = name;
 
-    const spanName = document.createElement('span');
-    spanName.textContent = name;
+        // Candau
+        const lockIcon = document.createElement('span');
+        lockIcon.className = 'lock-icon cursor-pointer mr-1';
+        lockIcon.innerHTML = calculatedActs[id]?.locked ? '🔒' : '🔓';
+        lockIcon.title = calculatedActs[id]?.locked ? 'Activitat bloquejada' : 'Activitat desbloquejada';
+        if (calculatedActs[id]?.calculated) lockIcon.classList.add('hidden');
 
-   // Candau
-const lockIcon = document.createElement('span');
-lockIcon.className = 'lock-icon cursor-pointer mr-1';
-lockIcon.innerHTML = calculatedActs[id]?.locked ? '🔒' : '🔓';
-lockIcon.title = calculatedActs[id]?.locked ? 'Activitat bloquejada' : 'Activitat desbloquejada';
+        lockIcon.addEventListener('click', async () => {
+            try {
+                const newLockState = !calculatedActs[id]?.locked;
+                await db.collection('classes').doc(currentClassId).update({
+                    [`calculatedActivities.${id}.locked`]: newLockState
+                });
+                if (!calculatedActs[id]) calculatedActs[id] = {};
+                calculatedActs[id].locked = newLockState;
 
-// Amaguem el candau si és una activitat calculada
-if (calculatedActs[id]?.calculated) {
-    lockIcon.classList.add('hidden');
-}
+                // Actualitzem la taula només
+                await renderNotesGrid();
+            } catch (e) {
+                console.error('Error canviant bloqueig:', e);
+                alert('Error canviant bloqueig: ' + e.message);
+            }
+        });
 
-lockIcon.addEventListener('click', async () => {
-  try {
-    const newLockState = !calculatedActs[id]?.locked;
+        // Icona refrescar (només si és calculada)
+        const refreshIcon = document.createElement('span');
+        refreshIcon.innerHTML = '🔄';
+        refreshIcon.title = 'Refrescar columna';
+        refreshIcon.className = 'ml-2 cursor-pointer hidden';
+        if (calculatedActs[id]?.calculated) refreshIcon.classList.remove('hidden');
 
-    // Guardar a Firestore
-    await db.collection('classes').doc(currentClassId).update({
-      // assegurem que l'objecte existeixi i calculem la propietat
-      [`calculatedActivities.${id}.locked`]: newLockState
+        refreshIcon.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const formulasRow = formulaTfoot.querySelector('.formulas-row');
+            if (!formulasRow) return;
+            const idx = Array.from(headRow.children).indexOf(thEl);
+            const formulaTd = formulasRow.children[idx];
+            if (!formulaTd) return;
+            const formulaText = formulaTd.textContent.trim();
+            if (!formulaText) return alert('No hi ha cap fórmula aplicada a aquesta activitat.');
+
+            try {
+                await Promise.all(classStudents.map(async sid => {
+                    const result = await evalFormulaAsync(formulaText, sid);
+                    await saveNote(sid, id, result);
+                }));
+                await renderNotesGrid();
+            } catch(err) {
+                console.error('Error recalculant fórmula:', err);
+                alert('Error recalculant la fórmula: ' + err.message);
+            }
+        });
+
+        const menuDiv = document.createElement('div');
+        menuDiv.className = 'relative';
+        menuDiv.innerHTML = `
+          <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white tooltip">⋮</button>
+          <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10">
+            <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
+            <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>
+            <button class="calc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Càlcul</button>
+            <button class="clear-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Netejar</button>
+          </div>
+        `;
+
+        container.prepend(lockIcon);
+        container.appendChild(spanName);
+        container.appendChild(refreshIcon);
+        container.appendChild(menuDiv);
+        thEl.appendChild(container);
+        headRow.appendChild(thEl);
+
+        if (calculatedActs[id]?.calculated) {
+            thEl.style.backgroundColor = "#dbeafe";
+            thEl.style.borderBottom = "3px solid #1d4ed8";
+            thEl.style.color = "black";
+        }
+
+        const menuBtn = menuDiv.querySelector('.menu-btn');
+        const menu = menuDiv.querySelector('.menu');
+        menuBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            document.querySelectorAll('.menu').forEach(m => m.classList.add('hidden'));
+            menu.classList.toggle('hidden');
+        });
+
+        menuDiv.querySelector('.edit-btn').addEventListener('click', () => {
+            const newName = prompt('Nou nom activitat:', name);
+            if (!newName || newName.trim() === name) return;
+            db.collection('activitats').doc(id).update({ nom: newName.trim() }).then(() => renderNotesGrid());
+        });
+
+        menuDiv.querySelector('.clear-btn').addEventListener('click', async () => {
+            if (!confirm('Segur que vols esborrar totes les notes d’aquesta activitat?')) return;
+            try {
+                await Promise.all(classStudents.map(sid => saveNote(sid, id, '')));
+                await db.collection('classes').doc(currentClassId).update({
+                  [`calculatedActivities.${id}`]: firebase.firestore.FieldValue.delete()
+                });
+                renderNotesGrid();
+            } catch(e) {
+                console.error('Error netejant notes:', e);
+                alert('Error netejant les notes: ' + e.message);
+            }
+        });
+
+        menuDiv.querySelector('.delete-btn').addEventListener('click', () => removeActivity(id));
+        menuDiv.querySelector('.calc-btn').addEventListener('click', () => openCalcModal(id));
     });
 
-    // Si no existia l'entrada a local, la creem per evitar undefined errors
-    if (!calculatedActs[id]) calculatedActs[id] = {};
-    calculatedActs[id].locked = newLockState;
+    headRow.appendChild(th('Mitjana', 'text-right'));
+    notesThead.appendChild(headRow);
 
-    // 🔥 Afegir aquesta línia perquè la UI es torni a generar amb l’estat correcte
-await renderNotesGrid();
+    enableActivityDrag();
 
-    // Actualitzar icona
-    lockIcon.innerHTML = newLockState ? '🔒' : '🔓';
-    lockIcon.title = newLockState ? 'Activitat bloquejada' : 'Activitat desbloquejada';
-
-    // Estat de bloqueig real (si és calculada, també bloquejada)
-    const locked = newLockState || Boolean(calculatedActs[id]?.calculated);
-
-    // Actualitzar inputs IMMEDIATAMENT (sense esperar un render complet)
-    document.querySelectorAll(`tr[data-student-id]`).forEach(tr => {
-      const input = tr.querySelector(`input[data-activity-id="${id}"]`);
-      if (!input) return;
-
-      // Usem readOnly en lloc de disabled per no trencar reactivitat/estils
-      input.readOnly = locked;
-
-      // mantenim els colors de fons CRÍTIC: no sobreescrivim si ja té classes de color
-      // si vols marcar visualment bloquejat, afegeix una classe mínima que no sobreescrigui colors
-      if (locked) {
-  input.disabled = true;
-  input.classList.add('blocked-cell');
-} else {
-  input.disabled = false;
-  input.classList.remove('blocked-cell');
-}
-
-      // Reapliquem la coloració basada en valor (applyCellColor) perquè no es perdin estils
-      applyCellColor(input);
-    });
-
-    // Opcional: si vols re-renderitzar tota la taula per altres canvis, crida renderNotesGrid()
-    // renderNotesGrid();
-  } catch (e) {
-    console.error('Error canviant bloqueig:', e);
-    alert('Error canviant bloqueig: ' + e.message);
-  }
-});
-
-
-
-    // Icona refrescar (només si és calculada)
-    const refreshIcon = document.createElement('span');
-    refreshIcon.innerHTML = '🔄';
-    refreshIcon.title = 'Refrescar columna';
-    refreshIcon.className = 'ml-2 cursor-pointer hidden';
-    if (calculatedActs[id]?.calculated) refreshIcon.classList.remove('hidden');
-
-    refreshIcon.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const formulasRow = formulaTfoot.querySelector('.formulas-row');
-      if (!formulasRow) return;
-      const idx = Array.from(headRow.children).indexOf(thEl);
-      const formulaTd = formulasRow.children[idx];
-      if (!formulaTd) return;
-      const formulaText = formulaTd.textContent.trim();
-      if (!formulaText) return alert('No hi ha cap fórmula aplicada a aquesta activitat.');
-
-      try {
-        // Aplicar fórmula a tots els alumnes i esperar que es guardi
-        await Promise.all(classStudents.map(async sid => {
-          const result = await evalFormulaAsync(formulaText, sid);
-          await saveNote(sid, id, result);
-        }));
-
-        // Quan acabi, actualitzem la vista i reapliquem colors
-        await renderNotesGrid();
-      } catch(err) {
-        console.error('Error recalculant fórmula:', err);
-        alert('Error recalculant la fórmula: ' + err.message);
-      }
-    });
-
-    const menuDiv = document.createElement('div');
-    menuDiv.className = 'relative';
-    menuDiv.innerHTML = `
-      <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white tooltip">⋮</button>
-      <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10">
-        <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
-        <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>
-        <button class="calc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Càlcul</button>
-        <button class="clear-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Netejar</button>
-      </div>
-    `;
-
-    container.prepend(lockIcon);
-    container.appendChild(spanName);
-    container.appendChild(refreshIcon);
-    container.appendChild(menuDiv);
-    thEl.appendChild(container);
-    headRow.appendChild(thEl);
-
-    // Estil per capçaleres calculades
-    if (calculatedActs[id]?.calculated) {
-      thEl.style.backgroundColor = "#dbeafe";
-      thEl.style.borderBottom = "3px solid #1d4ed8";
-      thEl.style.color = "black";
+    if (classStudents.length === 0) {
+        notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivities.length + 2}">No hi ha alumnes</td></tr>`;
+        renderAverages();
+        return;
     }
 
-    // Menú activitat
-    const menuBtn = menuDiv.querySelector('.menu-btn');
-    const menu = menuDiv.querySelector('.menu');
-    menuBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      document.querySelectorAll('.menu').forEach(m => m.classList.add('hidden'));
-      menu.classList.toggle('hidden');
-    });
+    const studentDocs = await Promise.all(classStudents.map(id => db.collection('alumnes').doc(id).get()));
+    studentDocs.forEach(sdoc => {
+        const studentId = sdoc.id;
+        const studentData = sdoc.exists ? sdoc.data() : { nom: 'Desconegut', notes: {} };
 
-    menuDiv.querySelector('.edit-btn').addEventListener('click', () => {
-      const newName = prompt('Nou nom activitat:', name);
-      if (!newName || newName.trim() === name) return;
-      db.collection('activitats').doc(id).update({ nom: newName.trim() }).then(() => renderNotesGrid());
-    });
+        const tr = document.createElement('tr');
+        tr.dataset.studentId = studentId;
 
-    menuDiv.querySelector('.clear-btn').addEventListener('click', async () => {
-      if (!confirm('Segur que vols esborrar totes les notes d’aquesta activitat?')) return;
-      try {
-        await Promise.all(classStudents.map(sid => saveNote(sid, id, '')));
-        await db.collection('classes').doc(currentClassId).update({
-          [`calculatedActivities.${id}`]: firebase.firestore.FieldValue.delete()
-        });
-        renderNotesGrid();
-      } catch(e) {
-        console.error('Error netejant notes:', e);
-        alert('Error netejant les notes: ' + e.message);
-      }
-    });
+        const tdName = document.createElement('td');
+        tdName.className = 'border px-2 py-1';
+        tdName.textContent = studentData.nom;
+        tr.appendChild(tdName);
 
-    menuDiv.querySelector('.delete-btn').addEventListener('click', () => removeActivity(id));
-    menuDiv.querySelector('.calc-btn').addEventListener('click', () => openCalcModal(id));
+        actDocs.forEach(actDoc => {
+            const actId = actDoc.id;
+            const val = (studentData.notes && studentData.notes[actId] !== undefined) ? studentData.notes[actId] : '';
 
-  });
+            const td = document.createElement('td');
+            td.className = 'border px-2 py-1';
 
-  headRow.appendChild(th('Mitjana', 'text-right'));
-  notesThead.appendChild(headRow);
+            if (calculatedActs[actId]?.calculated) td.style.backgroundColor = "#dbeafe";
 
-  enableActivityDrag();
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.min = 0;
+            input.max = 10;
+            input.value = val;
+            input.dataset.activityId = actId;
+            input.className = 'table-input text-center rounded border p-1';
 
-  if (classStudents.length === 0) {
-    notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivities.length + 2}">No hi ha alumnes</td></tr>`;
-    renderAverages();
-    return;
-  }
-
-  // Carrega alumnes (una sola vegada)
-  const studentDocs = await Promise.all(classStudents.map(id => db.collection('alumnes').doc(id).get()));
-
-  studentDocs.forEach(sdoc => {
-    const studentId = sdoc.id;
-    const studentData = sdoc.exists ? sdoc.data() : { nom: 'Desconegut', notes: {} };
-
-    const tr = document.createElement('tr');
-    tr.dataset.studentId = studentId;
-
-    const tdName = document.createElement('td');
-    tdName.className = 'border px-2 py-1';
-    tdName.textContent = studentData.nom;
-    tr.appendChild(tdName);
-
-    // Per cada activitat afegim la cel·la i l'input
-    actDocs.forEach(actDoc => {
-      const actId = actDoc.id;
-      const val = (studentData.notes && studentData.notes[actId] !== undefined) ? studentData.notes[actId] : '';
-
-      const td = document.createElement('td');
-      td.className = 'border px-2 py-1';
-
-      if (calculatedActs[actId]?.calculated) {
-        td.style.backgroundColor = "#dbeafe"; // capçalera blava i cel·la alguna cosa similar
-      }
-
-      const input = document.createElement('input');
-      input.type = 'number';
-      input.min = 0;
-      input.max = 10;
-      input.value = val;
-      input.dataset.activityId = actId;
-      input.className = 'table-input text-center rounded border p-1';
-
-      // Estat bloquejat si és calculada o hi ha lock
-      const isLocked = !!(calculatedActs[actId]?.locked) || !!(calculatedActs[actId]?.calculated);
-      input.disabled = isLocked;
-      // 🔥 IMPORTANT: Afegir la classe visual persistent
-if (isLocked) {
-    input.classList.add('blocked-cell');
-} else {
-    input.classList.remove('blocked-cell');
-}
-
-      // Reaplica color sempre (això evita que quedi en gris)
-      applyCellColor(input);
-
-      // HANDLER: quan l'usuari canvia la nota, fem un save i actualitzem UI només quan saveNote acaba.
-      if (!isLocked) {
-        input.addEventListener('input', () => {
-          // color en viu mentre escriu
-          applyCellColor(input);
-        });
-
-        input.addEventListener('change', async (e) => {
-          const newVal = e.target.value;
-          try {
-            // Opcional: desactivar l'input mentre guardem per evitar múltiples clicks ràpids
-            input.disabled = true;
-
-            // Guardem la nota a Firestore (await)
-            await saveNote(studentId, actId, newVal);
-
-            // Quan ja està guardada: reapliquem color (i recalculs locals ràpids)
+            const isLocked = !!(calculatedActs[actId]?.locked) || !!(calculatedActs[actId]?.calculated);
+            input.disabled = isLocked;
+            if (isLocked) input.classList.add('blocked-cell'); else input.classList.remove('blocked-cell');
             applyCellColor(input);
 
-            // Actualitza mitjanes i mitjanes per activitat (local)
-            renderAverages();
+            if (!isLocked) {
+                input.addEventListener('input', () => applyCellColor(input));
+                input.addEventListener('change', async (e) => {
+                    const newVal = e.target.value;
+                    try {
+                        input.disabled = true;
+                        await saveNote(studentId, actId, newVal);
+                        applyCellColor(input);
+                        renderAverages();
+                    } catch (err) {
+                        console.error('Error guardant nota:', err);
+                        alert('Error guardant la nota: ' + err.message);
+                    } finally {
+                        const nowLocked = !!(calculatedActs[actId]?.locked) || !!(calculatedActs[actId]?.calculated);
+                        input.disabled = nowLocked;
+                    }
+                });
+            }
 
-            // Si vols forçar refresc de columnes calculades relatives, pots cridar updateCalculatedCells()
-            // updateCalculatedCells(); // opcional
-
-          } catch (err) {
-            console.error('Error guardant nota:', err);
-            alert('Error guardant la nota: ' + err.message);
-          } finally {
-            // Tornem a aplicar disabled si la columna està bloquejada ara
-            const nowLocked = !!(calculatedActs[actId]?.locked) || !!(calculatedActs[actId]?.calculated);
-            input.disabled = nowLocked;
-          }
+            td.appendChild(input);
+            tr.appendChild(td);
         });
-      } else {
-        // Si està bloquejat, però vols que el color reflecteixi el valor actual, ja està feta applyCellColor()
-        // No afegim handlers
-      }
 
-      td.appendChild(input);
-      tr.appendChild(td);
+        const avgTd = document.createElement('td');
+        avgTd.className = 'border px-2 py-1 text-right font-semibold';
+        avgTd.textContent = computeStudentAverageText(studentData);
+        tr.appendChild(avgTd);
+
+        notesTbody.appendChild(tr);
     });
 
-    // Mitjana alumne
-    const avgTd = document.createElement('td');
-    avgTd.className = 'border px-2 py-1 text-right font-semibold';
-    avgTd.textContent = computeStudentAverageText(studentData);
-    tr.appendChild(avgTd);
-
-    notesTbody.appendChild(tr);
-  });
-
-  // Final: recalculs de mitjanes i fila fórmules (igual que abans)
-  renderAverages();
+    renderAverages();
 }
-
-
 
 
 // Funció per actualitzar cel·les calculades sense recrear tota la taula
