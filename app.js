@@ -1540,3 +1540,73 @@ btnAddTerm.addEventListener('click', async () => {
     alert('Error creant terme: ' + e.message);
   }
 });
+
+// ---------------- Construir capçaleres amb menú de tres puntets ----------------
+function buildActivityHeaders() {
+  const tr = notesThead.querySelector('tr');
+  tr.innerHTML = ''; // netejar fila abans de renderitzar
+
+  // Columna Alumne
+  const thAlumne = document.createElement('th');
+  thAlumne.textContent = 'Alumne';
+  tr.appendChild(thAlumne);
+
+  // Activitats del terme actiu
+  const activities = Terms.getActiveTermActivities();
+
+  activities.forEach((aid, idx) => {
+    const th = document.createElement('th');
+    th.className = 'relative px-2 py-1 text-center';
+
+    // Nom activitat
+    const actDoc = db.collection('activitats').doc(aid);
+    actDoc.get().then(doc => {
+      th.textContent = doc.exists ? doc.data().nom : 'Sense nom';
+    });
+
+    // Botó de menú tres puntets
+    const menuBtn = document.createElement('button');
+    menuBtn.textContent = '⋮';
+    menuBtn.className = 'absolute top-1 right-1 px-1 text-sm menu-btn';
+    th.appendChild(menuBtn);
+
+    // Menu desplegable
+    const menuDiv = document.createElement('div');
+    menuDiv.className = 'menu absolute right-0 mt-6 bg-white border rounded shadow hidden z-50';
+    menuDiv.innerHTML = `
+      <button class="block w-full px-2 py-1 hover:bg-gray-200 text-left">Eliminar activitat</button>
+      <!-- Pots afegir més opcions aquí -->
+    `;
+    th.appendChild(menuDiv);
+
+    // Toggle menú
+    menuBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      menuDiv.classList.toggle('hidden');
+    });
+
+    // Botó Eliminar activitat
+    const deleteBtn = menuDiv.querySelector('button');
+    deleteBtn.addEventListener('click', async () => {
+      try {
+        await Terms.removeActivityFromActiveTerm(aid); // elimina del terme actiu
+        renderNotesGrid(); // refresca graella
+        menuDiv.classList.add('hidden');
+      } catch(e) {
+        console.error('Error eliminant activitat:', e);
+        alert('Error eliminant activitat: ' + e.message);
+      }
+    });
+
+    tr.appendChild(th);
+  });
+
+  // Columna Mitjana
+  const thMitjana = document.createElement('th');
+  thMitjana.textContent = 'Mitjana';
+  tr.appendChild(thMitjana);
+
+  // Reactivar drag & drop
+  enableActivityDrag();
+}
+
