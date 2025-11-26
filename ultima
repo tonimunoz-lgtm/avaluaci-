@@ -1,6 +1,7 @@
 // app.js - lògica principal (modules)
 import { openModal, closeModal, confirmAction } from './modals.js';
 import * as Terms from './terms.js';
+window.Terms = Terms;
 
 
 /* ---------------- FIREBASE CONFIG ---------------- */
@@ -431,18 +432,36 @@ function sortStudentsAlpha(){
 btnAddActivity.addEventListener('click', ()=> openModal('modalAddActivity'));
 modalAddActivityBtn.addEventListener('click', createActivityModal);
 
-function createActivityModal(){
-  const name = document.getElementById('modalActivityName').value.trim();
-  if(!name) return alert('Posa un nom');
-  const ref = db.collection('activitats').doc();
-  ref.set({ nom: name, data: new Date().toISOString().split('T')[0], calcType:'numeric', formula:'' })
-    .then(()=> db.collection('classes').doc(currentClassId).update({ activitats: firebase.firestore.FieldValue.arrayUnion(ref.id) }))
-    .then(()=> {
-      closeModal('modalAddActivity');
-      document.getElementById('modalActivityName').value = '';
-      loadClassData();
-    }).catch(e=> alert('Error: '+e.message));
+async function createActivityModal() {
+    const name = document.getElementById("modalActivityName").value.trim();
+    if (!name) return;
+
+    const ref = db.collection("activitats").doc();
+
+    await ref.set({
+        nom: name,
+        data: new Date().toISOString().split("T")[0],
+        calcType: "numeric",
+        formula: ""
+    });
+
+    // 🔥 Aquí afegim l'activitat al terme actiu
+    if (window.Terms && Terms.addActivityToActiveTerm) {
+        await Terms.addActivityToActiveTerm(ref.id);
+    } else {
+        console.error("❌ Terms no està carregat. Revisa l'import a app.js");
+    }
+
+    closeModal("modalAddActivity");
+    document.getElementById("modalActivityName").value = "";
+
+    // 🔥 NO posar loadClassData() si tens dubtes!
+    // Si vols recarregar:
+    if (typeof loadClassData === "function") {
+        loadClassData();
+    }
 }
+
 
 function removeActivity(actId){
   confirmAction('Eliminar activitat', 'Esborrar activitat i totes les notes relacionades?', ()=> {
@@ -1314,10 +1333,12 @@ function enableActivityDrag(){
 
       // 🔥 Guardar el nou ordre a Firestore
       if(currentClassId){
-        db.collection('classes').doc(currentClassId).update({ activitats: classActivities })
-          .then(() => console.log('Ordre d’activitats actualitzat a Firestore'))
-          .catch(e => console.error('Error guardant ordre activitats', e));
-      }
+  const path = `terms.${Terms.getActiveTerm()}.activities`;
+  db.collection('classes').doc(currentClassId).update({ [path]: classActivities })
+    .then(() => console.log('Ordre d’activitats actualitzat a Firestore'))
+    .catch(e => console.error('Error guardant ordre activitats', e));
+}
+
 
       renderNotesGrid();
     });
@@ -1505,3 +1526,17 @@ if (closeBtn) {
     container.classList.remove('mobile-open');
   });
 }
+
+// ----------------------Fer funcionar el botó + (afegir terme)
+const btnAddTerm = document.getElementById('btnAddTerm');
+btnAddTerm.addEventListener('click', async () => {
+  const name = prompt('Nom del nou grup (p. ex. 2TRIM):');
+  if(!name) return;
+  try {
+    const newId = await Terms.addNewTermWithName(name);
+    // Quan acaba, Terms ja cridarà l'onChange que actualitza la graella i el dropdown
+  } catch(e) {
+    console.error('Error creant terme:', e);
+    alert('Error creant terme: ' + e.message);
+  }
+});
