@@ -763,7 +763,6 @@ menuDiv.querySelector('.delete-btn').addEventListener('click', () => {
       await batch.commit();
 
       // Refrescar graella i capçaleres
-      buildActivityHeaders();
       renderNotesGrid();
     } catch(e) {
       alert('Error esborrant activitat: ' + e.message);
