@@ -1,6 +1,5 @@
 // terms.js
 // Mòdul responsable de gestionar "terms" (grups d'activitats) dins d'una classe.
-// IMPORTANT: aquest mòdul NO fa res a l'import; es inicialitza mitjançant setup()
 
 let _db = null;
 let _currentClassId = null;
@@ -10,32 +9,26 @@ let _onChangeCallback = null;  // opcional: cridar quan canvia terme
 
 // Utilities
 function makeTermId(name) {
-  // id senzill únic (p. ex. term_163467...)
   return `term_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
 }
 
 // --------- setup ---------
-// db: instancia Firestore (passa-li la variable db de app.js)
-// classId: currentClassId
-// classData: document.data() de la classe
-// opts.onChange(termId) opcional
 export function setup(db, classId, classData, opts = {}) {
   _db = db;
   _currentClassId = classId;
   _classData = classData || {};
   _onChangeCallback = opts.onChange || null;
 
-  // Assegurem que existeixi el node terms al objecte local
-  if (!_classData.terms || Object.keys(_classData.terms).length === 0) {
-    // Si hi ha activitats antics a nivell de classe (per compatibilitat), les posem dins d'un terme per defecte
+  // Només creem el terme inicial si no existeix cap terme
+  if (!_classData.terms) {
     const legacyActs = _classData.activitats || [];
-    const defaultId = makeTermId('Avaluacio');
-    _classData.terms = {};
-    _classData.terms[defaultId] = {
-      name: 'Avaluació',
-      activities: Array.isArray(legacyActs) ? [...legacyActs] : []
+    const defaultId = makeTermId('avaluacio');
+    _classData.terms = {
+      [defaultId]: {
+        name: 'Avaluació',
+        activities: Array.isArray(legacyActs) ? [...legacyActs] : []
+      }
     };
-    // **No fem write automàtic aquí**: només guardarem quan calgui (per evitar múltiples escritures inesperades)
   }
 
   // Seleccionem el primer terme si no hi ha actiu
@@ -44,7 +37,7 @@ export function setup(db, classId, classData, opts = {}) {
   }
 
   renderDropdown();
-  // Notificar app.js que terme actiu pot haver canviat
+
   if (_onChangeCallback) _onChangeCallback(_activeTermId);
 }
 
@@ -73,38 +66,30 @@ function renderDropdown() {
     sel.appendChild(opt);
   });
 
-  // Selecciona el terme actiu
   if (_activeTermId) sel.value = _activeTermId;
 
-  // Event listener per canvis manuals des del dropdown
   sel.onchange = (e) => {
     _activeTermId = e.target.value;
     if (_onChangeCallback) _onChangeCallback(_activeTermId);
   };
 }
 
-// --------- crear un nou terme (crida des de app.js) ---------
+// --------- crear un nou terme ---------
 export async function addNewTermWithName(name) {
   if (!name || !name.trim()) return null;
   if (!_db || !_currentClassId) throw new Error('terms.js no inicialitzat (db o classId manquen)');
 
   const newId = makeTermId(name.trim());
-  const payload = {
-    name: name.trim(),
-    activities: []
-  };
+  const payload = { name: name.trim(), activities: [] };
 
-  // Guardar a Firestore sota terms.<newId>
   const updateObj = {};
   updateObj[`terms.${newId}`] = payload;
 
   await _db.collection('classes').doc(_currentClassId).update(updateObj);
 
-  // Recarregar dades de la classe (per tenir sincronitzat _classData)
   const doc = await _db.collection('classes').doc(_currentClassId).get();
   _classData = doc.exists ? doc.data() : _classData;
 
-  // Establim com a actiu
   _activeTermId = newId;
   renderDropdown();
   if (_onChangeCallback) _onChangeCallback(_activeTermId);
@@ -120,10 +105,9 @@ export async function addActivityToActiveTerm(activityId) {
     [path]: firebase.firestore.FieldValue.arrayUnion(activityId)
   });
 
-  // Actualitzar _classData local
   const doc = await _db.collection('classes').doc(_currentClassId).get();
   _classData = doc.exists ? doc.data() : _classData;
-  // Notificar canvi per re-render a app.js
+
   if (_onChangeCallback) _onChangeCallback(_activeTermId);
 }
 
@@ -143,13 +127,11 @@ export async function removeActivityFromActiveTerm(activityId) {
 export async function renameTerm(termId, newName) {
   if (!termId || !newName) return;
   const path = `terms.${termId}.name`;
-  await _db.collection('classes').doc(_currentClassId).update({
-    [path]: newName
-  });
+  await _db.collection('classes').doc(_currentClassId).update({ [path]: newName });
   const doc = await _db.collection('classes').doc(_currentClassId).get();
   _classData = doc.exists ? doc.data() : _classData;
   renderDropdown();
 }
 
-// Exports mínims fets (setup, addNewTermWithName, getActiveTermActivities, getActiveTermName, addActivityToActiveTerm, removeActivityFromActiveTerm, getActiveTermId)
+// --------- exports mínims ---------
 export function getActiveTerm() { return _activeTermId; }
