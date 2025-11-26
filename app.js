@@ -463,20 +463,17 @@ async function createActivityModal() {
 }
 
 
-function removeActivity(actId){
-  confirmAction('Eliminar activitat', 'Esborrar activitat i totes les notes relacionades?', ()=> {
-    db.collection('classes').doc(currentClassId).update({ activitats: firebase.firestore.FieldValue.arrayRemove(actId) })
-      .then(()=> {
-        const batch = db.batch();
-        classStudents.forEach(sid => {
-          const ref = db.collection('alumnes').doc(sid);
-          batch.update(ref, { [`notes.${actId}`]: firebase.firestore.FieldValue.delete() });
-        });
-        return batch.commit();
-      }).then(()=> loadClassData())
-      .catch(e=> alert('Error esborrant activitat: '+e.message));
-  });
+async function removeActivityFromTermWithConfirm(actId) {
+  if (!confirm('Segur que vols eliminar aquesta activitat del terme actiu?')) return;
+  try {
+    await Terms.removeActivityFromActiveTerm(actId);
+    buildActivityHeaders(); // refresca capçaleres
+    renderNotesGrid();      // refresca graella
+  } catch(e) {
+    alert('Error eliminant activitat: ' + e.message);
+  }
 }
+
 
 /* ---------------- Render Students List amb menú ---------------- */
 function renderStudentsList(){
