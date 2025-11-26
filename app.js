@@ -544,6 +544,7 @@ function renderStudentsList(){
   });
 }
 /* ---------------- Notes Grid amb menú activitats ---------------- */
+/* ---------------- Notes Grid amb menú activitats ---------------- */
 async function renderNotesGrid() {
   // Neteja taula
   notesThead.innerHTML = '';
@@ -561,8 +562,9 @@ async function renderNotesGrid() {
   const classData = classDoc.data();
   const calculatedActs = classData.calculatedActivities || {};
 
-  // Carrega activitats
-  const actDocs = await Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()));
+  // Carrega activitats del terme actiu
+  const termActivities = Terms.getActiveTermActivities();
+  const actDocs = await Promise.all(termActivities.map(id => db.collection('activitats').doc(id).get()));
 
   // Capçalera activitats amb icona refresh i candau
   actDocs.forEach(adoc => {
@@ -576,72 +578,41 @@ async function renderNotesGrid() {
     const spanName = document.createElement('span');
     spanName.textContent = name;
 
-   // Candau
-const lockIcon = document.createElement('span');
-lockIcon.className = 'lock-icon cursor-pointer mr-1';
-lockIcon.innerHTML = calculatedActs[id]?.locked ? '🔒' : '🔓';
-lockIcon.title = calculatedActs[id]?.locked ? 'Activitat bloquejada' : 'Activitat desbloquejada';
+    // Candau
+    const lockIcon = document.createElement('span');
+    lockIcon.className = 'lock-icon cursor-pointer mr-1';
+    lockIcon.innerHTML = calculatedActs[id]?.locked ? '🔒' : '🔓';
+    lockIcon.title = calculatedActs[id]?.locked ? 'Activitat bloquejada' : 'Activitat desbloquejada';
+    if (calculatedActs[id]?.calculated) lockIcon.classList.add('hidden');
 
-// Amaguem el candau si és una activitat calculada
-if (calculatedActs[id]?.calculated) {
-    lockIcon.classList.add('hidden');
-}
+    lockIcon.addEventListener('click', async () => {
+      try {
+        const newLockState = !calculatedActs[id]?.locked;
+        await db.collection('classes').doc(currentClassId).update({
+          [`calculatedActivities.${id}.locked`]: newLockState
+        });
+        if (!calculatedActs[id]) calculatedActs[id] = {};
+        calculatedActs[id].locked = newLockState;
 
-lockIcon.addEventListener('click', async () => {
-  try {
-    const newLockState = !calculatedActs[id]?.locked;
+        // Actualitza només inputs afectats
+        document.querySelectorAll(`tr[data-student-id]`).forEach(tr => {
+          const input = tr.querySelector(`input[data-activity-id="${id}"]`);
+          if (!input) return;
+          const locked = newLockState || Boolean(calculatedActs[id]?.calculated);
+          input.readOnly = locked;
+          input.disabled = locked;
+          input.classList.toggle('blocked-cell', locked);
+          applyCellColor(input);
+        });
 
-    // Guardar a Firestore
-    await db.collection('classes').doc(currentClassId).update({
-      // assegurem que l'objecte existeixi i calculem la propietat
-      [`calculatedActivities.${id}.locked`]: newLockState
+        // Actualitza icona
+        lockIcon.innerHTML = newLockState ? '🔒' : '🔓';
+        lockIcon.title = newLockState ? 'Activitat bloquejada' : 'Activitat desbloquejada';
+      } catch (e) {
+        console.error('Error canviant bloqueig:', e);
+        alert('Error canviant bloqueig: ' + e.message);
+      }
     });
-
-    // Si no existia l'entrada a local, la creem per evitar undefined errors
-    if (!calculatedActs[id]) calculatedActs[id] = {};
-    calculatedActs[id].locked = newLockState;
-
-    // 🔥 Afegir aquesta línia perquè la UI es torni a generar amb l’estat correcte
-await renderNotesGrid();
-
-    // Actualitzar icona
-    lockIcon.innerHTML = newLockState ? '🔒' : '🔓';
-    lockIcon.title = newLockState ? 'Activitat bloquejada' : 'Activitat desbloquejada';
-
-    // Estat de bloqueig real (si és calculada, també bloquejada)
-    const locked = newLockState || Boolean(calculatedActs[id]?.calculated);
-
-    // Actualitzar inputs IMMEDIATAMENT (sense esperar un render complet)
-    document.querySelectorAll(`tr[data-student-id]`).forEach(tr => {
-      const input = tr.querySelector(`input[data-activity-id="${id}"]`);
-      if (!input) return;
-
-      // Usem readOnly en lloc de disabled per no trencar reactivitat/estils
-      input.readOnly = locked;
-
-      // mantenim els colors de fons CRÍTIC: no sobreescrivim si ja té classes de color
-      // si vols marcar visualment bloquejat, afegeix una classe mínima que no sobreescrigui colors
-      if (locked) {
-  input.disabled = true;
-  input.classList.add('blocked-cell');
-} else {
-  input.disabled = false;
-  input.classList.remove('blocked-cell');
-}
-
-      // Reapliquem la coloració basada en valor (applyCellColor) perquè no es perdin estils
-      applyCellColor(input);
-    });
-
-    // Opcional: si vols re-renderitzar tota la taula per altres canvis, crida renderNotesGrid()
-    // renderNotesGrid();
-  } catch (e) {
-    console.error('Error canviant bloqueig:', e);
-    alert('Error canviant bloqueig: ' + e.message);
-  }
-});
-
-
 
     // Icona refrescar (només si és calculada)
     const refreshIcon = document.createElement('span');
@@ -661,20 +632,26 @@ await renderNotesGrid();
       if (!formulaText) return alert('No hi ha cap fórmula aplicada a aquesta activitat.');
 
       try {
-        // Aplicar fórmula a tots els alumnes i esperar que es guardi
         await Promise.all(classStudents.map(async sid => {
           const result = await evalFormulaAsync(formulaText, sid);
           await saveNote(sid, id, result);
         }));
 
-        // Quan acabi, actualitzem la vista i reapliquem colors
-        await renderNotesGrid();
-      } catch(err) {
+        // Actualitza només inputs afectats després de recalcul
+        document.querySelectorAll(`tr[data-student-id]`).forEach(tr => {
+          const input = tr.querySelector(`input[data-activity-id="${id}"]`);
+          if (!input) return;
+          input.value = computeCalculatedNote(tr.dataset.studentId, id); 
+          applyCellColor(input);
+        });
+        renderAverages();
+      } catch (err) {
         console.error('Error recalculant fórmula:', err);
         alert('Error recalculant la fórmula: ' + err.message);
       }
     });
 
+    // Menú activitat
     const menuDiv = document.createElement('div');
     menuDiv.className = 'relative';
     menuDiv.innerHTML = `
@@ -724,7 +701,7 @@ await renderNotesGrid();
           [`calculatedActivities.${id}`]: firebase.firestore.FieldValue.delete()
         });
         renderNotesGrid();
-      } catch(e) {
+      } catch (e) {
         console.error('Error netejant notes:', e);
         alert('Error netejant les notes: ' + e.message);
       }
@@ -732,7 +709,6 @@ await renderNotesGrid();
 
     menuDiv.querySelector('.delete-btn').addEventListener('click', () => removeActivity(id));
     menuDiv.querySelector('.calc-btn').addEventListener('click', () => openCalcModal(id));
-
   });
 
   headRow.appendChild(th('Mitjana', 'text-right'));
@@ -741,18 +717,17 @@ await renderNotesGrid();
   enableActivityDrag();
 
   if (classStudents.length === 0) {
-    notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${classActivities.length + 2}">No hi ha alumnes</td></tr>`;
+    notesTbody.innerHTML = `<tr><td class="p-3 text-sm text-gray-400" colspan="${actDocs.length + 2}">No hi ha alumnes</td></tr>`;
     renderAverages();
     return;
   }
 
-  // Carrega alumnes (una sola vegada)
+  // Carrega alumnes
   const studentDocs = await Promise.all(classStudents.map(id => db.collection('alumnes').doc(id).get()));
 
   studentDocs.forEach(sdoc => {
     const studentId = sdoc.id;
     const studentData = sdoc.exists ? sdoc.data() : { nom: 'Desconegut', notes: {} };
-
     const tr = document.createElement('tr');
     tr.dataset.studentId = studentId;
 
@@ -761,17 +736,11 @@ await renderNotesGrid();
     tdName.textContent = studentData.nom;
     tr.appendChild(tdName);
 
-    // Per cada activitat afegim la cel·la i l'input
     actDocs.forEach(actDoc => {
       const actId = actDoc.id;
       const val = (studentData.notes && studentData.notes[actId] !== undefined) ? studentData.notes[actId] : '';
-
       const td = document.createElement('td');
       td.className = 'border px-2 py-1';
-
-      if (calculatedActs[actId]?.calculated) {
-        td.style.backgroundColor = "#dbeafe"; // capçalera blava i cel·la alguna cosa similar
-      }
 
       const input = document.createElement('input');
       input.type = 'number';
@@ -781,63 +750,34 @@ await renderNotesGrid();
       input.dataset.activityId = actId;
       input.className = 'table-input text-center rounded border p-1';
 
-      // Estat bloquejat si és calculada o hi ha lock
       const isLocked = !!(calculatedActs[actId]?.locked) || !!(calculatedActs[actId]?.calculated);
       input.disabled = isLocked;
-      // 🔥 IMPORTANT: Afegir la classe visual persistent
-if (isLocked) {
-    input.classList.add('blocked-cell');
-} else {
-    input.classList.remove('blocked-cell');
-}
-
-      // Reaplica color sempre (això evita que quedi en gris)
+      input.classList.toggle('blocked-cell', isLocked);
       applyCellColor(input);
 
-      // HANDLER: quan l'usuari canvia la nota, fem un save i actualitzem UI només quan saveNote acaba.
       if (!isLocked) {
-        input.addEventListener('input', () => {
-          // color en viu mentre escriu
-          applyCellColor(input);
-        });
-
+        input.addEventListener('input', () => applyCellColor(input));
         input.addEventListener('change', async (e) => {
           const newVal = e.target.value;
+          input.disabled = true;
           try {
-            // Opcional: desactivar l'input mentre guardem per evitar múltiples clicks ràpids
-            input.disabled = true;
-
-            // Guardem la nota a Firestore (await)
             await saveNote(studentId, actId, newVal);
-
-            // Quan ja està guardada: reapliquem color (i recalculs locals ràpids)
             applyCellColor(input);
-
-            // Actualitza mitjanes i mitjanes per activitat (local)
             renderAverages();
-
-            // Si vols forçar refresc de columnes calculades relatives, pots cridar updateCalculatedCells()
-            // updateCalculatedCells(); // opcional
-
           } catch (err) {
             console.error('Error guardant nota:', err);
             alert('Error guardant la nota: ' + err.message);
           } finally {
-            // Tornem a aplicar disabled si la columna està bloquejada ara
             const nowLocked = !!(calculatedActs[actId]?.locked) || !!(calculatedActs[actId]?.calculated);
             input.disabled = nowLocked;
           }
         });
-      } else {
-        // Si està bloquejat, però vols que el color reflecteixi el valor actual, ja està feta applyCellColor()
-        // No afegim handlers
       }
 
       td.appendChild(input);
       tr.appendChild(td);
     });
 
-    // Mitjana alumne
     const avgTd = document.createElement('td');
     avgTd.className = 'border px-2 py-1 text-right font-semibold';
     avgTd.textContent = computeStudentAverageText(studentData);
@@ -846,8 +786,28 @@ if (isLocked) {
     notesTbody.appendChild(tr);
   });
 
-  // Final: recalculs de mitjanes i fila fórmules (igual que abans)
   renderAverages();
+}
+
+// ---------------- Eliminar activitat ----------------
+async function removeActivity(activityId) {
+  if (!confirm('Segur que vols eliminar aquesta activitat?')) return;
+
+  try {
+    // Treure activitat del terme actiu
+    await Terms.removeActivityFromActiveTerm(activityId);
+    // Esborrar activitat Firestore
+    await db.collection('activitats').doc(activityId).delete();
+
+    // Actualitzar classActivities amb el terme actiu
+    classActivities = Terms.getActiveTermActivities();
+
+    // Tornar a renderitzar
+    renderNotesGrid();
+  } catch (e) {
+    console.error('Error eliminant activitat:', e);
+    alert('Error eliminant activitat: ' + e.message);
+  }
 }
 
 
