@@ -1529,79 +1529,38 @@ btnAddTerm.addEventListener('click', async () => {
 });
 
 // ---------------- Construir capçaleres amb menú de tres puntets ----------------
-async function buildActivityHeaders() {
-  const tr = notesThead.querySelector('tr');
-  tr.innerHTML = ''; // netejar fila abans de renderitzar
-
-  // Columna Alumne
-  const thAlumne = document.createElement('th');
-  thAlumne.textContent = 'Alumne';
-  tr.appendChild(thAlumne);
-
-  // Activitats del terme actiu
-  const activityIds = Terms.getActiveTermActivities();
-
-  for (const aid of activityIds) {
-    const th = document.createElement('th');
-    th.className = 'relative px-2 py-1 text-center';
-
-    // Nom activitat
-    try {
-      const doc = await db.collection('activitats').doc(aid).get();
-      th.textContent = doc.exists ? doc.data().nom : 'Sense nom';
-    } catch(e) {
-      th.textContent = 'Sense nom';
-      console.error('Error carregant activitat:', e);
-    }
-
-    // Botó de menú tres puntets
-    const menuBtn = document.createElement('button');
-    menuBtn.textContent = '⋮';
-    menuBtn.className = 'absolute top-1 right-1 px-1 text-sm menu-btn';
-    th.appendChild(menuBtn);
-
-    // Menu desplegable
-    const menuDiv = document.createElement('div');
-    menuDiv.className = 'menu absolute right-0 mt-6 bg-white border rounded shadow hidden z-50';
-    menuDiv.innerHTML = `
-      <button class="block w-full px-2 py-1 hover:bg-gray-200 text-left">Eliminar activitat</button>
-    `;
-    th.appendChild(menuDiv);
-
-    // Toggle menú
-    menuBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      menuDiv.classList.toggle('hidden');
-    });
-
-    // Botó Eliminar activitat
-    const deleteBtn = menuDiv.querySelector('button');
-    deleteBtn.addEventListener('click', async () => {
-  if (!confirm('Segur que vols eliminar aquesta activitat del terme actiu?')) return;
+async function removeActivityFromTermAndStudents(aid) {
+  if (!confirm('Segur que vols eliminar aquesta activitat i totes les notes relacionades?')) return;
 
   try {
-    await Terms.removeActivityFromActiveTerm(aid); // elimina del terme actiu
-    buildActivityHeaders(); // refresca capçaleres
-    renderNotesGrid();      // refresca graella
+    const termId = Terms.getActiveTermId();
+    const currentClassRef = db.collection('classes').doc(currentClassId);
+
+    // 1️⃣ Eliminar del terme actiu
+    await currentClassRef.update({
+      [`terms.${termId}.activities`]: firebase.firestore.FieldValue.arrayRemove(aid)
+    });
+
+    // 2️⃣ Eliminar de l'array general d'activitats de la classe
+    await currentClassRef.update({
+      activitats: firebase.firestore.FieldValue.arrayRemove(aid)
+    });
+
+    // 3️⃣ Eliminar notes dels alumnes
+    const batch = db.batch();
+    classStudents.forEach(sid => {
+      const ref = db.collection('alumnes').doc(sid);
+      batch.update(ref, { [`notes.${aid}`]: firebase.firestore.FieldValue.delete() });
+    });
+    await batch.commit();
+
+    // 4️⃣ Refrescar dades i capçaleres
+    await loadClassData();
+    buildActivityHeaders();
+    renderNotesGrid();
+
   } catch(e) {
+    console.error('Error eliminant activitat:', e);
     alert('Error eliminant activitat: ' + e.message);
   }
-});
-
-
-    tr.appendChild(th);
-  }
-
-  // Columna Mitjana
-  const thMitjana = document.createElement('th');
-  thMitjana.textContent = 'Mitjana';
-  tr.appendChild(thMitjana);
-
-  // Reactivar drag & drop
-  enableActivityDrag();
 }
-
-// Tancar menús quan es clica fora
-document.addEventListener('click', () => {
-  document.querySelectorAll('.menu').forEach(m => m.classList.add('hidden'));
-});
