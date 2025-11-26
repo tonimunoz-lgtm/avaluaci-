@@ -1542,10 +1542,8 @@ btnAddTerm.addEventListener('click', async () => {
 });
 
 // ---------------- Construir capçaleres amb menú de tres puntets ----------------
-// ---------------- Construir capçaleres amb menú de tres puntets ----------------
 async function buildActivityHeaders() {
   const tr = notesThead.querySelector('tr');
-  if (!tr) return;
   tr.innerHTML = ''; // netejar fila abans de renderitzar
 
   // Columna Alumne
@@ -1556,7 +1554,7 @@ async function buildActivityHeaders() {
   // Activitats del terme actiu
   const activities = Terms.getActiveTermActivities();
 
-  for (const aid of activities) {
+  for (let aid of activities) {
     const th = document.createElement('th');
     th.className = 'relative px-2 py-1 text-center';
 
@@ -1565,8 +1563,8 @@ async function buildActivityHeaders() {
       const doc = await db.collection('activitats').doc(aid).get();
       th.textContent = doc.exists ? doc.data().nom : 'Sense nom';
     } catch(e) {
-      th.textContent = 'Sense nom';
-      console.error('Error carregant activitat:', e);
+      console.error('Error llegint activitat:', e);
+      th.textContent = 'Error';
     }
 
     // Botó de menú tres puntets
@@ -1593,9 +1591,12 @@ async function buildActivityHeaders() {
     const deleteBtn = menuDiv.querySelector('button');
     deleteBtn.addEventListener('click', async () => {
       try {
+        if (!aid) return alert('Activitat no trobada!');
         await Terms.removeActivityFromActiveTerm(aid); // elimina del terme actiu
-        await buildActivityHeaders(); // reconstruir capçaleres
-        renderNotesGrid(); // refresca graella
+        // Refresca dades després d’eliminar
+        await buildActivityHeaders();
+        renderNotesGrid(); 
+        menuDiv.classList.add('hidden');
       } catch(e) {
         console.error('Error eliminant activitat:', e);
         alert('Error eliminant activitat: ' + e.message);
@@ -1614,7 +1615,7 @@ async function buildActivityHeaders() {
   enableActivityDrag();
 }
 
-// Tancar menús si fas clic fora
+// Tanca qualsevol menú obert si fem clic fora
 document.addEventListener('click', () => {
-  document.querySelectorAll('.menu').forEach(menu => menu.classList.add('hidden'));
+  document.querySelectorAll('.menu').forEach(m => m.classList.add('hidden'));
 });
