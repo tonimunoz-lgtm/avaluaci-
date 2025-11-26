@@ -1579,3 +1579,52 @@ btnAddTerm.addEventListener('click', async () => {
     alert('Error creant terme: ' + e.message);
   }
 });
+
+// Botó de menú de graella
+const termMenuBtn = document.getElementById('termMenuBtn');
+const termMenu = document.getElementById('termMenu');
+
+termMenuBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  termMenu.classList.toggle('hidden');
+});
+
+// Tancar menú si clicques fora
+document.addEventListener('click', () => {
+  termMenu.classList.add('hidden');
+});
+
+// Editar nom de graella
+termMenu.querySelector('.edit-term-btn').addEventListener('click', async () => {
+  const currentTermId = Terms.getActiveTermId();
+  const currentName = Terms.getActiveTermName();
+  const newName = prompt('Nou nom de la graella:', currentName);
+  if (newName && newName.trim() !== '') {
+    await Terms.renameTerm(currentTermId, newName.trim());
+  }
+  termMenu.classList.add('hidden');
+});
+
+// Eliminar graella
+termMenu.querySelector('.delete-term-btn').addEventListener('click', async () => {
+  const currentTermId = Terms.getActiveTermId();
+  if (!confirm('Segur que vols eliminar aquesta graella i totes les seves activitats?')) return;
+
+  try {
+    const updateObj = { [`terms.${currentTermId}`]: firebase.firestore.FieldValue.delete() };
+    await _db.collection('classes').doc(_currentClassId).update(updateObj);
+
+    // Actualitzar dades locals i seleccionar un altre terme
+    const doc = await _db.collection('classes').doc(_currentClassId).get();
+    _classData = doc.exists ? doc.data() : {};
+    _activeTermId = Object.keys(_classData.terms || {})[0] || null;
+
+    renderDropdown();  // refrescar desplegable
+    if (_onChangeCallback) _onChangeCallback(_activeTermId);
+
+  } catch(e) {
+    alert('Error eliminant graella: ' + e.message);
+  }
+
+  termMenu.classList.add('hidden');
+});
