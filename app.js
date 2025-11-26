@@ -1025,12 +1025,16 @@ function renderAverages(){
 function openCalcModal(activityId){
   currentCalcActivityId = activityId; 
   openModal('modalCalc');
+   populateCalculatorActivities(); // NOVA LÍNIA
   // Reset modal
   document.getElementById('calcType').value = 'numeric';
   document.getElementById('formulaInputs').classList.add('hidden');
   document.getElementById('numericInput').classList.remove('hidden');
   document.getElementById('numericField').value = '';
   document.getElementById('formulaField').value = '';
+  document.getElementById('calculatorActivitySelect').addEventListener('change', e=>{
+  currentCalcActivityId = e.target.value;
+});
 }
 /* ---------------- Modal Calcul: Numeric / Formula ---------------- */
 const calcTypeSelect = document.getElementById('calcType');
@@ -1194,16 +1198,14 @@ function buildFormulaButtons(){
   formulaButtonsDiv.innerHTML = '';
 
   // Botons activitats
-  classActivities.forEach(aid=>{
-    db.collection('activitats').doc(aid).get().then(doc=>{
-      const name = doc.exists ? doc.data().nom : '???';
-      const btn = document.createElement('button');
-      btn.type='button';
-      btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
-      btn.textContent = name;
-      btn.addEventListener('click', ()=> addToFormula(name));
-      formulaButtonsDiv.appendChild(btn);
-    });
+  Terms.getAllActivities().forEach(a=>{
+  const btn = document.createElement('button');
+  btn.type='button';
+  btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
+  btn.textContent = `${a.termName} → ${a.actName}`;
+  btn.addEventListener('click', ()=> addToFormula(a.actName));
+  formulaButtonsDiv.appendChild(btn);
+});
   });
 
   // Botons operadors
@@ -1254,16 +1256,14 @@ function buildRoundingButtons(){
   formulaButtonsDiv.innerHTML = '';
 
   // Botons activitats
-  classActivities.forEach(aid=>{
-    db.collection('activitats').doc(aid).get().then(doc=>{
-      const name = doc.exists ? doc.data().nom : '???';
-      const btn = document.createElement('button');
-      btn.type='button';
-      btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
-      btn.textContent = name;
-      btn.addEventListener('click', ()=> addToFormula(name)); // el nom de l'activitat
-      formulaButtonsDiv.appendChild(btn);
-    });
+ Terms.getAllActivities().forEach(a=>{
+  const btn = document.createElement('button');
+  btn.type='button';
+  btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
+  btn.textContent = `${a.termName} → ${a.actName}`;
+  btn.addEventListener('click', ()=> addToFormula(a.actName));
+  formulaButtonsDiv.appendChild(btn);
+});
   });
 
   // Botó Backspace
@@ -1619,3 +1619,20 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
 
   termMenu.classList.add('hidden');
 });
+
+function populateCalculatorActivities(){
+  const select = document.getElementById('calculatorActivitySelect');
+  select.innerHTML = '';
+
+  const allActs = Terms.getAllActivities(); 
+  allActs.forEach(a=>{
+    const option = document.createElement('option');
+    option.value = a.actId;
+    option.textContent = `${a.termName} → ${a.actName}`;
+    select.appendChild(option);
+  });
+
+  // Per defecte seleccionem la primera activitat
+  currentCalcActivityId = allActs.length ? allActs[0].actId : null;
+}
+
