@@ -463,7 +463,20 @@ async function createActivityModal() {
 }
 
 
-
+function removeActivity(actId){
+  confirmAction('Eliminar activitat', 'Esborrar activitat i totes les notes relacionades?', ()=> {
+    db.collection('classes').doc(currentClassId).update({ activitats: firebase.firestore.FieldValue.arrayRemove(actId) })
+      .then(()=> {
+        const batch = db.batch();
+        classStudents.forEach(sid => {
+          const ref = db.collection('alumnes').doc(sid);
+          batch.update(ref, { [`notes.${actId}`]: firebase.firestore.FieldValue.delete() });
+        });
+        return batch.commit();
+      }).then(()=> loadClassData())
+      .catch(e=> alert('Error esborrant activitat: '+e.message));
+  });
+}
 
 /* ---------------- Render Students List amb menú ---------------- */
 function renderStudentsList(){
@@ -1527,40 +1540,3 @@ btnAddTerm.addEventListener('click', async () => {
     alert('Error creant terme: ' + e.message);
   }
 });
-
-// ---------------- Construir capçaleres amb menú de tres puntets ----------------
-async function removeActivityFromTermAndStudents(aid) {
-  if (!confirm('Segur que vols eliminar aquesta activitat i totes les notes relacionades?')) return;
-
-  try {
-    const termId = Terms.getActiveTermId();
-    const currentClassRef = db.collection('classes').doc(currentClassId);
-
-    // 1️⃣ Eliminar del terme actiu
-    await currentClassRef.update({
-      [`terms.${termId}.activities`]: firebase.firestore.FieldValue.arrayRemove(aid)
-    });
-
-    // 2️⃣ Eliminar de l'array general d'activitats de la classe
-    await currentClassRef.update({
-      activitats: firebase.firestore.FieldValue.arrayRemove(aid)
-    });
-
-    // 3️⃣ Eliminar notes dels alumnes
-    const batch = db.batch();
-    classStudents.forEach(sid => {
-      const ref = db.collection('alumnes').doc(sid);
-      batch.update(ref, { [`notes.${aid}`]: firebase.firestore.FieldValue.delete() });
-    });
-    await batch.commit();
-
-    // 4️⃣ Refrescar dades i capçaleres
-    await loadClassData();
-    buildActivityHeaders();
-    renderNotesGrid();
-
-  } catch(e) {
-    console.error('Error eliminant activitat:', e);
-    alert('Error eliminant activitat: ' + e.message);
-  }
-}
