@@ -1,99 +1,89 @@
 // terms.js
-// Definim initTerms global per evitar l'import ES6
-window.initTerms = function({ db, renderNotesGrid, currentClassId, currentTermId }) {
 
-  const container = document.createElement('div');
-  container.id = 'termsControls';
-  container.className = 'flex gap-2 items-center mb-4';
+let currentTermName = 'Avaluació'; // Nom per defecte del primer grup
+let classTerms = {}; // { 'Avaluació': { activitats: [], calculatedActivities: {} }, 'Exàmens': {...} }
 
-  // Selector de trimestres
+// Inicialitzar termes
+function initTerms(classData) {
+  // Si ja hi ha termes guardats a Firestore, els carreguem
+  classTerms = classData.terms || {};
+  if(Object.keys(classTerms).length === 0){
+    // Crear un terme inicial si no existeix
+    classTerms[currentTermName] = { activitats: [...classActivities], calculatedActivities: {} };
+  }
+
+  renderTermSelector();
+  renderTermGrid();
+}
+
+// ------------------ Botó "+" per crear nou terme ------------------
+const btnAddTerm = document.getElementById('btnAddTerm');
+if(btnAddTerm){
+  btnAddTerm.addEventListener('click', async ()=>{
+    const termName = prompt("Introdueix el nom del nou grup d'activitats:");
+    if(!termName) return;
+
+    if(classTerms[termName]){
+      alert('Ja existeix un grup amb aquest nom!');
+      return;
+    }
+
+    // Crear un nou terme buit (només alumnes)
+    classTerms[termName] = { activitats: [], calculatedActivities: {} };
+    currentTermName = termName;
+
+    await saveTermsToFirestore();
+    renderTermSelector();
+    renderTermGrid();
+  });
+}
+
+// ------------------ Render selector de termes ------------------
+function renderTermSelector(){
+  const selectorDiv = document.getElementById('termSelector');
+  if(!selectorDiv) return;
+
+  selectorDiv.innerHTML = '';
+
   const select = document.createElement('select');
-  select.id = 'termSelector';
-  select.className = 'border rounded p-1';
-  container.appendChild(select);
+  select.className = 'border p-1 rounded';
 
-  // Botó "+" per crear un nou trimestre
-  const addBtn = document.createElement('button');
-  addBtn.textContent = '+';
-  addBtn.className = 'bg-green-500 text-white px-3 py-1 rounded';
-  container.appendChild(addBtn);
-
-  // Insertem abans de la graella
-  const wrapper = document.getElementById('classScreenWrapper');
-  if (wrapper) wrapper.prepend(container);
-
-  // Carrega trimestres existents
-  loadTerms();
-
-  // Selector change
-  select.addEventListener('change', async () => {
-    const termId = select.value;
-    if (!termId) return;
-    window.currentTermId = termId;
-    await renderNotesGrid();
+  Object.keys(classTerms).forEach(term=>{
+    const option = document.createElement('option');
+    option.value = term;
+    option.textContent = term;
+    if(term === currentTermName) option.selected = true;
+    select.appendChild(option);
   });
 
-  // Botó per crear un nou trimestre
-  addBtn.addEventListener('click', async () => {
-    const name = prompt('Nom del nou trimestre:');
-    if (!name) return;
-    await createTerm(name);
-    await loadTerms();
+  select.addEventListener('change', (e)=>{
+    currentTermName = e.target.value;
+    renderTermGrid();
   });
 
-  // ---------------- Funcions internes -----------------
-  async function loadTerms() {
-    if (!select || !currentClassId) return;
+  selectorDiv.appendChild(select);
+}
 
-    const snapshot = await db.collection('classes')
-      .doc(currentClassId)
-      .collection('terms')
-      .get();
+// ------------------ Render graella segons terme ------------------
+function renderTermGrid(){
+  // Activitats del terme actual
+  const termData = classTerms[currentTermName];
+  classActivities = termData.activitats || [];
+  calculatedActivities = termData.calculatedActivities || {};
 
-    select.innerHTML = '';
-    snapshot.forEach(doc => {
-      const opt = document.createElement('option');
-      opt.value = doc.id;
-      opt.textContent = doc.data().name || doc.id;
-      select.appendChild(opt);
+  // Cridem la funció de app.js que ja renderitza la graella
+  renderNotesGrid();
+}
+
+// ------------------ Guardar termes a Firestore ------------------
+async function saveTermsToFirestore(){
+  if(!currentClassId) return;
+  try{
+    await db.collection('classes').doc(currentClassId).update({
+      terms: classTerms
     });
-
-    // Selecciona el primer si no hi ha cap definit
-    if (!window.currentTermId && snapshot.docs.length) {
-      window.currentTermId = snapshot.docs[0].id;
-    }
-
-    // Marquem l’actual
-    Array.from(select.options).forEach(opt => {
-      opt.selected = opt.value === window.currentTermId;
-    });
+  } catch(e){
+    console.error('Error guardant termes:', e);
+    alert('Error guardant grups d’activitats: ' + e.message);
   }
-
-  async function createTerm(name) {
-    if (!currentClassId) return;
-
-    const newTermRef = db.collection('classes')
-      .doc(currentClassId)
-      .collection('terms')
-      .doc(); // genera ID automàtic
-
-    // Clonem alumnes i activitats de l'últim trimestre si existeix
-    const lastTermSnap = await db.collection('classes')
-      .doc(currentClassId)
-      .collection('terms')
-      .orderBy('createdAt', 'desc')
-      .limit(1)
-      .get();
-
-    let data = { name, createdAt: Date.now(), alumnes: [], activitats: [] };
-    if (!lastTermSnap.empty) {
-      const lastData = lastTermSnap.docs[0].data();
-      data.alumnes = lastData.alumnes || [];
-      data.activitats = lastData.activitats || [];
-    }
-
-    await newTermRef.set(data);
-    window.currentTermId = newTermRef.id;
-  }
-
-};
+}
