@@ -404,7 +404,6 @@ function sortStudentsAlpha(){
     }).then(()=> loadClassData())
     .catch(e=> console.error(e));
 }
-
 /* ---------------- Activities ---------------- */
 btnAddActivity.addEventListener('click', ()=> openModal('modalAddActivity'));
 modalAddActivityBtn.addEventListener('click', createActivityModal);
@@ -807,9 +806,6 @@ if (isLocked) {
 
   // Final: recalculs de mitjanes i fila fórmules (igual que abans)
   renderAverages();
-  // Després de carregar classData i alumnes
-initTerms(classData);
-
 }
 
 
@@ -1299,7 +1295,6 @@ function enableActivityDrag(){
           .then(() => console.log('Ordre d’activitats actualitzat a Firestore'))
           .catch(e => console.error('Error guardant ordre activitats', e));
       }
-      saveActivityChangeToTerm();
 
       renderNotesGrid();
     });
