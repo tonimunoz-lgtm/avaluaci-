@@ -1,6 +1,7 @@
 // app.js - lògica principal (modules)
 import { openModal, closeModal, confirmAction } from './modals.js';
-import * as Terms from './terms.js';
+import { Terms } from "./terms.js";
+window.Terms = Terms;
 
 
 /* ---------------- FIREBASE CONFIG ---------------- */
