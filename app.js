@@ -199,7 +199,10 @@ function loadClassesScreen() {
   ];
 
   db.collection('professors').doc(professorUID).get().then(doc => {
-    if(!doc.exists) { classesGrid.innerHTML = '<div class="text-sm text-red-500">Professor no trobat</div>'; return; }
+    if(!doc.exists) { 
+      classesGrid.innerHTML = '<div class="text-sm text-red-500">Professor no trobat</div>'; 
+      return; 
+    }
     const ids = doc.data().classes || [];
     if(ids.length === 0){
       classesGrid.innerHTML = `<div class="col-span-full p-6 bg-white dark:bg-gray-800 rounded shadow text-center">No tens cap classe. Crea la primera!</div>`;
@@ -216,10 +219,17 @@ function loadClassesScreen() {
           card.className = `class-card bg-gradient-to-br ${color} text-white relative p-4 rounded-lg`;
           card.dataset.id = d.id;
 
+          // Comptar activitats totals sumant totes les activitats de tots els termes
+          let totalActivities = 0;
+          const terms = d.data().terms || {};
+          Object.values(terms).forEach(term => {
+            totalActivities += (term.activities || []).length;
+          });
+
           card.innerHTML = `
             ${deleteMode ? '<input type="checkbox" class="delete-checkbox absolute top-2 right-2 w-5 h-5">' : ''}
             <h3 class="text-lg font-bold">${d.data().nom||'Sense nom'}</h3>
-            <p class="text-sm mt-2">${(d.data().alumnes||[]).length} alumnes · ${(d.data().activitats||[]).length} activitats</p>
+            <p class="text-sm mt-2">${(d.data().alumnes||[]).length} alumnes · ${totalActivities} activitats</p>
             <div class="click-hint">${deleteMode ? 'Selecciona per eliminar' : 'Fes clic per obrir'}</div>
           `;
 
@@ -266,6 +276,7 @@ function loadClassesScreen() {
     console.error(e);
   });
 }
+
 /* ---------------- Delete Mode Classes ---------------- */
 const btnDeleteMode = document.getElementById('btnDeleteMode');
 btnDeleteMode.addEventListener('click', ()=> {
