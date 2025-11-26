@@ -1,6 +1,8 @@
 // app.js - lògica principal (modules)
 import { openModal, closeModal, confirmAction } from './modals.js';
 import * as Terms from './terms.js';
+window.Terms = Terms;
+
 
 /* ---------------- FIREBASE CONFIG ---------------- */
 const firebaseConfig = {
@@ -430,19 +432,36 @@ function sortStudentsAlpha(){
 btnAddActivity.addEventListener('click', ()=> openModal('modalAddActivity'));
 modalAddActivityBtn.addEventListener('click', createActivityModal);
 
-function createActivityModal(){
-  const name = document.getElementById('modalActivityName').value.trim();
-  if(!name) return alert('Posa un nom');
-  const ref = db.collection('activitats').doc();
-   ref.set({ nom: name, data: new Date().toISOString().split('T')[0], calcType:'numeric', formula:'' })
-    .then(()=> db.collection('classes').doc(currentClassId).update({ activitats: firebase.firestore.FieldValue.arrayUnion(ref.id) }))
-    .then(()=> {
-      closeModal('modalAddActivity');
-      document.getElementById('modalActivityName').value = '';
-      loadClassData();
+async function createActivityModal() {
+    const name = document.getElementById("modalActivityName").value.trim();
+    if (!name) return;
 
-    }).catch(e=> alert('Error: '+e.message));
+    const ref = db.collection("activitats").doc();
+
+    await ref.set({
+        nom: name,
+        data: new Date().toISOString().split("T")[0],
+        calcType: "numeric",
+        formula: ""
+    });
+
+    // 🔥 Aquí afegim l'activitat al terme actiu
+    if (window.Terms && Terms.addActivityToActiveTerm) {
+        await Terms.addActivityToActiveTerm(ref.id);
+    } else {
+        console.error("❌ Terms no està carregat. Revisa l'import a app.js");
+    }
+
+    closeModal("modalAddActivity");
+    document.getElementById("modalActivityName").value = "";
+
+    // 🔥 NO posar loadClassData() si tens dubtes!
+    // Si vols recarregar:
+    if (typeof loadClassData === "function") {
+        loadClassData();
+    }
 }
+
 
 function removeActivity(actId){
   confirmAction('Eliminar activitat', 'Esborrar activitat i totes les notes relacionades?', ()=> {
