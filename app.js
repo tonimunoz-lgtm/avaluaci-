@@ -744,7 +744,33 @@ await renderNotesGrid();
       }
     });
 
-    menuDiv.querySelector('.delete-btn').addEventListener('click', () => removeActivity(id));
+menuDiv.querySelector('.delete-btn').addEventListener('click', () => {
+  confirmAction('Eliminar activitat', 'Esborrar activitat i totes les notes relacionades?', async () => {
+    try {
+      // Eliminar del terme actiu
+      await Terms.removeActivityFromActiveTerm(id);
+
+      // Eliminar de la llista general d’activitats de la classe
+      await db.collection('classes').doc(currentClassId)
+              .update({ activitats: firebase.firestore.FieldValue.arrayRemove(id) });
+
+      // Esborrar les notes dels alumnes
+      const batch = db.batch();
+      classStudents.forEach(sid => {
+        const ref = db.collection('alumnes').doc(sid);
+        batch.update(ref, { [`notes.${id}`]: firebase.firestore.FieldValue.delete() });
+      });
+      await batch.commit();
+
+      // Refrescar graella i capçaleres
+      buildActivityHeaders();
+      renderNotesGrid();
+    } catch(e) {
+      alert('Error esborrant activitat: ' + e.message);
+    }
+  });
+});
+
     menuDiv.querySelector('.calc-btn').addEventListener('click', () => openCalcModal(id));
 
   });
