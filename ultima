@@ -464,19 +464,33 @@ async function createActivityModal() {
 
 
 function removeActivity(actId){
-  confirmAction('Eliminar activitat', 'Esborrar activitat i totes les notes relacionades?', ()=> {
-    db.collection('classes').doc(currentClassId).update({ activitats: firebase.firestore.FieldValue.arrayRemove(actId) })
-      .then(()=> {
-        const batch = db.batch();
-        classStudents.forEach(sid => {
-          const ref = db.collection('alumnes').doc(sid);
-          batch.update(ref, { [`notes.${actId}`]: firebase.firestore.FieldValue.delete() });
-        });
-        return batch.commit();
-      }).then(()=> loadClassData())
-      .catch(e=> alert('Error esborrant activitat: '+e.message));
+  confirmAction('Eliminar activitat', 'Esborrar activitat i totes les notes relacionades?', async ()=> {
+    try {
+      const termId = Terms.getActiveTermId(); // obtenir terme actiu
+
+      // Eliminar activitat del llistat general i del terme actiu
+      await db.collection('classes').doc(currentClassId).update({
+        activitats: firebase.firestore.FieldValue.arrayRemove(actId),
+        [`terms.${termId}.activities`]: firebase.firestore.FieldValue.arrayRemove(actId)
+      });
+
+      // Eliminar notes dels alumnes
+      const batch = db.batch();
+      classStudents.forEach(sid => {
+        const ref = db.collection('alumnes').doc(sid);
+        batch.update(ref, { [`notes.${actId}`]: firebase.firestore.FieldValue.delete() });
+      });
+      await batch.commit();
+
+      // Refrescar dades
+      loadClassData();
+
+    } catch(e) {
+      alert('Error esborrant activitat: ' + e.message);
+    }
   });
 }
+
 
 /* ---------------- Render Students List amb menú ---------------- */
 function renderStudentsList(){
@@ -730,7 +744,32 @@ await renderNotesGrid();
       }
     });
 
-    menuDiv.querySelector('.delete-btn').addEventListener('click', () => removeActivity(id));
+menuDiv.querySelector('.delete-btn').addEventListener('click', () => {
+  confirmAction('Eliminar activitat', 'Esborrar activitat i totes les notes relacionades?', async () => {
+    try {
+      // Eliminar del terme actiu
+      await Terms.removeActivityFromActiveTerm(id);
+
+      // Eliminar de la llista general d’activitats de la classe
+      await db.collection('classes').doc(currentClassId)
+              .update({ activitats: firebase.firestore.FieldValue.arrayRemove(id) });
+
+      // Esborrar les notes dels alumnes
+      const batch = db.batch();
+      classStudents.forEach(sid => {
+        const ref = db.collection('alumnes').doc(sid);
+        batch.update(ref, { [`notes.${id}`]: firebase.firestore.FieldValue.delete() });
+      });
+      await batch.commit();
+
+      // Refrescar graella i capçaleres
+      renderNotesGrid();
+    } catch(e) {
+      alert('Error esborrant activitat: ' + e.message);
+    }
+  });
+});
+
     menuDiv.querySelector('.calc-btn').addEventListener('click', () => openCalcModal(id));
 
   });
