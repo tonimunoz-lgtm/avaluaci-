@@ -1,8 +1,6 @@
 // terms.js
 // Mòdul per gestionar "terms" (graelles d'activitats) dins d'una classe
 
-import firebase from "firebase/compat/app";
-
 let _db = null;
 let _currentClassId = null;
 let _classData = null;
@@ -52,10 +50,6 @@ export function getActiveTermName() {
 
 export function getActiveTermActivities() {
   return (_classData?.terms?.[_activeTermId]?.activities) || [];
-}
-
-export function getTermNameById(termId) {
-  return _classData?.terms?.[termId]?.name || '';
 }
 
 // ------------------------ Render Dropdown ------------------------
@@ -143,23 +137,6 @@ export async function renameTerm(termId, newName) {
   renderDropdown();
 }
 
-// ------------------------ Obtenir totes les activitats amb informació del terme ------------------------
-export function getAllTermActivities() {
-  const all = [];
-  const terms = _classData.terms || {};
-  Object.keys(terms).forEach(termId => {
-    const term = terms[termId];
-    term.activities.forEach(actId => {
-      all.push({
-        termId,
-        termName: term.name,
-        actId
-      });
-    });
-  });
-  return all;
-}
-
 // ------------------------ Eliminar terme complet ------------------------
 export async function deleteTerm(termId) {
   if (!_db || !_currentClassId || !_classData?.terms?.[termId]) return;
@@ -181,3 +158,6 @@ export async function deleteTerm(termId) {
   renderDropdown();
   if (_onChangeCallback) _onChangeCallback(_activeTermId);
 }
+
+// ------------------------ Exports mínims ------------------------
+export function getActiveTerm() { return _activeTermId; }
