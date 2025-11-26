@@ -1557,12 +1557,13 @@ async function buildActivityHeaders() {
   for (let aid of activities) {
     const th = document.createElement('th');
     th.className = 'relative px-2 py-1 text-center';
+    th.dataset.aid = aid; // guardem l'id per referència ràpida
 
     // Nom activitat
     try {
       const doc = await db.collection('activitats').doc(aid).get();
       th.textContent = doc.exists ? doc.data().nom : 'Sense nom';
-    } catch(e) {
+    } catch (e) {
       console.error('Error llegint activitat:', e);
       th.textContent = 'Error';
     }
@@ -1592,12 +1593,16 @@ async function buildActivityHeaders() {
     deleteBtn.addEventListener('click', async () => {
       try {
         if (!aid) return alert('Activitat no trobada!');
-        await Terms.removeActivityFromActiveTerm(aid); // elimina del terme actiu
-        // Refresca dades després d’eliminar
-        await buildActivityHeaders();
-        renderNotesGrid(); 
+        await Terms.removeActivityFromActiveTerm(aid);
+
+        // Eliminar només la columna de la capçalera
+        th.remove();
+
+        // Refresca només les columnes de les notes corresponents
+        removeActivityColumnFromGrid(aid);
+
         menuDiv.classList.add('hidden');
-      } catch(e) {
+      } catch (e) {
         console.error('Error eliminant activitat:', e);
         alert('Error eliminant activitat: ' + e.message);
       }
@@ -1613,6 +1618,16 @@ async function buildActivityHeaders() {
 
   // Reactivar drag & drop
   enableActivityDrag();
+}
+
+// Funció que elimina la columna de la graella corresponent a l'activitat
+function removeActivityColumnFromGrid(aid) {
+  const rows = notesTbody.querySelectorAll('tr');
+  rows.forEach(row => {
+    const cells = Array.from(row.children);
+    const idx = cells.findIndex(td => td.dataset?.aid === aid);
+    if (idx > -1) row.children[idx].remove();
+  });
 }
 
 // Tanca qualsevol menú obert si fem clic fora
