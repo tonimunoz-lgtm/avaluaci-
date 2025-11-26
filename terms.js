@@ -1,107 +1,92 @@
-// terms.js
+// =================== terms.js ===================
 
-// ---------------- Variables globals ----------------
-let currentTermName = 'Avaluació'; // Grup inicial per defecte
-let classTerms = {}; // Objecte amb tots els grups { 'Avaluació': {...}, 'Exàmens': {...} }
+// Termes globals
+let activeTermId = null;
+let currentClassData = null;
 
-// ---------------- Inicialitzar termes ----------------
-async function initTerms(classData) {
-  // Carregar termes existents de Firestore
-  classTerms = classData.terms || {};
+// Inicialitzar termes per la classe
+export function initTerms(classData){
+  currentClassData = classData;
+  const dropdown = document.getElementById('termsDropdown');
+  dropdown.innerHTML = '';
 
-  if (Object.keys(classTerms).length === 0) {
-    // Si no hi ha termes, crear un grup inicial amb activitats existents
-    classTerms[currentTermName] = { activitats: [...classActivities], calculatedActivities: {} };
-    await saveTermsToFirestore();
+  const terms = classData.terms || {};
+  Object.keys(terms).forEach(termId => {
+    const opt = document.createElement('option');
+    opt.value = termId;
+    opt.textContent = terms[termId].name;
+    dropdown.appendChild(opt);
+  });
+
+  // Seleccionar primer terme si no n'hi ha actiu
+  if(Object.keys(terms).length > 0){
+    setActiveTerm(Object.keys(terms)[0]);
   }
 
-  renderTermSelector();
-  renderTermGrid();
+  // Canvi terme
+  dropdown.addEventListener('change', e => setActiveTerm(e.target.value));
 }
 
-// ---------------- Botó "+" per crear un nou grup ----------------
-const btnAddTerm = document.getElementById('btnAddTerm');
-if (btnAddTerm) {
-  btnAddTerm.addEventListener('click', async () => {
-    const termName = prompt("Introdueix el nom del nou grup d'activitats:");
-    if (!termName) return;
-
-    if (classTerms[termName]) {
-      alert('Ja existeix un grup amb aquest nom!');
-      return;
-    }
-
-    // Crear un nou terme buit (només alumnes, activitats buides)
-    classTerms[termName] = { activitats: [], calculatedActivities: {} };
-    currentTermName = termName;
-
-    await saveTermsToFirestore();
-    renderTermSelector();
-    renderTermGrid();
-  });
+// Assignar terme actiu i renderitzar graella
+export function setActiveTerm(termId){
+  activeTermId = termId;
+  document.getElementById('termsDropdown').value = termId;
+  renderNotesGridForTerm();
 }
 
-// ---------------- Render selector de termes ----------------
-function renderTermSelector() {
-  const selectorDiv = document.getElementById('termSelector');
-  if (!selectorDiv) return;
+// Funció per renderitzar graella segons terme actiu
+export function renderNotesGridForTerm(){
+  if(!activeTermId || !currentClassData) return;
 
-  selectorDiv.innerHTML = '';
-
-  const select = document.createElement('select');
-  select.className = 'border p-1 rounded';
-
-  Object.keys(classTerms).forEach(term => {
-    const option = document.createElement('option');
-    option.value = term;
-    option.textContent = term;
-    if (term === currentTermName) option.selected = true;
-    select.appendChild(option);
-  });
-
-  select.addEventListener('change', e => {
-    currentTermName = e.target.value;
-    renderTermGrid();
-  });
-
-  selectorDiv.appendChild(select);
+  const termActivities = currentClassData.terms[activeTermId]?.activities || [];
+  
+  // Crida a la teva funció existent renderNotesGrid, però amb filtratge
+  renderNotesGrid(termActivities); // Modifica renderNotesGrid per acceptar un array d'activitats
 }
 
-// ---------------- Render graella segons grup ----------------
-function renderTermGrid() {
-  const termData = classTerms[currentTermName];
+// Crear un nou terme (botó +)
+export async function addNewTerm(){
+  const termName = prompt("Introdueix el nom del nou grup d’activitats:");
+  if(!termName) return;
 
-  // Assignar activitats i calculatedActivities globals de app.js
-  classActivities = termData.activitats || [];
-  calculatedActivities = termData.calculatedActivities || {};
+  const newTermId = `term_${Date.now()}`;
 
-  // Actualitzar el títol de la classe amb el nom del terme
-  const classTitleEl = document.getElementById('classTitle');
-  if (classTitleEl && currentClassId) {
-    classTitleEl.textContent = `${currentClassName} - ${currentTermName}`;
+  try {
+    // Guardar al Firestore
+    await db.collection('classes').doc(currentClassId).update({
+      [`terms.${newTermId}`]: {
+        name: termName,
+        activities: []
+      }
+    });
+
+    // Recarregar classData i inicialitzar termes
+    const classDoc = await db.collection('classes').doc(currentClassId).get();
+    initTerms(classDoc.data());
+
+    // Posar aquest terme com a actiu
+    setActiveTerm(newTermId);
+
+  } catch(e) {
+    console.error(e);
+    alert('Error creant el grup: ' + e.message);
   }
-
-  // Cridar funció global per renderitzar graella
-  renderNotesGrid();
 }
 
-// ---------------- Guardar termes a Firestore ----------------
-async function saveTermsToFirestore() {
-  if (!currentClassId) return;
+// Canviar el nom d'un terme existent
+export async function saveActivityChangeToTerm(termId, newName){
+  if(!termId || !newName) return;
   try {
     await db.collection('classes').doc(currentClassId).update({
-      terms: classTerms
+      [`terms.${termId}.name`]: newName
     });
-  } catch (e) {
-    console.error('Error guardant grups d’activitats:', e);
-    alert('Error guardant grups d’activitats: ' + e.message);
-  }
-}
 
-// ---------------- Funcions helpers per actualitzar activitats dins del grup ----------------
-async function saveActivityChangeToTerm() {
-  if (!currentTermName) return;
-  classTerms[currentTermName].activitats = [...classActivities];
-  classTerms[currentTermName].calculatedActivities = { ...calculatedActivities };
-  await saveTermsToFirestore();
+    // Recarregar classData i desplegable
+    const classDoc = await db.collection('classes').doc(currentClassId).get();
+    initTerms(classDoc.data());
+
+  } catch(e) {
+    console.error(e);
+    alert('Error canviant nom del grup: ' + e.message);
+  }
 }
