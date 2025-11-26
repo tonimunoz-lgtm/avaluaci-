@@ -435,12 +435,13 @@ function createActivityModal(){
   const name = document.getElementById('modalActivityName').value.trim();
   if(!name) return alert('Posa un nom');
   const ref = db.collection('activitats').doc();
-  ref.set({ nom: name, data: new Date().toISOString().split('T')[0], calcType:'numeric', formula:'' })
-    .then(()=> db.collection('classes').doc(currentClassId).update({ activitats: firebase.firestore.FieldValue.arrayUnion(ref.id) }))
-    .then(()=> {
-      closeModal('modalAddActivity');
-      document.getElementById('modalActivityName').value = '';
-      loadClassData();
+  await ref.set({ nom: name, data: new Date().toISOString().split('T')[0], calcType:'numeric', formula:'' });
+// Afegim l'activitat al terme actiu (Firestone path terms.<termId>.activities)
+await Terms.addActivityToActiveTerm(ref.id);
+closeModal('modalAddActivity');
+document.getElementById('modalActivityName').value = '';
+loadClassData(); // o renderNotesGrid() — loadClassData recarrega i re-inicialitza termes
+
     }).catch(e=> alert('Error: '+e.message));
 }
 
