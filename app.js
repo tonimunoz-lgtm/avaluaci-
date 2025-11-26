@@ -433,34 +433,44 @@ btnAddActivity.addEventListener('click', ()=> openModal('modalAddActivity'));
 modalAddActivityBtn.addEventListener('click', createActivityModal);
 
 async function createActivityModal() {
-    const name = document.getElementById("modalActivityName").value.trim();
-    if (!name) return;
+  const nameInput = document.getElementById("modalActivityName");
+  const name = nameInput.value.trim();
+  if (!name) return;
 
+  try {
+    // 1️⃣ Crear document activitat a Firestore
     const ref = db.collection("activitats").doc();
-
     await ref.set({
-        nom: name,
-        data: new Date().toISOString().split("T")[0],
-        calcType: "numeric",
-        formula: ""
+      nom: name,
+      data: new Date().toISOString().split("T")[0],
+      calcType: "numeric",
+      formula: ""
     });
 
-    // 🔥 Aquí afegim l'activitat al terme actiu
+    // 2️⃣ Afegir activitat al terme actiu
     if (window.Terms && Terms.addActivityToActiveTerm) {
-        await Terms.addActivityToActiveTerm(ref.id);
+      await Terms.addActivityToActiveTerm(ref.id);
     } else {
-        console.error("❌ Terms no està carregat. Revisa l'import a app.js");
+      console.error("❌ Terms no està carregat. Revisa l'import a app.js");
     }
 
+    // 3️⃣ Actualitzar la llista de activitats locals del terme actiu
+    classActivities = Terms.getActiveTermActivities();
+
+    // 4️⃣ Tancar modal i netejar input
     closeModal("modalAddActivity");
-    document.getElementById("modalActivityName").value = "";
+    nameInput.value = "";
 
-    // 🔥 NO posar loadClassData() si tens dubtes!
-    // Si vols recarregar:
-    if (typeof loadClassData === "function") {
-        loadClassData();
+    // 5️⃣ Re-renderitzar la taula de notes
+    if (typeof renderNotesGrid === "function") {
+      renderNotesGrid();
     }
+  } catch (err) {
+    console.error("Error creant activitat:", err);
+    alert("Error creant activitat: " + err.message);
+  }
 }
+
 
 
 function removeActivity(actId){
