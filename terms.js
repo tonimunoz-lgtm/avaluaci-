@@ -20,7 +20,7 @@ export function setup(db, classId, classData, opts = {}) {
   _onChangeCallback = opts.onChange || null;
 
   // Només creem el terme inicial si no existeix cap terme
-  if (!_classData.terms) {
+  if (!_classData.terms || Object.keys(_classData.terms).length === 0) {
     const legacyActs = _classData.activitats || [];
     const defaultId = makeTermId('avaluacio');
     _classData.terms = {
@@ -85,7 +85,13 @@ export async function addNewTermWithName(name) {
   const updateObj = {};
   updateObj[`terms.${newId}`] = payload;
 
-  await _db.collection('classes').doc(_currentClassId).update(updateObj);
+  // 🔥 Merge amb l'existent a Firestore
+  await _db.collection('classes').doc(_currentClassId).set({
+    terms: {
+      ...(_classData.terms || {}),
+      [newId]: payload
+    }
+  }, { merge: true });
 
   const doc = await _db.collection('classes').doc(_currentClassId).get();
   _classData = doc.exists ? doc.data() : _classData;
@@ -100,15 +106,20 @@ export async function addNewTermWithName(name) {
 // --------- afegir activitat a terme actiu ---------
 export async function addActivityToActiveTerm(activityId) {
   if (!_activeTermId || !_db || !_currentClassId) return;
-  const path = `terms.${_activeTermId}.activities`;
-  await _db.collection('classes').doc(_currentClassId).update({
-    [path]: firebase.firestore.FieldValue.arrayUnion(activityId)
-  });
 
-  const doc = await _db.collection('classes').doc(_currentClassId).get();
-  _classData = doc.exists ? doc.data() : _classData;
+  const currentActivities = _classData.terms[_activeTermId]?.activities || [];
 
-  if (_onChangeCallback) _onChangeCallback(_activeTermId);
+  if (!currentActivities.includes(activityId)) {
+    const path = `terms.${_activeTermId}.activities`;
+    await _db.collection('classes').doc(_currentClassId).update({
+      [path]: firebase.firestore.FieldValue.arrayUnion(activityId)
+    });
+
+    const doc = await _db.collection('classes').doc(_currentClassId).get();
+    _classData = doc.exists ? doc.data() : _classData;
+
+    if (_onChangeCallback) _onChangeCallback(_activeTermId);
+  }
 }
 
 // --------- eliminar activitat de terme actiu ---------
