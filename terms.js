@@ -1,89 +1,155 @@
 // terms.js
+// Mòdul responsable de gestionar "terms" (grups d'activitats) dins d'una classe.
+// IMPORTANT: aquest mòdul NO fa res a l'import; es inicialitza mitjançant setup()
 
-let currentTermName = 'Avaluació'; // Nom per defecte del primer grup
-let classTerms = {}; // { 'Avaluació': { activitats: [], calculatedActivities: {} }, 'Exàmens': {...} }
+let _db = null;
+let _currentClassId = null;
+let _classData = null;         // objecte sencer de la classe (document.data())
+let _activeTermId = null;
+let _onChangeCallback = null;  // opcional: cridar quan canvia terme
 
-// Inicialitzar termes
-function initTerms(classData) {
-  // Si ja hi ha termes guardats a Firestore, els carreguem
-  classTerms = classData.terms || {};
-  if(Object.keys(classTerms).length === 0){
-    // Crear un terme inicial si no existeix
-    classTerms[currentTermName] = { activitats: [...classActivities], calculatedActivities: {} };
+// Utilities
+function makeTermId(name) {
+  // id senzill únic (p. ex. term_163467...)
+  return `term_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+}
+
+// --------- setup ---------
+// db: instancia Firestore (passa-li la variable db de app.js)
+// classId: currentClassId
+// classData: document.data() de la classe
+// opts.onChange(termId) opcional
+export function setup(db, classId, classData, opts = {}) {
+  _db = db;
+  _currentClassId = classId;
+  _classData = classData || {};
+  _onChangeCallback = opts.onChange || null;
+
+  // Assegurem que existeixi el node terms al objecte local
+  if (!_classData.terms || Object.keys(_classData.terms).length === 0) {
+    // Si hi ha activitats antics a nivell de classe (per compatibilitat), les posem dins d'un terme per defecte
+    const legacyActs = _classData.activitats || [];
+    const defaultId = makeTermId('Avaluacio');
+    _classData.terms = {};
+    _classData.terms[defaultId] = {
+      name: 'Avaluació',
+      activities: Array.isArray(legacyActs) ? [...legacyActs] : []
+    };
+    // **No fem write automàtic aquí**: només guardarem quan calgui (per evitar múltiples escritures inesperades)
   }
 
-  renderTermSelector();
-  renderTermGrid();
-}
-
-// ------------------ Botó "+" per crear nou terme ------------------
-const btnAddTerm = document.getElementById('btnAddTerm');
-if(btnAddTerm){
-  btnAddTerm.addEventListener('click', async ()=>{
-    const termName = prompt("Introdueix el nom del nou grup d'activitats:");
-    if(!termName) return;
-
-    if(classTerms[termName]){
-      alert('Ja existeix un grup amb aquest nom!');
-      return;
-    }
-
-    // Crear un nou terme buit (només alumnes)
-    classTerms[termName] = { activitats: [], calculatedActivities: {} };
-    currentTermName = termName;
-
-    await saveTermsToFirestore();
-    renderTermSelector();
-    renderTermGrid();
-  });
-}
-
-// ------------------ Render selector de termes ------------------
-function renderTermSelector(){
-  const selectorDiv = document.getElementById('termSelector');
-  if(!selectorDiv) return;
-
-  selectorDiv.innerHTML = '';
-
-  const select = document.createElement('select');
-  select.className = 'border p-1 rounded';
-
-  Object.keys(classTerms).forEach(term=>{
-    const option = document.createElement('option');
-    option.value = term;
-    option.textContent = term;
-    if(term === currentTermName) option.selected = true;
-    select.appendChild(option);
-  });
-
-  select.addEventListener('change', (e)=>{
-    currentTermName = e.target.value;
-    renderTermGrid();
-  });
-
-  selectorDiv.appendChild(select);
-}
-
-// ------------------ Render graella segons terme ------------------
-function renderTermGrid(){
-  // Activitats del terme actual
-  const termData = classTerms[currentTermName];
-  classActivities = termData.activitats || [];
-  calculatedActivities = termData.calculatedActivities || {};
-
-  // Cridem la funció de app.js que ja renderitza la graella
-  renderNotesGrid();
-}
-
-// ------------------ Guardar termes a Firestore ------------------
-async function saveTermsToFirestore(){
-  if(!currentClassId) return;
-  try{
-    await db.collection('classes').doc(currentClassId).update({
-      terms: classTerms
-    });
-  } catch(e){
-    console.error('Error guardant termes:', e);
-    alert('Error guardant grups d’activitats: ' + e.message);
+  // Seleccionem el primer terme si no hi ha actiu
+  if (!_activeTermId) {
+    _activeTermId = Object.keys(_classData.terms)[0];
   }
+
+  renderDropdown();
+  // Notificar app.js que terme actiu pot haver canviat
+  if (_onChangeCallback) _onChangeCallback(_activeTermId);
 }
+
+// --------- obtenir dades ---------
+export function getActiveTermId() {
+  return _activeTermId;
+}
+export function getActiveTermName() {
+  return (_classData?.terms?.[_activeTermId]?.name) || '';
+}
+export function getActiveTermActivities() {
+  return (_classData?.terms?.[_activeTermId]?.activities) || [];
+}
+
+// --------- render dropdown (DOM) ---------
+function renderDropdown() {
+  const sel = document.getElementById('termsDropdown');
+  if (!sel) return;
+  sel.innerHTML = '';
+
+  const terms = _classData.terms || {};
+  Object.keys(terms).forEach(termId => {
+    const opt = document.createElement('option');
+    opt.value = termId;
+    opt.textContent = terms[termId].name || termId;
+    sel.appendChild(opt);
+  });
+
+  // Selecciona el terme actiu
+  if (_activeTermId) sel.value = _activeTermId;
+
+  // Event listener per canvis manuals des del dropdown
+  sel.onchange = (e) => {
+    _activeTermId = e.target.value;
+    if (_onChangeCallback) _onChangeCallback(_activeTermId);
+  };
+}
+
+// --------- crear un nou terme (crida des de app.js) ---------
+export async function addNewTermWithName(name) {
+  if (!name || !name.trim()) return null;
+  if (!_db || !_currentClassId) throw new Error('terms.js no inicialitzat (db o classId manquen)');
+
+  const newId = makeTermId(name.trim());
+  const payload = {
+    name: name.trim(),
+    activities: []
+  };
+
+  // Guardar a Firestore sota terms.<newId>
+  const updateObj = {};
+  updateObj[`terms.${newId}`] = payload;
+
+  await _db.collection('classes').doc(_currentClassId).update(updateObj);
+
+  // Recarregar dades de la classe (per tenir sincronitzat _classData)
+  const doc = await _db.collection('classes').doc(_currentClassId).get();
+  _classData = doc.exists ? doc.data() : _classData;
+
+  // Establim com a actiu
+  _activeTermId = newId;
+  renderDropdown();
+  if (_onChangeCallback) _onChangeCallback(_activeTermId);
+
+  return newId;
+}
+
+// --------- afegir activitat a terme actiu ---------
+export async function addActivityToActiveTerm(activityId) {
+  if (!_activeTermId || !_db || !_currentClassId) return;
+  const path = `terms.${_activeTermId}.activities`;
+  await _db.collection('classes').doc(_currentClassId).update({
+    [path]: firebase.firestore.FieldValue.arrayUnion(activityId)
+  });
+
+  // Actualitzar _classData local
+  const doc = await _db.collection('classes').doc(_currentClassId).get();
+  _classData = doc.exists ? doc.data() : _classData;
+  // Notificar canvi per re-render a app.js
+  if (_onChangeCallback) _onChangeCallback(_activeTermId);
+}
+
+// --------- eliminar activitat de terme actiu ---------
+export async function removeActivityFromActiveTerm(activityId) {
+  if (!_activeTermId || !_db || !_currentClassId) return;
+  const path = `terms.${_activeTermId}.activities`;
+  await _db.collection('classes').doc(_currentClassId).update({
+    [path]: firebase.firestore.FieldValue.arrayRemove(activityId)
+  });
+  const doc = await _db.collection('classes').doc(_currentClassId).get();
+  _classData = doc.exists ? doc.data() : _classData;
+  if (_onChangeCallback) _onChangeCallback(_activeTermId);
+}
+
+// --------- renombrar terme ---------
+export async function renameTerm(termId, newName) {
+  if (!termId || !newName) return;
+  const path = `terms.${termId}.name`;
+  await _db.collection('classes').doc(_currentClassId).update({
+    [path]: newName
+  });
+  const doc = await _db.collection('classes').doc(_currentClassId).get();
+  _classData = doc.exists ? doc.data() : _classData;
+  renderDropdown();
+}
+
+// Exports mínims fets (setup, addNewTermWithName, getActiveTermActivities, getActiveTermName, addActivityToActiveTerm, removeActivityFromActiveTerm, getActiveTermId)
+export function getActiveTerm() { return _activeTermId; }
