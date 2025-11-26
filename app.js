@@ -823,32 +823,6 @@ async function removeActivity(activityId) {
 
 
 
-// Funció per actualitzar cel·les calculades sense recrear tota la taula
-function updateCalculatedCells() {
-  db.collection('classes').doc(currentClassId).get().then(doc => {
-    if (!doc.exists) return;
-    const calculatedActs = doc.data().calculatedActivities || {};
-
-    classStudents.forEach(sid => {
-      const row = document.querySelector(`tr[data-student-id="${sid}"]`);
-      if (!row) return;
-
-      classActivities.forEach(aid => {
-        if (!calculatedActs[aid]) return;
-        const input = row.querySelector(`input[data-activity-id="${aid}"]`);
-        if (!input) return;
-
-        const val = computeCalculatedNote(sid, aid); // funció que calcula nota
-        input.value = val;
-        input.disabled = true;
-        input.style.backgroundColor = "#fca5a5";
-      });
-    });
-  });
-}
-
-
-
 /* ---------------- Helpers Notes & Excel ---------------- */
 function th(txt, cls=''){
   const el = document.createElement('th');
