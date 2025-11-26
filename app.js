@@ -1299,6 +1299,7 @@ function enableActivityDrag(){
           .then(() => console.log('Ordre d’activitats actualitzat a Firestore'))
           .catch(e => console.error('Error guardant ordre activitats', e));
       }
+      saveActivityChangeToTerm();
 
       renderNotesGrid();
     });
