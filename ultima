@@ -1608,20 +1608,11 @@ termMenu.querySelector('.edit-term-btn').addEventListener('click', async () => {
 // Eliminar graella
 termMenu.querySelector('.delete-term-btn').addEventListener('click', async () => {
   const currentTermId = Terms.getActiveTermId();
+  if (!currentTermId) return;
   if (!confirm('Segur que vols eliminar aquesta graella i totes les seves activitats?')) return;
 
   try {
-    const updateObj = { [`terms.${currentTermId}`]: firebase.firestore.FieldValue.delete() };
-    await _db.collection('classes').doc(_currentClassId).update(updateObj);
-
-    // Actualitzar dades locals i seleccionar un altre terme
-    const doc = await _db.collection('classes').doc(_currentClassId).get();
-    _classData = doc.exists ? doc.data() : {};
-    _activeTermId = Object.keys(_classData.terms || {})[0] || null;
-
-    renderDropdown();  // refrescar desplegable
-    if (_onChangeCallback) _onChangeCallback(_activeTermId);
-
+    await Terms.deleteTerm(currentTermId); // <-- Aquí utilitzem la funció de terms.js
   } catch(e) {
     alert('Error eliminant graella: ' + e.message);
   }
