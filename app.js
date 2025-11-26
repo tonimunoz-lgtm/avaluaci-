@@ -445,21 +445,24 @@ async function createActivityModal() {
         formula: ""
     });
 
-    // 🔥 Aquí afegim l'activitat al terme actiu
+    // 🔥 Afegim l'activitat al terme actiu
     if (window.Terms && Terms.addActivityToActiveTerm) {
         await Terms.addActivityToActiveTerm(ref.id);
     } else {
         console.error("❌ Terms no està carregat. Revisa l'import a app.js");
     }
 
+    // 🔥 Actualitzar array d'activitats del terme actiu i renderitzar la taula
+    if (window.Terms && Terms.getActiveTermActivities) {
+        classActivities = Terms.getActiveTermActivities(); // només activitats del terme actiu
+        await renderNotesGrid(); // renderitzar sense tocar tota la classe
+    } else {
+        console.warn("⚠️ getActiveTermActivities no disponible, la taula pot no actualitzar-se correctament");
+    }
+
+    // Tancar modal i netejar input
     closeModal("modalAddActivity");
     document.getElementById("modalActivityName").value = "";
-
-    // 🔥 NO posar loadClassData() si tens dubtes!
-    // Si vols recarregar:
-    if (typeof loadClassData === "function") {
-        loadClassData();
-    }
 }
 
 
