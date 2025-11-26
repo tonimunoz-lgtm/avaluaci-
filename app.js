@@ -1505,3 +1505,17 @@ if (closeBtn) {
     container.classList.remove('mobile-open');
   });
 }
+
+// ----------------------Fer funcionar el botó + (afegir terme)
+const btnAddTerm = document.getElementById('btnAddTerm');
+btnAddTerm.addEventListener('click', async () => {
+  const name = prompt('Nom del nou grup (p. ex. 2TRIM):');
+  if(!name) return;
+  try {
+    const newId = await Terms.addNewTermWithName(name);
+    // Quan acaba, Terms ja cridarà l'onChange que actualitza la graella i el dropdown
+  } catch(e) {
+    console.error('Error creant terme:', e);
+    alert('Error creant terme: ' + e.message);
+  }
+});
