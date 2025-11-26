@@ -1542,8 +1542,10 @@ btnAddTerm.addEventListener('click', async () => {
 });
 
 // ---------------- Construir capçaleres amb menú de tres puntets ----------------
-function buildActivityHeaders() {
+// ---------------- Construir capçaleres amb menú de tres puntets ----------------
+async function buildActivityHeaders() {
   const tr = notesThead.querySelector('tr');
+  if (!tr) return;
   tr.innerHTML = ''; // netejar fila abans de renderitzar
 
   // Columna Alumne
@@ -1554,15 +1556,18 @@ function buildActivityHeaders() {
   // Activitats del terme actiu
   const activities = Terms.getActiveTermActivities();
 
-  activities.forEach((aid, idx) => {
+  for (const aid of activities) {
     const th = document.createElement('th');
     th.className = 'relative px-2 py-1 text-center';
 
     // Nom activitat
-    const actDoc = db.collection('activitats').doc(aid);
-    actDoc.get().then(doc => {
+    try {
+      const doc = await db.collection('activitats').doc(aid).get();
       th.textContent = doc.exists ? doc.data().nom : 'Sense nom';
-    });
+    } catch(e) {
+      th.textContent = 'Sense nom';
+      console.error('Error carregant activitat:', e);
+    }
 
     // Botó de menú tres puntets
     const menuBtn = document.createElement('button');
@@ -1575,7 +1580,6 @@ function buildActivityHeaders() {
     menuDiv.className = 'menu absolute right-0 mt-6 bg-white border rounded shadow hidden z-50';
     menuDiv.innerHTML = `
       <button class="block w-full px-2 py-1 hover:bg-gray-200 text-left">Eliminar activitat</button>
-      <!-- Pots afegir més opcions aquí -->
     `;
     th.appendChild(menuDiv);
 
@@ -1590,8 +1594,8 @@ function buildActivityHeaders() {
     deleteBtn.addEventListener('click', async () => {
       try {
         await Terms.removeActivityFromActiveTerm(aid); // elimina del terme actiu
+        await buildActivityHeaders(); // reconstruir capçaleres
         renderNotesGrid(); // refresca graella
-        menuDiv.classList.add('hidden');
       } catch(e) {
         console.error('Error eliminant activitat:', e);
         alert('Error eliminant activitat: ' + e.message);
@@ -1599,7 +1603,7 @@ function buildActivityHeaders() {
     });
 
     tr.appendChild(th);
-  });
+  }
 
   // Columna Mitjana
   const thMitjana = document.createElement('th');
@@ -1610,3 +1614,7 @@ function buildActivityHeaders() {
   enableActivityDrag();
 }
 
+// Tancar menús si fas clic fora
+document.addEventListener('click', () => {
+  document.querySelectorAll('.menu').forEach(menu => menu.classList.add('hidden'));
+});
