@@ -345,14 +345,35 @@ function loadClassData(){
   db.collection('classes').doc(currentClassId).get().then(doc=>{
     if(!doc.exists) { alert('Classe no trobada'); return; }
     const data = doc.data();
+
+    // Guardem dades locals com abans
     classStudents = data.alumnes || [];
-    classActivities = data.activitats || [];
+    // NO assignem classActivities directament des d'aquí; els activitats s'obtindran del terme actiu.
+    // classActivities = data.activitats || [];
     document.getElementById('classTitle').textContent = data.nom || 'Sense nom';
     document.getElementById('classSub').textContent = `ID: ${doc.id}`;
+
+    // Inicialitzar Terms passant db, id i dades de la classe
+    Terms.setup(db, currentClassId, data, {
+      onChange: (activeTermId) => {
+        // Quan el terme actiu canvia, actualitzem classActivities i re-renderitzem la taula
+        const acts = Terms.getActiveTermActivities();
+        classActivities = Array.isArray(acts) ? acts : [];
+        // També actualitzem calculatedActivities si vols (si ho guardes dins del terme)
+        // calculatedActivities = (data.terms && data.terms[activeTermId] && data.terms[activeTermId].calculatedActivities) || {};
+        renderNotesGrid(); // renderitza la taula amb activitats del terme actiu
+        // Actualitzar títol per incloure nom terme al costat de nom classe
+        const titleEl = document.getElementById('classTitle');
+        if(titleEl) titleEl.textContent = `${data.nom} - ${Terms.getActiveTermName() || ''}`;
+      }
+    });
+
+    // Render llista d'alumnes i altres UI
     renderStudentsList();
-    renderNotesGrid();
+    // renderNotesGrid() serà cridat per l'onChange del setup
   }).catch(e=> console.error(e));
 }
+
 
 /* ---------------- Students ---------------- */
 btnAddStudent.addEventListener('click', ()=> openModal('modalAddStudent'));
