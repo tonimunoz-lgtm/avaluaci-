@@ -36,7 +36,10 @@ export function setup(db, classId, classData, opts = {}) {
 
   renderDropdown();
 
-  if (_onChangeCallback) _onChangeCallback(_activeTermId);
+  // MOSTRAR/AMAGAR MISSATGE DE GRUPS BUIDOS
+  showEmptyMessage(Object.keys(_classData.terms).length === 0);
+
+  if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
 }
 
 // ------------------------ Obtenir dades ------------------------
@@ -59,7 +62,19 @@ function renderDropdown() {
   sel.innerHTML = '';
 
   const terms = _classData.terms || {};
-  Object.keys(terms).forEach(termId => {
+  const termIds = Object.keys(terms);
+
+  if (termIds.length === 0) {
+    const opt = document.createElement('option');
+    opt.textContent = 'Crea el teu primer grup';
+    opt.disabled = true;
+    opt.selected = true;
+    sel.appendChild(opt);
+    showEmptyMessage(true);
+    return;
+  }
+
+  termIds.forEach(termId => {
     const opt = document.createElement('option');
     opt.value = termId;
     opt.textContent = terms[termId].name || termId;
@@ -70,8 +85,26 @@ function renderDropdown() {
 
   sel.onchange = (e) => {
     _activeTermId = e.target.value;
+    showEmptyMessage(false);
     if (_onChangeCallback) _onChangeCallback(_activeTermId);
   };
+
+  showEmptyMessage(false);
+}
+
+// ------------------------ Mostrar/Amagar missatge ------------------------
+function showEmptyMessage(show) {
+  const msg = document.getElementById('emptyGroupMessage');
+  const table = document.getElementById('notesTable-wrapper');
+  if (!msg || !table) return;
+
+  if (show) {
+    msg.style.display = 'block';
+    table.style.display = 'none';
+  } else {
+    msg.style.display = 'none';
+    table.style.display = 'block';
+  }
 }
 
 // ------------------------ Crear un nou terme ------------------------
@@ -92,12 +125,13 @@ export async function addNewTermWithName(name) {
 
   _activeTermId = newId;
   renderDropdown();
-  if (_onChangeCallback) _onChangeCallback(_activeTermId);
+  showEmptyMessage(false);
 
+  if (_onChangeCallback) _onChangeCallback(_activeTermId);
   return newId;
 }
 
-// ------------------------ Afegir activitat a terme actiu ------------------------
+// ------------------------ Afegir/Eliminar activitat ------------------------
 export async function addActivityToActiveTerm(activityId) {
   if (!_activeTermId || !_db || !_currentClassId) return;
   const path = `terms.${_activeTermId}.activities`;
@@ -111,7 +145,6 @@ export async function addActivityToActiveTerm(activityId) {
   if (_onChangeCallback) _onChangeCallback(_activeTermId);
 }
 
-// ------------------------ Eliminar activitat de terme actiu ------------------------
 export async function removeActivityFromActiveTerm(activityId) {
   if (!_activeTermId || !_db || !_currentClassId) return;
   const path = `terms.${_activeTermId}.activities`;
@@ -125,7 +158,7 @@ export async function removeActivityFromActiveTerm(activityId) {
   if (_onChangeCallback) _onChangeCallback(_activeTermId);
 }
 
-// ------------------------ Renombrar terme ------------------------
+// ------------------------ Renombrar/eliminar terme ------------------------
 export async function renameTerm(termId, newName) {
   if (!termId || !newName) return;
   const path = `terms.${termId}.name`;
@@ -137,27 +170,26 @@ export async function renameTerm(termId, newName) {
   renderDropdown();
 }
 
-// ------------------------ Eliminar terme complet ------------------------
 export async function deleteTerm(termId) {
   if (!_db || !_currentClassId || !_classData?.terms?.[termId]) return;
 
   const updateObj = {};
   updateObj[`terms.${termId}`] = firebase.firestore.FieldValue.delete();
-
   await _db.collection('classes').doc(_currentClassId).update(updateObj);
 
   const doc = await _db.collection('classes').doc(_currentClassId).get();
   _classData = doc.exists ? doc.data() : _classData;
 
-  // Si el terme eliminat era el actiu, seleccionar un altre
   if (_activeTermId === termId) {
     const remainingTerms = Object.keys(_classData.terms || {});
     _activeTermId = remainingTerms[0] || null;
   }
 
   renderDropdown();
-  if (_onChangeCallback) _onChangeCallback(_activeTermId);
+  showEmptyMessage(!_activeTermId);
+
+  if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
 }
 
-// ------------------------ Exports mínims ------------------------
+// ------------------------ Export mínim ------------------------
 export function getActiveTerm() { return _activeTermId; }
