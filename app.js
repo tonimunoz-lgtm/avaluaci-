@@ -1,6 +1,7 @@
 // app.js - lògica principal (modules)
 import { openModal, closeModal, confirmAction } from './modals.js';
-
+import * as Calc from './calcModal.js';
+window.calcModal = calcModal;
 import * as Terms from './terms.js';
 window.Terms = Terms;
 
@@ -1680,8 +1681,6 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
 });
 
 /* ---------------- Open Calculator Modal ---------------- */
-import * as Calc from './calcModal.js';
-window.calcModal = calcModal;
 
 /* Inicialitzar el modal amb db i classe actual */
 Calc.setupCalcModal(db, currentClassId);
