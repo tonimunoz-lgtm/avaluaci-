@@ -119,14 +119,21 @@
 </aside>
 
   <!-- notes grid -->
-  <div id="notesTable-wrapper" class="flex-grow bg-white rounded-xl shadow p-3 overflow-x-auto">
-    <div id="gridWrapper" class="w-full">
-      <table id="notesTable" class="min-w-full border-collapse">
-        <thead id="notesThead" class="bg-gray-100"></thead>
-        <tbody id="notesTbody"></tbody>
-        <tfoot id="notesTfoot" class="bg-gray-50"></tfoot>
-        <tfoot id="formulaTfoot" class="bg-gray-50 hidden"></tfoot>
-      </table>
+ <div id="notesTable-wrapper" class="flex-grow bg-white rounded-xl shadow p-3 overflow-x-auto">
+
+  <!-- MISSATGE CENTRAL GRAN -->
+  <div id="emptyInstructionMessage" 
+       style="display:none; text-align:center; margin-top:50px; font-size:1.5rem; font-weight:bold; color:#555;">
+    Presiona el botó <strong>＋</strong> per crear un nou grup d'activitats (primer trimestre, segon trimestre, etc.)
+  </div>
+
+  <div id="gridWrapper" class="w-full">
+    <table id="notesTable" class="min-w-full border-collapse">
+      <thead id="notesThead" class="bg-gray-100"></thead>
+      <tbody id="notesTbody"></tbody>
+      <tfoot id="notesTfoot" class="bg-gray-50"></tfoot>
+      <tfoot id="formulaTfoot" class="bg-gray-50 hidden"></tfoot>
+    </table>
     </div>
   </div>
 
