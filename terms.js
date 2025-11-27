@@ -92,18 +92,24 @@ function renderDropdown() {
 
 // ------------------------ Mostrar/Amagar missatge ------------------------
 function showEmptyMessage(show) {
-  const msg = document.getElementById('emptyGroupMessage');
-  const table = document.getElementById('notesTable-wrapper');
-  if (!msg || !table) return;
+  const msg = document.getElementById('emptyGroupMessage');           // missatge petit existent
+  const wrapper = document.getElementById('notesTable-wrapper');
+  const table = document.getElementById('notesTable');
+  const instruction = document.getElementById('emptyInstructionMessage'); // nou missatge central
+
+  if (!msg || !wrapper || !table || !instruction) return;
 
   if (show) {
-    msg.style.display = 'block';
-    table.style.display = 'none';
+    msg.style.display = 'block';        // missatge existent
+    table.style.display = 'none';       // amaguem la taula
+    instruction.style.display = 'block';// mostrem missatge central gran
   } else {
     msg.style.display = 'none';
-    table.style.display = 'block';
+    table.style.display = 'table';
+    instruction.style.display = 'none';
   }
 }
+
 
 // ------------------------ Crear un nou terme ------------------------
 export async function addNewTermWithName(name) {
