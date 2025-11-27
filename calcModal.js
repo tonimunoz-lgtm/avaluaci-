@@ -71,8 +71,6 @@ calcTermSelect.addEventListener('change', e => {
 // Obrir modal → omplir desplegable
 // ---------------------------
 // calcModal.js
-
-// Afegim al window per evitar problemes d'import ES Modules
 export function openCalcModal() {
   const modal = document.getElementById('modalCalc');
   if (!modal) return;
@@ -98,46 +96,62 @@ export function openCalcModal() {
     select.value = Terms.getActiveTermId();
   }
 
+  // Render activitats del terme actiu
+  renderActivitiesForTerm(select.value);
+
   // Listener: quan canviem terme al desplegable
   select.addEventListener('change', () => {
     const termId = select.value;
     if (!termId) return;
     if (window.Terms && typeof Terms.setActiveTerm === 'function') {
       Terms.setActiveTerm(termId);
-      // També podem refrescar les activitats del modal o la taula principal
+      renderActivitiesForTerm(termId);
       if (typeof window.renderNotesGrid === 'function') {
         window.renderNotesGrid();
       }
     }
   });
 
-  // Opcional: botó tancar modal
+  // Botó tancar modal
   const btnClose = modal.querySelector('.close-modal');
   if (btnClose) {
     btnClose.addEventListener('click', () => {
       modal.classList.add('hidden');
     });
   }
-
-  // Carregar activitats del terme actiu dins el modal (opcional)
-  renderActivitiesForTerm(select.value);
 }
 
-// Funció interna: mostrar activitats dins modal
-function renderActivitiesForTerm(termId) {
+// Funció interna: mostrar activitats dins modal amb nom i fórmula
+async function renderActivitiesForTerm(termId) {
   const container = document.getElementById('calcActivitiesContainer');
   if (!container) return;
   container.innerHTML = '';
 
   if (window.Terms && typeof Terms.getTermActivities === 'function') {
-    const acts = Terms.getTermActivities(termId) || [];
-    acts.forEach(actId => {
+    const actIds = Terms.getTermActivities(termId) || [];
+
+    // Agafem activitats de Firebase
+    const actsData = await Promise.all(
+      actIds.map(id => db.collection('activitats').doc(id).get())
+    );
+
+    actsData.forEach(adoc => {
+      if (!adoc.exists) return;
+      const data = adoc.data();
       const div = document.createElement('div');
-      div.textContent = actId; // Aquí pots mostrar nom, data, fórmula...
+      div.className = 'calc-activity p-2 border-b flex justify-between items-center';
+      div.innerHTML = `
+        <span class="font-medium">${data.nom || 'Sense nom'}</span>
+        <span class="text-sm text-gray-500 italic">${data.formula || '-'}</span>
+      `;
       container.appendChild(div);
     });
+
+    if (actIds.length === 0) {
+      container.innerHTML = '<p class="text-sm text-gray-400">No hi ha activitats per aquest terme.</p>';
+    }
   }
 }
 
-// Assignem a window per cridar des de qualsevol lloc
+// Exposem globalment
 window.openCalcModal = openCalcModal;
