@@ -1,5 +1,7 @@
 // app.js - lògica principal (modules)
 import { openModal, closeModal, confirmAction } from './modals.js';
+import { openCalcModal } from './calcModal.js';
+
 import * as Terms from './terms.js';
 window.Terms = Terms;
 
