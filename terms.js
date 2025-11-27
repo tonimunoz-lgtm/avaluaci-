@@ -19,16 +19,14 @@ export function setup(db, classId, classData, opts = {}) {
   _classData = classData || {};
   _onChangeCallback = opts.onChange || null;
 
-  // Si no hi ha termes, deixem tot buit i mostrem missatge
   if (!_classData.terms) {
-    _classData.terms = {};   // sense terme inicial
-    _activeTermId = null;    // cap terme actiu
-    renderDropdown();        // desplegable buit
-    showEmptyMessage(true);  // mostrar missatge
+    _classData.terms = {};
+    _activeTermId = null;
+    renderDropdown();
+    showEmptyMessage(true);
     return;
   }
 
-  // Selecciona primer terme actiu
   if (!_activeTermId) _activeTermId = Object.keys(_classData.terms)[0];
 
   renderDropdown();
@@ -47,6 +45,26 @@ export function getActiveTermName() {
 
 export function getActiveTermActivities() {
   return (_classData?.terms?.[_activeTermId]?.activities) || [];
+}
+
+// ------------------------ NOVES FUNCIONS PER CALCULADORA ------------------------
+
+// Retorna tots els termes com array {id, name}
+export function getAllTerms() {
+  if (!_classData?.terms) return [];
+  return Object.entries(_classData.terms).map(([id, term]) => ({
+    id,
+    name: term.name
+  }));
+}
+
+// Retorna les activitats d'un terme concret
+export function getActivities(termId) {
+  if (!_classData?.terms?.[termId]?.activities) return [];
+  return _classData.terms[termId].activities.map(act => ({
+    id: act,
+    name: act
+  }));
 }
 
 // ------------------------ Render Dropdown ------------------------
@@ -92,24 +110,23 @@ function renderDropdown() {
 
 // ------------------------ Mostrar/Amagar missatge ------------------------
 function showEmptyMessage(show) {
-  const msg = document.getElementById('emptyGroupMessage');           // missatge petit existent
+  const msg = document.getElementById('emptyGroupMessage');
   const wrapper = document.getElementById('notesTable-wrapper');
   const table = document.getElementById('notesTable');
-  const instruction = document.getElementById('emptyInstructionMessage'); // nou missatge central
+  const instruction = document.getElementById('emptyInstructionMessage');
 
   if (!msg || !wrapper || !table || !instruction) return;
 
   if (show) {
-    msg.style.display = 'block';        // missatge existent
-    table.style.display = 'none';       // amaguem la taula
-    instruction.style.display = 'block';// mostrem missatge central gran
+    msg.style.display = 'block';
+    table.style.display = 'none';
+    instruction.style.display = 'block';
   } else {
     msg.style.display = 'none';
     table.style.display = 'table';
     instruction.style.display = 'none';
   }
 }
-
 
 // ------------------------ Crear un nou terme ------------------------
 export async function addNewTermWithName(name) {
