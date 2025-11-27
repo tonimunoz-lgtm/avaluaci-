@@ -1689,3 +1689,15 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
 
   termMenu.classList.add('hidden');
 });
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.openCalcBtn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const calcModal = initCalcModal({
+        getTerms: () => window.Terms.getAllTerms(),
+        getActivitiesByTerm: (termId) => window.Terms.getActivities(termId)
+      });
+      openModal('modalCalc'); // la funció que obre el modal
+    });
+  });
+});
