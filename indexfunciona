@@ -83,15 +83,16 @@
             </div>
             <div class="flex flex-wrap gap-2">
   <!-- Botó menú graella -->
-  <div class="relative">
-    <button id="termMenuBtn" class="px-2 py-1 text-gray-600 hover:text-gray-800">⋮</button>
-    <div id="termMenu" class="menu absolute left-0 mt-2 bg-white border rounded shadow hidden z-50">
-      <button class="edit-term-btn px-2 py-1 w-full text-left hover:bg-gray-200">Editar nom</button>
-      <button class="delete-term-btn px-2 py-1 w-full text-left hover:bg-gray-200">Eliminar graella</button>
-    </div>
-  </div>
+ 
               <select id="termsDropdown"></select>
               <button id="btnAddTerm" class="bg-green-500 text-white px-3 py-1 rounded font-bold text-lg">＋</button>
+            <div class="relative">
+              <button id="termMenuBtn" class="bg-green-500 text-white px-3 py-1 rounded font-bold text-lg">⋮</button>
+                <div id="termMenu" class="menu absolute left-0 mt-2 bg-white border rounded shadow hidden z-50">
+                  <button class="edit-term-btn px-2 py-1 w-full text-left hover:bg-gray-200 whitespace-nowrap">Editar nom</button>
+                  <button class="delete-term-btn px-2 py-1 w-full text-left hover:bg-gray-200 whitespace-nowrap">Eliminar graella</button>
+              </div>
+           </div>
               <button id="btnSortAlpha" class="bg-yellow-400 text-black px-3 py-1 rounded">Ordenar A-Z</button>
               <button id="btnExport" class="bg-amber-500 text-white px-3 py-1 rounded">Exportar</button>
               <button id="btnImportAL" class="bg-blue-500 text-white px-3 py-1 rounded">Importar</button>
@@ -119,14 +120,21 @@
 </aside>
 
   <!-- notes grid -->
-  <div id="notesTable-wrapper" class="flex-grow bg-white rounded-xl shadow p-3 overflow-x-auto">
-    <div id="gridWrapper" class="w-full">
-      <table id="notesTable" class="min-w-full border-collapse">
-        <thead id="notesThead" class="bg-gray-100"></thead>
-        <tbody id="notesTbody"></tbody>
-        <tfoot id="notesTfoot" class="bg-gray-50"></tfoot>
-        <tfoot id="formulaTfoot" class="bg-gray-50 hidden"></tfoot>
-      </table>
+ <div id="notesTable-wrapper" class="flex-grow bg-white rounded-xl shadow p-3 overflow-x-auto">
+
+  <!-- MISSATGE CENTRAL GRAN -->
+  <div id="emptyInstructionMessage" 
+       style="display:none; text-align:center; margin-top:50px; font-size:1.5rem; font-weight:bold; color:#555;">
+    🔰Presiona el botó <strong>＋</strong> per crear un nou grup d'activitats (primer trimestre, segon trimestre, etc.)
+  </div>
+
+  <div id="gridWrapper" class="w-full">
+    <table id="notesTable" class="min-w-full border-collapse">
+      <thead id="notesThead" class="bg-gray-100"></thead>
+      <tbody id="notesTbody"></tbody>
+      <tfoot id="notesTfoot" class="bg-gray-50"></tfoot>
+      <tfoot id="formulaTfoot" class="bg-gray-50 hidden"></tfoot>
+    </table>
     </div>
   </div>
 
