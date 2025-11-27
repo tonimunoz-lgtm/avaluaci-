@@ -1679,15 +1679,3 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
   termMenu.classList.add('hidden');
 });
 
-import { openCalcModal } from './calcModal.js';
-
-// Assignem la funció a window per compatibilitat
-window.openCalcModal = openCalcModal;
-
-const btnOpenCalc = document.getElementById('btnOpenCalc');
-if (btnOpenCalc) {
-  btnOpenCalc.addEventListener('click', () => {
-    window.openCalcModal();
-  });
-}
-
