@@ -230,21 +230,15 @@
   <!-- Modal Calcul -->
 <div id="modalCalc" class="modal hidden fixed inset-0 items-center justify-center z-50">
   <div class="bg-white p-6 rounded shadow-lg w-96 max-w-full flex flex-col gap-4">
-    
     <button class="modal-close self-end" data-modal-close="modalCalc">✖</button>
-    <h2 class="text-lg font-bold">Càlcul de l’activitat</h2>
+    <h2 class="text-lg font-bold">Calcul activitat</h2>
 
-    <!-- Tipus de càlcul -->
     <label for="calcType">Tipus de càlcul:</label>
     <select id="calcType" class="border rounded p-1">
-      <option value="numeric">Numèric</option>
+      <option value="numeric">Numeric</option>
       <option value="formula">Fórmula</option>
-      <option value="rounding">Arrodoniment</option>
+      <option value="rounding">Redondeig</option>
     </select>
-
-    <!-- Selecció de graella -->
-    <label for="calcTermSelect">Selecciona graella:</label>
-    <select id="calcTermSelect" class="border rounded p-1 w-full mb-2"></select>
 
     <!-- Numeric -->
     <div id="numericInput">
@@ -254,17 +248,14 @@
 
     <!-- Fórmula -->
     <div id="formulaInputs" class="hidden flex flex-col gap-2">
-      <label for="formulaField">Fórmula:</label>
       <input type="text" id="formulaField" readonly class="border rounded p-1 w-full" placeholder="Construeix la fórmula">
-      
-      <!-- Selecció d'activitat dins de la graella -->
-      <label for="calculatorActivitySelect">Activitats disponibles:</label>
-      <select id="calculatorActivitySelect" class="border rounded p-1 w-full mb-2"></select>
-
-      <!-- Botons de la calculadora -->
       <div id="formulaButtons" class="flex flex-wrap gap-1"></div>
     </div>
 
+<label for="calcTermSelect">Selecciona graella:</label>
+<select id="calcTermSelect" class="border rounded p-1 w-full mb-2"></select>
+
+    
     <button id="modalApplyCalcBtn" class="bg-indigo-500 text-white p-2 rounded font-semibold">Aplica</button>
   </div>
 </div>
