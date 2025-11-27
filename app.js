@@ -85,21 +85,6 @@ if (btnCloseStudentsMobile) {
   });
 }
 
-import { openCalcModal } from './calcModal.js';
-
-const btnOpenCalc = document.getElementById('btnOpenCalc');
-if (btnOpenCalc) {
-  btnOpenCalc.addEventListener('click', () => {
-    openCalcModal();
-  });
-}
-document.addEventListener('DOMContentLoaded', () => {
-  const btnOpenCalc = document.getElementById('btnOpenCalc');
-  if (btnOpenCalc) {
-    btnOpenCalc.addEventListener('click', () => openCalcModal());
-  }
-});
-
 
 // També tancar si cliques a fora del card (overlay)
 // detectem clicks al container però fora de .students-card
@@ -1692,4 +1677,19 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
   }
 
   termMenu.classList.add('hidden');
+});
+
+import { openCalcModal } from './calcModal.js';
+
+const btnOpenCalc = document.getElementById('btnOpenCalc');
+if (btnOpenCalc) {
+  btnOpenCalc.addEventListener('click', () => {
+    openCalcModal();
+  });
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const btnOpenCalc = document.getElementById('btnOpenCalc');
+  if (btnOpenCalc) {
+    btnOpenCalc.addEventListener('click', () => openCalcModal());
+  }
 });
