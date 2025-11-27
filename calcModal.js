@@ -1,22 +1,20 @@
 // calcModal.js
 export function initCalcModal({ getTerms, getActivitiesByTerm }) {
   const modal = document.getElementById('modalCalc');
-  const termDropdown = modal.querySelector('#calculatorActivitySelect');
+  const termDropdown = modal.querySelector('#calcTermSelect'); // utilitzem un id nou
   const formulaButtons = modal.querySelector('#formulaButtons');
   const formulaField = modal.querySelector('#formulaField');
 
-  // ------------------ Omplir desplegable de graelles ------------------
   function populateTerms() {
-    const terms = getTerms() || []; // Array d'objectes {id, name}
+    const terms = getTerms(); // array d'objectes {id, name}
     termDropdown.innerHTML = '';
-
-    if (terms.length === 0) {
+    if (!terms || terms.length === 0) {
       const opt = document.createElement('option');
-      opt.textContent = 'Cap graella disponible';
+      opt.textContent = 'No hi ha graelles';
       opt.disabled = true;
-      opt.selected = true;
       termDropdown.appendChild(opt);
       formulaButtons.innerHTML = '';
+      formulaField.value = '';
       return;
     }
 
@@ -31,10 +29,11 @@ export function initCalcModal({ getTerms, getActivitiesByTerm }) {
     populateActivities(terms[0].id);
   }
 
-  // ------------------ Omplir botons d'activitats ------------------
   function populateActivities(termId) {
-    const activities = getActivitiesByTerm(termId) || [];
+    const activities = getActivitiesByTerm(termId);
     formulaButtons.innerHTML = '';
+    formulaField.value = '';
+    if (!activities) return;
 
     activities.forEach(act => {
       const btn = document.createElement('button');
@@ -48,13 +47,12 @@ export function initCalcModal({ getTerms, getActivitiesByTerm }) {
     });
   }
 
-  // ------------------ Canvi de graella ------------------
+  // Quan canviem de terme al desplegable
   termDropdown.addEventListener('change', (e) => {
     const selectedTermId = e.target.value;
     populateActivities(selectedTermId);
   });
 
-  // ------------------ Obrir i tancar modal ------------------
   function open() {
     modal.classList.remove('hidden');
     populateTerms();
@@ -62,8 +60,8 @@ export function initCalcModal({ getTerms, getActivitiesByTerm }) {
 
   function close() {
     modal.classList.add('hidden');
-    formulaField.value = '';
     formulaButtons.innerHTML = '';
+    formulaField.value = '';
   }
 
   const closeBtn = modal.querySelector('.modal-close');
