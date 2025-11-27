@@ -1,186 +1,265 @@
-// terms.js
-// Mòdul per gestionar "terms" (graelles d'activitats) dins d'una classe
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gestor de Classes</title>
 
-let _db = null;
-let _currentClassId = null;
-let _classData = null;
-let _activeTermId = null;
-let _onChangeCallback = null;
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
 
-// Generar un ID únic per terme
-function makeTermId(name) {
-  return `term_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
-}
+  <!-- CSS propi -->
+  <link rel="stylesheet" href="style.css">
 
-// ------------------------ Setup ------------------------
-export function setup(db, classId, classData, opts = {}) {
-  _db = db;
-  _currentClassId = classId;
-  _classData = classData || {};
-  _onChangeCallback = opts.onChange || null;
+  <!-- Firebase (compat per la teva base actual) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-  // Crear terme inicial si no n'hi ha cap
- if (!_classData.terms) {
-  _classData.terms = {}; // sense terme inicial
-  _activeTermId = null;  // cap terme actiu
-  renderDropdown();       // desplegable buit
-  showEmptyMessage(true); // mostrar missatge d'instrucció
-  return;
-}
+  <!-- XLSX per export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body class="bg-gradient-to-br from-gray-100 via-white to-gray-200 text-gray-900">
+
+  <div class="min-h-screen flex items-center justify-center p-4">
+
+    <!-- LOGIN SCREEN -->
+    <section id="loginScreen" class="w-full max-w-md p-6">
+      <div class="bg-white rounded-xl shadow-xl p-6 flex flex-col items-center">
+        <img src="https://img.icons8.com/ios-filled/100/6366f1/school.png" alt="Logo" class="w-24 h-24 mb-4">
+        <h1 class="text-2xl font-bold mb-2">Mini Gestor de Notes</h1>
+        <p class="mb-4 text-sm text-gray-500 text-center">Gestiona classes, alumnes i activitats — responsive i modern</p>
+
+        <input id="loginEmail" type="email" placeholder="Email" class="w-full rounded-lg p-3 mb-2 border border-gray-300 focus:ring-2 focus:ring-indigo-400 focus:outline-none">
+        <input id="loginPassword" type="password" placeholder="Contrasenya" class="w-full rounded-lg p-3 mb-3 border border-gray-300 focus:ring-2 focus:ring-indigo-400 focus:outline-none">
+
+        <button id="btnLogin" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-3 rounded-lg mb-2 transition-all duration-200">Login</button>
+        <button id="btnRegister" class="w-full bg-indigo-100 hover:bg-indigo-200 text-indigo-800 font-semibold py-3 rounded-lg mb-2 transition-all duration-200">Registrar</button>
+        <button id="btnRecover" class="text-indigo-500 underline text-sm hover:text-indigo-700 transition-all duration-200">He oblidat la contrasenya</button>
+      </div>
+    </section>
+
+    <!-- MAIN APP CONTAINER -->
+    <div id="appRoot" class="hidden w-full max-w-6xl mx-auto p-6 rounded-xl shadow-lg bg-white">
+
+      <!-- HEADER -->
+      <header class="flex items-center justify-between mb-6 p-4 rounded-xl shadow-md">
+        <div>
+          <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight">Gestor d'avaluació</h1>
+        </div>
+        <div id="userArea" class="flex items-center gap-2">
+          <span id="usuariNom">usuari</span>
+          <button id="userMenuBtn" class="text-gray-600 hover:text-gray-800">⋮</button>
+          <div id="userMenu" class="hidden absolute bg-white border rounded shadow-md p-2">
+            <button id="changePasswordBtn" class="w-full text-left px-2 py-1 hover:bg-gray-100">Canviar contrasenya</button>
+          </div>
+          <button id="btnLogout">Logout</button>
+        </div>
+
+      </header>
+
+      <main>
+
+        <!-- SCREEN: classes list -->
+        <section id="screen-classes" class="space-y-6">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xl font-semibold">Les meves classes</h2>
+            <div class="flex gap-3">
+              <button id="btnCreateClass" class="bg-indigo-500 hover:bg-indigo-600 text-white px-5 py-2 rounded-xl shadow transition-transform">➕ Crear classe</button>
+              <button id="btnDeleteMode" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-xl shadow transition-transform">🗑️ Eliminar classe</button>
+            </div>
+          </div>
+          <div id="classesGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"></div>
+        </section>
+
+        <!-- SCREEN: class view -->
+        <section id="screen-class" class="hidden mt-4">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-3">
+            <div>
+              <button id="btnBack" class="text-sm text-gray-600 mr-3">← Tornar</button>
+              <h2 id="classTitle" class="text-2xl font-bold inline-block"></h2>
+              <p id="classSub" class="text-sm text-gray-500"></p>
+
+            </div>
+            <div class="flex flex-wrap gap-2">
+  <!-- Botó menú graella -->
+  <div class="relative">
+    <button id="termMenuBtn" class="px-2 py-1 text-gray-600 hover:text-gray-800">⋮</button>
+    <div id="termMenu" class="menu absolute left-0 mt-2 bg-white border rounded shadow hidden z-50">
+      <button class="edit-term-btn px-2 py-1 w-full text-left hover:bg-gray-200">Editar nom</button>
+      <button class="delete-term-btn px-2 py-1 w-full text-left hover:bg-gray-200">Eliminar graella</button>
+    </div>
+  </div>
+              <select id="termsDropdown"></select>
+              <button id="btnAddTerm" class="bg-green-500 text-white px-3 py-1 rounded font-bold text-lg">＋</button>
+              <button id="btnSortAlpha" class="bg-yellow-400 text-black px-3 py-1 rounded">Ordenar A-Z</button>
+              <button id="btnExport" class="bg-amber-500 text-white px-3 py-1 rounded">Exportar</button>
+              <button id="btnImportAL" class="bg-blue-500 text-white px-3 py-1 rounded">Importar</button>
+              <button id="btnToggleStudentsMobile" class="block md:hidden bg-indigo-500 text-white px-3 py-1 rounded shadow">👥Alumnes</button>
+              <button id="btnAddStudent" class="bg-purple-600 text-white px-3 py-1 rounded">➕ Alumne</button>
+              <button id="btnAddActivity" class="bg-teal-600 text-white px-3 py-1 rounded">➕ Activitat</button>
+            </div>
+          </div>
+
+          <div id="classScreenWrapper">
+
+  <!-- students col -->
+ <aside id="studentsListContainer">
+  <div id="studentsListContent">
+  <!-- Botó de tancament mòbil -->
+  <button id="closeStudentsMobile" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 font-bold text-xl">&times;</button>
+
+  <h3 class="font-semibold mb-2">
+    Alumnes <span id="studentsCount" class="text-sm text-gray-400"></span>
+  </h3>
+
+  <ul id="studentsList" class="space-y-2"></ul>
+  <p class="mt-3 text-xs text-gray-400">Arrossega per ordenar</p>
+</div>
+</aside>
+
+  <!-- notes grid -->
+  <div id="notesTable-wrapper" class="flex-grow bg-white rounded-xl shadow p-3 overflow-x-auto">
+    <div id="gridWrapper" class="w-full">
+      <table id="notesTable" class="min-w-full border-collapse">
+        <thead id="notesThead" class="bg-gray-100"></thead>
+        <tbody id="notesTbody"></tbody>
+        <tfoot id="notesTfoot" class="bg-gray-50"></tfoot>
+        <tfoot id="formulaTfoot" class="bg-gray-50 hidden"></tfoot>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- ---------- MODALS ---------- -->
+
+<!-- Modal Importar Alumnes -->
+<div id="modalImportAL" class="fixed inset-0 hidden items-center justify-center z-50">
+  <div class="modal-backdrop absolute inset-0"></div>
+  <div class="bg-white rounded shadow-lg z-10 w-full max-w-md p-4">
+    <h3 class="text-lg font-semibold mb-2">Importar alumnes</h3>
+
+    <!-- 📝 Instruccions -->
+    <div class="text-sm text-gray-700 dark:text-gray-300 mb-4 p-2 bg-gray-100 dark:bg-gray-900 rounded">
+      <strong>Instruccions:</strong>
+      <ul class="list-disc list-inside mt-1">
+        <li>Prepara un fitxer <code>.xlsx</code> o <code>.csv</code>.</li>
+        <li>Escriu els <strong>noms i cognoms dels alumnes</strong> a <strong>la primera columna</strong>, sense cap fila de capçalera.</li>
+        <li>Cada alumne ha d’estar en una fila diferent.</li>
+        <li>Desa el fitxer i selecciona’l aquí per importar-lo.</li>
+      </ul>
+      <p class="mt-1 text-xs text-gray-500">Exemple: una columna amb Maria Pérez, Joan García, Laura Rodríguez, etc. Un a sota de l'altre</p>
+    </div>
+    
+    <input type="file" id="fileImport" accept=".csv,.xlsx" class="w-full mb-3" />
+    <div class="flex justify-end gap-2">
+      <button data-modal-close="modalImportAL" class="modal-close px-3 py-1 rounded bg-gray-200">Cancel·lar</button>
+      <button id="btnImportALConfirm" class="px-3 py-1 rounded bg-green-500 text-white">Importa</button>
+    </div>
+  </div>
+</div>
+
+  
+  <!-- Create Class Modal -->
+  <div id="modalCreateClass" class="fixed inset-0 hidden items-center justify-center z-50">
+    <div class="modal-backdrop absolute inset-0"></div>
+    <div class="bg-white rounded shadow-lg z-10 w-full max-w-md p-4">
+      <h3 class="text-lg font-semibold mb-2">Crear nova classe</h3>
+      <input id="modalClassName" class="border rounded px-3 py-2 w-full mb-3" placeholder="Nom de la classe">
+      <div class="flex justify-end gap-2">
+        <button data-modal-close="modalCreateClass" class="modal-close px-3 py-1 rounded bg-gray-200">Cancel·lar</button>
+        <button id="modalCreateClassBtn" class="px-3 py-1 rounded bg-indigo-500 text-white">Crear</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Student Modal -->
+  <div id="modalAddStudent" class="fixed inset-0 hidden items-center justify-center z-50">
+    <div class="modal-backdrop absolute inset-0"></div>
+    <div class="bg-white rounded shadow-lg z-10 w-full max-w-md p-4">
+      <h3 class="text-lg font-semibold mb-2">Afegir alumne</h3>
+      <input id="modalStudentName" class="border rounded px-3 py-2 w-full mb-3" placeholder="Nom de l'alumne">
+      <div class="flex justify-end gap-2">
+        <button data-modal-close="modalAddStudent" class="modal-close px-3 py-1 rounded bg-gray-200">Cancel·lar</button>
+        <button id="modalAddStudentBtn" class="px-3 py-1 rounded bg-purple-600 text-white">Afegir</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Activity Modal -->
+  <div id="modalAddActivity" class="fixed inset-0 hidden items-center justify-center z-50">
+    <div class="modal-backdrop absolute inset-0"></div>
+    <div class="bg-white rounded shadow-lg z-10 w-full max-w-md p-4">
+      <h3 class="text-lg font-semibold mb-2">Afegir activitat</h3>
+      <input id="modalActivityName" class="border rounded px-3 py-2 w-full mb-3" placeholder="Nom de l'activitat">
+      <div class="flex justify-end gap-2">
+        <button data-modal-close="modalAddActivity" class="modal-close px-3 py-1 rounded bg-gray-200">Cancel·lar</button>
+        <button id="modalAddActivityBtn" class="px-3 py-1 rounded bg-teal-600 text-white">Afegir</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Modal -->
+  <div id="modalConfirm" class="fixed inset-0 hidden items-center justify-center z-50">
+    <div class="modal-backdrop absolute inset-0"></div>
+    <div class="bg-white rounded shadow-lg z-10 w-full max-w-sm p-4">
+      <h3 id="confirmTitle" class="text-lg font-semibold mb-2">Confirmació</h3>
+      <p id="confirmMsg" class="text-sm text-gray-600 mb-4"></p>
+      <div class="flex justify-end gap-2">
+        <button data-modal-close="modalConfirm" class="modal-close px-3 py-1 rounded bg-gray-200">Cancel·lar</button>
+        <button id="confirmYes" class="px-3 py-1 rounded bg-red-500 text-white">Sí, eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Calcul -->
+<div id="modalCalc" class="modal hidden fixed inset-0 items-center justify-center z-50">
+  <div class="bg-white p-6 rounded shadow-lg w-96 max-w-full flex flex-col gap-4">
+    <button class="modal-close self-end" data-modal-close="modalCalc">✖</button>
+    <h2 class="text-lg font-bold">Calcul activitat</h2>
+
+    <label for="calcType">Tipus de càlcul:</label>
+    <select id="calcType" class="border rounded p-1">
+      <option value="numeric">Numeric</option>
+      <option value="formula">Fórmula</option>
+      <option value="rounding">Redondeig</option>
+    </select>
+
+    <!-- Numeric -->
+    <div id="numericInput">
+      <label for="numericField">Valor:</label>
+      <input type="number" id="numericField" min="0" max="10" class="border rounded p-1 w-full">
+    </div>
+
+    <!-- Fórmula -->
+    <div id="formulaInputs" class="hidden flex flex-col gap-2">
+      <input type="text" id="formulaField" readonly class="border rounded p-1 w-full" placeholder="Construeix la fórmula">
+      <div id="formulaButtons" class="flex flex-wrap gap-1"></div>
+    </div>
+
+<select id="calculatorActivitySelect" class="border rounded p-1 w-full mb-2"></select>
+
+    
+    <button id="modalApplyCalcBtn" class="bg-indigo-500 text-white p-2 rounded font-semibold">Aplica</button>
+  </div>
+</div>
+
+  <div id="emptyGroupMessage" 
+     style="display:none; padding:1.5rem; text-align:center; font-size:1.1rem; color:#555;">
+  🔰 <strong>Crea el teu primer grup d’avaluació</strong><br>
+  Prem el botó <strong>+</strong> per afegir un grup (p. ex. "1r trimestre")
+</div>
 
 
-  // Selecciona primer terme actiu
-  if (!_activeTermId) _activeTermId = Object.keys(_classData.terms)[0];
 
-  renderDropdown();
-
-  if (_onChangeCallback) _onChangeCallback(_activeTermId);
-}
-
-// ------------------------ Obtenir dades ------------------------
-export function getActiveTermId() {
-  return _activeTermId;
-}
-
-export function getActiveTermName() {
-  return (_classData?.terms?.[_activeTermId]?.name) || '';
-}
-
-export function getActiveTermActivities() {
-  return (_classData?.terms?.[_activeTermId]?.activities) || [];
-}
-
-// ------------------------ Render Dropdown ------------------------
-function renderDropdown() {
-  const sel = document.getElementById('termsDropdown');
-  if (!sel) return;
-  sel.innerHTML = '';
-
-  const terms = _classData.terms || {};
-  Object.keys(terms).forEach(termId => {
-    const opt = document.createElement('option');
-    opt.value = termId;
-    opt.textContent = terms[termId].name || termId;
-    sel.appendChild(opt);
-  });
-
-  if (_activeTermId) sel.value = _activeTermId;
-
-  sel.onchange = (e) => {
-    _activeTermId = e.target.value;
-    if (_onChangeCallback) _onChangeCallback(_activeTermId);
-  };
-}
-
-// ------------------------ Crear un nou terme ------------------------
-export async function addNewTermWithName(name) {
-  if (!name || !name.trim()) return null;
-  if (!_db || !_currentClassId) throw new Error('terms.js no inicialitzat (db o classId manquen)');
-
-  const newId = makeTermId(name.trim());
-  const payload = { name: name.trim(), activities: [] };
-
-  const updateObj = {};
-  updateObj[`terms.${newId}`] = payload;
-
-  await _db.collection('classes').doc(_currentClassId).update(updateObj);
-
-  const doc = await _db.collection('classes').doc(_currentClassId).get();
-  _classData = doc.exists ? doc.data() : _classData;
-
-  _activeTermId = newId;
-  renderDropdown();
-  if (_onChangeCallback) _onChangeCallback(_activeTermId);
-
-  return newId;
-}
-
-// ------------------------ Afegir activitat a terme actiu ------------------------
-export async function addActivityToActiveTerm(activityId) {
-  if (!_activeTermId || !_db || !_currentClassId) return;
-  const path = `terms.${_activeTermId}.activities`;
-  await _db.collection('classes').doc(_currentClassId).update({
-    [path]: firebase.firestore.FieldValue.arrayUnion(activityId)
-  });
-
-  const doc = await _db.collection('classes').doc(_currentClassId).get();
-  _classData = doc.exists ? doc.data() : _classData;
-
-  if (_onChangeCallback) _onChangeCallback(_activeTermId);
-}
-
-// ------------------------ Eliminar activitat de terme actiu ------------------------
-export async function removeActivityFromActiveTerm(activityId) {
-  if (!_activeTermId || !_db || !_currentClassId) return;
-  const path = `terms.${_activeTermId}.activities`;
-  await _db.collection('classes').doc(_currentClassId).update({
-    [path]: firebase.firestore.FieldValue.arrayRemove(activityId)
-  });
-
-  const doc = await _db.collection('classes').doc(_currentClassId).get();
-  _classData = doc.exists ? doc.data() : _classData;
-
-  if (_onChangeCallback) _onChangeCallback(_activeTermId);
-}
-
-// ------------------------ Renombrar terme ------------------------
-export async function renameTerm(termId, newName) {
-  if (!termId || !newName) return;
-  const path = `terms.${termId}.name`;
-  await _db.collection('classes').doc(_currentClassId).update({ [path]: newName });
-
-  const doc = await _db.collection('classes').doc(_currentClassId).get();
-  _classData = doc.exists ? doc.data() : _classData;
-
-  renderDropdown();
-}
-
-// ------------------------ Eliminar terme complet ------------------------
-export async function deleteTerm(termId) {
-  if (!_db || !_currentClassId || !_classData?.terms?.[termId]) return;
-
-  const updateObj = {};
-  updateObj[`terms.${termId}`] = firebase.firestore.FieldValue.delete();
-
-  await _db.collection('classes').doc(_currentClassId).update(updateObj);
-
-  const doc = await _db.collection('classes').doc(_currentClassId).get();
-  _classData = doc.exists ? doc.data() : _classData;
-
-  // Si el terme eliminat era el actiu, seleccionar un altre
-  if (_activeTermId === termId) {
-    const remainingTerms = Object.keys(_classData.terms || {});
-    _activeTermId = remainingTerms[0] || null;
-  }
-
- renderDropdown(); // refresca el desplegable
-
-if (_activeTermId) {
-  sel.value = _activeTermId;
-  showEmptyMessage(false); // amaguem missatge
-} else {
-  sel.innerHTML = '<option value="" selected disabled>Selecciona o crea un grup</option>';
-  showEmptyMessage(true);  // mostrar missatge
-}
-
-if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
-
-}
-
-function showEmptyMessage(show) {
-  const msg = document.getElementById('emptyGroupMessage');
-  const table = document.getElementById('notesTable-wrapper');
-  if (!msg || !table) return;
-
-  if (show) {
-    msg.style.display = 'block';
-    table.style.display = 'none';
-  } else {
-    msg.style.display = 'none';
-    table.style.display = 'block';
-  }
-}
-
-
-// ------------------------ Exports mínims ------------------------
-export function getActiveTerm() { return _activeTermId; }
+  <!-- SCRIPT PRINCIPAL -->
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
