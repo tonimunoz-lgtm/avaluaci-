@@ -108,23 +108,86 @@ async function renderActivitiesForTerm(termId) {
 // ---------------------------
 // Obrir modal
 // ---------------------------
+// calcModal.js
 export function openCalcModal() {
-  if (!calcModal || !calcTermSelect) return;
+  const modal = document.getElementById('modalCalc');
+  if (!modal) return;
+  modal.classList.remove('hidden');
 
-  calcModal.classList.remove('hidden');
-  populateCalcTermSelect();
+  const select = document.getElementById('calcTermSelect');
+  if (!select) return;
+
+  // Omplim desplegable amb termes
+  select.innerHTML = '';
+  if (window.Terms && typeof Terms.getAllTerms === 'function') {
+    Terms.getAllTerms().forEach(term => {
+      const opt = document.createElement('option');
+      opt.value = term.id;
+      opt.textContent = term.name;
+      select.appendChild(opt);
+    });
+  }
+
+  // Seleccionem el terme actiu
+  if (window.Terms && typeof Terms.getActiveTermId === 'function') {
+    select.value = Terms.getActiveTermId();
+  }
+
+  // Render activitats
+  renderActivitiesForTerm(select.value);
+
+  // Listener canvi terme
+  select.addEventListener('change', () => {
+    const termId = select.value;
+    if (window.Terms && typeof Terms.setActiveTerm === 'function') {
+      Terms.setActiveTerm(termId);
+      renderActivitiesForTerm(termId);
+      if (typeof window.renderNotesGrid === 'function') {
+        window.renderNotesGrid();
+      }
+    }
+  });
 
   // Botó tancar modal
-  const btnClose = calcModal.querySelector('.close-modal');
+  const btnClose = modal.querySelector('.close-modal');
   if (btnClose) {
     btnClose.addEventListener('click', () => {
-      calcModal.classList.add('hidden');
+      modal.classList.add('hidden');
     });
   }
 }
 
-// ---------------------------
-// Compatibilitat amb codi antic
-// ---------------------------
+// Funció interna per renderitzar activitats
+async function renderActivitiesForTerm(termId) {
+  const container = document.getElementById('calcActivitiesContainer');
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (window.Terms && typeof Terms.getTermActivities === 'function') {
+    const actIds = Terms.getTermActivities(termId) || [];
+    const actsData = await Promise.all(
+      actIds.map(id => db.collection('activitats').doc(id).get())
+    );
+
+    actsData.forEach(adoc => {
+      if (!adoc.exists) return;
+      const data = adoc.data();
+      const div = document.createElement('div');
+      div.className = 'calc-activity p-2 border-b flex justify-between items-center';
+      div.innerHTML = `
+        <span class="font-medium">${data.nom || 'Sense nom'}</span>
+        <span class="text-sm text-gray-500 italic">${data.formula || '-'}</span>
+      `;
+      container.appendChild(div);
+    });
+
+    if (actIds.length === 0) {
+      container.innerHTML = '<p class="text-sm text-gray-400">No hi ha activitats per aquest terme.</p>';
+    }
+  }
+}
+
+// Exposem globalment
 window.openCalcModal = openCalcModal;
+
 
