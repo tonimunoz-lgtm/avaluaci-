@@ -79,8 +79,19 @@
               <button id="btnBack" class="text-sm text-gray-600 mr-3">← Tornar</button>
               <h2 id="classTitle" class="text-2xl font-bold inline-block"></h2>
               <p id="classSub" class="text-sm text-gray-500"></p>
+
             </div>
             <div class="flex flex-wrap gap-2">
+  <!-- Botó menú graella -->
+  <div class="relative">
+    <button id="termMenuBtn" class="px-2 py-1 text-gray-600 hover:text-gray-800">⋮</button>
+    <div id="termMenu" class="menu absolute left-0 mt-2 bg-white border rounded shadow hidden z-50">
+      <button class="edit-term-btn px-2 py-1 w-full text-left hover:bg-gray-200">Editar nom</button>
+      <button class="delete-term-btn px-2 py-1 w-full text-left hover:bg-gray-200">Eliminar graella</button>
+    </div>
+  </div>
+              <select id="termsDropdown"></select>
+              <button id="btnAddTerm" class="bg-green-500 text-white px-3 py-1 rounded font-bold text-lg">＋</button>
               <button id="btnSortAlpha" class="bg-yellow-400 text-black px-3 py-1 rounded">Ordenar A-Z</button>
               <button id="btnExport" class="bg-amber-500 text-white px-3 py-1 rounded">Exportar</button>
               <button id="btnImportAL" class="bg-blue-500 text-white px-3 py-1 rounded">Importar</button>
@@ -233,8 +244,17 @@
       <div id="formulaButtons" class="flex flex-wrap gap-1"></div>
     </div>
 
+<select id="calculatorActivitySelect" class="border rounded p-1 w-full mb-2"></select>
+
+    
     <button id="modalApplyCalcBtn" class="bg-indigo-500 text-white p-2 rounded font-semibold">Aplica</button>
   </div>
+</div>
+
+  <div id="emptyGroupMessage"
+     style="display:none; padding:1.5rem; text-align:center; font-size:1.1rem; color:#555;">
+  🔰 <strong>Crea el teu primer grup d’avaluació</strong><br>
+  Prem el botó <strong>+</strong> per afegir un grup (per exemple, “1r trimestre”)
 </div>
 
 
