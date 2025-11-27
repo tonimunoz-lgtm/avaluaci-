@@ -1679,6 +1679,8 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
 });
 
 /* ---------------- Open Calculator Modal ---------------- */
+import './calcModal.js';
+
 const btnOpenCalc = document.getElementById('btnOpenCalc');
 
 if (btnOpenCalc) {
