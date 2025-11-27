@@ -902,7 +902,9 @@ input.addEventListener('keydown', e => {
             if (nextInput && !nextInput.disabled) nextInput.focus();
         }
     }
-
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+    e.preventDefault(); // evita increment automàtic
+}
     // 🔼 Fletxa amunt
     if (e.key === 'ArrowUp') {
         const rows = Array.from(notesTbody.querySelectorAll('tr[data-student-id]'));
