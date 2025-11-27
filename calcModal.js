@@ -109,36 +109,50 @@ async function renderActivitiesForTerm(termId) {
 // Obrir modal
 // ---------------------------
 // calcModal.js
-export function openCalcModal() {
+// calcModal.js
+export async function openCalcModal() {
   const modal = document.getElementById('modalCalc');
   if (!modal) return;
   modal.classList.remove('hidden');
 
   const select = document.getElementById('calcTermSelect');
   if (!select) return;
-
-  // Omplim desplegable amb termes
   select.innerHTML = '';
-  if (window.Terms && typeof Terms.getAllTerms === 'function') {
-    Terms.getAllTerms().forEach(term => {
-      const opt = document.createElement('option');
-      opt.value = term.id;
-      opt.textContent = term.name;
-      select.appendChild(opt);
-    });
+
+  // Funció per obtenir termes carregats
+  async function waitForTerms() {
+    let terms = [];
+    if (window.Terms && typeof Terms.getAllTerms === 'function') {
+      terms = Terms.getAllTerms();
+    }
+    // Si encara no hi ha termes, esperem 100ms i tornem a provar
+    if (!terms || !terms.length) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      return waitForTerms();
+    }
+    return terms;
   }
 
-  // Seleccionem el terme actiu
-  if (window.Terms && typeof Terms.getActiveTermId === 'function') {
-    select.value = Terms.getActiveTermId();
-  }
+  const terms = await waitForTerms();
 
-  // Render activitats
+  // Omplim desplegable
+  terms.forEach(term => {
+    const opt = document.createElement('option');
+    opt.value = term.id;
+    opt.textContent = term.name;
+    select.appendChild(opt);
+  });
+
+  // Seleccionem terme actiu
+  select.value = (window.Terms && typeof Terms.getActiveTermId === 'function') ? Terms.getActiveTermId() : terms[0].id;
+
+  // Mostrem activitats del terme actiu
   renderActivitiesForTerm(select.value);
 
-  // Listener canvi terme
+  // Listener: canvi de terme
   select.addEventListener('change', () => {
     const termId = select.value;
+    if (!termId) return;
     if (window.Terms && typeof Terms.setActiveTerm === 'function') {
       Terms.setActiveTerm(termId);
       renderActivitiesForTerm(termId);
@@ -156,6 +170,7 @@ export function openCalcModal() {
     });
   }
 }
+
 
 // Funció interna per renderitzar activitats
 async function renderActivitiesForTerm(termId) {
