@@ -1,65 +1,63 @@
 // calcModal.js
-import { openModal } from './modals.js';
-
 export function initCalcModal({ getTerms, getActivitiesByTerm }) {
   const modal = document.getElementById('modalCalc');
-  const termSelect = document.getElementById('calculatorActivitySelect');
-  const formulaButtonsContainer = document.getElementById('formulaButtons');
-  const formulaField = document.getElementById('formulaField');
+  const termDropdown = modal.querySelector('#calculatorActivitySelect');
+  const formulaButtons = modal.querySelector('#formulaButtons');
+  const formulaField = modal.querySelector('#formulaField');
 
-  // Funció que pinta els botons de les activitats dins la fórmula
-  function updateFormulaButtons(activities) {
-    formulaButtonsContainer.innerHTML = '';
-    activities.forEach(act => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'px-2 py-1 bg-gray-200 rounded hover:bg-gray-300';
-      btn.textContent = act.name;
-      btn.addEventListener('click', () => {
-        formulaField.value += act.name; // afegeix el nom al camp fórmula
-      });
-      formulaButtonsContainer.appendChild(btn);
-    });
-  }
-
-  // Omplir desplegable amb graelles
+  // Funció per omplir el desplegable de termes
   function populateTerms() {
-    termSelect.innerHTML = '';
-    const terms = getTerms(); // Array de graelles [{id, name}, ...]
+    const terms = getTerms(); // Esperem un array d'objectes {id, name}
+    termDropdown.innerHTML = '';
     terms.forEach(term => {
       const option = document.createElement('option');
       option.value = term.id;
       option.textContent = term.name;
-      termSelect.appendChild(option);
+      termDropdown.appendChild(option);
     });
-
-    // Selecciona la primera graella i actualitza botons
+    // Carreguem les activitats del primer terme per defecte
     if (terms.length > 0) {
-      const firstTermId = terms[0].id;
-      termSelect.value = firstTermId;
-      const activities = getActivitiesByTerm(firstTermId);
-      updateFormulaButtons(activities);
+      populateActivities(terms[0].id);
     }
   }
 
-  // Quan canvies de graella
-  termSelect.addEventListener('change', () => {
-    const termId = termSelect.value;
-    const activities = getActivitiesByTerm(termId);
-    updateFormulaButtons(activities);
-  });
-
-  // Tanca modal
-  modal.querySelectorAll('.modal-close').forEach(btn => {
-    btn.addEventListener('click', () => {
-      modal.classList.add('hidden');
+  // Funció per omplir els botons d'activitats segons el terme
+  function populateActivities(termId) {
+    const activities = getActivitiesByTerm(termId); // Esperem array d'objectes {id, name}
+    formulaButtons.innerHTML = '';
+    activities.forEach(act => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = act.name;
+      btn.className = 'bg-gray-200 px-2 py-1 rounded hover:bg-gray-300';
+      btn.addEventListener('click', () => {
+        formulaField.value += `[${act.name}]`; // afegeix l'activitat a la fórmula
+      });
+      formulaButtons.appendChild(btn);
     });
+  }
+
+  // Quan canviem de terme al desplegable
+  termDropdown.addEventListener('change', (e) => {
+    const selectedTermId = e.target.value;
+    populateActivities(selectedTermId);
   });
 
-  return {
-    open: () => {
-      populateTerms();
-      openModal('modalCalc');
-    }
-  };
+  // Inicialitzar modal
+  function open() {
+    modal.classList.remove('hidden');
+    populateTerms();
+  }
+
+  function close() {
+    modal.classList.add('hidden');
+    formulaField.value = '';
+    formulaButtons.innerHTML = '';
+  }
+
+  // Assignar botó de tancament si existeix
+  const closeBtn = modal.querySelector('.modal-close');
+  if (closeBtn) closeBtn.addEventListener('click', close);
+
+  return { open, close };
 }
