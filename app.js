@@ -1679,14 +1679,12 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
 });
 
 /* ---------------- Open Calculator Modal ---------------- */
-
-import { openCalcModal } from './calcModal.js';
-
 const btnOpenCalc = document.getElementById('btnOpenCalc');
 
 if (btnOpenCalc) {
   btnOpenCalc.addEventListener('click', () => {
-    openCalcModal(); // sense paràmetres
+    if (window.openCalcModal) window.openCalcModal();
   });
 }
+
 
