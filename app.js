@@ -2,6 +2,17 @@
 import { openModal, closeModal, confirmAction } from './modals.js';
 import * as Terms from './terms.js';
 window.Terms = Terms;
+
+document.querySelectorAll('.openCalcBtn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const calc = initCalcModal({
+      getTerms: () => window.Terms.getAllTerms(),
+      getActivitiesByTerm: (termId) => window.Terms.getActivities(termId)
+    });
+    calc.open();
+  });
+});
+
 import { initCalcModal } from './calcModal.js';
 window.initCalcModal = initCalcModal;
 
@@ -1687,17 +1698,4 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
   }
 
   termMenu.classList.add('hidden');
-});
-
-document.addEventListener('DOMContentLoaded', () => { 
-  const calc = initCalcModal({
-    getTerms: () => window.Terms.getAllTerms(),
-    getActivitiesByTerm: (termId) => window.Terms.getActivities(termId)
-  });
-
-  document.querySelectorAll('.openCalcBtn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      calc.open();
-    });
-  });
 });
