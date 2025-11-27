@@ -20,16 +20,14 @@ export function setup(db, classId, classData, opts = {}) {
   _onChangeCallback = opts.onChange || null;
 
   // Crear terme inicial si no n'hi ha cap
-  if (!_classData.terms) {
-    const legacyActs = _classData.activitats || [];
-    const defaultId = makeTermId('avaluacio');
-    _classData.terms = {
-      [defaultId]: {
-        name: 'Avaluació',
-        activities: Array.isArray(legacyActs) ? [...legacyActs] : []
-      }
-    };
-  }
+ if (!_classData.terms) {
+  _classData.terms = {}; // sense terme inicial
+  _activeTermId = null;  // cap terme actiu
+  renderDropdown();       // desplegable buit
+  showEmptyMessage(true); // mostrar missatge d'instrucció
+  return;
+}
+
 
   // Selecciona primer terme actiu
   if (!_activeTermId) _activeTermId = Object.keys(_classData.terms)[0];
@@ -155,9 +153,34 @@ export async function deleteTerm(termId) {
     _activeTermId = remainingTerms[0] || null;
   }
 
-  renderDropdown();
-  if (_onChangeCallback) _onChangeCallback(_activeTermId);
+ renderDropdown(); // refresca el desplegable
+
+if (_activeTermId) {
+  sel.value = _activeTermId;
+  showEmptyMessage(false); // amaguem missatge
+} else {
+  sel.innerHTML = '<option value="" selected disabled>Selecciona o crea un grup</option>';
+  showEmptyMessage(true);  // mostrar missatge
 }
+
+if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
+
+}
+
+function showEmptyMessage(show) {
+  const msg = document.getElementById('emptyGroupMessage');
+  const table = document.getElementById('notesTable-wrapper');
+  if (!msg || !table) return;
+
+  if (show) {
+    msg.style.display = 'block';
+    table.style.display = 'none';
+  } else {
+    msg.style.display = 'none';
+    table.style.display = 'block';
+  }
+}
+
 
 // ------------------------ Exports mínims ------------------------
 export function getActiveTerm() { return _activeTermId; }
