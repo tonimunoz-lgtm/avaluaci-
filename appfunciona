@@ -1,5 +1,8 @@
 // app.js - lògica principal (modules)
 import { openModal, closeModal, confirmAction } from './modals.js';
+import * as Terms from './terms.js';
+window.Terms = Terms;
+
 
 /* ---------------- FIREBASE CONFIG ---------------- */
 const firebaseConfig = {
@@ -196,7 +199,10 @@ function loadClassesScreen() {
   ];
 
   db.collection('professors').doc(professorUID).get().then(doc => {
-    if(!doc.exists) { classesGrid.innerHTML = '<div class="text-sm text-red-500">Professor no trobat</div>'; return; }
+    if(!doc.exists) { 
+      classesGrid.innerHTML = '<div class="text-sm text-red-500">Professor no trobat</div>'; 
+      return; 
+    }
     const ids = doc.data().classes || [];
     if(ids.length === 0){
       classesGrid.innerHTML = `<div class="col-span-full p-6 bg-white dark:bg-gray-800 rounded shadow text-center">No tens cap classe. Crea la primera!</div>`;
@@ -213,10 +219,17 @@ function loadClassesScreen() {
           card.className = `class-card bg-gradient-to-br ${color} text-white relative p-4 rounded-lg`;
           card.dataset.id = d.id;
 
+          // Comptar activitats totals sumant totes les activitats de tots els termes
+          let totalActivities = 0;
+          const terms = d.data().terms || {};
+          Object.values(terms).forEach(term => {
+            totalActivities += (term.activities || []).length;
+          });
+
           card.innerHTML = `
             ${deleteMode ? '<input type="checkbox" class="delete-checkbox absolute top-2 right-2 w-5 h-5">' : ''}
             <h3 class="text-lg font-bold">${d.data().nom||'Sense nom'}</h3>
-            <p class="text-sm mt-2">${(d.data().alumnes||[]).length} alumnes · ${(d.data().activitats||[]).length} activitats</p>
+            <p class="text-sm mt-2">${(d.data().alumnes||[]).length} alumnes · ${totalActivities} activitats</p>
             <div class="click-hint">${deleteMode ? 'Selecciona per eliminar' : 'Fes clic per obrir'}</div>
           `;
 
@@ -263,6 +276,7 @@ function loadClassesScreen() {
     console.error(e);
   });
 }
+
 /* ---------------- Delete Mode Classes ---------------- */
 const btnDeleteMode = document.getElementById('btnDeleteMode');
 btnDeleteMode.addEventListener('click', ()=> {
@@ -343,14 +357,35 @@ function loadClassData(){
   db.collection('classes').doc(currentClassId).get().then(doc=>{
     if(!doc.exists) { alert('Classe no trobada'); return; }
     const data = doc.data();
+
+    // Guardem dades locals com abans
     classStudents = data.alumnes || [];
-    classActivities = data.activitats || [];
+    // NO assignem classActivities directament des d'aquí; els activitats s'obtindran del terme actiu.
+    // classActivities = data.activitats || [];
     document.getElementById('classTitle').textContent = data.nom || 'Sense nom';
     document.getElementById('classSub').textContent = `ID: ${doc.id}`;
+
+    // Inicialitzar Terms passant db, id i dades de la classe
+    Terms.setup(db, currentClassId, data, {
+      onChange: (activeTermId) => {
+        // Quan el terme actiu canvia, actualitzem classActivities i re-renderitzem la taula
+        const acts = Terms.getActiveTermActivities();
+        classActivities = Array.isArray(acts) ? acts : [];
+        // També actualitzem calculatedActivities si vols (si ho guardes dins del terme)
+        // calculatedActivities = (data.terms && data.terms[activeTermId] && data.terms[activeTermId].calculatedActivities) || {};
+        renderNotesGrid(); // renderitza la taula amb activitats del terme actiu
+        // Actualitzar títol per incloure nom terme al costat de nom classe
+        const titleEl = document.getElementById('classTitle');
+        if(titleEl) titleEl.textContent = `${data.nom} - ${Terms.getActiveTermName() || ''}`;
+      }
+    });
+
+    // Render llista d'alumnes i altres UI
     renderStudentsList();
-    renderNotesGrid();
+    // renderNotesGrid() serà cridat per l'onChange del setup
   }).catch(e=> console.error(e));
 }
+
 
 /* ---------------- Students ---------------- */
 btnAddStudent.addEventListener('click', ()=> openModal('modalAddStudent'));
@@ -408,33 +443,65 @@ function sortStudentsAlpha(){
 btnAddActivity.addEventListener('click', ()=> openModal('modalAddActivity'));
 modalAddActivityBtn.addEventListener('click', createActivityModal);
 
-function createActivityModal(){
-  const name = document.getElementById('modalActivityName').value.trim();
-  if(!name) return alert('Posa un nom');
-  const ref = db.collection('activitats').doc();
-  ref.set({ nom: name, data: new Date().toISOString().split('T')[0], calcType:'numeric', formula:'' })
-    .then(()=> db.collection('classes').doc(currentClassId).update({ activitats: firebase.firestore.FieldValue.arrayUnion(ref.id) }))
-    .then(()=> {
-      closeModal('modalAddActivity');
-      document.getElementById('modalActivityName').value = '';
-      loadClassData();
-    }).catch(e=> alert('Error: '+e.message));
+async function createActivityModal() {
+    const name = document.getElementById("modalActivityName").value.trim();
+    if (!name) return;
+
+    const ref = db.collection("activitats").doc();
+
+    await ref.set({
+        nom: name,
+        data: new Date().toISOString().split("T")[0],
+        calcType: "numeric",
+        formula: ""
+    });
+
+    // 🔥 Aquí afegim l'activitat al terme actiu
+    if (window.Terms && Terms.addActivityToActiveTerm) {
+        await Terms.addActivityToActiveTerm(ref.id);
+    } else {
+        console.error("❌ Terms no està carregat. Revisa l'import a app.js");
+    }
+
+    closeModal("modalAddActivity");
+    document.getElementById("modalActivityName").value = "";
+
+    // 🔥 NO posar loadClassData() si tens dubtes!
+    // Si vols recarregar:
+    if (typeof loadClassData === "function") {
+        loadClassData();
+    }
 }
 
+
 function removeActivity(actId){
-  confirmAction('Eliminar activitat', 'Esborrar activitat i totes les notes relacionades?', ()=> {
-    db.collection('classes').doc(currentClassId).update({ activitats: firebase.firestore.FieldValue.arrayRemove(actId) })
-      .then(()=> {
-        const batch = db.batch();
-        classStudents.forEach(sid => {
-          const ref = db.collection('alumnes').doc(sid);
-          batch.update(ref, { [`notes.${actId}`]: firebase.firestore.FieldValue.delete() });
-        });
-        return batch.commit();
-      }).then(()=> loadClassData())
-      .catch(e=> alert('Error esborrant activitat: '+e.message));
+  confirmAction('Eliminar activitat', 'Esborrar activitat i totes les notes relacionades?', async ()=> {
+    try {
+      const termId = Terms.getActiveTermId(); // obtenir terme actiu
+
+      // Eliminar activitat del llistat general i del terme actiu
+      await db.collection('classes').doc(currentClassId).update({
+        activitats: firebase.firestore.FieldValue.arrayRemove(actId),
+        [`terms.${termId}.activities`]: firebase.firestore.FieldValue.arrayRemove(actId)
+      });
+
+      // Eliminar notes dels alumnes
+      const batch = db.batch();
+      classStudents.forEach(sid => {
+        const ref = db.collection('alumnes').doc(sid);
+        batch.update(ref, { [`notes.${actId}`]: firebase.firestore.FieldValue.delete() });
+      });
+      await batch.commit();
+
+      // Refrescar dades
+      loadClassData();
+
+    } catch(e) {
+      alert('Error esborrant activitat: ' + e.message);
+    }
   });
 }
+
 
 /* ---------------- Render Students List amb menú ---------------- */
 function renderStudentsList(){
@@ -688,7 +755,32 @@ await renderNotesGrid();
       }
     });
 
-    menuDiv.querySelector('.delete-btn').addEventListener('click', () => removeActivity(id));
+menuDiv.querySelector('.delete-btn').addEventListener('click', () => {
+  confirmAction('Eliminar activitat', 'Esborrar activitat i totes les notes relacionades?', async () => {
+    try {
+      // Eliminar del terme actiu
+      await Terms.removeActivityFromActiveTerm(id);
+
+      // Eliminar de la llista general d’activitats de la classe
+      await db.collection('classes').doc(currentClassId)
+              .update({ activitats: firebase.firestore.FieldValue.arrayRemove(id) });
+
+      // Esborrar les notes dels alumnes
+      const batch = db.batch();
+      classStudents.forEach(sid => {
+        const ref = db.collection('alumnes').doc(sid);
+        batch.update(ref, { [`notes.${id}`]: firebase.firestore.FieldValue.delete() });
+      });
+      await batch.commit();
+
+      // Refrescar graella i capçaleres
+      renderNotesGrid();
+    } catch(e) {
+      alert('Error esborrant activitat: ' + e.message);
+    }
+  });
+});
+
     menuDiv.querySelector('.calc-btn').addEventListener('click', () => openCalcModal(id));
 
   });
@@ -791,10 +883,55 @@ if (isLocked) {
         // No afegim handlers
       }
 
+// 🔽 Navegació amb Enter, Shift+Enter i fletxes
+input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+
+        const currentAct = input.dataset.activityId;
+        const currentStudent = tr.dataset.studentId;
+
+        // Trobar la fila actual
+        const rows = Array.from(notesTbody.querySelectorAll('tr[data-student-id]'));
+        const rowIndex = rows.findIndex(r => r.dataset.studentId === currentStudent);
+
+        const nextRowIndex = e.shiftKey ? rowIndex - 1 : rowIndex + 1;
+
+        if (rows[nextRowIndex]) {
+            const nextInput = rows[nextRowIndex].querySelector(`input[data-activity-id="${currentAct}"]`);
+            if (nextInput && !nextInput.disabled) nextInput.focus();
+        }
+    }
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+    e.preventDefault(); // evita increment automàtic
+}
+    // 🔼 Fletxa amunt
+    if (e.key === 'ArrowUp') {
+        const rows = Array.from(notesTbody.querySelectorAll('tr[data-student-id]'));
+        const rowIndex = rows.findIndex(r => r.dataset.studentId === tr.dataset.studentId);
+        if (rows[rowIndex - 1]) {
+            const nextInput = rows[rowIndex - 1].querySelector(`input[data-activity-id="${input.dataset.activityId}"]`);
+            if (nextInput && !nextInput.disabled) nextInput.focus();
+        }
+    }
+
+    // 🔽 Fletxa avall
+    if (e.key === 'ArrowDown') {
+        const rows = Array.from(notesTbody.querySelectorAll('tr[data-student-id]'));
+        const rowIndex = rows.findIndex(r => r.dataset.studentId === tr.dataset.studentId);
+        if (rows[rowIndex + 1]) {
+            const nextInput = rows[rowIndex + 1].querySelector(`input[data-activity-id="${input.dataset.activityId}"]`);
+            if (nextInput && !nextInput.disabled) nextInput.focus();
+        }
+    }
+});
+
+
+      
       td.appendChild(input);
       tr.appendChild(td);
     });
-
+    
     // Mitjana alumne
     const avgTd = document.createElement('td');
     avgTd.className = 'border px-2 py-1 text-right font-semibold';
@@ -1291,10 +1428,12 @@ function enableActivityDrag(){
 
       // 🔥 Guardar el nou ordre a Firestore
       if(currentClassId){
-        db.collection('classes').doc(currentClassId).update({ activitats: classActivities })
-          .then(() => console.log('Ordre d’activitats actualitzat a Firestore'))
-          .catch(e => console.error('Error guardant ordre activitats', e));
-      }
+  const path = `terms.${Terms.getActiveTerm()}.activities`;
+  db.collection('classes').doc(currentClassId).update({ [path]: classActivities })
+    .then(() => console.log('Ordre d’activitats actualitzat a Firestore'))
+    .catch(e => console.error('Error guardant ordre activitats', e));
+}
+
 
       renderNotesGrid();
     });
@@ -1482,3 +1621,57 @@ if (closeBtn) {
     container.classList.remove('mobile-open');
   });
 }
+
+// ----------------------Fer funcionar el botó + (afegir terme)
+const btnAddTerm = document.getElementById('btnAddTerm');
+btnAddTerm.addEventListener('click', async () => {
+  const name = prompt('Nom del nou grup (p. ex. 2TRIM):');
+  if(!name) return;
+  try {
+    const newId = await Terms.addNewTermWithName(name);
+    // Quan acaba, Terms ja cridarà l'onChange que actualitza la graella i el dropdown
+  } catch(e) {
+    console.error('Error creant terme:', e);
+    alert('Error creant terme: ' + e.message);
+  }
+});
+
+// Botó de menú de graella
+const termMenuBtn = document.getElementById('termMenuBtn');
+const termMenu = document.getElementById('termMenu');
+
+termMenuBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  termMenu.classList.toggle('hidden');
+});
+
+// Tancar menú si clicques fora
+document.addEventListener('click', () => {
+  termMenu.classList.add('hidden');
+});
+
+// Editar nom de graella
+termMenu.querySelector('.edit-term-btn').addEventListener('click', async () => {
+  const currentTermId = Terms.getActiveTermId();
+  const currentName = Terms.getActiveTermName();
+  const newName = prompt('Nou nom de la graella:', currentName);
+  if (newName && newName.trim() !== '') {
+    await Terms.renameTerm(currentTermId, newName.trim());
+  }
+  termMenu.classList.add('hidden');
+});
+
+// Eliminar graella
+termMenu.querySelector('.delete-term-btn').addEventListener('click', async () => {
+  const currentTermId = Terms.getActiveTermId();
+  if (!currentTermId) return;
+  if (!confirm('Segur que vols eliminar aquesta graella i totes les seves activitats?')) return;
+
+  try {
+    await Terms.deleteTerm(currentTermId); // <-- Aquí utilitzem la funció de terms.js
+  } catch(e) {
+    alert('Error eliminant graella: ' + e.message);
+  }
+
+  termMenu.classList.add('hidden');
+});
