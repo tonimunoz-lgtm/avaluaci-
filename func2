@@ -569,7 +569,13 @@ function renderStudentsList(){
   });
 }
 /* ---------------- Notes Grid amb menú activitats ---------------- */
+// 🔹 Nou
+let isRenderingGrid = false; // evita duplicació de capçaleres
+
 async function renderNotesGrid() {
+  // 🔹 Nou: evita execucions simultànies
+  if (isRenderingGrid) return;
+  isRenderingGrid = true;
   // Neteja taula
   notesThead.innerHTML = '';
   notesTbody.innerHTML = '';
@@ -943,6 +949,8 @@ input.addEventListener('keydown', e => {
 
   // Final: recalculs de mitjanes i fila fórmules (igual que abans)
   renderAverages();
+  // 🔹 Nou: permet pròxim render
+  isRenderingGrid = false;
 }
 
 
