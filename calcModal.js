@@ -71,6 +71,32 @@ calcTermSelect.addEventListener('change', e => {
 // Obrir modal → omplir desplegable
 // ---------------------------
 export function openCalcModal() {
-  populateCalcTermSelect();
-  calcModal.classList.remove('hidden');
+  const modal = document.getElementById('modalCalc');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+
+  // Omplim el desplegable de termes
+  const select = document.getElementById('calcTermSelect');
+  if (!select) return;
+  select.innerHTML = '';
+
+  if (window.Terms) {
+    const terms = Terms.getAllTerms(); // Suposant que retorna {id, name}
+    terms.forEach(term => {
+      const opt = document.createElement('option');
+      opt.value = term.id;
+      opt.textContent = term.name;
+      select.appendChild(opt);
+    });
+  }
+
+  // Seleccionem terme actiu
+  if (Terms.getActiveTermId) {
+    select.value = Terms.getActiveTermId();
+  }
+
+  // Podeu afegir listeners d’activitats segons terme
 }
+
+// Afegim al window per evitar problemes d'import ES Modules amb Firebase
+window.openCalcModal = openCalcModal;
