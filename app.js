@@ -5,7 +5,6 @@ window.Terms = Terms;
 import { initCalcModal } from './calcModal.js';
 window.initCalcModal = initCalcModal;
 
-
 /* ---------------- FIREBASE CONFIG ---------------- */
 const firebaseConfig = {
   apiKey: "AIzaSyA0P7TWcEw9y9_13yqRhvsgWN5d3YKH7yo",
