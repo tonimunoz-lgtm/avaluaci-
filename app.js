@@ -883,6 +883,49 @@ if (isLocked) {
         // No afegim handlers
       }
 
+// 🔽 Navegació amb Enter, Shift+Enter i fletxes
+input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+
+        const currentAct = input.dataset.activityId;
+        const currentStudent = tr.dataset.studentId;
+
+        // Trobar la fila actual
+        const rows = Array.from(notesTbody.querySelectorAll('tr[data-student-id]'));
+        const rowIndex = rows.findIndex(r => r.dataset.studentId === currentStudent);
+
+        const nextRowIndex = e.shiftKey ? rowIndex - 1 : rowIndex + 1;
+
+        if (rows[nextRowIndex]) {
+            const nextInput = rows[nextRowIndex].querySelector(`input[data-activity-id="${currentAct}"]`);
+            if (nextInput && !nextInput.disabled) nextInput.focus();
+        }
+    }
+
+    // 🔼 Fletxa amunt
+    if (e.key === 'ArrowUp') {
+        const rows = Array.from(notesTbody.querySelectorAll('tr[data-student-id]'));
+        const rowIndex = rows.findIndex(r => r.dataset.studentId === tr.dataset.studentId);
+        if (rows[rowIndex - 1]) {
+            const nextInput = rows[rowIndex - 1].querySelector(`input[data-activity-id="${input.dataset.activityId}"]`);
+            if (nextInput && !nextInput.disabled) nextInput.focus();
+        }
+    }
+
+    // 🔽 Fletxa avall
+    if (e.key === 'ArrowDown') {
+        const rows = Array.from(notesTbody.querySelectorAll('tr[data-student-id]'));
+        const rowIndex = rows.findIndex(r => r.dataset.studentId === tr.dataset.studentId);
+        if (rows[rowIndex + 1]) {
+            const nextInput = rows[rowIndex + 1].querySelector(`input[data-activity-id="${input.dataset.activityId}"]`);
+            if (nextInput && !nextInput.disabled) nextInput.focus();
+        }
+    }
+});
+
+
+      
       td.appendChild(input);
       tr.appendChild(td);
     });
