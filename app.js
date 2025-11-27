@@ -1690,16 +1690,14 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Inicialitzem només una vegada
-  const calcModal = initCalcModal({
-    getTerms: () => window.Terms.getAllTerms(),
+  const calc = initCalcModal({
+    getTerms: () => window.Terms.getAllTerms().map((t, i) => ({ id: i, name: t })), // adaptar segons el que retorni
     getActivitiesByTerm: (termId) => window.Terms.getActivities(termId)
   });
 
-  // Assignem el botó per obrir el modal
   document.querySelectorAll('.openCalcBtn').forEach(btn => {
     btn.addEventListener('click', () => {
-      calcModal.open(); // omple els desplegables i obre el modal
+      calc.open(); // obre el modal
     });
   });
 });
