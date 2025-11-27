@@ -1,15 +1,8 @@
 // app.js - lògica principal (modules)
+import { openModal, closeModal, confirmAction } from './modals.js';
 import * as Terms from './terms.js';
 window.Terms = Terms;
-import { openModal, closeModal, confirmAction } from './modals.js';
-import { initCalcModal } from './calcModal.js';
-//import * as Terms from './terms.js';
-//window.Terms = Terms;
 
-
-
-//import { initCalcModal } from './calcModal.js';
-//window.initCalcModal = initCalcModal;
 
 /* ---------------- FIREBASE CONFIG ---------------- */
 const firebaseConfig = {
@@ -64,24 +57,6 @@ const formulaTfoot = document.getElementById('formulaTfoot');
 const modalCreateClassBtn = document.getElementById('modalCreateClassBtn');
 const modalAddStudentBtn = document.getElementById('modalAddStudentBtn');
 const modalAddActivityBtn = document.getElementById('modalAddActivityBtn');
-
-// ---------- INICIALITZACIÓ DEL MODAL DE CALCUL ----------
-
- const calc = initCalcModal({
-    getTerms: () => Terms.getAllTerms(),        // ha de retornar [{id, name}, ...]
-    getActivitiesByTerm: (termId) => Terms.getActivities(termId) // ha de retornar [{id, name}, ...]
-  });
-
-  // Botons que obren el modal
-  document.querySelectorAll('.openCalcBtn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      calc.open();
-    });
-  });
-}
-
-// Iniciem l'app
-document.addEventListener('DOMContentLoaded', initApp);
 
 const btnImportAL = document.getElementById('btnImportAL');
 btnImportAL.addEventListener('click', () => {
@@ -594,13 +569,7 @@ function renderStudentsList(){
   });
 }
 /* ---------------- Notes Grid amb menú activitats ---------------- */
-// 🔹 Nou
-let isRenderingGrid = false; // evita duplicació de capçaleres
-
 async function renderNotesGrid() {
-  // 🔹 Nou: evita execucions simultànies
-  if (isRenderingGrid) return;
-  isRenderingGrid = true;
   // Neteja taula
   notesThead.innerHTML = '';
   notesTbody.innerHTML = '';
@@ -974,8 +943,6 @@ input.addEventListener('keydown', e => {
 
   // Final: recalculs de mitjanes i fila fórmules (igual que abans)
   renderAverages();
-  // 🔹 Nou: permet pròxim render
-  isRenderingGrid = false;
 }
 
 
