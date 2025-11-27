@@ -1683,17 +1683,10 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
 import { openCalcModal } from './calcModal.js';
 
 const btnOpenCalc = document.getElementById('btnOpenCalc');
-const calcSelect = document.getElementById('calcTermSelect');
 
 if (btnOpenCalc) {
   btnOpenCalc.addEventListener('click', () => {
-    openCalcModal({
-      getAllTerms: Terms.getAllTerms,
-      getActiveTermId: Terms.getActiveTermId,
-      setActiveTerm: Terms.setActiveTerm,
-      getTermActivities: Terms.getTermActivities,
-      renderNotesGrid: window.renderNotesGrid,
-      db
-    });
+    openCalcModal(); // sense paràmetres
   });
 }
+
