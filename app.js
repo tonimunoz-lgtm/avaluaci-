@@ -1,7 +1,5 @@
 // app.js - lògica principal (modules)
 import { openModal, closeModal, confirmAction } from './modals.js';
-import * as Calc from './calcModal.js';
-window.calcModal = calcModal;
 import * as Terms from './terms.js';
 window.Terms = Terms;
 
@@ -1682,18 +1680,20 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
 
 /* ---------------- Open Calculator Modal ---------------- */
 
-/* Inicialitzar el modal amb db i classe actual */
-Calc.setupCalcModal(db, currentClassId);
+import { openCalcModal } from './calcModal.js';
 
-/* Botó per obrir modal de càlcul */
-const calcSelect = document.getElementById('calcTermSelect');
 const btnOpenCalc = document.getElementById('btnOpenCalc');
+const calcSelect = document.getElementById('calcTermSelect');
 
-if (btnOpenCalc && calcSelect) {
+if (btnOpenCalc) {
   btnOpenCalc.addEventListener('click', () => {
-    const selectedTermId = calcSelect.value;
-    if (!selectedTermId) return alert('Selecciona un terme primer');
-
-    Calc.openCalcModal(selectedTermId);
+    openCalcModal({
+      getAllTerms: Terms.getAllTerms,
+      getActiveTermId: Terms.getActiveTermId,
+      setActiveTerm: Terms.setActiveTerm,
+      getTermActivities: Terms.getTermActivities,
+      renderNotesGrid: window.renderNotesGrid,
+      db
+    });
   });
 }
