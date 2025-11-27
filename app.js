@@ -1691,13 +1691,16 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Inicialitzem només una vegada
+  const calcModal = initCalcModal({
+    getTerms: () => window.Terms.getAllTerms(),
+    getActivitiesByTerm: (termId) => window.Terms.getActivities(termId)
+  });
+
+  // Assignem el botó per obrir el modal
   document.querySelectorAll('.openCalcBtn').forEach(btn => {
     btn.addEventListener('click', () => {
-      const calcModal = initCalcModal({
-        getTerms: () => window.Terms.getAllTerms(),
-        getActivitiesByTerm: (termId) => window.Terms.getActivities(termId)
-      });
-      openModal('modalCalc'); // la funció que obre el modal
+      calcModal.open(); // omple els desplegables i obre el modal
     });
   });
 });
