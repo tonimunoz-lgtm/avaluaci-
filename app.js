@@ -1679,3 +1679,22 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
   termMenu.classList.add('hidden');
 });
 
+/* ---------------- Open Calculator Modal ---------------- */
+const calcSelect = document.getElementById('calcTermSelect');
+const btnOpenCalc = document.getElementById('btnOpenCalc');
+
+if (btnOpenCalc && calcSelect) {
+  btnOpenCalc.addEventListener('click', () => {
+    const selectedTermId = calcSelect.value;
+    if (!selectedTermId) {
+      return alert('Selecciona un terme primer');
+    }
+
+    // Cridem el modal passant el terme seleccionat
+    if (window.openCalcModal) {
+      window.openCalcModal(selectedTermId);
+    } else {
+      console.error('openCalcModal no està disponible');
+    }
+  });
+}
