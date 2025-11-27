@@ -1680,21 +1680,20 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
 });
 
 /* ---------------- Open Calculator Modal ---------------- */
+import * as Calc from './calcModal.js';
+
+/* Inicialitzar el modal amb db i classe actual */
+Calc.setupCalcModal(db, currentClassId);
+
+/* Botó per obrir modal de càlcul */
 const calcSelect = document.getElementById('calcTermSelect');
 const btnOpenCalc = document.getElementById('btnOpenCalc');
 
 if (btnOpenCalc && calcSelect) {
   btnOpenCalc.addEventListener('click', () => {
     const selectedTermId = calcSelect.value;
-    if (!selectedTermId) {
-      return alert('Selecciona un terme primer');
-    }
+    if (!selectedTermId) return alert('Selecciona un terme primer');
 
-    // Cridem el modal passant el terme seleccionat
-    if (window.openCalcModal) {
-      window.openCalcModal(selectedTermId);
-    } else {
-      console.error('openCalcModal no està disponible');
-    }
+    Calc.openCalcModal(selectedTermId);
   });
 }
