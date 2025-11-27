@@ -1689,15 +1689,15 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
   termMenu.classList.add('hidden');
 });
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => { 
   const calc = initCalcModal({
-    getTerms: () => window.Terms.getAllTerms().map((t, i) => ({ id: i, name: t })), // adaptar segons el que retorni
+    getTerms: () => window.Terms.getAllTerms(),
     getActivitiesByTerm: (termId) => window.Terms.getActivities(termId)
   });
 
   document.querySelectorAll('.openCalcBtn').forEach(btn => {
     btn.addEventListener('click', () => {
-      calc.open(); // obre el modal
+      calc.open();
     });
   });
 });
