@@ -4,7 +4,7 @@ export function initCalcModal({ getTerms, getActivitiesByTerm }) {
   const modal = document.getElementById('modalCalc');
 
   // ⛔ AQUEST ID L’HEM DE CANVIAR QUAN EM PASSIS L’HTML
-  const termDropdown = modal.querySelector('#calculatorActivitySelect');
+  const termDropdown = modal.querySelector('#calcTermSelect');
 
   const formulaButtons = modal.querySelector('#formulaButtons');
   const formulaField = modal.querySelector('#formulaField');
