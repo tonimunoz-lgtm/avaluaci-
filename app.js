@@ -2,6 +2,8 @@
 import { openModal, closeModal, confirmAction } from './modals.js';
 import * as Terms from './terms.js';
 window.Terms = Terms;
+import { initCalcModal } from './calcModal.js';
+window.initCalcModal = initCalcModal;
 
 
 /* ---------------- FIREBASE CONFIG ---------------- */
