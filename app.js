@@ -1,20 +1,15 @@
 // app.js - lògica principal (modules)
-import { openModal, closeModal, confirmAction } from './modals.js';
 import * as Terms from './terms.js';
 window.Terms = Terms;
-
-document.querySelectorAll('.openCalcBtn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const calc = initCalcModal({
-      getTerms: () => window.Terms.getAllTerms(),
-      getActivitiesByTerm: (termId) => window.Terms.getActivities(termId)
-    });
-    calc.open();
-  });
-});
-
+import { openModal, closeModal, confirmAction } from './modals.js';
 import { initCalcModal } from './calcModal.js';
-window.initCalcModal = initCalcModal;
+//import * as Terms from './terms.js';
+//window.Terms = Terms;
+
+
+
+//import { initCalcModal } from './calcModal.js';
+//window.initCalcModal = initCalcModal;
 
 /* ---------------- FIREBASE CONFIG ---------------- */
 const firebaseConfig = {
@@ -72,7 +67,21 @@ const modalAddActivityBtn = document.getElementById('modalAddActivityBtn');
 
 // ---------- INICIALITZACIÓ DEL MODAL DE CALCUL ----------
 
+ const calc = initCalcModal({
+    getTerms: () => Terms.getAllTerms(),        // ha de retornar [{id, name}, ...]
+    getActivitiesByTerm: (termId) => Terms.getActivities(termId) // ha de retornar [{id, name}, ...]
+  });
 
+  // Botons que obren el modal
+  document.querySelectorAll('.openCalcBtn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      calc.open();
+    });
+  });
+}
+
+// Iniciem l'app
+document.addEventListener('DOMContentLoaded', initApp);
 
 const btnImportAL = document.getElementById('btnImportAL');
 btnImportAL.addEventListener('click', () => {
