@@ -21,15 +21,16 @@ export function setup(db, classId, classData, opts = {}) {
 
   // Crear terme inicial si no n'hi ha cap
   if (!_classData.terms) {
-    const legacyActs = _classData.activitats || [];
-    const defaultId = makeTermId('avaluacio');
-    _classData.terms = {
-      [defaultId]: {
-        name: 'Avaluació',
-        activities: Array.isArray(legacyActs) ? [...legacyActs] : []
-      }
-    };
-  }
+  const legacyActs = _classData.activitats || [];
+  const defaultId = makeTermId('avaluacio');
+  _classData.terms = {
+    [defaultId]: {
+      name: 'Avaluació',
+      activities: Array.isArray(legacyActs) ? [...legacyActs] : []
+    }
+  };
+}
+
 
   // Selecciona primer terme actiu
   if (!_activeTermId) _activeTermId = Object.keys(_classData.terms)[0];
@@ -186,10 +187,35 @@ export async function deleteTerm(termId) {
   }
 
   renderDropdown();
-  showEmptyMessage(!_activeTermId);
+  renderDropdown(); // refresca el desplegable amb els termes existents
 
-  if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
+if (_activeTermId) {
+  sel.value = _activeTermId;
+  showEmptyMessage(false);
+} else {
+  sel.innerHTML = '<option value="" selected disabled>Selecciona o crea un grup</option>';
+  showEmptyMessage(true);
 }
+
+// Finalment, cridem el callback només si hi ha un terme actiu
+if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
+}
+
+//--------------------
+function showEmptyMessage(show) {
+  const msg = document.getElementById('emptyGroupMessage');
+  const table = document.getElementById('notesTable-wrapper');
+  if (!msg || !table) return;
+
+  if (show) {
+    msg.style.display = 'block';
+    table.style.display = 'none';
+  } else {
+    msg.style.display = 'none';
+    table.style.display = 'block';
+  }
+}
+
 
 // ------------------------ Export mínim ------------------------
 export function getActiveTerm() { return _activeTermId; }
