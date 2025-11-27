@@ -21,24 +21,20 @@ export function setup(db, classId, classData, opts = {}) {
 
   // Crear terme inicial si no n'hi ha cap
   if (!_classData.terms) {
-  const legacyActs = _classData.activitats || [];
-  const defaultId = makeTermId('avaluacio');
-  _classData.terms = {
-    [defaultId]: {
-      name: 'Avaluació',
-      activities: Array.isArray(legacyActs) ? [...legacyActs] : []
-    }
-  };
-}
-
+    const legacyActs = _classData.activitats || [];
+    const defaultId = makeTermId('avaluacio');
+    _classData.terms = {
+      [defaultId]: {
+        name: 'Avaluació',
+        activities: Array.isArray(legacyActs) ? [...legacyActs] : []
+      }
+    };
+  }
 
   // Selecciona primer terme actiu
   if (!_activeTermId) _activeTermId = Object.keys(_classData.terms)[0];
 
   renderDropdown();
-
-  // MOSTRAR/AMAGAR MISSATGE DE GRUPS BUIDOS
-  showEmptyMessage(Object.keys(_classData.terms).length === 0);
 
   if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
 }
@@ -126,9 +122,8 @@ export async function addNewTermWithName(name) {
 
   _activeTermId = newId;
   renderDropdown();
-  showEmptyMessage(false);
-
   if (_onChangeCallback) _onChangeCallback(_activeTermId);
+
   return newId;
 }
 
@@ -159,7 +154,7 @@ export async function removeActivityFromActiveTerm(activityId) {
   if (_onChangeCallback) _onChangeCallback(_activeTermId);
 }
 
-// ------------------------ Renombrar/eliminar terme ------------------------
+// ------------------------ Renombrar terme ------------------------
 export async function renameTerm(termId, newName) {
   if (!termId || !newName) return;
   const path = `terms.${termId}.name`;
@@ -171,6 +166,7 @@ export async function renameTerm(termId, newName) {
   renderDropdown();
 }
 
+// ------------------------ Eliminar terme ------------------------
 export async function deleteTerm(termId) {
   if (!_db || !_currentClassId || !_classData?.terms?.[termId]) return;
 
@@ -181,41 +177,15 @@ export async function deleteTerm(termId) {
   const doc = await _db.collection('classes').doc(_currentClassId).get();
   _classData = doc.exists ? doc.data() : _classData;
 
+  // Selecciona un altre terme si s'elimina l'actiu
   if (_activeTermId === termId) {
     const remainingTerms = Object.keys(_classData.terms || {});
     _activeTermId = remainingTerms[0] || null;
   }
 
   renderDropdown();
-  renderDropdown(); // refresca el desplegable amb els termes existents
-
-if (_activeTermId) {
-  sel.value = _activeTermId;
-  showEmptyMessage(false);
-} else {
-  sel.innerHTML = '<option value="" selected disabled>Selecciona o crea un grup</option>';
-  showEmptyMessage(true);
+  if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
 }
-
-// Finalment, cridem el callback només si hi ha un terme actiu
-if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
-}
-
-//--------------------
-function showEmptyMessage(show) {
-  const msg = document.getElementById('emptyGroupMessage');
-  const table = document.getElementById('notesTable-wrapper');
-  if (!msg || !table) return;
-
-  if (show) {
-    msg.style.display = 'block';
-    table.style.display = 'none';
-  } else {
-    msg.style.display = 'none';
-    table.style.display = 'block';
-  }
-}
-
 
 // ------------------------ Export mínim ------------------------
 export function getActiveTerm() { return _activeTermId; }
