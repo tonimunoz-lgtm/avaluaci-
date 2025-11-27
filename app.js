@@ -27,6 +27,14 @@ let deleteMode = false;
 let currentCalcActivityId = null; // Activitat actual per fer càlculs
 
 /* Elements */
+
+const btnOpenCalc = document.getElementById('btnOpenCalc');
+if (btnOpenCalc) {
+  btnOpenCalc.addEventListener('click', () => {
+    if(window.openCalcModal) window.openCalcModal();
+  });
+}
+
 const loginScreen = document.getElementById('loginScreen');
 const appRoot = document.getElementById('appRoot');
 const usuariNom = document.getElementById('usuariNom');
