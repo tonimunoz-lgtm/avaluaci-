@@ -1681,15 +1681,13 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
 
 import { openCalcModal } from './calcModal.js';
 
+// Assignem la funció a window per compatibilitat
+window.openCalcModal = openCalcModal;
+
 const btnOpenCalc = document.getElementById('btnOpenCalc');
 if (btnOpenCalc) {
   btnOpenCalc.addEventListener('click', () => {
-    openCalcModal();
+    window.openCalcModal();
   });
 }
-document.addEventListener('DOMContentLoaded', () => {
-  const btnOpenCalc = document.getElementById('btnOpenCalc');
-  if (btnOpenCalc) {
-    btnOpenCalc.addEventListener('click', () => openCalcModal());
-  }
-});
+
