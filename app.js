@@ -62,10 +62,7 @@ const modalAddActivityBtn = document.getElementById('modalAddActivityBtn');
 
 // ---------- INICIALITZACIÓ DEL MODAL DE CALCUL ----------
 
-const calcModal = initCalcModal({
-  getTerms: () => window.Terms.getAllTerms(),          // retorna array de graelles
-  getActivitiesByTerm: (termId) => window.Terms.getActivities(termId) // activitats per graella
-});
+
 
 const btnImportAL = document.getElementById('btnImportAL');
 btnImportAL.addEventListener('click', () => {
