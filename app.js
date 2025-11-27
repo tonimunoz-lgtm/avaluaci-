@@ -26,7 +26,6 @@ let deleteMode = false;
 let currentCalcActivityId = null; // Activitat actual per fer càlculs
 
 /* Elements */
-
 const loginScreen = document.getElementById('loginScreen');
 const appRoot = document.getElementById('appRoot');
 const usuariNom = document.getElementById('usuariNom');
@@ -83,7 +82,6 @@ if (btnCloseStudentsMobile) {
     cont.classList.remove('mobile-open');
   });
 }
-
 
 // També tancar si cliques a fora del card (overlay)
 // detectem clicks al container però fora de .students-card
@@ -1677,18 +1675,3 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
 
   termMenu.classList.add('hidden');
 });
-
-/* ---------------- Open Calculator Modal ---------------- */
-
-// primer, tot el login i altres scripts
-// després carreguem el modal
-import './calcModal.js';
-
-const btnOpenCalc = document.getElementById('btnOpenCalc');
-if (btnOpenCalc) {
-  btnOpenCalc.addEventListener('click', () => {
-    if (window.openCalcModal) window.openCalcModal();
-  });
-}
-
-
