@@ -70,18 +70,21 @@ calcTermSelect.addEventListener('change', e => {
 // ---------------------------
 // Obrir modal → omplir desplegable
 // ---------------------------
+// calcModal.js
+
+// Afegim al window per evitar problemes d'import ES Modules
 export function openCalcModal() {
   const modal = document.getElementById('modalCalc');
   if (!modal) return;
   modal.classList.remove('hidden');
 
-  // Omplim el desplegable de termes
   const select = document.getElementById('calcTermSelect');
   if (!select) return;
   select.innerHTML = '';
 
-  if (window.Terms) {
-    const terms = Terms.getAllTerms(); // Suposant que retorna {id, name}
+  // Carregar termes disponibles des de Terms
+  if (window.Terms && typeof Terms.getAllTerms === 'function') {
+    const terms = Terms.getAllTerms(); // Retorna array [{id, name}]
     terms.forEach(term => {
       const opt = document.createElement('option');
       opt.value = term.id;
@@ -90,13 +93,51 @@ export function openCalcModal() {
     });
   }
 
-  // Seleccionem terme actiu
-  if (Terms.getActiveTermId) {
+  // Seleccionem el terme actiu
+  if (window.Terms && typeof Terms.getActiveTermId === 'function') {
     select.value = Terms.getActiveTermId();
   }
 
-  // Podeu afegir listeners d’activitats segons terme
+  // Listener: quan canviem terme al desplegable
+  select.addEventListener('change', () => {
+    const termId = select.value;
+    if (!termId) return;
+    if (window.Terms && typeof Terms.setActiveTerm === 'function') {
+      Terms.setActiveTerm(termId);
+      // També podem refrescar les activitats del modal o la taula principal
+      if (typeof window.renderNotesGrid === 'function') {
+        window.renderNotesGrid();
+      }
+    }
+  });
+
+  // Opcional: botó tancar modal
+  const btnClose = modal.querySelector('.close-modal');
+  if (btnClose) {
+    btnClose.addEventListener('click', () => {
+      modal.classList.add('hidden');
+    });
+  }
+
+  // Carregar activitats del terme actiu dins el modal (opcional)
+  renderActivitiesForTerm(select.value);
 }
 
-// Afegim al window per evitar problemes d'import ES Modules amb Firebase
+// Funció interna: mostrar activitats dins modal
+function renderActivitiesForTerm(termId) {
+  const container = document.getElementById('calcActivitiesContainer');
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (window.Terms && typeof Terms.getTermActivities === 'function') {
+    const acts = Terms.getTermActivities(termId) || [];
+    acts.forEach(actId => {
+      const div = document.createElement('div');
+      div.textContent = actId; // Aquí pots mostrar nom, data, fórmula...
+      container.appendChild(div);
+    });
+  }
+}
+
+// Assignem a window per cridar des de qualsevol lloc
 window.openCalcModal = openCalcModal;
