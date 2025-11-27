@@ -1679,10 +1679,12 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
 });
 
 /* ---------------- Open Calculator Modal ---------------- */
+
+// primer, tot el login i altres scripts
+// després carreguem el modal
 import './calcModal.js';
 
 const btnOpenCalc = document.getElementById('btnOpenCalc');
-
 if (btnOpenCalc) {
   btnOpenCalc.addEventListener('click', () => {
     if (window.openCalcModal) window.openCalcModal();
