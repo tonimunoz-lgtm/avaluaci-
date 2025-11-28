@@ -1728,61 +1728,58 @@ function populateGridDropdown() {
 let currentCalcGridActivities = []; // global per la calculadora
 
 async function loadActivitiesForSelectedGrid(termId) {
-  if (!termId) return;
+  // Obtenir activitats del terme
+  const allTerms = Terms.getAllTerms();
+  const term = allTerms.find(t => t.id === termId);
+  if (!term) {
+    currentCalcGridActivities = [];
+    return;
+  }
 
-  // 1. Neteja la llista global
-  currentCalcGridActivities = [];
+  // Obtenim llistat d'IDs d'activitats
+  const activitiesIds = Terms.getActiveTermId() === termId 
+      ? Terms.getActiveTermActivities() 
+      : Object.values(Terms.getAllTerms()).find(t => t.id === termId)?.activities || [];
 
-  // 2. Obtenim els IDs de la graella
-  const activityIds = Terms.getTermActivities(termId); // cal que la funció retorni array d'IDs
-
-  // 3. Obtenim els documents de Firestore
-  const activities = await Promise.all(activityIds.map(async (aid) => {
+  // Convertim a objectes {id, nom}
+  currentCalcGridActivities = await Promise.all(activitiesIds.map(async aid => {
     const doc = await db.collection('activitats').doc(aid).get();
-    if (!doc.exists) return null;
-    return {
-      id: aid,
-      nom: doc.data().nom,
-      termName: Terms.getTermName(termId)
-    };
+    return doc.exists ? { id: doc.id, nom: doc.data().nom } : null;
   }));
 
-  // 4. Filtrar nuls i duplicats
-  const cleanActivities = activities.filter(a => a !== null);
-  currentCalcGridActivities = cleanActivities;
+  // Eliminar nulls (activitats esborrades)
+  currentCalcGridActivities = currentCalcGridActivities.filter(a => a);
 
-  // 5. Construïm els botons de la calculadora
-  buildFormulaButtonsForCalc(currentCalcGridActivities);
+  // Actualitzar botons / camp de fórmula
+  buildFormulaButtons(currentCalcGridActivities);
+  buildRoundingButtons(currentCalcGridActivities);
 }
-
 
 
 //------------crea nova versio de la calculadora---------
 function buildFormulaButtonsForCalc(activities){
-  // 1. Netejar botons antics
   formulaButtonsDiv.innerHTML = '';
 
-  // 2. Botons activitats
+  // Botons activitats de la graella seleccionada
   activities.forEach(a => {
     const btn = document.createElement('button');
-    btn.type = 'button';
+    btn.type='button';
     btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
-    btn.textContent = `${a.nom} (${a.termName})`;
-    btn.addEventListener('click', ()=> addToFormula('__ACT__' + a.id));
+    btn.textContent = a.nom + ' (' + a.termName + ')'; // Diferenciar per nom graella
+    btn.addEventListener('click', ()=> addToFormula('__ACT__' + a.id)); 
     formulaButtonsDiv.appendChild(btn);
   });
 
-  // 3. Botons operadors
-  ['+', '-', '*', '/', '(', ')'].forEach(op => {
+  // Botons operadors, números, decimals, backspace igual que abans
+  ['+', '-', '*', '/', '(', ')'].forEach(op=>{
     const btn = document.createElement('button');
-    btn.type = 'button';
+    btn.type='button';
     btn.className='px-2 py-1 m-1 bg-gray-200 rounded hover:bg-gray-300';
     btn.textContent = op;
     btn.addEventListener('click', ()=> addToFormula(op));
     formulaButtonsDiv.appendChild(btn);
   });
 
-  // 4. Botons números
   for(let i=0;i<=10;i++){
     const btn = document.createElement('button');
     btn.type='button';
@@ -1792,17 +1789,15 @@ function buildFormulaButtonsForCalc(activities){
     formulaButtonsDiv.appendChild(btn);
   }
 
-  // 5. Botons decimals
   ['.', ','].forEach(dec=>{
     const btn = document.createElement('button');
     btn.type='button';
     btn.className='px-2 py-1 m-1 bg-yellow-200 rounded hover:bg-yellow-300';
-    btn.textContent = '.';
+    btn.textContent = dec;
     btn.addEventListener('click', ()=> addToFormula('.'));
     formulaButtonsDiv.appendChild(btn);
   });
 
-  // 6. Botó backspace
   const backBtn = document.createElement('button');
   backBtn.type='button';
   backBtn.className='px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
@@ -1811,10 +1806,7 @@ function buildFormulaButtonsForCalc(activities){
   formulaButtonsDiv.appendChild(backBtn);
 }
 
-
-
 document.getElementById('selectGridForCalc').addEventListener('change', e => {
   const selectedTermId = e.target.value;
   loadActivitiesForSelectedGrid(selectedTermId);
 });
-
