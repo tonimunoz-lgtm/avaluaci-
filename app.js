@@ -1684,18 +1684,20 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
   termMenu.classList.add('hidden');
 });
 
-// --- Obrir modal de prova ---
 document.addEventListener("DOMContentLoaded", () => {
   const btnTestCalc = document.getElementById("btnTestCalc");
   const modalCalc = document.getElementById("modalCalc");
 
   if (btnTestCalc) {
     btnTestCalc.addEventListener("click", () => {
+      // Obre el modal
       modalCalc.classList.remove("hidden");
       modalCalc.style.display = "flex";
 
-      // Cridem aquí la funció que omplirà el desplegable
-      populateTermSelect();
+      // Omple el select amb les graelles actuals
+      if (window.currentClassData?.terms) {
+        populateCalcTermSelect(Object.values(window.currentClassData.terms));
+      }
     });
   }
 
@@ -1706,21 +1708,22 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-function populateTermSelect() {
-  const select = document.getElementById("calcTermSelect");
-  select.innerHTML = "";
+// Funció única per omplir el select del modal de càlcul
+function populateCalcTermSelect(classTerms) {
+  const calcTermSelect = document.getElementById("calcTermSelect");
+  calcTermSelect.innerHTML = "";
 
-  if (!window.currentClassData || !window.currentClassData.terms) {
-    console.warn("No hi ha dades de la classe carregades encara.");
-    return;
-  }
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Selecciona graella...";
+  placeholder.disabled = true;
+  placeholder.selected = true;
+  calcTermSelect.appendChild(placeholder);
 
-  const terms = window.currentClassData.terms;
-
-  Object.keys(terms).forEach(termId => {
-    const opt = document.createElement("option");
-    opt.value = termId;
-    opt.textContent = terms[termId].name || "Sense nom";
-    select.appendChild(opt);
+  classTerms.forEach(term => {
+    const option = document.createElement("option");
+    option.value = term.id;
+    option.textContent = term.name || "Sense nom";
+    calcTermSelect.appendChild(option);
   });
 }
