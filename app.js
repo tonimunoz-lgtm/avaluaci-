@@ -1730,60 +1730,59 @@ let currentCalcGridActivities = []; // global per la calculadora
 async function loadActivitiesForSelectedGrid(termId) {
   if (!termId) return;
 
-  // Obtenim només els IDs d'activitats de la graella seleccionada
-  const activityIds = await Terms.getActivitiesForTerm(termId); // retorna array d'IDs
+  // 1. Neteja la llista global
+  currentCalcGridActivities = [];
 
-  // Evitar duplicats: utilitzem un Set
-  const uniqueIds = [...new Set(activityIds)];
+  // 2. Obtenim els IDs de la graella
+  const activityIds = Terms.getTermActivities(termId); // cal que la funció retorni array d'IDs
 
-  // Ara convertim aquests IDs en objectes amb nom + id + nom de la graella
-  const activities = await Promise.all(uniqueIds.map(async (aid) => {
+  // 3. Obtenim els documents de Firestore
+  const activities = await Promise.all(activityIds.map(async (aid) => {
     const doc = await db.collection('activitats').doc(aid).get();
     if (!doc.exists) return null;
     return {
       id: aid,
       nom: doc.data().nom,
-      termName: Terms.getActiveTermName() // nom de la graella actual
+      termName: Terms.getTermName(termId)
     };
   }));
 
-  // Filtrar possibles nulls (activitats eliminades)
+  // 4. Filtrar nuls i duplicats
   const cleanActivities = activities.filter(a => a !== null);
-
-  // Construïm els botons de la calculadora
-  buildFormulaButtonsForCalc(cleanActivities);
-
-  // Guardem les activitats actuals de la graella per evalFormulaAsync
   currentCalcGridActivities = cleanActivities;
+
+  // 5. Construïm els botons de la calculadora
+  buildFormulaButtonsForCalc(currentCalcGridActivities);
 }
 
 
 
 //------------crea nova versio de la calculadora---------
 function buildFormulaButtonsForCalc(activities){
-  formulaButtonsDiv.innerHTML = ''; // neteja prèvia
+  // 1. Netejar botons antics
+  formulaButtonsDiv.innerHTML = '';
 
-  // Botons activitats de la graella seleccionada
+  // 2. Botons activitats
   activities.forEach(a => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
-    btn.textContent = `${a.nom} (${a.termName})`; // Mostra nom + graella
+    btn.textContent = `${a.nom} (${a.termName})`;
     btn.addEventListener('click', ()=> addToFormula('__ACT__' + a.id));
     formulaButtonsDiv.appendChild(btn);
   });
 
-  // Botons operadors
-  ['+', '-', '*', '/', '(', ')'].forEach(op=>{
+  // 3. Botons operadors
+  ['+', '-', '*', '/', '(', ')'].forEach(op => {
     const btn = document.createElement('button');
-    btn.type='button';
+    btn.type = 'button';
     btn.className='px-2 py-1 m-1 bg-gray-200 rounded hover:bg-gray-300';
     btn.textContent = op;
     btn.addEventListener('click', ()=> addToFormula(op));
     formulaButtonsDiv.appendChild(btn);
   });
 
-  // Botons números
+  // 4. Botons números
   for(let i=0;i<=10;i++){
     const btn = document.createElement('button');
     btn.type='button';
@@ -1793,7 +1792,7 @@ function buildFormulaButtonsForCalc(activities){
     formulaButtonsDiv.appendChild(btn);
   }
 
-  // Botons decimals
+  // 5. Botons decimals
   ['.', ','].forEach(dec=>{
     const btn = document.createElement('button');
     btn.type='button';
@@ -1803,7 +1802,7 @@ function buildFormulaButtonsForCalc(activities){
     formulaButtonsDiv.appendChild(btn);
   });
 
-  // Botó de retrocés
+  // 6. Botó backspace
   const backBtn = document.createElement('button');
   backBtn.type='button';
   backBtn.className='px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
