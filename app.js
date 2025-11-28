@@ -1685,16 +1685,17 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
 });
 
 // COPIAR estructura
-termMenu.querySelector('.copy-term-structure-btn').addEventListener('click', async () => {
+termMenu.querySelector('.copy-term-structure-btn')
+  .addEventListener('click', () => {
     const termId = Terms.getActiveTermId();
     Terms.copyGridStructure(termId);
     termMenu.classList.add('hidden');
   });
 
 // ENGANXAR estructura
-termMenu.querySelector('.paste-term-structure-btn').addEventListener('click', async () => {
+termMenu.querySelector('.paste-term-structure-btn')
+  .addEventListener('click', async () => {
     const termId = Terms.getActiveTermId();
     await Terms.pasteGridStructure(termId);
     termMenu.classList.add('hidden');
   });
-
