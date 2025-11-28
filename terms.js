@@ -201,23 +201,24 @@ export async function deleteTerm(termId) {
   if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
 }
 
-// ------------------------ Copiar NOMES estructura (noms) ------------------------
+// ------------------------ Copiar estructura ------------------------
 export function copyGridStructure(termId) {
   if (!termId || !_classData?.terms?.[termId]) return;
 
-  // Llista d'IDs d'activitat del terme
   const activityIds = _classData.terms[termId].activities || [];
 
-  // Guardem només els noms de cada activitat
+  // Guardem només els noms
   _copiedGridStructure = activityIds.map(id => {
     return _classData.activities?.[id]?.name || "SenseNom";
   });
 
-  console.log("Noms d'activitats copiats:", _copiedGridStructure);
+  console.log("Estructura copiada (només noms):", _copiedGridStructure);
 }
 
 
+
 // ------------------------ Enganxar estructura (crear activitats noves) ------------------------
+// ------------------------ Enganxar estructura ------------------------
 export async function pasteGridStructure(termId) {
   if (!_copiedGridStructure || _copiedGridStructure.length === 0) {
     console.warn("No hi ha estructura copiada.");
@@ -228,17 +229,17 @@ export async function pasteGridStructure(termId) {
 
   const classRef = _db.collection("classes").doc(_currentClassId);
 
-  // 1) Creem activitats noves
+  // Crear activitats noves amb IDs únics
   const newActivityIds = _copiedGridStructure.map(name => {
     return `act_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
   });
 
-  // 2) Construïm objecte d'update
   const updateObj = {};
 
+  // Assignem cada activitat nova amb el nom copiat i valors buits
   newActivityIds.forEach((id, i) => {
     updateObj[`activities.${id}`] = {
-      name: _copiedGridStructures[i],
+      name: _copiedGridStructure[i],
       weight: 1,
       formula: "",
       isAverage: false,
@@ -247,22 +248,20 @@ export async function pasteGridStructure(termId) {
     };
   });
 
-  // 3) Afegir la nova llista d'activitats al terme
+  // Afegim la nova llista d'activitats al terme
   updateObj[`terms.${termId}.activities`] = newActivityIds;
 
-  // 4) Actualitzar Firestore
+  // Actualitzar Firestore
   await classRef.update(updateObj);
 
-  // 5) Recarregar dades locals
+  // Recarregar dades locals
   const doc = await classRef.get();
   _classData = doc.exists ? doc.data() : _classData;
 
-  console.log("Estructura enganxada:", newActivityIds);
+  console.log("Estructura enganxada (activitats noves):", newActivityIds);
 
   return true;
 }
-
-
 
 // ------------------------ Export mínim ------------------------
 export function getActiveTerm() { return _activeTermId; }
