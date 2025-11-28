@@ -202,43 +202,50 @@ export async function deleteTerm(termId) {
 }
 
 // ------------------------ Copiar estructura ------------------------
+**
+ * Copiar l'estructura de la graella actual (només noms de les activitats)
+ * @param {string} termId - ID del terme que volem copiar
+ */
 export function copyGridStructure(termId) {
   if (!termId || !_classData?.terms?.[termId]) return;
 
-  const activityIds = _classData.terms[termId].activities || [];
+  const term = _classData.terms[termId];
+  const activitiesIds = term.activities || [];
 
-  // Copiar els noms directament
-  _copiedGridStructure = activityIds.map(id => {
-    const act = _classData.activities?.[id];
-    return act?.name || "SenseNom";
+  // Guardem només els noms
+  _copiedGridStructure = activitiesIds.map(aid => {
+    // Si tens un objecte amb informació de cada activitat dins del terme
+    const activityData = term.activitiesData?.[aid];
+    return activityData?.name || `Activitat ${aid}`;
   });
 
-  console.log("Estructura copiada (només noms):", _copiedGridStructure);
+  console.log("Estructura copiada:", _copiedGridStructure);
 }
 
-
-// ------------------------ Enganxar estructura ------------------------
+/**
+ * Enganxar l'estructura copiada en un terme (activitats noves amb notes buides)
+ * @param {string} termId - ID del terme on enganxar
+ */
 export async function pasteGridStructure(termId) {
   if (!_copiedGridStructure || _copiedGridStructure.length === 0) {
     console.warn("No hi ha estructura copiada.");
     return false;
   }
-
   if (!termId || !_db || !_currentClassId) return false;
 
   const classRef = _db.collection("classes").doc(_currentClassId);
 
-  // Crear activitats noves amb IDs únics
-  const newActivityIds = _copiedGridStructure.map(name => {
-    return `act_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
-  });
+  // Crear IDs únics per activitats noves
+  const newActivityIds = _copiedGridStructure.map(() => 
+    `act_${Date.now()}_${Math.random().toString(36).slice(2,7)}`
+  );
 
   const updateObj = {};
 
-  // Assignem cada activitat nova amb el nom copiat i valors buits
+  // Assignar només noms i deixar notes buides
   newActivityIds.forEach((id, i) => {
     updateObj[`activities.${id}`] = {
-      name: _copiedGridStructure[i],  // aquí posem el nom copiat
+      name: _copiedGridStructure[i],
       weight: 1,
       formula: "",
       isAverage: false,
@@ -247,21 +254,19 @@ export async function pasteGridStructure(termId) {
     };
   });
 
-  // Afegim la nova llista d'activitats al terme
+  // Assignar noves activitats al terme (sobrescrivint si vols substituir)
   updateObj[`terms.${termId}.activities`] = newActivityIds;
 
   // Actualitzar Firestore
   await classRef.update(updateObj);
 
-  // Recarregar dades locals
+  // Actualitzar dades locals
   const doc = await classRef.get();
   _classData = doc.exists ? doc.data() : _classData;
 
-  console.log("Estructura enganxada (activitats noves):", newActivityIds);
-
+  console.log("Estructura enganxada:", newActivityIds);
   return true;
 }
-
 
 // ------------------------ Export mínim ------------------------
 export function getActiveTerm() { return _activeTermId; }
