@@ -1839,3 +1839,11 @@ function buildRoundingButtonsForCalc(activities){
   backBtn.addEventListener('click', ()=> formulaField.value = formulaField.value.slice(0,-1));
   container.appendChild(backBtn);
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+  const formulaButtonsDiv = document.getElementById('formulaButtonsDiv');
+  const roundingButtonsDiv = document.getElementById('roundingButtonsDiv');
+
+  // Aquí pots cridar altres funcions inicials si cal
+});
+
