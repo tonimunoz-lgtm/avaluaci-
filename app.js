@@ -1684,46 +1684,64 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
   termMenu.classList.add('hidden');
 });
 
-document.addEventListener("DOMContentLoaded", () => {
+//-----------------------
+  document.addEventListener("DOMContentLoaded", () => {
   const btnTestCalc = document.getElementById("btnTestCalc");
   const modalCalc = document.getElementById("modalCalc");
+  const termsDropdown = document.getElementById("termsDropdown");
 
+  // Funció per omplir un select amb les graelles
+  function populateTermSelect(selectElement, classTerms) {
+    selectElement.innerHTML = "";
+
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Selecciona graella...";
+    placeholder.disabled = true;
+    placeholder.selected = true;
+    selectElement.appendChild(placeholder);
+
+    classTerms.forEach(term => {
+      const option = document.createElement("option");
+      option.value = term.id;
+      option.textContent = term.name || "Sense nom";
+      selectElement.appendChild(option);
+    });
+  }
+
+  // Funció per actualitzar tots els selects amb les dades de la classe actual
+  function updateAllTermSelects() {
+    if (!window.currentClassData?.terms) return;
+
+    const classTerms = Object.values(window.currentClassData.terms);
+
+    // Actualitza el select principal
+    if (termsDropdown) populateTermSelect(termsDropdown, classTerms);
+
+    // Actualitza el select del modal de càlcul
+    const calcTermSelect = document.getElementById("calcTermSelect");
+    if (calcTermSelect) populateTermSelect(calcTermSelect, classTerms);
+  }
+
+  // Obre el modal de càlcul
   if (btnTestCalc) {
     btnTestCalc.addEventListener("click", () => {
-      // Obre el modal
       modalCalc.classList.remove("hidden");
       modalCalc.style.display = "flex";
-
-      // Omple el select amb les graelles actuals
-      if (window.currentClassData?.terms) {
-        populateCalcTermSelect(Object.values(window.currentClassData.terms));
-      }
+      updateAllTermSelects(); // Omple els selects amb les graelles actuals
     });
   }
 
   // Tancar modal
-  modalCalc.querySelector(".modal-close").addEventListener("click", () => {
-    modalCalc.classList.add("hidden");
-    modalCalc.style.display = "none";
-  });
+  const modalCloseBtn = modalCalc.querySelector(".modal-close");
+  if (modalCloseBtn) {
+    modalCloseBtn.addEventListener("click", () => {
+      modalCalc.classList.add("hidden");
+      modalCalc.style.display = "none";
+    });
+  }
+
+  // Actualitza els selects quan canvia la classe carregada
+  // Exemple: quan carregues una nova classe a `window.currentClassData`
+  // window.currentClassData = novaClasse; updateAllTermSelects();
 });
-
-// Funció única per omplir el select del modal de càlcul
-function populateCalcTermSelect(classTerms) {
-  const calcTermSelect = document.getElementById("calcTermSelect");
-  calcTermSelect.innerHTML = "";
-
-  const placeholder = document.createElement("option");
-  placeholder.value = "";
-  placeholder.textContent = "Selecciona graella...";
-  placeholder.disabled = true;
-  placeholder.selected = true;
-  calcTermSelect.appendChild(placeholder);
-
-  classTerms.forEach(term => {
-    const option = document.createElement("option");
-    option.value = term.id;
-    option.textContent = term.name || "Sense nom";
-    calcTermSelect.appendChild(option);
-  });
-}
