@@ -252,8 +252,9 @@
       <div id="formulaButtons" class="flex flex-wrap gap-1"></div>
     </div>
 
-<label for="calcTermSelect">Selecciona graella:</label>
-<select id="calcTermSelect" class="border rounded p-1 w-full mb-2"></select>
+<select id="calcTermSelect" class="border rounded p-1 w-full mb-2">
+  <option value="" disabled selected>Selecciona graella...</option>
+</select>
 
     
     <button id="modalApplyCalcBtn" class="bg-indigo-500 text-white p-2 rounded font-semibold">Aplica</button>
@@ -266,9 +267,7 @@
   Prem el botó <strong>+</strong> per afegir un grup (per exemple, “1r trimestre”)
 </div>
 
-  <button id="btnTestCalc" class="bg-blue-500 text-white p-2 rounded">Test Calculadora</button>
-
-
+  
   <!-- SCRIPT PRINCIPAL -->
   <script type="module" src="./calcModal.js"></script>
   <script type="module" src="./app.js"></script>
