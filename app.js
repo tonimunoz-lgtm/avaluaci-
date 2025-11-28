@@ -1812,7 +1812,7 @@ function buildFormulaButtonsForCalc(activities){
   formulaButtonsDiv.appendChild(backBtn);
 }
 
-function buildRoundingButtons(activities){
+function buildRoundingButtonsForCalc(activities){
   formulaButtonsDiv.innerHTML = '';
 
   // Botons activitats
