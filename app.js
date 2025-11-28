@@ -1700,4 +1700,3 @@ termMenu.querySelector('.paste-term-structure-btn')
     termMenu.classList.add('hidden');
   });
 
-
