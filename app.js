@@ -1683,3 +1683,44 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
 
   termMenu.classList.add('hidden');
 });
+
+// --- Obrir modal de prova ---
+document.addEventListener("DOMContentLoaded", () => {
+  const btnTestCalc = document.getElementById("btnTestCalc");
+  const modalCalc = document.getElementById("modalCalc");
+
+  if (btnTestCalc) {
+    btnTestCalc.addEventListener("click", () => {
+      modalCalc.classList.remove("hidden");
+      modalCalc.style.display = "flex";
+
+      // Cridem aquí la funció que omplirà el desplegable
+      populateTermSelect();
+    });
+  }
+
+  // Tancar modal
+  modalCalc.querySelector(".modal-close").addEventListener("click", () => {
+    modalCalc.classList.add("hidden");
+    modalCalc.style.display = "none";
+  });
+});
+
+function populateTermSelect() {
+  const select = document.getElementById("calcTermSelect");
+  select.innerHTML = "";
+
+  if (!window.currentClassData || !window.currentClassData.terms) {
+    console.warn("No hi ha dades de la classe carregades encara.");
+    return;
+  }
+
+  const terms = window.currentClassData.terms;
+
+  Object.keys(terms).forEach(termId => {
+    const opt = document.createElement("option");
+    opt.value = termId;
+    opt.textContent = terms[termId].name || "Sense nom";
+    select.appendChild(opt);
+  });
+}
