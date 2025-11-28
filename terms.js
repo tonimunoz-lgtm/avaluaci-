@@ -6,6 +6,8 @@ let _currentClassId = null;
 let _classData = null;
 let _activeTermId = null;
 let _onChangeCallback = null;
+let _copiedGridStructure = null; // guardar estructura d'activitats temporalment
+
 
 // Generar un ID únic per terme
 function makeTermId(name) {
@@ -196,6 +198,31 @@ export async function deleteTerm(termId) {
 
   if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
 }
+
+// ------------------------ Copiar estructura ------------------------
+export function copyGridStructure(termId) {
+  if (!termId || !_classData?.terms?.[termId]) return;
+  // Guardem una còpia de l'array d'activitats
+  _copiedGridStructure = [...(_classData.terms[termId].activities || [])];
+  console.log('Estructura copiada:', _copiedGridStructure);
+}
+
+// ------------------------ Enganxar estructura ------------------------
+export async function pasteGridStructure(termId) {
+  if (!termId || !_classData?.terms?.[termId] || !_copiedGridStructure) return;
+
+  const path = `terms.${termId}.activities`;
+  await _db.collection('classes').doc(_currentClassId).update({
+    [path]: _copiedGridStructure
+  });
+
+  const doc = await _db.collection('classes').doc(_currentClassId).get();
+  _classData = doc.exists ? doc.data() : _classData;
+
+  if (_onChangeCallback) _onChangeCallback(termId);
+  console.log('Estructura enganxada a la graella', termId);
+}
+
 
 // ------------------------ Export mínim ------------------------
 export function getActiveTerm() { return _activeTermId; }
