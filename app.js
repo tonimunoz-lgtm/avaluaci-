@@ -1728,50 +1728,52 @@ function populateGridDropdown() {
 let currentCalcGridActivities = []; // global per la calculadora
 
 async function loadActivitiesForSelectedGrid(termId) {
-  // Obtenir activitats del terme
-  const allTerms = Terms.getAllTerms();
-  const term = allTerms.find(t => t.id === termId);
-  if (!term) {
-    currentCalcGridActivities = [];
-    return;
-  }
+  if (!termId) return;
 
-  // Obtenim llistat d'IDs d'activitats
-  const activitiesIds = Terms.getActiveTermId() === termId 
-      ? Terms.getActiveTermActivities() 
-      : Object.values(Terms.getAllTerms()).find(t => t.id === termId)?.activities || [];
+  // Obtenim només els IDs d'activitats de la graella seleccionada
+  const activityIds = await Terms.getActivitiesForTerm(termId); // retorna array d'IDs
 
-  // Convertim a objectes {id, nom}
-  currentCalcGridActivities = await Promise.all(activitiesIds.map(async aid => {
+  // Evitar duplicats: utilitzem un Set
+  const uniqueIds = [...new Set(activityIds)];
+
+  // Ara convertim aquests IDs en objectes amb nom + id + nom de la graella
+  const activities = await Promise.all(uniqueIds.map(async (aid) => {
     const doc = await db.collection('activitats').doc(aid).get();
-    return doc.exists ? { id: doc.id, nom: doc.data().nom } : null;
+    if (!doc.exists) return null;
+    return {
+      id: aid,
+      nom: doc.data().nom,
+      termName: Terms.getActiveTermName() // nom de la graella actual
+    };
   }));
 
-  // Eliminar nulls (activitats esborrades)
-  currentCalcGridActivities = currentCalcGridActivities.filter(a => a);
+  // Filtrar possibles nulls (activitats eliminades)
+  const cleanActivities = activities.filter(a => a !== null);
 
-  // Actualitzar botons / camp de fórmula
-  buildFormulaButtons(currentCalcGridActivities);
-  buildRoundingButtons(currentCalcGridActivities);
+  // Construïm els botons de la calculadora
+  buildFormulaButtonsForCalc(cleanActivities);
+
+  // Guardem les activitats actuals de la graella per evalFormulaAsync
+  currentCalcGridActivities = cleanActivities;
 }
+
 
 
 //------------crea nova versio de la calculadora---------
 function buildFormulaButtonsForCalc(activities){
-  // 1️⃣ Netejar tots els botons antics
-  formulaButtonsDiv.innerHTML = '';
+  formulaButtonsDiv.innerHTML = ''; // neteja prèvia
 
-  // 2️⃣ Botons activitats de la graella seleccionada
+  // Botons activitats de la graella seleccionada
   activities.forEach(a => {
     const btn = document.createElement('button');
-    btn.type='button';
+    btn.type = 'button';
     btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
-    btn.textContent = a.nom + ' (' + a.termName + ')'; 
-    btn.addEventListener('click', ()=> addToFormula('__ACT__' + a.id)); 
+    btn.textContent = `${a.nom} (${a.termName})`; // Mostra nom + graella
+    btn.addEventListener('click', ()=> addToFormula('__ACT__' + a.id));
     formulaButtonsDiv.appendChild(btn);
   });
 
-  // 3️⃣ Botons operadors i números (igual que abans)
+  // Botons operadors
   ['+', '-', '*', '/', '(', ')'].forEach(op=>{
     const btn = document.createElement('button');
     btn.type='button';
@@ -1781,6 +1783,7 @@ function buildFormulaButtonsForCalc(activities){
     formulaButtonsDiv.appendChild(btn);
   });
 
+  // Botons números
   for(let i=0;i<=10;i++){
     const btn = document.createElement('button');
     btn.type='button';
@@ -1790,15 +1793,17 @@ function buildFormulaButtonsForCalc(activities){
     formulaButtonsDiv.appendChild(btn);
   }
 
+  // Botons decimals
   ['.', ','].forEach(dec=>{
     const btn = document.createElement('button');
     btn.type='button';
     btn.className='px-2 py-1 m-1 bg-yellow-200 rounded hover:bg-yellow-300';
-    btn.textContent = dec;
+    btn.textContent = '.';
     btn.addEventListener('click', ()=> addToFormula('.'));
     formulaButtonsDiv.appendChild(btn);
   });
 
+  // Botó de retrocés
   const backBtn = document.createElement('button');
   backBtn.type='button';
   backBtn.className='px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
@@ -1806,6 +1811,7 @@ function buildFormulaButtonsForCalc(activities){
   backBtn.addEventListener('click', ()=> formulaField.value = formulaField.value.slice(0,-1));
   formulaButtonsDiv.appendChild(backBtn);
 }
+
 
 
 document.getElementById('selectGridForCalc').addEventListener('change', e => {
