@@ -207,17 +207,16 @@ export function copyGridStructure(termId) {
 
   const activityIds = _classData.terms[termId].activities || [];
 
-  // Guardem només els noms
+  // Copiar els noms directament
   _copiedGridStructure = activityIds.map(id => {
-    return _classData.activities?.[id]?.name || "SenseNom";
+    const act = _classData.activities?.[id];
+    return act?.name || "SenseNom";
   });
 
   console.log("Estructura copiada (només noms):", _copiedGridStructure);
 }
 
 
-
-// ------------------------ Enganxar estructura (crear activitats noves) ------------------------
 // ------------------------ Enganxar estructura ------------------------
 export async function pasteGridStructure(termId) {
   if (!_copiedGridStructure || _copiedGridStructure.length === 0) {
@@ -239,7 +238,7 @@ export async function pasteGridStructure(termId) {
   // Assignem cada activitat nova amb el nom copiat i valors buits
   newActivityIds.forEach((id, i) => {
     updateObj[`activities.${id}`] = {
-      name: _copiedGridStructure[i],
+      name: _copiedGridStructure[i],  // aquí posem el nom copiat
       weight: 1,
       formula: "",
       isAverage: false,
@@ -262,6 +261,7 @@ export async function pasteGridStructure(termId) {
 
   return true;
 }
+
 
 // ------------------------ Export mínim ------------------------
 export function getActiveTerm() { return _activeTermId; }
