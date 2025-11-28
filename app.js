@@ -1806,26 +1806,3 @@ function buildFormulaButtonsForCalc(activities){
   formulaButtonsDiv.appendChild(backBtn);
 }
 
-// -------------------- Botons per redondeig --------------------
-function buildRoundingButtons(activities){
-  const container = document.getElementById('activityButtonsDiv');
-  container.innerHTML = ''; // netejar només botons d'activitats
-
-  activities.forEach(a => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
-    btn.textContent = a.nom;
-    btn.addEventListener('click', () => addToFormula('__ACT__' + a.id));
-    container.appendChild(btn);
-  });
-
-  [0.5, 1].forEach(val => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
-    btn.textContent = val;
-    btn.addEventListener('click', () => addToFormula(val));
-    container.appendChild(btn);
-  });
-}
