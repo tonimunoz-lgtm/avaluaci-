@@ -1688,15 +1688,15 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
 });
 
 //----------------funcio per carregar graelles al desplegable
-// Funció per carregar el desplegable de graelles dins del modal de càlcul
+// -------------------- Desplegable de graelles --------------------
 function populateGridDropdown() {
   const select = document.getElementById('selectGridForCalc');
   select.innerHTML = '';
 
-  const terms = Terms.getAllTerms(); // ara retorna array d'objectes {id, name}
-  console.log('Terms:', terms);      // comprovar que realment hi ha dades
+  const terms = Terms.getAllTerms(); // array {id, name, activities}
+  console.log('Terms:', terms);
 
-  if (terms.length === 0) {
+  if (!terms.length) {
     const opt = document.createElement('option');
     opt.textContent = 'No hi ha graelles disponibles';
     opt.disabled = true;
@@ -1711,97 +1711,113 @@ function populateGridDropdown() {
     select.appendChild(option);
   });
 
-  // Seleccionar el primer per defecte
+  // Seleccionar el primer terme per defecte
   select.value = terms[0].id;
 
-  // Quan canviï la selecció, actualitzar activitats de la calculadora
+  // Carregar activitats del primer terme
+  loadActivitiesForSelectedGrid(select.value);
+
+  // Quan canvii la selecció
   select.addEventListener('change', () => {
     loadActivitiesForSelectedGrid(select.value);
   });
-
-  // Carregar activitats inicials del primer terme
-  loadActivitiesForSelectedGrid(select.value);
 }
 
-
-//-----------funcio per carregar activitats a la graella
+// -------------------- Activitats de la graella --------------------
 let currentCalcGridActivities = []; // global per la calculadora
 
 async function loadActivitiesForSelectedGrid(termId) {
-  // Obtenir activitats del terme
   const allTerms = Terms.getAllTerms();
   const term = allTerms.find(t => t.id === termId);
   if (!term) {
     currentCalcGridActivities = [];
-    return;
+  } else {
+    const activitiesIds = term.activities || [];
+    currentCalcGridActivities = await Promise.all(activitiesIds.map(async aid => {
+      const doc = await db.collection('activitats').doc(aid).get();
+      return doc.exists ? { id: doc.id, nom: doc.data().nom } : null;
+    }));
+    currentCalcGridActivities = currentCalcGridActivities.filter(a => a); // eliminar nulls
   }
 
-  // Obtenim llistat d'IDs d'activitats
-  const activitiesIds = Terms.getActiveTermId() === termId 
-      ? Terms.getActiveTermActivities() 
-      : Object.values(Terms.getAllTerms()).find(t => t.id === termId)?.activities || [];
-
-  // Convertim a objectes {id, nom}
-  currentCalcGridActivities = await Promise.all(activitiesIds.map(async aid => {
-    const doc = await db.collection('activitats').doc(aid).get();
-    return doc.exists ? { id: doc.id, nom: doc.data().nom } : null;
-  }));
-
-  // Eliminar nulls (activitats esborrades)
-  currentCalcGridActivities = currentCalcGridActivities.filter(a => a);
-
-  // Actualitzar botons / camp de fórmula
-  buildFormulaButtons(currentCalcGridActivities);
-  buildRoundingButtons(currentCalcGridActivities);
+  // Netejar i mostrar botons segons el mode actual
+  const calcType = document.getElementById('calcType').value;
+  if (calcType === 'formula') {
+    buildFormulaButtons(currentCalcGridActivities);
+  } else if (calcType === 'rounding') {
+    buildRoundingButtons(currentCalcGridActivities);
+  }
+  // mode numeric no necessita botons
 }
 
+// -------------------- Botons per fórmula --------------------
+function buildFormulaButtons(activities){
+  formulaButtonsDiv.innerHTML = ''; // netejar botons antics
 
-//------------crea nova versio de la calculadora---------
-function buildFormulaButtonsForCalc(activities){
-  formulaButtonsDiv.innerHTML = '';
-
-  // Botons activitats de la graella seleccionada
   activities.forEach(a => {
     const btn = document.createElement('button');
-    btn.type='button';
-    btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
-    btn.textContent = a.nom + ' (' + a.termName + ')'; // Diferenciar per nom graella
-    btn.addEventListener('click', ()=> addToFormula('__ACT__' + a.id)); 
+    btn.type = 'button';
+    btn.className = 'px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
+    btn.textContent = a.nom; 
+    btn.addEventListener('click', () => addToFormula('__ACT__' + a.id));
     formulaButtonsDiv.appendChild(btn);
   });
 
-  // Botons operadors, números, decimals, backspace igual que abans
-  ['+', '-', '*', '/', '(', ')'].forEach(op=>{
+  ['+', '-', '*', '/', '(', ')'].forEach(op => {
     const btn = document.createElement('button');
-    btn.type='button';
-    btn.className='px-2 py-1 m-1 bg-gray-200 rounded hover:bg-gray-300';
+    btn.type = 'button';
+    btn.className = 'px-2 py-1 m-1 bg-gray-200 rounded hover:bg-gray-300';
     btn.textContent = op;
-    btn.addEventListener('click', ()=> addToFormula(op));
+    btn.addEventListener('click', () => addToFormula(op));
     formulaButtonsDiv.appendChild(btn);
   });
 
-  for(let i=0;i<=10;i++){
+  for (let i = 0; i <= 10; i++) {
     const btn = document.createElement('button');
-    btn.type='button';
-    btn.className='px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
+    btn.type = 'button';
+    btn.className = 'px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
     btn.textContent = i;
-    btn.addEventListener('click', ()=> addToFormula(i));
+    btn.addEventListener('click', () => addToFormula(i));
     formulaButtonsDiv.appendChild(btn);
   }
 
-  ['.', ','].forEach(dec=>{
+  ['.', ','].forEach(dec => {
     const btn = document.createElement('button');
-    btn.type='button';
-    btn.className='px-2 py-1 m-1 bg-yellow-200 rounded hover:bg-yellow-300';
+    btn.type = 'button';
+    btn.className = 'px-2 py-1 m-1 bg-yellow-200 rounded hover:bg-yellow-300';
     btn.textContent = dec;
-    btn.addEventListener('click', ()=> addToFormula('.'));
+    btn.addEventListener('click', () => addToFormula('.'));
     formulaButtonsDiv.appendChild(btn);
   });
 
   const backBtn = document.createElement('button');
-  backBtn.type='button';
-  backBtn.className='px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
+  backBtn.type = 'button';
+  backBtn.className = 'px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
   backBtn.textContent = '⌫';
-  backBtn.addEventListener('click', ()=> formulaField.value = formulaField.value.slice(0,-1));
+  backBtn.addEventListener('click', () => formulaField.value = formulaField.value.slice(0,-1));
   formulaButtonsDiv.appendChild(backBtn);
 }
+
+// -------------------- Botons per redondeig --------------------
+function buildRoundingButtons(activities){
+  formulaButtonsDiv.innerHTML = ''; // netejar botons antics
+
+  activities.forEach(a => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
+    btn.textContent = a.nom;
+    btn.addEventListener('click', () => addToFormula('__ACT__' + a.id));
+    formulaButtonsDiv.appendChild(btn);
+  });
+
+  [0.5, 1].forEach(val => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
+    btn.textContent = val;
+    btn.addEventListener('click', () => addToFormula(val));
+    formulaButtonsDiv.appendChild(btn);
+  });
+}
+
