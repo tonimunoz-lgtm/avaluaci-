@@ -1760,17 +1760,20 @@ async function loadActivitiesForSelectedGrid(termId) {
 function buildFormulaButtonsForCalc(activities){
   formulaButtonsDiv.innerHTML = '';
 
-  // Botons activitats de la graella seleccionada
-  activities.forEach(a => {
-    const btn = document.createElement('button');
-    btn.type='button';
-    btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
-    btn.textContent = a.nom + ' (' + a.termName + ')'; // Diferenciar per nom graella
-    btn.addEventListener('click', ()=> addToFormula('__ACT__' + a.id)); 
-    formulaButtonsDiv.appendChild(btn);
+  // Botons activitats
+  classActivities.forEach(aid=>{
+    db.collection('activitats').doc(aid).get().then(doc=>{
+      const name = doc.exists ? doc.data().nom : '???';
+      const btn = document.createElement('button');
+      btn.type='button';
+      btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
+      btn.textContent = name;
+      btn.addEventListener('click', ()=> addToFormula(name));
+      formulaButtonsDiv.appendChild(btn);
+    });
   });
 
-  // Botons operadors, números, decimals, backspace igual que abans
+  // Botons operadors
   ['+', '-', '*', '/', '(', ')'].forEach(op=>{
     const btn = document.createElement('button');
     btn.type='button';
@@ -1780,6 +1783,7 @@ function buildFormulaButtonsForCalc(activities){
     formulaButtonsDiv.appendChild(btn);
   });
 
+  // Botons números 0-10
   for(let i=0;i<=10;i++){
     const btn = document.createElement('button');
     btn.type='button';
@@ -1789,15 +1793,17 @@ function buildFormulaButtonsForCalc(activities){
     formulaButtonsDiv.appendChild(btn);
   }
 
+  // Botons decimals
   ['.', ','].forEach(dec=>{
     const btn = document.createElement('button');
     btn.type='button';
     btn.className='px-2 py-1 m-1 bg-yellow-200 rounded hover:bg-yellow-300';
     btn.textContent = dec;
-    btn.addEventListener('click', ()=> addToFormula('.'));
+    btn.addEventListener('click', ()=> addToFormula('.')); // sempre converteix ',' a '.'
     formulaButtonsDiv.appendChild(btn);
   });
 
+  // Botó Backspace
   const backBtn = document.createElement('button');
   backBtn.type='button';
   backBtn.className='px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
@@ -1805,6 +1811,47 @@ function buildFormulaButtonsForCalc(activities){
   backBtn.addEventListener('click', ()=> formulaField.value = formulaField.value.slice(0,-1));
   formulaButtonsDiv.appendChild(backBtn);
 }
+
+// Afegir a formula
+function addToFormula(str){
+  formulaField.value += str;
+}
+
+function buildRoundingButtons(){
+  formulaButtonsDiv.innerHTML = '';
+
+  // Botons activitats
+  classActivities.forEach(aid=>{
+    db.collection('activitats').doc(aid).get().then(doc=>{
+      const name = doc.exists ? doc.data().nom : '???';
+      const btn = document.createElement('button');
+      btn.type='button';
+      btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
+      btn.textContent = name;
+      btn.addEventListener('click', ()=> addToFormula(name)); // el nom de l'activitat
+      formulaButtonsDiv.appendChild(btn);
+    });
+  });
+
+  // Botó Backspace
+  const backBtn = document.createElement('button');
+  backBtn.type='button';
+  backBtn.className='px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
+  backBtn.textContent = '⌫';
+  backBtn.addEventListener('click', ()=> formulaField.value = formulaField.value.slice(0,-1));
+  formulaButtonsDiv.appendChild(backBtn);
+
+  // Botons 0.5 i 1
+  [0.5,1].forEach(v=>{
+    const btn = document.createElement('button');
+    btn.type='button';
+    btn.className='px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
+    btn.textContent = v;
+    btn.addEventListener('click', ()=> addToFormula(v)); // afegim directament 0.5 o 1
+    formulaButtonsDiv.appendChild(btn);
+  });
+}
+
 
 document.getElementById('selectGridForCalc').addEventListener('change', e => {
   const selectedTermId = e.target.value;
