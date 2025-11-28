@@ -1729,14 +1729,17 @@ let currentCalcGridActivities = []; // global per la calculadora
 async function loadActivitiesForSelectedGrid(termId) {
   const allTerms = Terms.getAllTerms();
   const term = allTerms.find(t => t.id === termId);
+  
   if (!term) {
     currentCalcGridActivities = [];
   } else {
     const activitiesIds = term.activities || [];
-    currentCalcGridActivities = await Promise.all(activitiesIds.map(async aid => {
-      const doc = await db.collection('activitats').doc(aid).get();
-      return doc.exists ? { id: doc.id, nom: doc.data().nom } : null;
-    }));
+    currentCalcGridActivities = await Promise.all(
+      activitiesIds.map(async aid => {
+        const doc = await db.collection('activitats').doc(aid).get();
+        return doc.exists ? { id: doc.id, nom: doc.data().nom } : null;
+      })
+    );
     currentCalcGridActivities = currentCalcGridActivities.filter(a => a); // eliminar nulls
   }
 
@@ -1752,55 +1755,62 @@ async function loadActivitiesForSelectedGrid(termId) {
 
 // -------------------- Botons per fórmula --------------------
 function buildFormulaButtons(activities){
-  formulaButtonsDiv.innerHTML = ''; // netejar botons antics
+  const container = document.getElementById('activityButtonsDiv');
+  container.innerHTML = ''; // netejar només botons d'activitats/operadors
 
+  // Botons activitats de la graella seleccionada
   activities.forEach(a => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
-    btn.textContent = a.nom; 
+    btn.textContent = a.nom;
     btn.addEventListener('click', () => addToFormula('__ACT__' + a.id));
-    formulaButtonsDiv.appendChild(btn);
+    container.appendChild(btn);
   });
 
+  // Botons operadors
   ['+', '-', '*', '/', '(', ')'].forEach(op => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'px-2 py-1 m-1 bg-gray-200 rounded hover:bg-gray-300';
     btn.textContent = op;
     btn.addEventListener('click', () => addToFormula(op));
-    formulaButtonsDiv.appendChild(btn);
+    container.appendChild(btn);
   });
 
+  // Botons numèrics
   for (let i = 0; i <= 10; i++) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
     btn.textContent = i;
     btn.addEventListener('click', () => addToFormula(i));
-    formulaButtonsDiv.appendChild(btn);
+    container.appendChild(btn);
   }
 
+  // Botons decimals
   ['.', ','].forEach(dec => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'px-2 py-1 m-1 bg-yellow-200 rounded hover:bg-yellow-300';
     btn.textContent = dec;
     btn.addEventListener('click', () => addToFormula('.'));
-    formulaButtonsDiv.appendChild(btn);
+    container.appendChild(btn);
   });
 
+  // Botó backspace
   const backBtn = document.createElement('button');
   backBtn.type = 'button';
   backBtn.className = 'px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
   backBtn.textContent = '⌫';
   backBtn.addEventListener('click', () => formulaField.value = formulaField.value.slice(0,-1));
-  formulaButtonsDiv.appendChild(backBtn);
+  container.appendChild(backBtn);
 }
 
 // -------------------- Botons per redondeig --------------------
 function buildRoundingButtons(activities){
-  formulaButtonsDiv.innerHTML = ''; // netejar botons antics
+  const container = document.getElementById('activityButtonsDiv');
+  container.innerHTML = ''; // netejar només botons d'activitats
 
   activities.forEach(a => {
     const btn = document.createElement('button');
@@ -1808,7 +1818,7 @@ function buildRoundingButtons(activities){
     btn.className = 'px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
     btn.textContent = a.nom;
     btn.addEventListener('click', () => addToFormula('__ACT__' + a.id));
-    formulaButtonsDiv.appendChild(btn);
+    container.appendChild(btn);
   });
 
   [0.5, 1].forEach(val => {
@@ -1817,7 +1827,6 @@ function buildRoundingButtons(activities){
     btn.className = 'px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
     btn.textContent = val;
     btn.addEventListener('click', () => addToFormula(val));
-    formulaButtonsDiv.appendChild(btn);
+    container.appendChild(btn);
   });
 }
-
