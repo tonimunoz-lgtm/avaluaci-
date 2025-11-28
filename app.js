@@ -1688,15 +1688,15 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
 });
 
 //----------------funcio per carregar graelles al desplegable
-// -------------------- Desplegable de graelles --------------------
+// Funció per carregar el desplegable de graelles dins del modal de càlcul
 function populateGridDropdown() {
   const select = document.getElementById('selectGridForCalc');
   select.innerHTML = '';
 
-  const terms = Terms.getAllTerms(); // array {id, name, activities}
-  console.log('Terms:', terms);
+  const terms = Terms.getAllTerms(); // ara retorna array d'objectes {id, name}
+  console.log('Terms:', terms);      // comprovar que realment hi ha dades
 
-  if (!terms.length) {
+  if (terms.length === 0) {
     const opt = document.createElement('option');
     opt.textContent = 'No hi ha graelles disponibles';
     opt.disabled = true;
@@ -1711,17 +1711,18 @@ function populateGridDropdown() {
     select.appendChild(option);
   });
 
-  // Seleccionar el primer terme per defecte
+  // Seleccionar el primer per defecte
   select.value = terms[0].id;
 
-  // Carregar activitats del primer terme
-  loadActivitiesForSelectedGrid(select.value);
-
-  // Quan canvii la selecció
+  // Quan canviï la selecció, actualitzar activitats de la calculadora
   select.addEventListener('change', () => {
     loadActivitiesForSelectedGrid(select.value);
   });
+
+  // Carregar activitats inicials del primer terme
+  loadActivitiesForSelectedGrid(select.value);
 }
+
 //-----------funcio per carregar activitats a la graella
 let currentCalcGridActivities = []; // global per la calculadora
 
