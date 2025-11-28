@@ -1089,6 +1089,14 @@ function renderAverages(){
 function openCalcModal(activityId){
   currentCalcActivityId = activityId; 
   openModal('modalCalc');
+
+// ------------------- NOU: omplir desplegable de graelles -------------------
+  populateGridDropdown(); 
+  // Opcional: carregar activitats de la graella seleccionada inicialment
+  const selectedTermId = document.getElementById('selectGridForCalc').value;
+  loadActivitiesForSelectedGrid(selectedTermId);
+  // ------------------
+  
   // Reset modal
   document.getElementById('calcType').value = 'numeric';
   document.getElementById('formulaInputs').classList.add('hidden');
@@ -1683,3 +1691,92 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
 
   termMenu.classList.add('hidden');
 });
+
+//----------------funcio per carregar graelles al desplegable
+async function populateGridDropdown(){
+  const select = document.getElementById('selectGridForCalc');
+  select.innerHTML = ''; // netejar opcions
+
+  // Suposo que tens Terms.js amb funcions com getTerms()
+  const terms = await Terms.getAllTerms(); // Retorna array {id, name}
+
+  terms.forEach(term => {
+    const option = document.createElement('option');
+    option.value = term.id;
+    option.textContent = term.name;
+    select.appendChild(option);
+  });
+}
+
+//-----------funcio per carregar activitats a la graella
+async function loadActivitiesForSelectedGrid(termId){
+  if(!termId) return;
+
+  // Recupera activitats de la graella seleccionada
+  const termDoc = await Terms.getTermDoc(termId); // Retorna document amb activitats
+  if(!termDoc) return;
+
+  const activities = termDoc.activities || [];
+
+  // Assignar a variable global temporal, només per la calculadora
+  currentCalcGridActivities = activities;
+
+  // Recontruir botons de la calculadora amb aquestes activitats
+  buildFormulaButtonsForCalc(activities);
+}
+
+//------------crea nova versio de la calculadora---------
+function buildFormulaButtonsForCalc(activities){
+  formulaButtonsDiv.innerHTML = '';
+
+  // Botons activitats de la graella seleccionada
+  activities.forEach(a => {
+    const btn = document.createElement('button');
+    btn.type='button';
+    btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
+    btn.textContent = a.nom + ' (' + a.termName + ')'; // Diferenciar per nom graella
+    btn.addEventListener('click', ()=> addToFormula('__ACT__' + a.id)); 
+    formulaButtonsDiv.appendChild(btn);
+  });
+
+  // Botons operadors, números, decimals, backspace igual que abans
+  ['+', '-', '*', '/', '(', ')'].forEach(op=>{
+    const btn = document.createElement('button');
+    btn.type='button';
+    btn.className='px-2 py-1 m-1 bg-gray-200 rounded hover:bg-gray-300';
+    btn.textContent = op;
+    btn.addEventListener('click', ()=> addToFormula(op));
+    formulaButtonsDiv.appendChild(btn);
+  });
+
+  for(let i=0;i<=10;i++){
+    const btn = document.createElement('button');
+    btn.type='button';
+    btn.className='px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
+    btn.textContent = i;
+    btn.addEventListener('click', ()=> addToFormula(i));
+    formulaButtonsDiv.appendChild(btn);
+  }
+
+  ['.', ','].forEach(dec=>{
+    const btn = document.createElement('button');
+    btn.type='button';
+    btn.className='px-2 py-1 m-1 bg-yellow-200 rounded hover:bg-yellow-300';
+    btn.textContent = dec;
+    btn.addEventListener('click', ()=> addToFormula('.'));
+    formulaButtonsDiv.appendChild(btn);
+  });
+
+  const backBtn = document.createElement('button');
+  backBtn.type='button';
+  backBtn.className='px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
+  backBtn.textContent = '⌫';
+  backBtn.addEventListener('click', ()=> formulaField.value = formulaField.value.slice(0,-1));
+  formulaButtonsDiv.appendChild(backBtn);
+}
+
+document.getElementById('selectGridForCalc').addEventListener('change', e => {
+  const selectedTermId = e.target.value;
+  loadActivitiesForSelectedGrid(selectedTermId);
+});
+
