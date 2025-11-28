@@ -1089,16 +1089,12 @@ function renderAverages(){
 function openCalcModal(activityId){
   currentCalcActivityId = activityId; 
   openModal('modalCalc');
-  
   // Reset modal
   document.getElementById('calcType').value = 'numeric';
   document.getElementById('formulaInputs').classList.add('hidden');
   document.getElementById('numericInput').classList.remove('hidden');
   document.getElementById('numericField').value = '';
   document.getElementById('formulaField').value = '';
-
-    // ✅ Carregar desplegable de graelles
-  populateGridDropdown();
 }
 /* ---------------- Modal Calcul: Numeric / Formula ---------------- */
 const calcTypeSelect = document.getElementById('calcType');
@@ -1354,30 +1350,31 @@ function buildRoundingButtons(){
 }
 
 
-// ---------------- Evaluar fórmula (modificat per graelles) ----------------
+// ---------------- Evaluar fórmula ----------------
 async function evalFormulaAsync(formula, studentId){
   let evalStr = formula;
 
-  // Carregar notes de l'alumne
+  // Primer carreguem totes les notes de l'alumne
   const studentDoc = await db.collection('alumnes').doc(studentId).get();
   const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
 
-  // 1) Substituir marcadors per ID (__ACT__<actId>) només de la graella seleccionada
-  const activities = currentCalcGridActivities || [];
-  for(const a of activities){
-    const marker = '__ACT__' + a.id;
-    const val = Number(notes[a.id]);
+  // 1) Substituir marcadors per ID (ex: __ACT__<actId>)
+  for(const aid of classActivities){
+    const marker = `__ACT__${aid}`;
+    const val = Number(notes[aid]);
     const safeVal = isNaN(val) ? 0 : val;
     const reMarker = new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
     evalStr = evalStr.replace(reMarker, safeVal);
   }
 
   // 2) Substituir noms d'activitat per valors (compatibilitat amb fórmules antigues)
-  for(const a of activities){
-    const actName = a.nom; // nom de l'activitat
+  for(const aid of classActivities){
+    const actDoc = await db.collection('activitats').doc(aid).get();
+    const actName = actDoc.exists ? actDoc.data().nom : '';
     if(!actName) continue;
-    const val = Number(notes[a.id]);
+    const val = Number(notes[aid]);
     const safeVal = isNaN(val) ? 0 : val;
+
     const regex = new RegExp(actName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
     evalStr = evalStr.replace(regex, safeVal);
   }
@@ -1686,158 +1683,3 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
 
   termMenu.classList.add('hidden');
 });
-
-// -------------------- Obtenir divs --------------------
-const formulaButtonsDiv = document.getElementById('formulaButtonsDiv');
-const roundingButtonsDiv = document.getElementById('roundingButtonsDiv');
-// Funció per carregar el desplegable de graelles dins del modal de càlcul
-function populateGridDropdown() {
-  const select = document.getElementById('selectGridForCalc');
-  select.innerHTML = '';
-
-  const terms = Terms.getAllTerms(); // ara retorna array d'objectes {id, name}
-  console.log('Terms:', terms);      // comprovar que realment hi ha dades
-
-  if (terms.length === 0) {
-    const opt = document.createElement('option');
-    opt.textContent = 'No hi ha graelles disponibles';
-    opt.disabled = true;
-    select.appendChild(opt);
-    return;
-  }
-
-  terms.forEach(term => {
-    const option = document.createElement('option');
-    option.value = term.id;
-    option.textContent = term.name;
-    select.appendChild(option);
-  });
-
-  // Seleccionar el primer per defecte
-  select.value = terms[0].id;
-
-  // Quan canviï la selecció, actualitzar activitats de la calculadora
-  select.addEventListener('change', () => {
-    loadActivitiesForSelectedGrid(select.value);
-  });
-
-  // Carregar activitats inicials del primer terme
-  loadActivitiesForSelectedGrid(select.value);
-}
-
-
-//-----------funcio per carregar activitats a la graella
-let currentCalcGridActivities = []; // global per la calculadora
-
-async function loadActivitiesForSelectedGrid(termId) {
-  // Obtenir activitats del terme
-  const allTerms = Terms.getAllTerms();
-  const term = allTerms.find(t => t.id === termId);
-  if (!term) {
-    currentCalcGridActivities = [];
-    return;
-  }
-
-  // Obtenim llistat d'IDs d'activitats
-  const activitiesIds = Terms.getActiveTermId() === termId 
-      ? Terms.getActiveTermActivities() 
-      : Object.values(Terms.getAllTerms()).find(t => t.id === termId)?.activities || [];
-
-  // Convertim a objectes {id, nom}
-  currentCalcGridActivities = await Promise.all(activitiesIds.map(async aid => {
-    const doc = await db.collection('activitats').doc(aid).get();
-    return doc.exists ? { id: doc.id, nom: doc.data().nom } : null;
-  }));
-
-  // Eliminar nulls (activitats esborrades)
-  currentCalcGridActivities = currentCalcGridActivities.filter(a => a);
-
-  // Actualitzar botons / camp de fórmula
-  buildFormulaButtonsForCalc(currentCalcGridActivities);
-  buildRoundingButtonsForCalc(currentCalcGridActivities);
-}
-
-
-//------------crea nova versio de la calculadora---------
-function buildFormulaButtonsForCalc(activities){
-  formulaButtonsDiv.innerHTML = '';
-
-  // Botons activitats de la graella seleccionada
-  activities.forEach(a => {
-    const btn = document.createElement('button');
-    btn.type='button';
-    btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
-    btn.textContent = a.nom + ' (' + a.termName + ')'; // Diferenciar per nom graella
-    btn.addEventListener('click', ()=> addToFormula('__ACT__' + a.id)); 
-    formulaButtonsDiv.appendChild(btn);
-  });
-
-  // Botons operadors, números, decimals, backspace igual que abans
-  ['+', '-', '*', '/', '(', ')'].forEach(op=>{
-    const btn = document.createElement('button');
-    btn.type='button';
-    btn.className='px-2 py-1 m-1 bg-gray-200 rounded hover:bg-gray-300';
-    btn.textContent = op;
-    btn.addEventListener('click', ()=> addToFormula(op));
-    formulaButtonsDiv.appendChild(btn);
-  });
-
-  for(let i=0;i<=10;i++){
-    const btn = document.createElement('button');
-    btn.type='button';
-    btn.className='px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
-    btn.textContent = i;
-    btn.addEventListener('click', ()=> addToFormula(i));
-    formulaButtonsDiv.appendChild(btn);
-  }
-
-  ['.', ','].forEach(dec=>{
-    const btn = document.createElement('button');
-    btn.type='button';
-    btn.className='px-2 py-1 m-1 bg-yellow-200 rounded hover:bg-yellow-300';
-    btn.textContent = dec;
-    btn.addEventListener('click', ()=> addToFormula('.'));
-    formulaButtonsDiv.appendChild(btn);
-  });
-
-  const backBtn = document.createElement('button');
-  backBtn.type='button';
-  backBtn.className='px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
-  backBtn.textContent = '⌫';
-  backBtn.addEventListener('click', ()=> formulaField.value = formulaField.value.slice(0,-1));
-  formulaButtonsDiv.appendChild(backBtn);
-}
-
-// -------------------- Botons per redondeig (versió segura) --------------------
-function buildRoundingButtonsForCalc(activities){
-  const container = document.getElementById('activityButtonsDiv');
-  container.innerHTML = ''; // netejar només botons d'activitats de redondeig
-
-  // Botons activitats
-  activities.forEach(a => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
-    btn.textContent = a.nom;
-    btn.addEventListener('click', () => addToFormula('__ACT__' + a.id));
-    container.appendChild(btn);
-  });
-
-  // Botons valors per redondeig
-  [0.5, 1].forEach(val => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
-    btn.textContent = val;
-    btn.addEventListener('click', () => addToFormula(val));
-    container.appendChild(btn);
-  });
-
-  // Botó Backspace
-  const backBtn = document.createElement('button');
-  backBtn.type='button';
-  backBtn.className='px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
-  backBtn.textContent = '⌫';
-  backBtn.addEventListener('click', ()=> formulaField.value = formulaField.value.slice(0,-1));
-  container.appendChild(backBtn);
-}
