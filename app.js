@@ -1089,13 +1089,6 @@ function renderAverages(){
 function openCalcModal(activityId){
   currentCalcActivityId = activityId; 
   openModal('modalCalc');
-
-// ------------------- NOU: omplir desplegable de graelles -------------------
-  populateGridDropdown(); 
-  // Opcional: carregar activitats de la graella seleccionada inicialment
-  const selectedTermId = document.getElementById('selectGridForCalc').value;
-  loadActivitiesForSelectedGrid(selectedTermId);
-  // ------------------
   
   // Reset modal
   document.getElementById('calcType').value = 'numeric';
@@ -1103,6 +1096,9 @@ function openCalcModal(activityId){
   document.getElementById('numericInput').classList.remove('hidden');
   document.getElementById('numericField').value = '';
   document.getElementById('formulaField').value = '';
+
+    // ✅ Carregar desplegable de graelles
+  populateGridDropdown();
 }
 /* ---------------- Modal Calcul: Numeric / Formula ---------------- */
 const calcTypeSelect = document.getElementById('calcType');
@@ -1692,12 +1688,21 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
 });
 
 //----------------funcio per carregar graelles al desplegable
-async function populateGridDropdown(){
+// Funció per carregar el desplegable de graelles dins del modal de càlcul
+function populateGridDropdown() {
   const select = document.getElementById('selectGridForCalc');
-  select.innerHTML = ''; // netejar opcions
+  select.innerHTML = '';
 
-  // Suposo que tens Terms.js amb funcions com getTerms()
-  const terms = await Terms.getAllTerms(); // Retorna array {id, name}
+  const terms = Terms.getAllTerms(); // ara retorna array d'objectes {id, name}
+  console.log('Terms:', terms);      // comprovar que realment hi ha dades
+
+  if (terms.length === 0) {
+    const opt = document.createElement('option');
+    opt.textContent = 'No hi ha graelles disponibles';
+    opt.disabled = true;
+    select.appendChild(opt);
+    return;
+  }
 
   terms.forEach(term => {
     const option = document.createElement('option');
@@ -1705,24 +1710,51 @@ async function populateGridDropdown(){
     option.textContent = term.name;
     select.appendChild(option);
   });
+
+  // Seleccionar el primer per defecte
+  select.value = terms[0].id;
+
+  // Quan canviï la selecció, actualitzar activitats de la calculadora
+  select.addEventListener('change', () => {
+    loadActivitiesForSelectedGrid(select.value);
+  });
+
+  // Carregar activitats inicials del primer terme
+  loadActivitiesForSelectedGrid(select.value);
 }
+
 
 //-----------funcio per carregar activitats a la graella
-async function loadActivitiesForSelectedGrid(termId){
-  if(!termId) return;
+let currentCalcGridActivities = []; // global per la calculadora
 
-  // Recupera activitats de la graella seleccionada
-  const termDoc = await Terms.getTermDoc(termId); // Retorna document amb activitats
-  if(!termDoc) return;
+async function loadActivitiesForSelectedGrid(termId) {
+  // Obtenir activitats del terme
+  const allTerms = Terms.getAllTerms();
+  const term = allTerms.find(t => t.id === termId);
+  if (!term) {
+    currentCalcGridActivities = [];
+    return;
+  }
 
-  const activities = termDoc.activities || [];
+  // Obtenim llistat d'IDs d'activitats
+  const activitiesIds = Terms.getActiveTermId() === termId 
+      ? Terms.getActiveTermActivities() 
+      : Object.values(Terms.getAllTerms()).find(t => t.id === termId)?.activities || [];
 
-  // Assignar a variable global temporal, només per la calculadora
-  currentCalcGridActivities = activities;
+  // Convertim a objectes {id, nom}
+  currentCalcGridActivities = await Promise.all(activitiesIds.map(async aid => {
+    const doc = await db.collection('activitats').doc(aid).get();
+    return doc.exists ? { id: doc.id, nom: doc.data().nom } : null;
+  }));
 
-  // Recontruir botons de la calculadora amb aquestes activitats
-  buildFormulaButtonsForCalc(activities);
+  // Eliminar nulls (activitats esborrades)
+  currentCalcGridActivities = currentCalcGridActivities.filter(a => a);
+
+  // Actualitzar botons / camp de fórmula
+  buildFormulaButtons(currentCalcGridActivities);
+  buildRoundingButtons(currentCalcGridActivities);
 }
+
 
 //------------crea nova versio de la calculadora---------
 function buildFormulaButtonsForCalc(activities){
