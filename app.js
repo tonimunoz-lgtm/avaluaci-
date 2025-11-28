@@ -1694,7 +1694,7 @@ function populateGridDropdown() {
   select.innerHTML = ''; // netegem opcions antigues
 
   const terms = Terms.getAllTerms(); // retorna array {id, name}
-  console.log('Terms:', terms); // només per depuració
+  console.log('Terms:', terms); // depuració
 
   if (!terms || terms.length === 0) {
     const opt = document.createElement('option');
@@ -1724,48 +1724,50 @@ function populateGridDropdown() {
   loadActivitiesForSelectedGrid(select.value);
 }
 
-
 // ---------------------- Load Activities for Selected Grid ----------------------
 let currentCalcGridActivities = []; // global per la calculadora
 
 async function loadActivitiesForSelectedGrid(termId) {
   const allTerms = Terms.getAllTerms();
   const term = allTerms.find(t => t.id === termId);
-  
+
   if (!term) {
     currentCalcGridActivities = [];
-    buildFormulaButtonsForCalc([]);
-    buildRoundingButtons([]); // si tens funció per redondeig
+    buildFormulaButtonsForCalc([]); // neteja botons antics
+    buildRoundingButtons([]);       // idem per redondeig
     return;
   }
 
+  // Neteja abans d’afegir nous
+  currentCalcGridActivities = [];
+
+  // Obtenir activitats del terme (IDs exactes)
   const activityIds = term.activities || [];
 
-  currentCalcGridActivities = await Promise.all(
+  // Convertir a objectes {id, nom} amb les mateixes IDs que ja reconeix la calculadora
+  const activities = await Promise.all(
     activityIds.map(async aid => {
       const doc = await db.collection('activitats').doc(aid).get();
       return doc.exists ? { id: doc.id, nom: doc.data().nom } : null;
     })
   );
 
-  currentCalcGridActivities = currentCalcGridActivities.filter(a => a);
+  currentCalcGridActivities = activities.filter(a => a);
 
-  // Netejar i reconstruir els botons de la calculadora
+  // Actualitzar botons de la calculadora sense duplicats
   buildFormulaButtonsForCalc(currentCalcGridActivities);
   buildRoundingButtons(currentCalcGridActivities);
 }
 
-
 // ---------------------- Build Formula Buttons ----------------------
 function buildFormulaButtonsForCalc(activities) {
-  formulaButtonsDiv.innerHTML = ''; // netegem els botons antics
+  formulaButtonsDiv.innerHTML = ''; // netegem botons antics
 
-  // Botons activitats
   activities.forEach(a => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
-    btn.textContent = a.nom; // només nom de l'activitat
+    btn.textContent = a.nom;
     btn.addEventListener('click', () => addToFormula('__ACT__' + a.id));
     formulaButtonsDiv.appendChild(btn);
   });
