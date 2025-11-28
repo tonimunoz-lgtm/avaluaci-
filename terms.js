@@ -197,14 +197,5 @@ export async function deleteTerm(termId) {
   if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
 }
 
-// ------------------------ Obtenir tots els termes ------------------------
-export function getAllTerms() {
-  if (!_classData?.terms) return [];
-  return Object.entries(_classData.terms).map(([id, data]) => ({
-    id,
-    name: data.name || id
-  }));
-}
-
 // ------------------------ Export mínim ------------------------
 export function getActiveTerm() { return _activeTermId; }
