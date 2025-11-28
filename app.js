@@ -1688,15 +1688,15 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
 });
 
 //----------------funcio per carregar graelles al desplegable
-// Funció per carregar el desplegable de graelles dins del modal de càlcul
+// -------------------- Desplegable de graelles --------------------
 function populateGridDropdown() {
   const select = document.getElementById('selectGridForCalc');
   select.innerHTML = '';
 
-  const terms = Terms.getAllTerms(); // ara retorna array d'objectes {id, name}
-  console.log('Terms:', terms);      // comprovar que realment hi ha dades
+  const terms = Terms.getAllTerms(); // array {id, name, activities}
+  console.log('Terms:', terms);
 
-  if (terms.length === 0) {
+  if (!terms.length) {
     const opt = document.createElement('option');
     opt.textContent = 'No hi ha graelles disponibles';
     opt.disabled = true;
@@ -1711,69 +1711,64 @@ function populateGridDropdown() {
     select.appendChild(option);
   });
 
-  // Seleccionar el primer per defecte
+  // Seleccionar el primer terme per defecte
   select.value = terms[0].id;
 
-  // Quan canviï la selecció, actualitzar activitats de la calculadora
+  // Carregar activitats del primer terme
+  loadActivitiesForSelectedGrid(select.value);
+
+  // Quan canviï la selecció
   select.addEventListener('change', () => {
     loadActivitiesForSelectedGrid(select.value);
   });
-
-  // Carregar activitats inicials del primer terme
-  loadActivitiesForSelectedGrid(select.value);
 }
 
-
-//-----------funcio per carregar activitats a la graella
+// -------------------- Activitats de la graella --------------------
 let currentCalcGridActivities = []; // global per la calculadora
 
 async function loadActivitiesForSelectedGrid(termId) {
-  // Obtenir activitats del terme
   const allTerms = Terms.getAllTerms();
   const term = allTerms.find(t => t.id === termId);
+
   if (!term) {
     currentCalcGridActivities = [];
-    return;
+  } else {
+    const activitiesIds = term.activities || [];
+
+    currentCalcGridActivities = await Promise.all(activitiesIds.map(async aid => {
+      const doc = await db.collection('activitats').doc(aid).get();
+      return doc.exists ? { id: doc.id, nom: doc.data().nom } : null;
+    }));
+
+    currentCalcGridActivities = currentCalcGridActivities.filter(a => a); // eliminar nulls
   }
 
-  // Obtenim llistat d'IDs d'activitats
-  const activitiesIds = Terms.getActiveTermId() === termId 
-      ? Terms.getActiveTermActivities() 
-      : Object.values(Terms.getAllTerms()).find(t => t.id === termId)?.activities || [];
-
-  // Convertim a objectes {id, nom}
-  currentCalcGridActivities = await Promise.all(activitiesIds.map(async aid => {
-    const doc = await db.collection('activitats').doc(aid).get();
-    return doc.exists ? { id: doc.id, nom: doc.data().nom } : null;
-  }));
-
-  // Eliminar nulls (activitats esborrades)
-  currentCalcGridActivities = currentCalcGridActivities.filter(a => a);
-
-  // Actualitzar botons / camp de fórmula
-  buildFormulaButtons(currentCalcGridActivities);
-  buildRoundingButtons(currentCalcGridActivities);
-}
-
-
-//------------crea nova versio de la calculadora---------
-function buildFormulaButtonsForCalc(activities){
+  // ------------------- Netejar només botons antics abans de construir els nous -------------------
   formulaButtonsDiv.innerHTML = '';
 
-  // Botons activitats
-  classActivities.forEach(aid=>{
-    db.collection('activitats').doc(aid).get().then(doc=>{
-      const name = doc.exists ? doc.data().nom : '???';
-      const btn = document.createElement('button');
-      btn.type='button';
-      btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
-      btn.textContent = name;
-      btn.addEventListener('click', ()=> addToFormula(name));
-      formulaButtonsDiv.appendChild(btn);
-    });
+  // ------------------- Construir només el tipus de calculadora actual -------------------
+  const calcType = document.getElementById('calcType').value;
+  if (calcType === 'formula') {
+    buildFormulaButtonsForCalc(currentCalcGridActivities);  // Només fórmules
+  } else if (calcType === 'rounding') {
+    buildRoundingButtons(currentCalcGridActivities); // Només redondeig
+  }
+  // No fem res més, no toquem res de fórmules ni botó logging
+}
+
+// -------------------- Botons per fórmula --------------------
+function buildFormulaButtonsForCalc(activities){
+  formulaButtonsDiv.innerHTML = ''; // netejar botons antics
+
+  activities.forEach(a => {
+    const btn = document.createElement('button');
+    btn.type='button';
+    btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
+    btn.textContent = a.nom; 
+    btn.addEventListener('click', ()=> addToFormula('__ACT__' + a.id)); 
+    formulaButtonsDiv.appendChild(btn);
   });
 
-  // Botons operadors
   ['+', '-', '*', '/', '(', ')'].forEach(op=>{
     const btn = document.createElement('button');
     btn.type='button';
@@ -1783,7 +1778,6 @@ function buildFormulaButtonsForCalc(activities){
     formulaButtonsDiv.appendChild(btn);
   });
 
-  // Botons números 0-10
   for(let i=0;i<=10;i++){
     const btn = document.createElement('button');
     btn.type='button';
@@ -1793,17 +1787,15 @@ function buildFormulaButtonsForCalc(activities){
     formulaButtonsDiv.appendChild(btn);
   }
 
-  // Botons decimals
   ['.', ','].forEach(dec=>{
     const btn = document.createElement('button');
     btn.type='button';
     btn.className='px-2 py-1 m-1 bg-yellow-200 rounded hover:bg-yellow-300';
     btn.textContent = dec;
-    btn.addEventListener('click', ()=> addToFormula('.')); // sempre converteix ',' a '.'
+    btn.addEventListener('click', ()=> addToFormula('.'));
     formulaButtonsDiv.appendChild(btn);
   });
 
-  // Botó Backspace
   const backBtn = document.createElement('button');
   backBtn.type='button';
   backBtn.className='px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
@@ -1812,43 +1804,36 @@ function buildFormulaButtonsForCalc(activities){
   formulaButtonsDiv.appendChild(backBtn);
 }
 
+// -------------------- Botons per redondeig (versió nova) --------------------
 function buildRoundingButtonsForCalc(activities){
-  formulaButtonsDiv.innerHTML = '';
+  const container = document.getElementById('activityButtonsDiv');
+  container.innerHTML = ''; // netejar només activitats
 
-  // Botons activitats
-  classActivities.forEach(aid=>{
-    db.collection('activitats').doc(aid).get().then(doc=>{
-      const name = doc.exists ? doc.data().nom : '???';
-      const btn = document.createElement('button');
-      btn.type='button';
-      btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
-      btn.textContent = name;
-      btn.addEventListener('click', ()=> addToFormula(name)); // el nom de l'activitat
-      formulaButtonsDiv.appendChild(btn);
-    });
+  // Botons activitats de la graella seleccionada
+  activities.forEach(a => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
+    btn.textContent = a.nom;
+    btn.addEventListener('click', () => addToFormula('__ACT__' + a.id));
+    container.appendChild(btn);
   });
 
-  // Botó Backspace
+  // Botons valors per redondeig
+  [0.5, 1].forEach(val => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
+    btn.textContent = val;
+    btn.addEventListener('click', () => addToFormula(val));
+    container.appendChild(btn);
+  });
+
+  // -------------------- Botó Backspace --------------------
   const backBtn = document.createElement('button');
   backBtn.type='button';
   backBtn.className='px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
   backBtn.textContent = '⌫';
   backBtn.addEventListener('click', ()=> formulaField.value = formulaField.value.slice(0,-1));
-  formulaButtonsDiv.appendChild(backBtn);
-
-  // Botons 0.5 i 1
-  [0.5,1].forEach(v=>{
-    const btn = document.createElement('button');
-    btn.type='button';
-    btn.className='px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
-    btn.textContent = v;
-    btn.addEventListener('click', ()=> addToFormula(v)); // afegim directament 0.5 o 1
-    formulaButtonsDiv.appendChild(btn);
-  });
+  container.appendChild(backBtn);
 }
-
-
-document.getElementById('selectGridForCalc').addEventListener('change', e => {
-  const selectedTermId = e.target.value;
-  loadActivitiesForSelectedGrid(selectedTermId);
-});
