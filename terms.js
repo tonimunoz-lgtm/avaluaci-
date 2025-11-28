@@ -9,6 +9,8 @@ let _onChangeCallback = null;
 let _copiedGridStructure = null; // guardar estructura d'activitats temporalment
 
 
+
+
 // Generar un ID únic per terme
 function makeTermId(name) {
   return `term_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
@@ -208,41 +210,15 @@ export function copyGridStructure(termId) {
 }
 
 // ------------------------ Enganxar estructura ------------------------
-export async function pasteGridStructure(termId) {
-  if (!termId || !copiedStructure) return;
+// Enganxar estructura
+termMenu.querySelector('.paste-structure-btn').addEventListener('click', async () => {
+  const currentTermId = Terms.getActiveTermId();
+  if (!currentTermId) return;
 
-  const newActivityIds = [];
-
-  for (const actId of copiedStructure) {
-    // 1. Carregar activitat original
-    const doc = await _db.collection('activitats').doc(actId).get();
-    if (!doc.exists) continue;
-
-    const data = doc.data();
-
-    // 2. Crear nova activitat duplicada
-    const newActRef = await _db.collection('activitats').add({
-      ...data,
-      originalCloneOf: actId,         // opcional: rastrejar d'on ve
-      createdAt: Date.now()
-    });
-
-    newActivityIds.push(newActRef.id);
-  }
-
-  // 3. Associar els nous IDs a la graella
-  const path = `terms.${termId}.activities`;
-  await _db.collection('classes').doc(_currentClassId).update({
-    [path]: newActivityIds
-  });
-
-  // 4. Refrescar dades internes i UI
-  const doc = await _db.collection('classes').doc(_currentClassId).get();
-  _classData = doc.exists ? doc.data() : _classData;
-
-  if (_onChangeCallback) _onChangeCallback(termId);
-}
-
+  await Terms.pasteGridStructure(currentTermId);
+  alert('Estructura enganxada a la graella!');
+  termMenu.classList.add('hidden');
+});
 
 
 // ------------------------ Export mínim ------------------------
