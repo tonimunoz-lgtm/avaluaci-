@@ -1805,8 +1805,3 @@ function buildFormulaButtonsForCalc(activities){
   backBtn.addEventListener('click', ()=> formulaField.value = formulaField.value.slice(0,-1));
   formulaButtonsDiv.appendChild(backBtn);
 }
-
-document.getElementById('selectGridForCalc').addEventListener('change', e => {
-  const selectedTermId = e.target.value;
-  loadActivitiesForSelectedGrid(selectedTermId);
-});
