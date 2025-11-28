@@ -1728,32 +1728,37 @@ function populateGridDropdown() {
 let currentCalcGridActivities = []; // global per la calculadora
 
 async function loadActivitiesForSelectedGrid(termId) {
-  // Obtenir activitats del terme
   const allTerms = Terms.getAllTerms();
   const term = allTerms.find(t => t.id === termId);
+
   if (!term) {
     currentCalcGridActivities = [];
-    return;
+  } else {
+    const activitiesIds = Terms.getActiveTermId() === termId 
+        ? Terms.getActiveTermActivities() 
+        : term.activities || [];
+
+    currentCalcGridActivities = await Promise.all(activitiesIds.map(async aid => {
+      const doc = await db.collection('activitats').doc(aid).get();
+      return doc.exists ? { id: doc.id, nom: doc.data().nom } : null;
+    }));
+
+    currentCalcGridActivities = currentCalcGridActivities.filter(a => a); // eliminar nulls
   }
 
-  // Obtenim llistat d'IDs d'activitats
-  const activitiesIds = Terms.getActiveTermId() === termId 
-      ? Terms.getActiveTermActivities() 
-      : Object.values(Terms.getAllTerms()).find(t => t.id === termId)?.activities || [];
+  // ------------------- Netejar botons antics abans de construir els nous -------------------
+  formulaButtonsDiv.innerHTML = '';
 
-  // Convertim a objectes {id, nom}
-  currentCalcGridActivities = await Promise.all(activitiesIds.map(async aid => {
-    const doc = await db.collection('activitats').doc(aid).get();
-    return doc.exists ? { id: doc.id, nom: doc.data().nom } : null;
-  }));
-
-  // Eliminar nulls (activitats esborrades)
-  currentCalcGridActivities = currentCalcGridActivities.filter(a => a);
-
-  // Actualitzar botons / camp de fórmula
-  buildFormulaButtons(currentCalcGridActivities);
-  buildRoundingButtons(currentCalcGridActivities);
+  // ------------------- Construir només el tipus de calculadora actual -------------------
+  const calcType = document.getElementById('calcType').value;
+  if (calcType === 'formula') {
+    buildFormulaButtons(currentCalcGridActivities);  // només fórmules
+  } else if (calcType === 'rounding') {
+    buildRoundingButtons(currentCalcGridActivities); // només redondeig
+  }
+  // No fem res més, no toquem res de fórmules ni botó logging
 }
+
 
 
 //------------crea nova versio de la calculadora---------
