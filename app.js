@@ -1812,12 +1812,7 @@ function buildFormulaButtonsForCalc(activities){
   formulaButtonsDiv.appendChild(backBtn);
 }
 
-// Afegir a formula
-function addToFormula(str){
-  formulaField.value += str;
-}
-
-function buildRoundingButtons(){
+function buildRoundingButtons(activities){
   formulaButtonsDiv.innerHTML = '';
 
   // Botons activitats
