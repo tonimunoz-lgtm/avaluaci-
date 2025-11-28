@@ -1688,15 +1688,15 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
 });
 
 //----------------funcio per carregar graelles al desplegable
-// Funció per carregar el desplegable de graelles dins del modal de càlcul
+// ---------------------- Populate Grid Dropdown ----------------------
 function populateGridDropdown() {
   const select = document.getElementById('selectGridForCalc');
-  select.innerHTML = '';
+  select.innerHTML = ''; // netegem opcions antigues
 
-  const terms = Terms.getAllTerms(); // ara retorna array d'objectes {id, name}
-  console.log('Terms:', terms);      // comprovar que realment hi ha dades
+  const terms = Terms.getAllTerms(); // retorna array {id, name}
+  console.log('Terms:', terms); // només per depuració
 
-  if (terms.length === 0) {
+  if (!terms || terms.length === 0) {
     const opt = document.createElement('option');
     opt.textContent = 'No hi ha graelles disponibles';
     opt.disabled = true;
@@ -1704,6 +1704,7 @@ function populateGridDropdown() {
     return;
   }
 
+  // Afegim les opcions
   terms.forEach(term => {
     const option = document.createElement('option');
     option.value = term.id;
@@ -1711,7 +1712,7 @@ function populateGridDropdown() {
     select.appendChild(option);
   });
 
-  // Seleccionar el primer per defecte
+  // Seleccionar primer terme per defecte
   select.value = terms[0].id;
 
   // Quan canviï la selecció, actualitzar activitats de la calculadora
@@ -1724,84 +1725,88 @@ function populateGridDropdown() {
 }
 
 
-//-----------funcio per carregar activitats a la graella
+// ---------------------- Load Activities for Selected Grid ----------------------
 let currentCalcGridActivities = []; // global per la calculadora
 
 async function loadActivitiesForSelectedGrid(termId) {
-  // Obtenir activitats del terme
   const allTerms = Terms.getAllTerms();
   const term = allTerms.find(t => t.id === termId);
+  
   if (!term) {
     currentCalcGridActivities = [];
+    buildFormulaButtonsForCalc([]);
+    buildRoundingButtons([]); // si tens funció per redondeig
     return;
   }
 
-  // Obtenim llistat d'IDs d'activitats
-  const activitiesIds = Terms.getActiveTermId() === termId 
-      ? Terms.getActiveTermActivities() 
-      : Object.values(Terms.getAllTerms()).find(t => t.id === termId)?.activities || [];
+  const activityIds = term.activities || [];
 
-  // Convertim a objectes {id, nom}
-  currentCalcGridActivities = await Promise.all(activitiesIds.map(async aid => {
-    const doc = await db.collection('activitats').doc(aid).get();
-    return doc.exists ? { id: doc.id, nom: doc.data().nom } : null;
-  }));
+  currentCalcGridActivities = await Promise.all(
+    activityIds.map(async aid => {
+      const doc = await db.collection('activitats').doc(aid).get();
+      return doc.exists ? { id: doc.id, nom: doc.data().nom } : null;
+    })
+  );
 
-  // Eliminar nulls (activitats esborrades)
   currentCalcGridActivities = currentCalcGridActivities.filter(a => a);
 
-  // Actualitzar botons / camp de fórmula
-  buildFormulaButtons(currentCalcGridActivities);
+  // Netejar i reconstruir els botons de la calculadora
+  buildFormulaButtonsForCalc(currentCalcGridActivities);
   buildRoundingButtons(currentCalcGridActivities);
 }
 
 
-//------------crea nova versio de la calculadora---------
-function buildFormulaButtonsForCalc(activities){
-  formulaButtonsDiv.innerHTML = '';
+// ---------------------- Build Formula Buttons ----------------------
+function buildFormulaButtonsForCalc(activities) {
+  formulaButtonsDiv.innerHTML = ''; // netegem els botons antics
 
-  // Botons activitats de la graella seleccionada
+  // Botons activitats
   activities.forEach(a => {
     const btn = document.createElement('button');
-    btn.type='button';
-    btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
-    btn.textContent = a.nom + ' (' + a.termName + ')'; // Diferenciar per nom graella
-    btn.addEventListener('click', ()=> addToFormula('__ACT__' + a.id)); 
+    btn.type = 'button';
+    btn.className = 'px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
+    btn.textContent = a.nom; // només nom de l'activitat
+    btn.addEventListener('click', () => addToFormula('__ACT__' + a.id));
     formulaButtonsDiv.appendChild(btn);
   });
 
-  // Botons operadors, números, decimals, backspace igual que abans
-  ['+', '-', '*', '/', '(', ')'].forEach(op=>{
+  // Botons operadors
+  ['+', '-', '*', '/', '(', ')'].forEach(op => {
     const btn = document.createElement('button');
-    btn.type='button';
-    btn.className='px-2 py-1 m-1 bg-gray-200 rounded hover:bg-gray-300';
+    btn.type = 'button';
+    btn.className = 'px-2 py-1 m-1 bg-gray-200 rounded hover:bg-gray-300';
     btn.textContent = op;
-    btn.addEventListener('click', ()=> addToFormula(op));
+    btn.addEventListener('click', () => addToFormula(op));
     formulaButtonsDiv.appendChild(btn);
   });
 
-  for(let i=0;i<=10;i++){
+  // Botons números
+  for (let i = 0; i <= 10; i++) {
     const btn = document.createElement('button');
-    btn.type='button';
-    btn.className='px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
+    btn.type = 'button';
+    btn.className = 'px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
     btn.textContent = i;
-    btn.addEventListener('click', ()=> addToFormula(i));
+    btn.addEventListener('click', () => addToFormula(i));
     formulaButtonsDiv.appendChild(btn);
   }
 
-  ['.', ','].forEach(dec=>{
+  // Botons decimals
+  ['.', ','].forEach(dec => {
     const btn = document.createElement('button');
-    btn.type='button';
-    btn.className='px-2 py-1 m-1 bg-yellow-200 rounded hover:bg-yellow-300';
+    btn.type = 'button';
+    btn.className = 'px-2 py-1 m-1 bg-yellow-200 rounded hover:bg-yellow-300';
     btn.textContent = dec;
-    btn.addEventListener('click', ()=> addToFormula('.'));
+    btn.addEventListener('click', () => addToFormula('.'));
     formulaButtonsDiv.appendChild(btn);
   });
 
+  // Botó backspace
   const backBtn = document.createElement('button');
-  backBtn.type='button';
-  backBtn.className='px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
+  backBtn.type = 'button';
+  backBtn.className = 'px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
   backBtn.textContent = '⌫';
-  backBtn.addEventListener('click', ()=> formulaField.value = formulaField.value.slice(0,-1));
+  backBtn.addEventListener('click', () => {
+    formulaField.value = formulaField.value.slice(0, -1);
+  });
   formulaButtonsDiv.appendChild(backBtn);
 }
