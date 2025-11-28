@@ -1089,6 +1089,13 @@ function renderAverages(){
 function openCalcModal(activityId){
   currentCalcActivityId = activityId; 
   openModal('modalCalc');
+   if (window.currentClassData?.terms) {
+    window.populateCalcTermSelect(
+      Object.values(window.currentClassData.terms)
+    );
+  }
+
+  
   // Reset modal
   document.getElementById('calcType').value = 'numeric';
   document.getElementById('formulaInputs').classList.add('hidden');
