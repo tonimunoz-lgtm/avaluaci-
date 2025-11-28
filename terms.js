@@ -6,9 +6,7 @@ let _currentClassId = null;
 let _classData = null;
 let _activeTermId = null;
 let _onChangeCallback = null;
-let _copiedGridStructure = null; // guardar estructura d'activitats temporalment
-
-
+let _copiedGridStructure = null; // guardar estructura temporal de noms d'activitats
 
 
 // Generar un ID únic per terme
