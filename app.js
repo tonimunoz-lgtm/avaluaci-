@@ -1758,19 +1758,20 @@ async function loadActivitiesForSelectedGrid(termId) {
 
 //------------crea nova versio de la calculadora---------
 function buildFormulaButtonsForCalc(activities){
+  // 1️⃣ Netejar tots els botons antics
   formulaButtonsDiv.innerHTML = '';
 
-  // Botons activitats de la graella seleccionada
+  // 2️⃣ Botons activitats de la graella seleccionada
   activities.forEach(a => {
     const btn = document.createElement('button');
     btn.type='button';
     btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
-    btn.textContent = a.nom + ' (' + a.termName + ')'; // Diferenciar per nom graella
+    btn.textContent = a.nom + ' (' + a.termName + ')'; 
     btn.addEventListener('click', ()=> addToFormula('__ACT__' + a.id)); 
     formulaButtonsDiv.appendChild(btn);
   });
 
-  // Botons operadors, números, decimals, backspace igual que abans
+  // 3️⃣ Botons operadors i números (igual que abans)
   ['+', '-', '*', '/', '(', ')'].forEach(op=>{
     const btn = document.createElement('button');
     btn.type='button';
@@ -1805,6 +1806,7 @@ function buildFormulaButtonsForCalc(activities){
   backBtn.addEventListener('click', ()=> formulaField.value = formulaField.value.slice(0,-1));
   formulaButtonsDiv.appendChild(backBtn);
 }
+
 
 document.getElementById('selectGridForCalc').addEventListener('change', e => {
   const selectedTermId = e.target.value;
