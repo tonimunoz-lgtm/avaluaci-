@@ -1723,6 +1723,7 @@ function populateGridDropdown() {
   loadActivitiesForSelectedGrid(select.value);
 }
 
+
 //-----------funcio per carregar activitats a la graella
 let currentCalcGridActivities = []; // global per la calculadora
 
@@ -1803,43 +1804,4 @@ function buildFormulaButtonsForCalc(activities){
   backBtn.textContent = '⌫';
   backBtn.addEventListener('click', ()=> formulaField.value = formulaField.value.slice(0,-1));
   formulaButtonsDiv.appendChild(backBtn);
-}
-
-document.getElementById('selectGridForCalc').addEventListener('change', e => {
-  const selectedTermId = e.target.value;
-  loadActivitiesForSelectedGrid(selectedTermId);
-});
-
-// -------------------- Botons per redondeig (versió segura) --------------------
-function buildRoundingButtonsForCalc(activities){
-  const container = document.getElementById('activityButtonsDiv');
-  container.innerHTML = ''; // netejar només botons d'activitats de redondeig
-
-  // Botons activitats
-  activities.forEach(a => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
-    btn.textContent = a.nom;
-    btn.addEventListener('click', () => addToFormula('__ACT__' + a.id));
-    container.appendChild(btn);
-  });
-
-  // Botons valors per redondeig
-  [0.5, 1].forEach(val => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
-    btn.textContent = val;
-    btn.addEventListener('click', () => addToFormula(val));
-    container.appendChild(btn);
-  });
-
-  // Botó Backspace
-  const backBtn = document.createElement('button');
-  backBtn.type='button';
-  backBtn.className='px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
-  backBtn.textContent = '⌫';
-  backBtn.addEventListener('click', ()=> formulaField.value = formulaField.value.slice(0,-1));
-  container.appendChild(backBtn);
 }
