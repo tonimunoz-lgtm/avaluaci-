@@ -1687,7 +1687,9 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
   termMenu.classList.add('hidden');
 });
 
-//----------------funcio per carregar graelles al desplegable
+// -------------------- Obtenir divs --------------------
+const formulaButtonsDiv = document.getElementById('formulaButtonsDiv');
+const roundingButtonsDiv = document.getElementById('roundingButtonsDiv');
 // Funció per carregar el desplegable de graelles dins del modal de càlcul
 function populateGridDropdown() {
   const select = document.getElementById('selectGridForCalc');
@@ -1751,8 +1753,8 @@ async function loadActivitiesForSelectedGrid(termId) {
   currentCalcGridActivities = currentCalcGridActivities.filter(a => a);
 
   // Actualitzar botons / camp de fórmula
-  buildFormulaButtons(currentCalcGridActivities);
-  buildRoundingButtons(currentCalcGridActivities);
+  buildFormulaButtonsForCalc(currentCalcGridActivities);
+  buildRoundingButtonsForCalc(currentCalcGridActivities);
 }
 
 
@@ -1839,11 +1841,3 @@ function buildRoundingButtonsForCalc(activities){
   backBtn.addEventListener('click', ()=> formulaField.value = formulaField.value.slice(0,-1));
   container.appendChild(backBtn);
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-  const formulaButtonsDiv = document.getElementById('formulaButtonsDiv');
-  const roundingButtonsDiv = document.getElementById('roundingButtonsDiv');
-
-  // Aquí pots cridar altres funcions inicials si cal
-});
-
