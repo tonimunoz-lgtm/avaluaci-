@@ -569,13 +569,7 @@ function renderStudentsList(){
   });
 }
 /* ---------------- Notes Grid amb menú activitats ---------------- */
-// 🔹 Nou
-let isRenderingGrid = false; // evita duplicació de capçaleres
-
 async function renderNotesGrid() {
-  // 🔹 Nou: evita execucions simultànies
-  if (isRenderingGrid) return;
-  isRenderingGrid = true;
   // Neteja taula
   notesThead.innerHTML = '';
   notesTbody.innerHTML = '';
@@ -949,8 +943,6 @@ input.addEventListener('keydown', e => {
 
   // Final: recalculs de mitjanes i fila fórmules (igual que abans)
   renderAverages();
-  // 🔹 Nou: permet pròxim render
-  isRenderingGrid = false;
 }
 
 
@@ -1683,29 +1675,3 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
 
   termMenu.classList.add('hidden');
 });
-
-// Copiar estructura
-termMenu.querySelector('.copy-structure-btn').addEventListener('click', () => {
-  const currentTermId = Terms.getActiveTermId();
-  if (!currentTermId) return;
-  Terms.copyGridStructure(currentTermId);
-  alert('Estructura copiada!');
-  termMenu.classList.add('hidden');
-});
-
-// Enganxar estructura
-termMenu.querySelector('.paste-structure-btn').addEventListener('click', async () => {
-  const currentTermId = Terms.getActiveTermId();
-  if (!currentTermId) return;
-
-  await Terms.pasteGridStructure(currentTermId);
-  alert('Estructura enganxada a la graella!');
-  termMenu.classList.add('hidden');
-});
-
-async function refreshGridAfterDataChange() {
-  classStudents = Object.keys(_classData.students || {}); // o com guardis alumnes
-  classActivities = _classData.terms[_activeTermId]?.activities || [];
-  await renderNotesGrid();
-}
-
