@@ -569,17 +569,6 @@ function renderStudentsList(){
   });
 }
 /* ---------------- Notes Grid amb menú activitats ---------------- */
-
-  // 🔹 Nou: evita execucions simultànies
-  if (isRenderingGrid) return;
-  isRenderingGrid = true;
-  // Neteja taula
-  notesThead.innerHTML = '';
-  notesTbody.innerHTML = '';
-  notesTfoot.innerHTML = '';
-  formulaTfoot.innerHTML = '';
-
-
 // 🔹 Nou, si no funciona esborrar----------------------------------------------------------------------
 let isRenderingGrid = false; // evita duplicació de capçaleres
 //-------------------------------------------------------------------------------------------------------
@@ -962,9 +951,6 @@ input.addEventListener('keydown', e => {
   // Final: recalculs de mitjanes i fila fórmules (igual que abans)
   renderAverages();
 }
-
-
-
 
 // Funció per actualitzar cel·les calculades sense recrear tota la taula
 function updateCalculatedCells() {
