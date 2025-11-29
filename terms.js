@@ -6,7 +6,6 @@ let _currentClassId = null;
 let _classData = null;
 let _activeTermId = null;
 let _onChangeCallback = null;
-let _copiedGridStructure = null;
 
 // Generar un ID únic per terme
 function makeTermId(name) {
@@ -173,15 +172,7 @@ export async function renameTerm(termId, newName) {
   _classData = doc.exists ? doc.data() : _classData;
 
   renderDropdown();
-
-  // 🔹 Actualitza el nom del terme al span
-  const termNameLabel = document.getElementById('activeTermName');
-  if (termNameLabel && _classData.terms?.[_activeTermId]?.name) {
-    termNameLabel.textContent = _classData.terms[_activeTermId].name;
-  }
 }
-
-
 
 export async function deleteTerm(termId) {
   if (!_db || !_currentClassId || !_classData?.terms?.[termId]) return;
@@ -202,48 +193,6 @@ export async function deleteTerm(termId) {
 
   if (_activeTermId) showEmptyMessage(false);
   else showEmptyMessage(true);
-
-  if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
-}
-
-// ------------------------ Copiar estructura ------------------------
-export function copyGridStructure(termId) {
-  if (!termId || !_classData?.terms?.[termId]) return;
-  _copiedGridStructure = [...(_classData.terms[termId].activities || [])];
-  console.log('Estructura copiada:', _copiedGridStructure);
-}
-
-// ------------------------ Enganxar estructura ------------------------
-export async function pasteGridStructure(termId) {
-  if (!termId || !_copiedGridStructure) return;
-
-  const newActivityIds = [];
-
-  for (const actId of _copiedGridStructure) {
-    const doc = await _db.collection('activitats').doc(actId).get();
-    if (!doc.exists) continue;
-
-    const data = doc.data();
-
-    const newActRef = await _db.collection('activitats').add({
-      ...data,
-      originalCloneOf: actId,
-      createdAt: Date.now()
-    });
-
-    newActivityIds.push(newActRef.id);
-  }
-
-  if (!_classData.terms) _classData.terms = {};
-  if (!_classData.terms[termId]) _classData.terms[termId] = { name: '', activities: [], students: [] };
-
-  const path = `terms.${termId}.activities`;
-  await _db.collection('classes').doc(_currentClassId).update({
-    [path]: newActivityIds
-  });
-
-  const doc = await _db.collection('classes').doc(_currentClassId).get();
-  if (doc.exists) Object.assign(_classData, doc.data());
 
   if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
 }
