@@ -14,38 +14,38 @@ function makeTermId(name) {
 }
 
 // ------------------------ Setup ------------------------
+// ------------------------ Setup ------------------------
 export function setup(db, classId, classData, opts = {}) {
   _db = db;
   _currentClassId = classId;
   _classData = classData || {};
   _onChangeCallback = opts.onChange || null;
 
+  // Si no hi ha termes, inicialitzem i mostrem missatge.
   if (!_classData.terms) {
     _classData.terms = {};
     _activeTermId = null;
     renderDropdown();
     showEmptyMessage(true);
-
-    // 🔥 Forçar refresc també quan no hi ha termes
-    setTimeout(() => {
-      if (_onChangeCallback) _onChangeCallback(null);
-    }, 50);
-
+    // NO cridarem _onChangeCallback amb null — això provoca renders en blanc
     return;
   }
 
+  // Si no hi ha terme actiu, agafem el primer
   if (!_activeTermId) _activeTermId = Object.keys(_classData.terms)[0];
 
   renderDropdown();
 
-  // 🔥 Forçar refresc la primera vegada que es carrega una graella
-  setTimeout(() => {
-    if (_onChangeCallback && _activeTermId) {
-      _onChangeCallback(_activeTermId);
-    }
-  }, 50);
+  // Només cridem el callback amb un termid vàlid (si existeix)
+  if (_onChangeCallback && _activeTermId) {
+    // petit timeout perquè la UI ja estigui completament muntada
+    setTimeout(() => {
+      if (_onChangeCallback && _activeTermId) {
+        _onChangeCallback(_activeTermId);
+      }
+    }, 50);
+  }
 }
-
 
 
 // ------------------------ Obtenir dades ------------------------
