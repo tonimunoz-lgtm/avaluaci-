@@ -36,9 +36,22 @@ export function setup(db, classId, classData, opts = {}) {
   if (_onChangeCallback && _activeTermId) {
     setTimeout(() => {
       _onChangeCallback(_activeTermId);
+      // 🔥 Afegim aquesta línia per forçar render inicial
+      refreshGridAfterDataChange();
     }, 50);
   }
 }
+
+// 🔹 Força refresc de la graella després de canvis
+async function refreshGridAfterDataChange() {
+  // Actualitza les arrays locals que usa renderNotesGrid
+  classStudents = Object.keys(_classData.students || {}); // segons com guardis els alumnes
+  classActivities = _classData.terms[_activeTermId]?.activities || [];
+
+  // Crida renderNotesGrid() per forçar render
+  await renderNotesGrid();
+}
+
 
 // ------------------------ Obtenir dades ------------------------
 export function getActiveTermId() {
@@ -148,9 +161,8 @@ export async function addNewTermWithName(name) {
 export async function addActivityToActiveTerm(activityId) {
   if (!_activeTermId || !_db || !_currentClassId) return;
 
-  if (!_classData.terms) _classData.terms = {};
-  if (!_classData.terms[_activeTermId]) _classData.terms[_activeTermId] = { name: '', activities: [], students: [] };
-  if (!_classData.terms[_activeTermId].activities) _classData.terms[_activeTermId].activities = [];
+  if (!_classData.terms[_activeTermId].activities) 
+      _classData.terms[_activeTermId].activities = [];
 
   const path = `terms.${_activeTermId}.activities`;
 
@@ -158,33 +170,33 @@ export async function addActivityToActiveTerm(activityId) {
     [path]: firebase.firestore.FieldValue.arrayUnion(activityId)
   });
 
+  // Refresquem dades locals
   const doc = await _db.collection('classes').doc(_currentClassId).get();
   _classData = doc.exists ? doc.data() : _classData;
 
-  // 🔥 Forcem refresc de la graella, encara que estigui buida
-  if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
+  // 🔥 Forcem refresc de la graella
+  if (_onChangeCallback && _activeTermId) {
+    await _onChangeCallback(_activeTermId);
+    refreshGridAfterDataChange();
+  }
 }
 
 // ------------------------ Afegir/Eliminar alumne ------------------------
 export async function addStudentToActiveTerm(studentId) {
   if (!_activeTermId || !_db || !_currentClassId) return;
 
-  if (!_classData.terms) _classData.terms = {};
-  if (!_classData.terms[_activeTermId]) _classData.terms[_activeTermId] = { name: '', activities: [], students: [] };
-  if (!_classData.terms[_activeTermId].students) _classData.terms[_activeTermId].students = [];
-
-  const path = `terms.${_activeTermId}.students`;
+  if (!_classData.students) _classData.students = {};
+  _classData.students[studentId] = { nom: 'Nom alumne', notes: {} };
 
   await _db.collection('classes').doc(_currentClassId).update({
-    [path]: firebase.firestore.FieldValue.arrayUnion(studentId)
+    [`students.${studentId}`]: _classData.students[studentId]
   });
 
-  const doc = await _db.collection('classes').doc(_currentClassId).get();
-  _classData = doc.exists ? doc.data() : _classData;
-
-  // 🔥 Forcem refresc de la graella, encara que estigui buida
-  if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
+  // 🔥 Forcem refresc de la graella
+  if (_onChangeCallback && _activeTermId) {
+    await _onChangeCallback(_activeTermId);
+    refreshGridAfterDataChange();
+  }
 }
-
 // ------------------------ Export mínim ------------------------
 export function getActiveTerm() { return _activeTermId; }
