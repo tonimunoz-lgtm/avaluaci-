@@ -569,6 +569,7 @@ function renderStudentsList(){
   });
 }
 /* ---------------- Notes Grid amb menú activitats ---------------- */
+/* ---------------- Notes Grid amb menú activitats ---------------- */
 async function renderNotesGrid() {
   // Neteja taula
   notesThead.innerHTML = '';
@@ -945,7 +946,9 @@ input.addEventListener('keydown', e => {
   renderAverages();
 }
 
-}
+
+
+
 // Funció per actualitzar cel·les calculades sense recrear tota la taula
 function updateCalculatedCells() {
   db.collection('classes').doc(currentClassId).get().then(doc => {
@@ -969,8 +972,6 @@ function updateCalculatedCells() {
     });
   });
 }
-
-
 
 /* ---------------- Helpers Notes & Excel ---------------- */
 function th(txt, cls=''){
