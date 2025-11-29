@@ -238,7 +238,8 @@ export async function pasteGridStructure(termId) {
 
   // 4. Refrescar dades internes i UI
   const doc = await _db.collection('classes').doc(_currentClassId).get();
-  _classData = doc.exists ? doc.data() : _classData;
+  if (doc.exists) Object.assign(_classData, doc.data());
+
 
   if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
 }
