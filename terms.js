@@ -199,13 +199,16 @@ export async function deleteTerm(termId) {
   if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
 }
 
-// ------------------------ Copiar estructura ------------------------
-export function copyGridStructure(termId) {
-  if (!termId || !_classData?.terms?.[termId]) return;
-  // Guardem una còpia de l'array d'activitats
-  _copiedGridStructure = [...(_classData.terms[termId].activities || [])];
-  console.log('Estructura copiada:', _copiedGridStructure);
+function copyGridStructure(termId) {
+  const term = Terms.getAllTerms().find(t => t.id === termId);
+  if (!term) return;
+
+  // Guardem només la llista d’activitats
+  copiedGridStructure = [...(term.activities || [])];
+  console.log('Estructura copiada:', copiedGridStructure);
+  alert('Estructura copiada!');
 }
+
 
 // ------------------------ Enganxar estructura ------------------------
 export async function pasteGridStructure(termId) {
