@@ -20,25 +20,33 @@ export function setup(db, classId, classData, opts = {}) {
   _classData = classData || {};
   _onChangeCallback = opts.onChange || null;
 
+  // Si no hi ha termes, inicialitzem objecte i mostrem missatge
   if (!_classData.terms) {
     _classData.terms = {};
     _activeTermId = null;
-    renderDropdown();
-    showEmptyMessage(true);
+
+    renderDropdown();       // construïm dropdown buit
+    showEmptyMessage(true); // mostrem missatge "Crea el teu primer grup"
+
+    // NO cridem _onChangeCallback amb null
     return;
   }
 
+  // Si no hi ha terme actiu, agafem el primer disponible
   if (!_activeTermId) _activeTermId = Object.keys(_classData.terms)[0];
 
+  // Renderitzem dropdown i graella inicial
   renderDropdown();
+  showEmptyMessage(!_activeTermId); // si hi ha terme, mostrem graella, si no, missatge
 
-  // Forcem un refresc inicial si hi ha terme actiu
+  // 🔹 Forcem refresc inicial de la graella amb un terme vàlid
   if (_onChangeCallback && _activeTermId) {
     setTimeout(() => {
       _onChangeCallback(_activeTermId);
     }, 50);
   }
 }
+
 
 // ------------------------ Obtenir dades ------------------------
 export function getActiveTermId() {
