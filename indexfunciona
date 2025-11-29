@@ -251,10 +251,6 @@
       <input type="text" id="formulaField" readonly class="border rounded p-1 w-full" placeholder="Construeix la fórmula">
       <div id="formulaButtons" class="flex flex-wrap gap-1"></div>
     </div>
-
-<label for="calcTermSelect">Selecciona graella:</label>
-<select id="calcTermSelect" class="border rounded p-1 w-full mb-2"></select>
-
     
     <button id="modalApplyCalcBtn" class="bg-indigo-500 text-white p-2 rounded font-semibold">Aplica</button>
   </div>
