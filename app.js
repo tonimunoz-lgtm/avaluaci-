@@ -1684,18 +1684,21 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
   termMenu.classList.add('hidden');
 });
 
-// COPIAR estructura
-termMenu.querySelector('.copy-term-structure-btn')
-  .addEventListener('click', () => {
-    const termId = Terms.getActiveTermId();
-    Terms.copyGridStructure(termId);
-    termMenu.classList.add('hidden');
-  });
+// Copiar estructura
+termMenu.querySelector('.copy-structure-btn').addEventListener('click', () => {
+  const currentTermId = Terms.getActiveTermId();
+  if (!currentTermId) return;
+  Terms.copyGridStructure(currentTermId);
+  alert('Estructura copiada!');
+  termMenu.classList.add('hidden');
+});
 
-// ENGANXAR estructura
-termMenu.querySelector('.paste-term-structure-btn')
-  .addEventListener('click', async () => {
-    const termId = Terms.getActiveTermId();
-    await Terms.pasteGridStructure(termId);
-    termMenu.classList.add('hidden');
-  });
+// Enganxar estructura
+termMenu.querySelector('.paste-structure-btn').addEventListener('click', async () => {
+  const currentTermId = Terms.getActiveTermId();
+  if (!currentTermId) return;
+
+  await Terms.pasteGridStructure(currentTermId);
+  alert('Estructura enganxada a la graella!');
+  termMenu.classList.add('hidden');
+});
