@@ -14,6 +14,7 @@ function makeTermId(name) {
 }
 
 // ------------------------ Setup ------------------------
+e// ------------------------ Setup ------------------------
 export function setup(db, classId, classData, opts = {}) {
   _db = db;
   _currentClassId = classId;
@@ -25,6 +26,12 @@ export function setup(db, classId, classData, opts = {}) {
     _activeTermId = null;
     renderDropdown();
     showEmptyMessage(true);
+
+    // 🔥 També refrescar aquí (quan no hi ha termes)
+    setTimeout(() => {
+      if (_onChangeCallback) _onChangeCallback(null);
+    }, 50);
+
     return;
   }
 
@@ -32,8 +39,14 @@ export function setup(db, classId, classData, opts = {}) {
 
   renderDropdown();
 
-  if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
+  // 🔥 Forçar refresc quan sí que existeix una graella
+  setTimeout(() => {
+    if (_onChangeCallback && _activeTermId) {
+      _onChangeCallback(_activeTermId);
+    }
+  }, 50);
 }
+
 
 // ------------------------ Obtenir dades ------------------------
 export function getActiveTermId() {
