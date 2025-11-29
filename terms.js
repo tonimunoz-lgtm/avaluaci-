@@ -157,14 +157,18 @@ export async function addActivityToActiveTerm(activityId) {
   if (!_classData.terms[_activeTermId].activities) _classData.terms[_activeTermId].activities = [];
 
   const path = `terms.${_activeTermId}.activities`;
+
+  // Afegim activitat a Firestore
   await _db.collection('classes').doc(_currentClassId).update({
     [path]: firebase.firestore.FieldValue.arrayUnion(activityId)
   });
 
+  // Refresquem dades locals
   const doc = await _db.collection('classes').doc(_currentClassId).get();
   _classData = doc.exists ? doc.data() : _classData;
 
-  if (_onChangeCallback) _onChangeCallback(_activeTermId);
+  // 🔥 Forcem refresc de la graella independentment de si estava buida
+  if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
 }
 
 export async function removeActivityFromActiveTerm(activityId) {
@@ -178,8 +182,44 @@ export async function removeActivityFromActiveTerm(activityId) {
   const doc = await _db.collection('classes').doc(_currentClassId).get();
   _classData = doc.exists ? doc.data() : _classData;
 
-  if (_onChangeCallback) _onChangeCallback(_activeTermId);
+  if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
 }
+
+// ------------------------ Afegir/Eliminar alumne ------------------------
+// Suposant que tens funcions similars per alumnes, afegeix el mateix patró:
+export async function addStudentToActiveTerm(studentId) {
+  if (!_activeTermId || !_db || !_currentClassId) return;
+
+  if (!_classData.terms) _classData.terms = {};
+  if (!_classData.terms[_activeTermId]) _classData.terms[_activeTermId] = { name: '', students: [] };
+  if (!_classData.terms[_activeTermId].students) _classData.terms[_activeTermId].students = [];
+
+  const path = `terms.${_activeTermId}.students`;
+
+  await _db.collection('classes').doc(_currentClassId).update({
+    [path]: firebase.firestore.FieldValue.arrayUnion(studentId)
+  });
+
+  const doc = await _db.collection('classes').doc(_currentClassId).get();
+  _classData = doc.exists ? doc.data() : _classData;
+
+  if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
+}
+
+export async function removeStudentFromActiveTerm(studentId) {
+  if (!_activeTermId || !_db || !_currentClassId) return;
+
+  const path = `terms.${_activeTermId}.students`;
+  await _db.collection('classes').doc(_currentClassId).update({
+    [path]: firebase.firestore.FieldValue.arrayRemove(studentId)
+  });
+
+  const doc = await _db.collection('classes').doc(_currentClassId).get();
+  _classData = doc.exists ? doc.data() : _classData;
+
+  if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
+}
+
 
 // ------------------------ Renombrar/eliminar terme ------------------------
 export async function renameTerm(termId, newName) {
