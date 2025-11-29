@@ -240,7 +240,8 @@ export async function pasteGridStructure(termId) {
   const doc = await _db.collection('classes').doc(_currentClassId).get();
   _classData = doc.exists ? doc.data() : _classData;
 
-  if (_onChangeCallback) _onChangeCallback(termId);
+  if (_onChangeCallback && _activeTermId) 
+    _onChangeCallback(_activeTermId);
 }
 
 
