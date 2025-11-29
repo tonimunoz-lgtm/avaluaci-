@@ -13,7 +13,7 @@ function makeTermId(name) {
   return `term_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
 }
 
-// ------------------------ Setup ------------------------
+
 // ------------------------ Setup ------------------------
 export function setup(db, classId, classData, opts = {}) {
   _db = db;
@@ -46,7 +46,6 @@ export function setup(db, classId, classData, opts = {}) {
     }, 50);
   }
 }
-
 
 // ------------------------ Obtenir dades ------------------------
 export function getActiveTermId() {
@@ -298,6 +297,30 @@ export async function pasteGridStructure(termId) {
 
   if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
 }
+
+async function addItemToActiveTerm(itemId, type) {
+  if (!_activeTermId || !_db || !_currentClassId) return;
+
+  // Inicialitzem estructura si no existeix
+  if (!_classData.terms) _classData.terms = {};
+  if (!_classData.terms[_activeTermId]) _classData.terms[_activeTermId] = { name: '', activities: [], students: [] };
+  if (!_classData.terms[_activeTermId][type]) _classData.terms[_activeTermId][type] = [];
+
+  const path = `terms.${_activeTermId}.${type}`;
+
+  // Afegim a Firestore
+  await _db.collection('classes').doc(_currentClassId).update({
+    [path]: firebase.firestore.FieldValue.arrayUnion(itemId)
+  });
+
+  // Refresquem dades locals
+  const doc = await _db.collection('classes').doc(_currentClassId).get();
+  _classData = doc.exists ? doc.data() : _classData;
+
+  // 🔥 Forcem refresc de la graella encara que sigui el primer element
+  if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
+}
+
 
 // ------------------------ Export mínim ------------------------
 export function getActiveTerm() { return _activeTermId; }
