@@ -24,6 +24,7 @@ let classStudents = [];
 let classActivities = [];
 let deleteMode = false;
 let currentCalcActivityId = null; // Activitat actual per fer càlculs
+let isRenderingGrid = false; // 🔹 evita duplicació accidental
 
 /* Elements */
 const loginScreen = document.getElementById('loginScreen');
@@ -569,8 +570,9 @@ function renderStudentsList(){
   });
 }
 /* ---------------- Notes Grid amb menú activitats ---------------- */
-/* ---------------- Notes Grid amb menú activitats ---------------- */
 async function renderNotesGrid() {
+   if (isRenderingGrid) return; // ja s'està renderitzant
+  isRenderingGrid = true;
   // Neteja taula
   notesThead.innerHTML = '';
   notesTbody.innerHTML = '';
@@ -874,6 +876,7 @@ if (isLocked) {
             console.error('Error guardant nota:', err);
             alert('Error guardant la nota: ' + err.message);
           } finally {
+            isRenderingGrid = false; // alliberem el flag
             // Tornem a aplicar disabled si la columna està bloquejada ara
             const nowLocked = !!(calculatedActs[actId]?.locked) || !!(calculatedActs[actId]?.calculated);
             input.disabled = nowLocked;
