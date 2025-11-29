@@ -1702,3 +1702,10 @@ termMenu.querySelector('.paste-structure-btn').addEventListener('click', async (
   alert('Estructura enganxada a la graella!');
   termMenu.classList.add('hidden');
 });
+
+async function refreshGridAfterDataChange() {
+  classStudents = Object.keys(_classData.students || {}); // o com guardis alumnes
+  classActivities = _classData.terms[_activeTermId]?.activities || [];
+  await renderNotesGrid();
+}
+
