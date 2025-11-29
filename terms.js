@@ -1,5 +1,5 @@
 // terms.js
-// Mòdul per gestionar "terms" (graelles d'activitats i alumnes) dins d'una classe
+// Mòdul per gestionar "terms" (graelles d'activitats) dins d'una classe
 
 let _db = null;
 let _currentClassId = null;
@@ -20,7 +20,6 @@ export function setup(db, classId, classData, opts = {}) {
   _classData = classData || {};
   _onChangeCallback = opts.onChange || null;
 
-  // Si no hi ha termes, inicialitzem i mostrem missatge.
   if (!_classData.terms) {
     _classData.terms = {};
     _activeTermId = null;
@@ -29,12 +28,11 @@ export function setup(db, classId, classData, opts = {}) {
     return;
   }
 
-  // Si no hi ha terme actiu, agafem el primer
   if (!_activeTermId) _activeTermId = Object.keys(_classData.terms)[0];
 
   renderDropdown();
 
-  // 🔥 Forcem un refresc inicial si hi ha terme actiu
+  // 🔥 Forcem un refresc inicial encara que la graella estigui buida
   if (_onChangeCallback && _activeTermId) {
     setTimeout(() => {
       _onChangeCallback(_activeTermId);
@@ -43,10 +41,21 @@ export function setup(db, classId, classData, opts = {}) {
 }
 
 // ------------------------ Obtenir dades ------------------------
-export function getActiveTermId() { return _activeTermId; }
-export function getActiveTermName() { return (_classData?.terms?.[_activeTermId]?.name) || ''; }
-export function getActiveTermActivities() { return (_classData?.terms?.[_activeTermId]?.activities) || []; }
-export function getActiveTermStudents() { return (_classData?.terms?.[_activeTermId]?.students) || []; }
+export function getActiveTermId() {
+  return _activeTermId;
+}
+
+export function getActiveTermName() {
+  return (_classData?.terms?.[_activeTermId]?.name) || '';
+}
+
+export function getActiveTermActivities() {
+  return (_classData?.terms?.[_activeTermId]?.activities) || [];
+}
+
+export function getActiveTermStudents() {
+  return (_classData?.terms?.[_activeTermId]?.students) || [];
+}
 
 // ------------------------ Render Dropdown ------------------------
 function renderDropdown() {
@@ -130,7 +139,6 @@ export async function addNewTermWithName(name) {
   renderDropdown();
   showEmptyMessage(false);
 
-  // 🔥 Forcem refresc després de crear un terme nou
   if (_onChangeCallback) _onChangeCallback(_activeTermId);
 
   return newId;
@@ -154,24 +162,10 @@ export async function addActivityToActiveTerm(activityId) {
   _classData = doc.exists ? doc.data() : _classData;
 
   // 🔥 Forcem refresc de la graella, encara que estigui buida
-  if (_onChangeCallback) _onChangeCallback(_activeTermId);
+  if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
 }
 
-export async function removeActivityFromActiveTerm(activityId) {
-  if (!_activeTermId || !_db || !_currentClassId) return;
-
-  const path = `terms.${_activeTermId}.activities`;
-  await _db.collection('classes').doc(_currentClassId).update({
-    [path]: firebase.firestore.FieldValue.arrayRemove(activityId)
-  });
-
-  const doc = await _db.collection('classes').doc(_currentClassId).get();
-  _classData = doc.exists ? doc.data() : _classData;
-
-  if (_onChangeCallback) _onChangeCallback(_activeTermId);
-}
-
-// ------------------------ Afegir/Eliminar alumnes ------------------------
+// ------------------------ Afegir/Eliminar alumne ------------------------
 export async function addStudentToActiveTerm(studentId) {
   if (!_activeTermId || !_db || !_currentClassId) return;
 
@@ -189,98 +183,6 @@ export async function addStudentToActiveTerm(studentId) {
   _classData = doc.exists ? doc.data() : _classData;
 
   // 🔥 Forcem refresc de la graella, encara que estigui buida
-  if (_onChangeCallback) _onChangeCallback(_activeTermId);
-}
-
-export async function removeStudentFromActiveTerm(studentId) {
-  if (!_activeTermId || !_db || !_currentClassId) return;
-
-  const path = `terms.${_activeTermId}.students`;
-  await _db.collection('classes').doc(_currentClassId).update({
-    [path]: firebase.firestore.FieldValue.arrayRemove(studentId)
-  });
-
-  const doc = await _db.collection('classes').doc(_currentClassId).get();
-  _classData = doc.exists ? doc.data() : _classData;
-
-  if (_onChangeCallback) _onChangeCallback(_activeTermId);
-}
-
-// ------------------------ Renombrar/eliminar terme ------------------------
-export async function renameTerm(termId, newName) {
-  if (!termId || !newName) return;
-
-  const path = `terms.${termId}.name`;
-  await _db.collection('classes').doc(_currentClassId).update({ [path]: newName });
-
-  const doc = await _db.collection('classes').doc(_currentClassId).get();
-  _classData = doc.exists ? doc.data() : _classData;
-
-  renderDropdown();
-}
-
-export async function deleteTerm(termId) {
-  if (!_db || !_currentClassId || !_classData?.terms?.[termId]) return;
-
-  const updateObj = {};
-  updateObj[`terms.${termId}`] = firebase.firestore.FieldValue.delete();
-  await _db.collection('classes').doc(_currentClassId).update(updateObj);
-
-  const doc = await _db.collection('classes').doc(_currentClassId).get();
-  _classData = doc.exists ? doc.data() : _classData;
-
-  if (_activeTermId === termId) {
-    const remainingTerms = Object.keys(_classData.terms || {});
-    _activeTermId = remainingTerms[0] || null;
-  }
-
-  renderDropdown();
-
-  if (_activeTermId) showEmptyMessage(false);
-  else showEmptyMessage(true);
-
-  if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
-}
-
-// ------------------------ Copiar estructura ------------------------
-export function copyGridStructure(termId) {
-  if (!termId || !_classData?.terms?.[termId]) return;
-  _copiedGridStructure = [...(_classData.terms[termId].activities || [])];
-  console.log('Estructura copiada:', _copiedGridStructure);
-}
-
-// ------------------------ Enganxar estructura ------------------------
-export async function pasteGridStructure(termId) {
-  if (!termId || !_copiedGridStructure) return;
-
-  const newActivityIds = [];
-
-  for (const actId of _copiedGridStructure) {
-    const doc = await _db.collection('activitats').doc(actId).get();
-    if (!doc.exists) continue;
-
-    const data = doc.data();
-
-    const newActRef = await _db.collection('activitats').add({
-      ...data,
-      originalCloneOf: actId,
-      createdAt: Date.now()
-    });
-
-    newActivityIds.push(newActRef.id);
-  }
-
-  if (!_classData.terms) _classData.terms = {};
-  if (!_classData.terms[termId]) _classData.terms[termId] = { name: '', activities: [], students: [] };
-
-  const path = `terms.${termId}.activities`;
-  await _db.collection('classes').doc(_currentClassId).update({
-    [path]: newActivityIds
-  });
-
-  const doc = await _db.collection('classes').doc(_currentClassId).get();
-  if (doc.exists) Object.assign(_classData, doc.data());
-
   if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
 }
 
