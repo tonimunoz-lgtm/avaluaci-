@@ -130,18 +130,19 @@ export async function addNewTermWithName(name) {
   _classData.terms[newId] = payload;
   _activeTermId = newId;
 
+  // 🔹 Forçar render inicial de la graella encara que no tingui dades
   renderDropdown();
   showEmptyMessage(false);
+  if (_onChangeCallback) _onChangeCallback(_activeTermId);  // aquí refresca la graella
 
-  if (_onChangeCallback) _onChangeCallback(_activeTermId);
-
-  // Després actualitzem Firestore
+  // 🔹 Després actualitzem Firestore
   const updateObj = {};
   updateObj[`terms.${newId}`] = payload;
   await _db.collection('classes').doc(_currentClassId).update(updateObj);
 
   return newId;
 }
+
 
 // ------------------------ Afegir/Eliminar activitat ------------------------
 export async function addActivityToActiveTerm(activityId) {
