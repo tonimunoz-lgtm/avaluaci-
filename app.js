@@ -951,7 +951,8 @@ input.addEventListener('keydown', e => {
   // Final: recalculs de mitjanes i fila fórmules (igual que abans)
   renderAverages();
 }
-
+ isRenderingGrid = false;
+}
 // Funció per actualitzar cel·les calculades sense recrear tota la taula
 function updateCalculatedCells() {
   db.collection('classes').doc(currentClassId).get().then(doc => {
