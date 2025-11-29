@@ -569,14 +569,7 @@ function renderStudentsList(){
   });
 }
 /* ---------------- Notes Grid amb menú activitats ---------------- */
-// 🔹 Nou, si no funciona esborrar----------------------------------------------------------------------
-let isRenderingGrid = false; // evita duplicació de capçaleres
-//-------------------------------------------------------------------------------------------------------
 async function renderNotesGrid() {
-// 🔹 Nou, si no funciona esborrar----------------------------------------------------------------------
-if (isRenderingGrid) return;
-  isRenderingGrid = true;
-//-------------------------------------------------------------------------------------------------------
   // Neteja taula
   notesThead.innerHTML = '';
   notesTbody.innerHTML = '';
@@ -951,7 +944,7 @@ input.addEventListener('keydown', e => {
   // Final: recalculs de mitjanes i fila fórmules (igual que abans)
   renderAverages();
 }
- isRenderingGrid = false;
+
 }
 // Funció per actualitzar cel·les calculades sense recrear tota la taula
 function updateCalculatedCells() {
