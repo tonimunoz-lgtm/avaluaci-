@@ -6,14 +6,11 @@ let _currentClassId = null;
 let _classData = null;
 let _activeTermId = null;
 let _onChangeCallback = null;
-let _copiedGridStructure = null; // guardar estructura temporal de noms d'activitats
-
 
 // Generar un ID únic per terme
 function makeTermId(name) {
   return `term_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
 }
-
 
 // ------------------------ Setup ------------------------
 export function setup(db, classId, classData, opts = {}) {
@@ -199,66 +196,6 @@ export async function deleteTerm(termId) {
 
   if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
 }
-
-// ------------------------ Copiar estructura ------------------------
-export function copyGridStructure(termId) {
-  if (!termId || !_classData?.terms?.[termId]) return;
-
-  const activityIds = _classData.terms[termId].activities || [];
-
-  // Guardem només els noms
-  _copiedGridStructure = activityIds.map(id => {
-    return _classData.activities?.[id]?.name || "SenseNom";
-  });
-
-  console.log("Estructura copiada (només noms):", _copiedGridStructure);
-}
-
-// ------------------------ Enganxar estructura ------------------------
-export async function pasteGridStructure(termId) {
-  if (!_copiedGridStructure || _copiedGridStructure.length === 0) {
-    console.warn("No hi ha estructura copiada.");
-    return false;
-  }
-
-  if (!termId || !_db || !_currentClassId) return false;
-
-  const classRef = _db.collection("classes").doc(_currentClassId);
-
-  // Crear activitats noves amb IDs únics
-  const newActivityIds = _copiedGridStructure.map(name => {
-    return `act_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
-  });
-
-  const updateObj = {};
-
-  // Assignem cada activitat nova amb el nom copiat i valors buits
-  newActivityIds.forEach((id, i) => {
-    updateObj[`activities.${id}`] = {
-      name: _copiedGridStructure[i],
-      weight: 1,
-      formula: "",
-      isAverage: false,
-      isExam: false,
-      isFinal: false
-    };
-  });
-
-  // Afegim la nova llista d'activitats al terme
-  updateObj[`terms.${termId}.activities`] = newActivityIds;
-
-  // Actualitzar Firestore
-  await classRef.update(updateObj);
-
-  // Recarregar dades locals
-  const doc = await classRef.get();
-  _classData = doc.exists ? doc.data() : _classData;
-
-  console.log("Estructura enganxada (activitats noves):", newActivityIds);
-
-  return true;
-}
-
 
 // ------------------------ Export mínim ------------------------
 export function getActiveTerm() { return _activeTermId; }
