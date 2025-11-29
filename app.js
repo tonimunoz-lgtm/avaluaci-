@@ -584,6 +584,9 @@ async function renderNotesGrid() {
   const classDoc = await db.collection('classes').doc(currentClassId).get();
   if (!classDoc.exists) return;
   const classData = classDoc.data();
+  //esto es lo que hemos añadido....si deja de funcionar, borrar
+  classActivities = classData.activitats || [];
+  
   const calculatedActs = classData.calculatedActivities || {};
 
   // Carrega activitats
