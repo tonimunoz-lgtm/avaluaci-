@@ -148,9 +148,13 @@ export async function addActivityToActiveTerm(activityId) {
   const doc = await _db.collection('classes').doc(_currentClassId).get();
   _classData = doc.exists ? doc.data() : _classData;
 
-  if (_onChangeCallback) _onChangeCallback(_activeTermId);
+ // if (_onChangeCallback) _onChangeCallback(_activeTermId);
+//}
+// 🔹 Només cridem la callback un cop
+  if (_onChangeCallback) setTimeout(() => _onChangeCallback(_activeTermId), 0);
 }
 
+  
 export async function removeActivityFromActiveTerm(activityId) {
   if (!_activeTermId || !_db || !_currentClassId) return;
   const path = `terms.${_activeTermId}.activities`;
