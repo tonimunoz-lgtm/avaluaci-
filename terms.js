@@ -133,7 +133,7 @@ export async function addNewTermWithName(name) {
   renderDropdown();
   showEmptyMessage(false);
 
-  if (_onChangeCallback) _onChangeCallback(_activeTermId);
+  if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
   return newId;
 }
 
@@ -161,7 +161,7 @@ export async function removeActivityFromActiveTerm(activityId) {
   const doc = await _db.collection('classes').doc(_currentClassId).get();
   _classData = doc.exists ? doc.data() : _classData;
 
-  if (_onChangeCallback) _onChangeCallback(_activeTermId);
+  if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
 }
 
 // ------------------------ Renombrar/eliminar terme ------------------------
@@ -240,8 +240,7 @@ export async function pasteGridStructure(termId) {
   const doc = await _db.collection('classes').doc(_currentClassId).get();
   _classData = doc.exists ? doc.data() : _classData;
 
-  if (_onChangeCallback && _activeTermId) 
-    _onChangeCallback(_activeTermId);
+  if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
 }
 
 
