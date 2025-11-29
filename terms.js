@@ -8,7 +8,6 @@ let _activeTermId = null;
 let _onChangeCallback = null;
 let _copiedGridStructure = null; // guardar estructura d'activitats temporalment
 
-
 // Generar un ID únic per terme
 function makeTermId(name) {
   return `term_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
@@ -21,16 +20,14 @@ export function setup(db, classId, classData, opts = {}) {
   _classData = classData || {};
   _onChangeCallback = opts.onChange || null;
 
-  // Si no hi ha termes, deixem tot buit i mostrem missatge
   if (!_classData.terms) {
-    _classData.terms = {};   // sense terme inicial
-    _activeTermId = null;    // cap terme actiu
-    renderDropdown();        // desplegable buit
-    showEmptyMessage(true);  // mostrar missatge
+    _classData.terms = {};
+    _activeTermId = null;
+    renderDropdown();
+    showEmptyMessage(true);
     return;
   }
 
-  // Selecciona primer terme actiu
   if (!_activeTermId) _activeTermId = Object.keys(_classData.terms)[0];
 
   renderDropdown();
@@ -94,24 +91,23 @@ function renderDropdown() {
 
 // ------------------------ Mostrar/Amagar missatge ------------------------
 function showEmptyMessage(show) {
-  const msg = document.getElementById('emptyGroupMessage');           // missatge petit existent
+  const msg = document.getElementById('emptyGroupMessage');
   const wrapper = document.getElementById('notesTable-wrapper');
   const table = document.getElementById('notesTable');
-  const instruction = document.getElementById('emptyInstructionMessage'); // nou missatge central
+  const instruction = document.getElementById('emptyInstructionMessage');
 
   if (!msg || !wrapper || !table || !instruction) return;
 
   if (show) {
-    msg.style.display = 'block';        // missatge existent
-    table.style.display = 'none';       // amaguem la taula
-    instruction.style.display = 'block';// mostrem missatge central gran
+    msg.style.display = 'block';
+    table.style.display = 'none';
+    instruction.style.display = 'block';
   } else {
     msg.style.display = 'none';
     table.style.display = 'table';
     instruction.style.display = 'none';
   }
 }
-
 
 // ------------------------ Crear un nou terme ------------------------
 export async function addNewTermWithName(name) {
@@ -121,9 +117,10 @@ export async function addNewTermWithName(name) {
   const newId = makeTermId(name.trim());
   const payload = { name: name.trim(), activities: [] };
 
+  if (!_classData.terms) _classData.terms = {};
+
   const updateObj = {};
   updateObj[`terms.${newId}`] = payload;
-
   await _db.collection('classes').doc(_currentClassId).update(updateObj);
 
   const doc = await _db.collection('classes').doc(_currentClassId).get();
@@ -133,13 +130,19 @@ export async function addNewTermWithName(name) {
   renderDropdown();
   showEmptyMessage(false);
 
-  if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
+  if (_onChangeCallback) _onChangeCallback(_activeTermId);
+
   return newId;
 }
 
 // ------------------------ Afegir/Eliminar activitat ------------------------
 export async function addActivityToActiveTerm(activityId) {
   if (!_activeTermId || !_db || !_currentClassId) return;
+
+  if (!_classData.terms) _classData.terms = {};
+  if (!_classData.terms[_activeTermId]) _classData.terms[_activeTermId] = { name: '', activities: [] };
+  if (!_classData.terms[_activeTermId].activities) _classData.terms[_activeTermId].activities = [];
+
   const path = `terms.${_activeTermId}.activities`;
   await _db.collection('classes').doc(_currentClassId).update({
     [path]: firebase.firestore.FieldValue.arrayUnion(activityId)
@@ -153,6 +156,7 @@ export async function addActivityToActiveTerm(activityId) {
 
 export async function removeActivityFromActiveTerm(activityId) {
   if (!_activeTermId || !_db || !_currentClassId) return;
+
   const path = `terms.${_activeTermId}.activities`;
   await _db.collection('classes').doc(_currentClassId).update({
     [path]: firebase.firestore.FieldValue.arrayRemove(activityId)
@@ -161,12 +165,13 @@ export async function removeActivityFromActiveTerm(activityId) {
   const doc = await _db.collection('classes').doc(_currentClassId).get();
   _classData = doc.exists ? doc.data() : _classData;
 
-  if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
+  if (_onChangeCallback) _onChangeCallback(_activeTermId);
 }
 
 // ------------------------ Renombrar/eliminar terme ------------------------
 export async function renameTerm(termId, newName) {
   if (!termId || !newName) return;
+
   const path = `terms.${termId}.name`;
   await _db.collection('classes').doc(_currentClassId).update({ [path]: newName });
 
@@ -202,7 +207,6 @@ export async function deleteTerm(termId) {
 // ------------------------ Copiar estructura ------------------------
 export function copyGridStructure(termId) {
   if (!termId || !_classData?.terms?.[termId]) return;
-  // Guardem una còpia de l'array d'activitats
   _copiedGridStructure = [...(_classData.terms[termId].activities || [])];
   console.log('Estructura copiada:', _copiedGridStructure);
 }
@@ -214,37 +218,33 @@ export async function pasteGridStructure(termId) {
   const newActivityIds = [];
 
   for (const actId of _copiedGridStructure) {
-    // 1. Carregar activitat original
     const doc = await _db.collection('activitats').doc(actId).get();
     if (!doc.exists) continue;
 
     const data = doc.data();
 
-    // 2. Crear nova activitat duplicada
     const newActRef = await _db.collection('activitats').add({
       ...data,
-      originalCloneOf: actId,         // opcional: rastrejar d'on ve
+      originalCloneOf: actId,
       createdAt: Date.now()
     });
 
     newActivityIds.push(newActRef.id);
   }
 
-  // 3. Associar els nous IDs a la graella
+  if (!_classData.terms) _classData.terms = {};
+  if (!_classData.terms[termId]) _classData.terms[termId] = { name: '', activities: [] };
+
   const path = `terms.${termId}.activities`;
   await _db.collection('classes').doc(_currentClassId).update({
     [path]: newActivityIds
   });
 
-  // 4. Refrescar dades internes i UI
   const doc = await _db.collection('classes').doc(_currentClassId).get();
   if (doc.exists) Object.assign(_classData, doc.data());
 
-
   if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
 }
-
-
 
 // ------------------------ Export mínim ------------------------
 export function getActiveTerm() { return _activeTermId; }
