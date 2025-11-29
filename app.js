@@ -569,7 +569,25 @@ function renderStudentsList(){
   });
 }
 /* ---------------- Notes Grid amb menú activitats ---------------- */
+
+  // 🔹 Nou: evita execucions simultànies
+  if (isRenderingGrid) return;
+  isRenderingGrid = true;
+  // Neteja taula
+  notesThead.innerHTML = '';
+  notesTbody.innerHTML = '';
+  notesTfoot.innerHTML = '';
+  formulaTfoot.innerHTML = '';
+
+
+// 🔹 Nou, si no funciona esborrar----------------------------------------------------------------------
+let isRenderingGrid = false; // evita duplicació de capçaleres
+//-------------------------------------------------------------------------------------------------------
 async function renderNotesGrid() {
+// 🔹 Nou, si no funciona esborrar----------------------------------------------------------------------
+if (isRenderingGrid) return;
+  isRenderingGrid = true;
+//-------------------------------------------------------------------------------------------------------
   // Neteja taula
   notesThead.innerHTML = '';
   notesTbody.innerHTML = '';
