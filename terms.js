@@ -6,7 +6,7 @@ let _currentClassId = null;
 let _classData = null;
 let _activeTermId = null;
 let _onChangeCallback = null;
-let copiedGridStructure = null;
+let _copiedGridStructure = null;
 
 
 // Generar un ID únic per terme
