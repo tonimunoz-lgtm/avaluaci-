@@ -166,14 +166,28 @@ export async function removeActivityFromActiveTerm(activityId) {
 // ------------------------ Renombrar/eliminar terme ------------------------
 export async function renameTerm(termId, newName) {
   if (!termId || !newName) return;
+
+  // Actualitzem la base de dades
   const path = `terms.${termId}.name`;
   await _db.collection('classes').doc(_currentClassId).update({ [path]: newName });
 
+  // Refresquem les dades locals
   const doc = await _db.collection('classes').doc(_currentClassId).get();
   _classData = doc.exists ? doc.data() : _classData;
 
+  // Refresquem el desplegable amb els noms actualitzats
   renderDropdown();
+
+  // 🔹 Forcem refresc de la UI que depèn del terme actiu
+  if (_onChangeCallback && _activeTermId) _onChangeCallback(_activeTermId);
+
+  // 🔹 Opcional: si tens algun element HTML que mostri explícitament el nom del terme
+  const termNameLabel = document.getElementById('activeTermName');
+  if (termNameLabel && _classData.terms?.[_activeTermId]?.name) {
+    termNameLabel.textContent = _classData.terms[_activeTermId].name;
+  }
 }
+
 
 export async function deleteTerm(termId) {
   if (!_db || !_currentClassId || !_classData?.terms?.[termId]) return;
