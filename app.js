@@ -46,8 +46,6 @@ const btnAddActivity = document.getElementById('btnAddActivity');
 const btnSortAlpha = document.getElementById('btnSortAlpha');
 const btnExport = document.getElementById('btnExport');
 
-const termMenu = document.getElementById('termMenu');
-
 const studentsList = document.getElementById('studentsList');
 const studentsCount = document.getElementById('studentsCount');
 
