@@ -8,7 +8,6 @@ let _activeTermId = null;
 let _onChangeCallback = null;
 let _copiedGridStructure = null;
 
-
 // Generar un ID únic per terme
 function makeTermId(name) {
   return `term_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
