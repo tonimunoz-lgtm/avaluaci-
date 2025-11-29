@@ -208,22 +208,6 @@ export function copyGridStructure(termId) {
 }
 
 // ------------------------ Enganxar estructura ------------------------
-//export async function pasteGridStructure(termId) {
-  //if (!termId || !_classData?.terms?.[termId] || !_copiedGridStructure) return;
-//
- // const path = `terms.${termId}.activities`;
-  //await _db.collection('classes').doc(_currentClassId).update({
-   // [path]: _copiedGridStructure
- // });
-//
- // const doc = await _db.collection('classes').doc(_currentClassId).get();
- // _classData = doc.exists ? doc.data() : _classData;
-//
-//  if (_onChangeCallback) _onChangeCallback(termId);
-//  console.log('Estructura enganxada a la graella', termId);
-//}
-
-//------------------
 export async function pasteGridStructure(termId) {
   if (!termId || !_copiedGridStructure) return;
 
