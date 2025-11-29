@@ -1,9 +1,4 @@
-// terms.js
 // Mòdul per gestionar "terms" (graelles d'activitats) dins d'una classe
-
-import firebase from 'firebase/app';
-import 'firebase/firestore';
-import { renderNotesGrid } from './app.js'; // ajusta la ruta segons la teva estructura
 
 let _db = null;
 let _currentClassId = null;
@@ -12,25 +7,9 @@ let _activeTermId = null;
 let _onChangeCallback = null;
 let _copiedGridStructure = null; // guardar estructura d'activitats temporalment
 
-// ---------- Generar un ID únic per terme ----------
+// Generar un ID únic per terme
 function makeTermId(name) {
   return `term_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
-}
-
-// ---------- Variables globals necessàries per renderNotesGrid ----------
-window.classStudents = [];
-window.classActivities = [];
-
-// 🔹 Força refresc de la graella després de canvis
-async function refreshGridAfterDataChange() {
-  if (!_classData || !_activeTermId) return;
-
-  // Actualitza arrays locals que renderNotesGrid utilitza
-  window.classStudents = Object.keys(_classData.students || {});
-  window.classActivities = _classData.terms[_activeTermId]?.activities || [];
-
-  // Crida renderNotesGrid() per forçar render
-  await renderNotesGrid();
 }
 
 // ------------------------ Setup ------------------------
@@ -54,11 +33,22 @@ export function setup(db, classId, classData, opts = {}) {
 
   // 🔥 Forcem un refresc inicial encara que la graella estigui buida
   if (_onChangeCallback && _activeTermId) {
-    setTimeout(async () => {
+    setTimeout(() => {
       _onChangeCallback(_activeTermId);
-      await refreshGridAfterDataChange();
+      // 🔥 Afegim aquesta línia per forçar render inicial
+      refreshGridAfterDataChange();
     }, 50);
   }
+}
+
+// 🔹 Força refresc de la graella després de canvis
+async function refreshGridAfterDataChange() {
+  // Actualitza les arrays locals que usa renderNotesGrid
+  classStudents = Object.keys(_classData.students || {}); // segons com guardis els alumnes
+  classActivities = _classData.terms[_activeTermId]?.activities || [];
+
+  // Crida renderNotesGrid() per forçar render
+  await renderNotesGrid();
 }
 
 // ------------------------ Obtenir dades ------------------------
@@ -104,11 +94,10 @@ function renderDropdown() {
     sel.appendChild(opt);
   });
 
-  sel.onchange = async (e) => {
+  sel.onchange = (e) => {
     _activeTermId = e.target.value;
     showEmptyMessage(false);
-    if (_onChangeCallback) await _onChangeCallback(_activeTermId);
-    await refreshGridAfterDataChange();
+    if (_onChangeCallback) _onChangeCallback(_activeTermId);
   };
 
   if (_activeTermId) {
@@ -126,7 +115,6 @@ function showEmptyMessage(show) {
   const wrapper = document.getElementById('notesTable-wrapper');
   const table = document.getElementById('notesTable');
   const instruction = document.getElementById('emptyInstructionMessage');
-
   if (!msg || !wrapper || !table || !instruction) return;
 
   if (show) {
@@ -161,10 +149,7 @@ export async function addNewTermWithName(name) {
   renderDropdown();
   showEmptyMessage(false);
 
-  if (_onChangeCallback) {
-    await _onChangeCallback(_activeTermId);
-    await refreshGridAfterDataChange();
-  }
+  if (_onChangeCallback) _onChangeCallback(_activeTermId);
 
   return newId;
 }
@@ -177,18 +162,18 @@ export async function addActivityToActiveTerm(activityId) {
       _classData.terms[_activeTermId].activities = [];
 
   const path = `terms.${_activeTermId}.activities`;
-
   await _db.collection('classes').doc(_currentClassId).update({
     [path]: firebase.firestore.FieldValue.arrayUnion(activityId)
   });
 
+  // Refresquem dades locals
   const doc = await _db.collection('classes').doc(_currentClassId).get();
   _classData = doc.exists ? doc.data() : _classData;
 
   // 🔥 Forcem refresc de la graella
   if (_onChangeCallback && _activeTermId) {
     await _onChangeCallback(_activeTermId);
-    await refreshGridAfterDataChange();
+    refreshGridAfterDataChange();
   }
 }
 
@@ -206,7 +191,7 @@ export async function addStudentToActiveTerm(studentId) {
   // 🔥 Forcem refresc de la graella
   if (_onChangeCallback && _activeTermId) {
     await _onChangeCallback(_activeTermId);
-    await refreshGridAfterDataChange();
+    refreshGridAfterDataChange();
   }
 }
 
