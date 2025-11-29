@@ -157,22 +157,26 @@ export async function addActivityToActiveTerm(activityId) {
   if (!_activeTermId || !_db || !_currentClassId) return;
 
   if (!_classData.terms) _classData.terms = {};
-  if (!_classData.terms[_activeTermId]) _classData.terms[_activeTermId] = { name: '', activities: [], students: [] };
+  if (!_classData.terms[_activeTermId]) _classData.terms[_activeTermId] = { name: '', activities: [] };
   if (!_classData.terms[_activeTermId].activities) _classData.terms[_activeTermId].activities = [];
 
   const path = `terms.${_activeTermId}.activities`;
 
-  // 🔹 Actualitzem localment abans que Firestore
-  _classData.terms[_activeTermId].activities.push(activityId);
-
-  // 🔹 Refresquem la graella immediatament
-  if (_onChangeCallback) _onChangeCallback(_activeTermId);
-
-  // 🔹 Actualitzem Firestore
+  // Afegim activitat a Firestore
   await _db.collection('classes').doc(_currentClassId).update({
     [path]: firebase.firestore.FieldValue.arrayUnion(activityId)
   });
+
+  // Refresquem dades locals
+  const doc = await _db.collection('classes').doc(_currentClassId).get();
+  _classData = doc.exists ? doc.data() : _classData;
+
+  // 🔥 Forcem refresc de la graella, encara que estigui buida
+  if (_onChangeCallback && _activeTermId) {
+    _onChangeCallback(_activeTermId);
+  }
 }
+
 
 // ------------------------ Afegir/Eliminar alumne ------------------------
 export async function addStudentToActiveTerm(studentId) {
