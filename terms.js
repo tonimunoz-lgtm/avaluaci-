@@ -1,6 +1,10 @@
 // terms.js
 // Mòdul per gestionar "terms" (graelles d'activitats) dins d'una classe
 
+import firebase from 'firebase/app';
+import 'firebase/firestore';
+import { renderNotesGrid } from './app.js'; // ajusta la ruta segons la teva estructura
+
 let _db = null;
 let _currentClassId = null;
 let _classData = null;
@@ -8,9 +12,25 @@ let _activeTermId = null;
 let _onChangeCallback = null;
 let _copiedGridStructure = null; // guardar estructura d'activitats temporalment
 
-// Generar un ID únic per terme
+// ---------- Generar un ID únic per terme ----------
 function makeTermId(name) {
   return `term_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+}
+
+// ---------- Variables globals necessàries per renderNotesGrid ----------
+window.classStudents = [];
+window.classActivities = [];
+
+// 🔹 Força refresc de la graella després de canvis
+async function refreshGridAfterDataChange() {
+  if (!_classData || !_activeTermId) return;
+
+  // Actualitza arrays locals que renderNotesGrid utilitza
+  window.classStudents = Object.keys(_classData.students || {});
+  window.classActivities = _classData.terms[_activeTermId]?.activities || [];
+
+  // Crida renderNotesGrid() per forçar render
+  await renderNotesGrid();
 }
 
 // ------------------------ Setup ------------------------
@@ -34,24 +54,12 @@ export function setup(db, classId, classData, opts = {}) {
 
   // 🔥 Forcem un refresc inicial encara que la graella estigui buida
   if (_onChangeCallback && _activeTermId) {
-    setTimeout(() => {
+    setTimeout(async () => {
       _onChangeCallback(_activeTermId);
-      // 🔥 Afegim aquesta línia per forçar render inicial
-      refreshGridAfterDataChange();
+      await refreshGridAfterDataChange();
     }, 50);
   }
 }
-
-// 🔹 Força refresc de la graella després de canvis
-async function refreshGridAfterDataChange() {
-  // Actualitza les arrays locals que usa renderNotesGrid
-  classStudents = Object.keys(_classData.students || {}); // segons com guardis els alumnes
-  classActivities = _classData.terms[_activeTermId]?.activities || [];
-
-  // Crida renderNotesGrid() per forçar render
-  await renderNotesGrid();
-}
-
 
 // ------------------------ Obtenir dades ------------------------
 export function getActiveTermId() {
@@ -96,10 +104,11 @@ function renderDropdown() {
     sel.appendChild(opt);
   });
 
-  sel.onchange = (e) => {
+  sel.onchange = async (e) => {
     _activeTermId = e.target.value;
     showEmptyMessage(false);
-    if (_onChangeCallback) _onChangeCallback(_activeTermId);
+    if (_onChangeCallback) await _onChangeCallback(_activeTermId);
+    await refreshGridAfterDataChange();
   };
 
   if (_activeTermId) {
@@ -152,7 +161,10 @@ export async function addNewTermWithName(name) {
   renderDropdown();
   showEmptyMessage(false);
 
-  if (_onChangeCallback) _onChangeCallback(_activeTermId);
+  if (_onChangeCallback) {
+    await _onChangeCallback(_activeTermId);
+    await refreshGridAfterDataChange();
+  }
 
   return newId;
 }
@@ -170,14 +182,13 @@ export async function addActivityToActiveTerm(activityId) {
     [path]: firebase.firestore.FieldValue.arrayUnion(activityId)
   });
 
-  // Refresquem dades locals
   const doc = await _db.collection('classes').doc(_currentClassId).get();
   _classData = doc.exists ? doc.data() : _classData;
 
   // 🔥 Forcem refresc de la graella
   if (_onChangeCallback && _activeTermId) {
     await _onChangeCallback(_activeTermId);
-    refreshGridAfterDataChange();
+    await refreshGridAfterDataChange();
   }
 }
 
@@ -195,8 +206,9 @@ export async function addStudentToActiveTerm(studentId) {
   // 🔥 Forcem refresc de la graella
   if (_onChangeCallback && _activeTermId) {
     await _onChangeCallback(_activeTermId);
-    refreshGridAfterDataChange();
+    await refreshGridAfterDataChange();
   }
 }
+
 // ------------------------ Export mínim ------------------------
 export function getActiveTerm() { return _activeTermId; }
