@@ -14,8 +14,8 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 // ---------------- Globals ----------------
-const usersTable = document.getElementById('usersTable'); // taula on mostrarem els usuaris
-const btnCreateAdmin = document.getElementById('btnCreateAdmin');
+const usersTableBody = document.getElementById('usersTableBody'); // taula on mostrarem els usuaris
+const btnCreateAdmin = document.getElementById('btnAddAdmin');
 const btnLogout = document.getElementById('btnLogout');
 btnLogout.addEventListener('click', async () => {
   await auth.signOut();
@@ -27,28 +27,31 @@ btnLogout.addEventListener('click', async () => {
 
 // Carrega la llista d'usuaris
 async function loadUsers() {
-  usersTable.innerHTML = ''; // buidem la taula
+  usersTableBody.innerHTML = ''; // buidem la taula
   const snapshot = await db.collection('professors').orderBy('createdAt', 'desc').get();
   snapshot.forEach(doc => {
     const data = doc.data();
     const tr = document.createElement('tr');
+    tr.classList.add('border-b');
 
     tr.innerHTML = `
-      <td>${data.nom || ''}</td>
-      <td>${data.email}</td>
-      <td>${data.createdAt ? data.createdAt.toDate().toLocaleString() : '-'}</td>
-      <td>
+      <td class="px-4 py-2">${data.nom || '-'}</td>
+      <td class="px-4 py-2">${data.email}</td>
+      <td class="px-4 py-2">${data.createdAt ? data.createdAt.toDate().toLocaleString() : '-'}</td>
+      <td class="px-4 py-2">${data.isAdmin ? 'Sí' : 'No'}</td>
+      <td class="px-4 py-2">${data.suspended ? 'Sí' : 'No'}</td>
+      <td class="px-4 py-2">
         <button class="btn-suspend" data-id="${doc.id}">Suspendre</button>
         <button class="btn-delete" data-id="${doc.id}">Eliminar</button>
         <button class="btn-admin" data-id="${doc.id}">${data.isAdmin ? 'Treure admin' : 'Fer admin'}</button>
       </td>
     `;
-
-    usersTable.appendChild(tr);
+    usersTableBody.appendChild(tr);
   });
 
   attachUserButtons();
 }
+
 
 // Assignar esdeveniments als botons de cada fila
 function attachUserButtons() {
@@ -118,3 +121,44 @@ window.addEventListener('DOMContentLoaded', () => {
     loadUsers();
   });
 });
+
+//------------------enviar mail--------------------
+const btnSendEmail = document.getElementById('btnSendEmail');
+btnSendEmail.addEventListener('click', async () => {
+  const email = document.getElementById('emailRecipient').value.trim();
+  const message = document.getElementById('emailMessage').value.trim();
+  if (!email || !message) return alert('Introdueix destinatari i missatge.');
+
+  try {
+    // Aquí pots fer servir Firebase Functions o nodemailer en backend
+    // Momentàniament només alert
+    alert(`Missatge enviat a ${email}:\n\n${message}`);
+    document.getElementById('emailRecipient').value = '';
+    document.getElementById('emailMessage').value = '';
+  } catch (e) {
+    alert('Error enviant el correu: ' + e.message);
+  }
+});
+
+//--------------mostrar 10 ultims accessos---------------
+async function loadLastLogins() {
+  const container = document.getElementById('lastLoginsContainer');
+  container.innerHTML = '';
+
+  const snapshot = await db.collection('professors').get();
+  for (const doc of snapshot.docs) {
+    const loginsRef = db.collection('professors').doc(doc.id).collection('logins')
+      .orderBy('timestamp', 'desc').limit(10);
+    const loginsSnap = await loginsRef.get();
+    const div = document.createElement('div');
+    div.classList.add('mb-2', 'bg-white', 'p-2', 'rounded', 'shadow');
+    div.innerHTML = `<strong>${doc.data().email}</strong>:<br>` +
+      loginsSnap.docs.map(d => d.data().timestamp.toDate().toLocaleString()).join('<br>');
+    container.appendChild(div);
+  }
+}
+
+// Crida a carregar
+loadLastLogins();
+
+
