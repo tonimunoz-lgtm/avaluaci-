@@ -178,6 +178,11 @@ btnLogout.addEventListener('click', ()=> {
 auth.onAuthStateChanged(user => {
   if (user) {
     professorUID = user.uid;
+
+    // ---------- REGISTRAR LOGIN ----------
+    db.collection('professors').doc(user.uid).collection('logins')
+      .add({ timestamp: firebase.firestore.Timestamp.now() })
+      .catch(e => console.error('Error registrant login:', e));
     setupAfterAuth(user);
   } else {
     professorUID = null;
