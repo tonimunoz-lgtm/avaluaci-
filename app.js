@@ -193,9 +193,7 @@ auth.onAuthStateChanged(async user => {
   if (user) {
     professorUID = null;
     showLogin();
-  }
-});
-
+ 
 
     // ---------- REGISTRAR LOGIN ----------
     db.collection('professors').doc(user.uid).collection('logins')
