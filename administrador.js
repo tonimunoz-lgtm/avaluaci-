@@ -96,40 +96,35 @@ function attachUserButtons() {
 
 // ---------------- ACCIONS ----------------
 
-// Suspendre usuari + enviar email
-async function suspendUser(uid) {
 
-    if (!confirm('Segur que vols suspendre aquest usuari?')) return;
 
-    const doc = await db.collection('professors').doc(uid).get();
-    if (!doc.exists) return alert('Usuari no trobat');
+//-------------reactivar/suspendre usuari-----------------
+// Toggle suspensió
+async function toggleSuspendUser(uid) {
 
-    const email = doc.data().email;
+  const doc = await db.collection('professors').doc(uid).get();
+  if (!doc.exists) return;
 
-    await db.collection('professors').doc(uid).update({
-        suspended: true,
-        suspendedAt: firebase.firestore.Timestamp.now()
-    });
+  const current = doc.data().suspended || false;
+  const email = doc.data().email;
 
-    // Enviament de correu automàtic (mock)
-    auth.sendPasswordResetEmail(email)
-        .catch(() => { /* ignorem errors */ });
+  // Nou estat (invertit)
+  const newState = !current;
 
-    alert(
-        "L’usuari ha estat suspès.\n\n" +
-        "📩 Rebrà un email informant que el seu compte ha estat bloquejat.\n"
-    );
+  await db.collection('professors').doc(uid).update({
+    suspended: newState,
+    suspendedAt: newState ? firebase.firestore.Timestamp.now() : null
+  });
 
-    loadUsers();
-}
+  if (newState) {
+    // Si s'està SUSPENENT → enviem correu mínim d’avís
+    auth.sendPasswordResetEmail(email).catch(() => {});
+    alert("Usuari suspès.\nRebrà un correu d’avís automàtic.");
+  } else {
+    alert("Usuari reactivat correctament.");
+  }
 
-//-------------reactivar usuari-----------------
-async function unsuspendUser(uid) {
-    await db.collection('professors').doc(uid).update({
-        suspended: false
-    });
-    alert("L’usuari ha estat reactivat.");
-    loadUsers();
+  loadUsers();
 }
 
 
