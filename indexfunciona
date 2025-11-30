@@ -65,7 +65,7 @@
           <div class="flex items-center justify-between">
             <h2 class="text-xl font-semibold">Les meves classes</h2>
             <div class="flex gap-3">
-              <button id="btnCreateClass" class="bg-indigo-500 hover:bg-indigo-600 text-white px-5 py-2 rounded-xl shadow transition-transform">➕ Crear classe</button>
+              <button id="btnCreateClass" class="bg-indigo-500 hover:bg-indigo-600 text-white px-5 py-2 rounded-xl shadow transition-transform">+ Crear classe</button>
               <button id="btnDeleteMode" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-xl shadow transition-transform">🗑️ Eliminar classe</button>
             </div>
           </div>
@@ -84,23 +84,23 @@
             <div class="flex flex-wrap gap-2">
   <!-- Botó menú graella -->
  
-              <select id="termsDropdown"></select>
+              <select id="termsDropdown" class="border border-black rounded px-3 py-1 rounded text-black"></select>
               <button id="btnAddTerm" class="bg-green-500 text-white px-3 py-1 rounded font-bold text-lg">＋</button>
             <div class="relative">
               <button id="termMenuBtn" class="bg-green-500 text-white px-3 py-1 rounded font-bold text-lg">⋮</button>
                 <div id="termMenu" class="menu absolute left-0 mt-2 bg-white border rounded shadow hidden z-50">
-                  <button class="edit-term-btn px-2 py-1 w-full text-left hover:bg-gray-200 whitespace-nowrap">Editar nom</button>
+                  <button class="edit-term-btn px-2 py-1 w-full text-left hover:bg-gray-200 whitespace-nowrap">Editar graella</button>
                   <button class="delete-term-btn px-2 py-1 w-full text-left hover:bg-gray-200 whitespace-nowrap">Eliminar graella</button>
                   <button class="copy-structure-btn px-2 py-1 w-full text-left hover:bg-gray-200 whitespace-nowrap">Copiar estructura</button>
                   <button class="paste-structure-btn px-2 py-1 w-full text-left hover:bg-gray-200 whitespace-nowrap">Enganxar estructura</button>
               </div>
            </div>
-              <button id="btnSortAlpha" class="bg-yellow-400 text-black px-3 py-1 rounded">Ordenar A-Z</button>
+              <button id="btnSortAlpha" class="bg-yellow-400 text-black px-3 py-1 rounded">Ordenar</button>
               <button id="btnExport" class="bg-amber-500 text-white px-3 py-1 rounded">Exportar</button>
               <button id="btnImportAL" class="bg-blue-500 text-white px-3 py-1 rounded">Importar</button>
-              <button id="btnToggleStudentsMobile" class="block md:hidden bg-indigo-500 text-white px-3 py-1 rounded shadow">👥Alumnes</button>
-              <button id="btnAddStudent" class="bg-purple-600 text-white px-3 py-1 rounded">➕ Alumne</button>
-              <button id="btnAddActivity" class="bg-teal-600 text-white px-3 py-1 rounded">➕ Activitat</button>
+              <button id="btnToggleStudentsMobile" class="block md:hidden bg-indigo-500 text-white px-3 py-1 rounded shadow">👥Alumnes</button>  
+              <button id="btnAddStudent" class="bg-purple-600 text-white px-3 py-1 rounded"><span class="text-xl text-white">+</span> Alumne</button>
+              <button id="btnAddActivity" class="bg-teal-600 text-white px-3 py-1 rounded"><span class="text-xl text-white">+</span> Activitat</button>
             </div>
           </div>
 
@@ -112,9 +112,22 @@
   <!-- Botó de tancament mòbil -->
   <button id="closeStudentsMobile" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 font-bold text-xl">&times;</button>
 
-  <h3 class="font-semibold mb-2">
+  <div class="flex items-center justify-between mb-2">
+  <h3 class="font-semibold">
     Alumnes <span id="studentsCount" class="text-sm text-gray-400"></span>
   </h3>
+
+  <!-- 🔵 Botó menú global alumnes -->
+  <div class="relative">
+      <button id="cancelDeleteStudentsBtn" style="display:none;">❌</button>
+      <button id="studentsMenuBtn" class="text-xl">⋮</button>
+
+      <div id="studentsMenu" class="absolute right-0 mt-1 bg-white border rounded shadow hidden z-50">
+          <button id="deleteStudentsModeBtn" class="px-3 py-1 w-full text-left hover:bg-gray-100 whitespace-nowrap">Eliminar alumnes</button>
+      </div>
+  </div>
+</div>
+
 
   <ul id="studentsList" class="space-y-2"></ul>
   <p class="mt-3 text-xs text-gray-400">Arrossega per ordenar</p>
