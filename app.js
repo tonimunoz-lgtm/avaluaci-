@@ -1725,6 +1725,53 @@ termMenu.querySelector('.paste-structure-btn').addEventListener('click', async (
 
 
 
+//----------------------activar eliminar estudiants--------------------
+function activateDeleteStudentsMode() {
+    studentsMenu.classList.add('hidden');
+
+    // Afegim el checkbox a cada alumne
+    document.querySelectorAll('#studentsList li').forEach(li => {
+        // Agafem la columna on hi ha el menú ⋮
+        const menuContainer = li.querySelector('.relative');
+
+        // Amaguem el menú ⋮
+        const menuBtn = li.querySelector('.menu-btn');
+        if (menuBtn) menuBtn.style.display = 'none';
+
+        // Creem el checkbox i l’afegim DINS del mateix container a la dreta
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'stu-check ml-2'; // ml-2: marge a l’esquerra del checkbox
+        menuContainer.appendChild(checkbox);
+    });
+
+    // Afegim menú inferior
+    const footer = document.createElement('div');
+    footer.id = 'studentsDeleteFooter';
+    footer.className = 'mt-3 p-2 bg-red-50 border border-red-200 rounded flex justify-between items-center';
+
+    footer.innerHTML = `
+        <div>
+            <label><input type="checkbox" id="selectAllStudents"> Seleccionar tots</label>
+        </div>
+        <button id="confirmDeleteStudents" class="bg-red-600 text-white px-3 py-1 rounded">
+            Eliminar seleccionats
+        </button>
+    `;
+
+    document.getElementById('studentsList').after(footer);
+
+    // Select all
+    document.getElementById('selectAllStudents').addEventListener('change', e => {
+        document.querySelectorAll('.stu-check').forEach(ch => ch.checked = e.target.checked);
+    });
+
+    // Botó eliminar seleccionats
+    document.getElementById('confirmDeleteStudents').addEventListener('click', () => {
+        deleteSelectedStudents();
+    });
+}
+
 //----------------------funcio eliminar seleccionats--------------------
 function deleteSelectedStudents() {
     const selected = [...document.querySelectorAll('.stu-check:checked')];
@@ -1741,7 +1788,7 @@ function deleteSelectedStudents() {
     selected.forEach(ch => {
         const li = ch.closest('li');
         const stuName = li.querySelector('.stu-name').textContent;
-        
+
         // Agafem ID per eliminar-lo de la classe
         const index = [...studentsList.children].indexOf(li);
         const stuId = classStudents[index];
@@ -1776,81 +1823,47 @@ function exitDeleteStudentsMode() {
 }
 
 //-----------------------control del mode eliminar
-
 function toggleDeleteStudentsMode() {
-  isDeleteMode = !isDeleteMode;
+    isDeleteMode = !isDeleteMode;
 
-  // Mostrem/Amaguem cancel·lar
-  const cancelBtn = document.getElementById('cancelDeleteStudentsBtn');
-  if (cancelBtn) cancelBtn.style.display = isDeleteMode ? 'inline-block' : 'none';
+    classStudents.forEach(stuId => {
+        const li = document.querySelector(`li[data-student-id="${stuId}"]`);
+        if (!li) return;
 
-  // Treure footer si existeix
-  const existingFooter = document.getElementById('studentsDeleteFooter');
-  if (existingFooter) existingFooter.remove();
+        const menuBtn = li.querySelector('.menu-btn');
 
-  // Actualitzar cada alumne
-  classStudents.forEach(stuId => {
-    const li = document.querySelector(`li[data-student-id="${stuId}"]`);
-    if (!li) return;
+        if (isDeleteMode) {
+            // Amaga ⋮ individuals
+            if (menuBtn) menuBtn.style.display = 'none';
 
-    const menuBtn = li.querySelector('.menu-btn');
-    const menuContainer = li.querySelector('.relative');
+            // Afegir checkbox si no existeix
+            if (!li.querySelector('.stu-check')) {
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'stu-check ml-2';
+                li.querySelector('.relative').appendChild(checkbox);
+            }
+        } else {
+            // Tornar a mostrar ⋮
+            if (menuBtn) menuBtn.style.display = 'inline-block';
 
-    if (isDeleteMode) {
-      // Amaga ⋮ individuals
-      if (menuBtn) menuBtn.style.display = 'none';
+            // Eliminar checkboxes
+            const checkbox = li.querySelector('.stu-check');
+            if (checkbox) checkbox.remove();
+        }
+    });
 
-      // Afegir checkbox si no existeix
-      if (!li.querySelector('.stu-check')) {
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.className = 'stu-check ml-2';
-        menuContainer.appendChild(checkbox);
-      }
-
-      // Afegir footer si no existeix
-      if (!document.getElementById('studentsDeleteFooter')) {
-        const footer = document.createElement('div');
-        footer.id = 'studentsDeleteFooter';
-        footer.className = 'mt-3 p-2 bg-red-50 border border-red-200 rounded flex justify-between items-center';
-        footer.innerHTML = `
-          <div>
-            <label><input type="checkbox" id="selectAllStudents"> Seleccionar tots</label>
-          </div>
-          <button id="confirmDeleteStudents" class="bg-red-600 text-white px-3 py-1 rounded">
-              Eliminar seleccionats
-          </button>
-        `;
-        document.getElementById('studentsList').after(footer);
-
-        // Select all
-        document.getElementById('selectAllStudents').addEventListener('change', e => {
-          document.querySelectorAll('.stu-check').forEach(ch => ch.checked = e.target.checked);
-        });
-
-        // Botó eliminar seleccionats
-        document.getElementById('confirmDeleteStudents').addEventListener('click', () => {
-          deleteSelectedStudents();
-        });
-      }
-
-    } else {
-      // Tornar a mostrar ⋮
-      if (menuBtn) menuBtn.style.display = 'inline-block';
-
-      // Eliminar checkboxes
-      const checkbox = li.querySelector('.stu-check');
-      if (checkbox) checkbox.remove();
-    }
-  });
+    // Mostrar/Amagar botó Cancel·lar a la capçalera
+    const cancelBtn = document.getElementById('cancelDeleteStudentsBtn');
+    if (cancelBtn) cancelBtn.style.display = isDeleteMode ? 'inline-block' : 'none';
 }
 
 // Premem els tres puntets → mode eliminar
-document.getElementById('deleteStudentsModeBtn').addEventListener('click', () => {
-  toggleDeleteStudentsMode();
+document.getElementById('studentsMenuBtn').addEventListener('click', () => {
+    toggleDeleteStudentsMode();
 });
 
 // Premem Cancel·lar → surt del mode
 document.getElementById('cancelDeleteStudentsBtn').addEventListener('click', () => {
-  toggleDeleteStudentsMode();
+    toggleDeleteStudentsMode();
 });
