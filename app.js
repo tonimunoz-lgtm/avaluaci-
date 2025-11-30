@@ -125,29 +125,16 @@ function showApp() {
 }
 
 /* ---------- AUTH ---------- */
-btnLogin.addEventListener('click', async () => {
+btnLogin.addEventListener('click', () => {
   const email = document.getElementById('loginEmail').value.trim();
   const pw = document.getElementById('loginPassword').value;
   if (!email || !pw) return alert('Introdueix email i contrasenya');
-
-  try {
-    const u = await auth.signInWithEmailAndPassword(email, pw);
-
-    const userDoc = await db.collection('professors').doc(u.user.uid).get();
-    if (userDoc.exists && userDoc.data().suspended) {
-      await auth.signOut();
-      alert("⚠️ El teu compte està suspès.\nContacta amb l’administrador.");
-      return;
-    }
-
-    professorUID = u.user.uid;
-    setupAfterAuth(u.user);
-
-  } catch (e) {
-    alert('Error login: ' + e.message);
-  }
+  auth.signInWithEmailAndPassword(email, pw)
+    .then(u => {
+      professorUID = u.user.uid;
+      setupAfterAuth(u.user);
+    }).catch(e => alert('Error login: ' + e.message));
 });
-
 
 btnRegister.addEventListener('click', () => {
   const email = document.getElementById('loginEmail').value.trim();
@@ -156,22 +143,10 @@ btnRegister.addEventListener('click', () => {
   auth.createUserWithEmailAndPassword(email, pw)
     .then(u => {
       professorUID = u.user.uid;
-    //------------------------------------------------
-      db.collection('professors').doc(professorUID).set({
-        email,
-        nom: email.split('@')[0],
-        isAdmin: false,
-        suspended: false,
-        createdAt: firebase.firestore.Timestamp.now(),
-        classes: []
-      }).then(()=> { setupAfterAuth(u.user); });
+      db.collection('professors').doc(professorUID).set({ email, classes: [] })
+        .then(()=> { setupAfterAuth(u.user); });
     }).catch(e => alert('Error registre: ' + e.message));
 });
- //-----------------------------------------------
-     // db.collection('professors').doc(professorUID).set({ email, classes: [] })
-     //   .then(()=> { setupAfterAuth(u.user); });
-//    }).catch(e => alert('Error registre: ' + e.message));
-//});
 
 btnRecover.addEventListener('click', () => {
   const email = document.getElementById('loginEmail').value.trim();
@@ -189,39 +164,15 @@ btnLogout.addEventListener('click', ()=> {
   });
 });
 
-auth.onAuthStateChanged(async (user) => {
+auth.onAuthStateChanged(user => {
   if (user) {
-    try {
-      const userDoc = await db.collection('professors').doc(user.uid).get();
-
-      if (!userDoc.exists) {
-        // Usuari autenticat però no té document a Firestore
-        await auth.signOut();
-        alert("⚠️ No tens un perfil creat. Contacta amb l'administrador.");
-        return;
-      }
-
-      if (userDoc.data().suspended) {
-        await auth.signOut();
-        alert("⚠️ El teu compte està suspès.\nContacta amb l’administrador.");
-        return;
-      }
-
-      professorUID = user.uid;
-      setupAfterAuth(user);
-
-    } catch (e) {
-      console.error("Error carregant l'usuari:", e);
-      await auth.signOut();
-      showLogin();
-    }
+    professorUID = user.uid;
+    setupAfterAuth(user);
   } else {
     professorUID = null;
     showLogin();
   }
 });
-
- 
 
     // ---------- REGISTRAR LOGIN ----------
     db.collection('professors').doc(user.uid).collection('logins')
