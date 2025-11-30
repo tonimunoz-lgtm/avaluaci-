@@ -1,65 +1,57 @@
 <!DOCTYPE html>
 <html lang="ca">
 <head>
-<meta charset="UTF-8">
-<title>Administració d'usuaris</title>
-<link rel="stylesheet" href="styles.css">
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions.js"></script>
+  <meta charset="UTF-8">
+  <title>Administració d'usuaris</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.3/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body class="bg-gray-100 p-6">
+<body class="bg-gray-100">
 
-<h1 class="text-3xl font-bold mb-4">Administració d’usuaris</h1>
+  <header class="p-4 bg-white shadow flex justify-between items-center">
+    <h1 class="text-2xl font-bold">Administració d’usuaris</h1>
+    <button id="btnLogout" class="bg-red-600 text-white px-3 py-1 rounded">Sortir</button>
+  </header>
 
-<!-- Filtre -->
-<div class="mb-4 flex gap-2">
-  <input id="filterName" placeholder="Filtrar per nom" class="px-2 py-1 border rounded">
-  <input id="filterEmail" placeholder="Filtrar per email" class="px-2 py-1 border rounded">
-  <button id="btnApplyFilter" class="bg-blue-600 text-white px-3 py-1 rounded">Filtrar</button>
-  <button id="btnClearFilter" class="bg-gray-400 text-white px-3 py-1 rounded">Netejar</button>
-</div>
+  <main class="p-6">
+    <!-- Taula d'usuaris -->
+    <section class="mb-6">
+      <h2 class="text-xl font-semibold mb-2">Usuaris registrats</h2>
+      <table class="w-full table-auto bg-white rounded shadow">
+        <thead class="bg-gray-200">
+          <tr>
+            <th class="px-4 py-2">Nom</th>
+            <th class="px-4 py-2">Email</th>
+            <th class="px-4 py-2">Data creació</th>
+            <th class="px-4 py-2">Admin</th>
+            <th class="px-4 py-2">Suspès</th>
+            <th class="px-4 py-2">Accions</th>
+          </tr>
+        </thead>
+        <tbody id="usersTableBody"></tbody>
+      </table>
+      <button id="btnAddAdmin" class="mt-3 bg-green-600 text-white px-3 py-1 rounded">Crear nou admin</button>
+    </section>
 
-<div id="usersTableContainer" class="overflow-x-auto bg-white rounded shadow p-4">
-  <table id="usersTable" class="w-full text-left">
-    <thead>
-      <tr class="bg-gray-200">
-        <th class="px-2 py-1">Nom</th>
-        <th class="px-2 py-1">Email</th>
-        <th class="px-2 py-1">Data creació</th>
-        <th class="px-2 py-1">Rol</th>
-        <th class="px-2 py-1">Últims accessos</th>
-        <th class="px-2 py-1">Accions</th>
-      </tr>
-    </thead>
-    <tbody>
-      <!-- Carregat via JS -->
-    </tbody>
-  </table>
-</div>
+    <!-- Enviament de correus -->
+    <section class="mb-6">
+      <h2 class="text-xl font-semibold mb-2">Envia correu</h2>
+      <label class="block mb-1">Usuari (email):</label>
+      <input type="email" id="emailRecipient" class="border p-2 w-full mb-2">
+      <label class="block mb-1">Missatge:</label>
+      <textarea id="emailMessage" class="border p-2 w-full mb-2"></textarea>
+      <button id="btnSendEmail" class="bg-blue-600 text-white px-3 py-1 rounded">Enviar</button>
+    </section>
 
-<button id="createUserBtn" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded">Crear nou usuari</button>
+    <!-- Últims accessos -->
+    <section>
+      <h2 class="text-xl font-semibold mb-2">Últims 10 accessos per usuari</h2>
+      <div id="lastLoginsContainer"></div>
+    </section>
+  </main>
 
-<!-- Modal Crear Usuari -->
-<div id="createUserModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
-  <div class="bg-white p-6 rounded shadow w-96">
-    <h2 class="text-xl font-bold mb-4">Crear nou usuari</h2>
-    <form id="createUserForm" class="flex flex-col gap-2">
-      <input type="text" id="newUserName" placeholder="Nom" class="px-2 py-1 border rounded" required>
-      <input type="email" id="newUserEmail" placeholder="Email" class="px-2 py-1 border rounded" required>
-      <input type="password" id="newUserPassword" placeholder="Contrasenya" class="px-2 py-1 border rounded" required>
-      <label class="flex items-center gap-2">
-        <input type="checkbox" id="newUserAdmin"> Administrador
-      </label>
-      <div class="flex justify-end gap-2 mt-2">
-        <button type="button" id="cancelCreateUserBtn" class="px-3 py-1 bg-gray-300 rounded">Cancelar</button>
-        <button type="submit" class="px-3 py-1 bg-blue-600 text-white rounded">Crear</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<script src="administrador.js"></script>
+  <script type="module" src="administrador.js"></script>
 </body>
 </html>
