@@ -110,7 +110,7 @@
  <aside id="studentsListContainer">
   <div id="studentsListContent">
   <!-- Botó de tancament mòbil -->
-  <button id="closeStudentsMobile" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 font-bold text-xl">&times;</button>
+  <button id="closeStudentsMobile" class="absolute top-2 right-2 text-red-500 hover:text-red-800 font-bold text-3xl">&times;</button>
 
   <div class="flex items-center justify-between mb-2">
   <h3 class="font-semibold">
