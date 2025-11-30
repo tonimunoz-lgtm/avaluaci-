@@ -125,16 +125,29 @@ function showApp() {
 }
 
 /* ---------- AUTH ---------- */
-btnLogin.addEventListener('click', () => {
+btnLogin.addEventListener('click', async () => {
   const email = document.getElementById('loginEmail').value.trim();
   const pw = document.getElementById('loginPassword').value;
   if (!email || !pw) return alert('Introdueix email i contrasenya');
-  auth.signInWithEmailAndPassword(email, pw)
-    .then(u => {
-      professorUID = u.user.uid;
-      setupAfterAuth(u.user);
-    }).catch(e => alert('Error login: ' + e.message));
+
+  try {
+    const u = await auth.signInWithEmailAndPassword(email, pw);
+
+    const userDoc = await db.collection('professors').doc(u.user.uid).get();
+    if (userDoc.exists && userDoc.data().suspended) {
+      await auth.signOut();
+      alert("⚠️ El teu compte està suspès.\nContacta amb l’administrador.");
+      return;
+    }
+
+    professorUID = u.user.uid;
+    setupAfterAuth(u.user);
+
+  } catch (e) {
+    alert('Error login: ' + e.message);
+  }
 });
+
 
 btnRegister.addEventListener('click', () => {
   const email = document.getElementById('loginEmail').value.trim();
