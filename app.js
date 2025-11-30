@@ -159,18 +159,31 @@ btnLogin.addEventListener('click', async () => {
   }
 });
 
-
-btnRegister.addEventListener('click', () => {
+btnRegister.addEventListener('click', async () => {
   const email = document.getElementById('loginEmail').value.trim();
   const pw = document.getElementById('loginPassword').value;
   if (!email || !pw) return alert('Introdueix email i contrasenya');
-  auth.createUserWithEmailAndPassword(email, pw)
-    .then(u => {
-      professorUID = u.user.uid;
-      db.collection('professors').doc(professorUID).set({ email, classes: [] })
-        .then(()=> { setupAfterAuth(u.user); });
-    }).catch(e => alert('Error registre: ' + e.message));
+
+  try {
+    const u = await auth.createUserWithEmailAndPassword(email, pw);
+    professorUID = u.user.uid;
+
+    await db.collection('professors').doc(professorUID).set({
+      email,
+      nom: email.split('@')[0],
+      isAdmin: false,
+      suspended: false,
+      createdAt: firebase.firestore.Timestamp.now(),
+      classes: []
+    });
+
+    setupAfterAuth(u.user);
+
+  } catch(e) {
+    alert('Error registre: ' + e.message);
+  }
 });
+
 
 btnRecover.addEventListener('click', () => {
   const email = document.getElementById('loginEmail').value.trim();
