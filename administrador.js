@@ -98,14 +98,12 @@ function attachUserButtons() {
 // ---------------- ACCIONS ----------------
 
 // Suspendre usuari
-// Toggle suspensió
 async function toggleSuspendUser(uid) {
 
   const doc = await db.collection('professors').doc(uid).get();
   if (!doc.exists) return;
 
   const current = doc.data().suspended || false;
-  const email = doc.data().email;
 
   // Invertim l’estat
   const newState = !current;
@@ -116,13 +114,18 @@ async function toggleSuspendUser(uid) {
   });
 
   if (newState) {
-    alert("Usuari suspès. Rebrà un correu d’avís.");
+    alert("Usuari suspès correctament. Rebrà un avís al login.");
     auth.sendPasswordResetEmail(email).catch(() => {});
   } else {
     alert("Usuari reactivat correctament.");
   }
 
   loadUsers();
+
+  } catch (e) {
+    console.error("Error canviant estat de suspensió:", e);
+    alert("⚠️ Error canviant estat de suspensió.");
+  }
 }
 
 
