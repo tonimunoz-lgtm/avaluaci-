@@ -568,6 +568,33 @@ function renderStudentsList(){
     });
   });
 }
+
+//------------------------------------------------nuevo-------------------------------------------------------
+/* ================================
+   MENÚ GLOBAL D'ALUMNES
+================================= */
+
+const studentsMenuBtn = document.getElementById('studentsMenuBtn');
+const studentsMenu = document.getElementById('studentsMenu');
+const deleteStudentsModeBtn = document.getElementById('deleteStudentsModeBtn');
+
+studentsMenuBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    studentsMenu.classList.toggle('hidden');
+});
+
+// Tancar menús quan es clica fora
+document.addEventListener('click', () => {
+    studentsMenu.classList.add('hidden');
+});
+
+/* 🔥 Activar mode d'eliminació múltiple */
+deleteStudentsModeBtn.addEventListener('click', () => {
+    activateDeleteStudentsMode();
+});
+
+
+
 /* ---------------- Notes Grid amb menú activitats ---------------- */
 async function renderNotesGrid() {
   // Neteja taula
@@ -1692,3 +1719,96 @@ termMenu.querySelector('.paste-structure-btn').addEventListener('click', async (
   alert('Estructura enganxada a la graella!');
   termMenu.classList.add('hidden');
 });
+
+function activateDeleteStudentsMode() {
+    studentsMenu.classList.add('hidden');
+
+    // Afegim el checkbox a cada alumne
+    document.querySelectorAll('#studentsList li').forEach(li => {
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'stu-check mr-2';
+        li.prepend(checkbox);
+        
+        // Amaguem el menú ⋮ de cada alumne
+        const menu = li.querySelector('.menu-btn');
+        if (menu) menu.style.display = 'none';
+    });
+
+    // Afegim menú inferior
+    const footer = document.createElement('div');
+    footer.id = 'studentsDeleteFooter';
+    footer.className = 'mt-3 p-2 bg-red-50 border border-red-200 rounded flex justify-between items-center';
+
+    footer.innerHTML = `
+        <div>
+            <label><input type="checkbox" id="selectAllStudents"> Seleccionar tots</label>
+        </div>
+        <button id="confirmDeleteStudents" class="bg-red-600 text-white px-3 py-1 rounded">
+            Eliminar seleccionats
+        </button>
+    `;
+
+    document.getElementById('studentsList').after(footer);
+
+    // Select all
+    document.getElementById('selectAllStudents').addEventListener('change', e => {
+        document.querySelectorAll('.stu-check').forEach(ch => ch.checked = e.target.checked);
+    });
+
+    // Botó eliminar seleccionats
+    document.getElementById('confirmDeleteStudents').addEventListener('click', () => {
+        deleteSelectedStudents();
+    });
+}
+
+//----------------------funcio eliminar seleccionats--------------------
+function deleteSelectedStudents() {
+    const selected = [...document.querySelectorAll('.stu-check:checked')];
+
+    if (selected.length === 0) {
+        alert('No hi ha alumnes seleccionats.');
+        return;
+    }
+
+    if (!confirm(`Eliminar ${selected.length} alumnes?`)) return;
+
+    const ids = [];
+
+    selected.forEach(ch => {
+        const li = ch.closest('li');
+        const stuName = li.querySelector('.stu-name').textContent;
+        
+        // Agafem ID per eliminar-lo de la classe
+        const index = [...studentsList.children].indexOf(li);
+        const stuId = classStudents[index];
+
+        ids.push(stuId);
+    });
+
+    // Actualitzar Firestore
+    const classRef = db.collection('classes').doc(currentClassId);
+
+    classRef.update({
+        alumnes: firebase.firestore.FieldValue.arrayRemove(...ids)
+    }).then(() => {
+        // Tornem a carregar
+        loadClassData();
+        exitDeleteStudentsMode();
+    });
+}
+
+//---------------sortit mode eliminacio----------------------------
+function exitDeleteStudentsMode() {
+    const footer = document.getElementById('studentsDeleteFooter');
+    if (footer) footer.remove();
+
+    // Treure els checkbox del costat dels alumnes
+    document.querySelectorAll('.stu-check').forEach(ch => ch.remove());
+
+    // Mostrar els ⋮ de cada alumne
+    document.querySelectorAll('#studentsList li .menu-btn').forEach(btn => {
+        btn.style.display = 'inline-block';
+    });
+}
+
