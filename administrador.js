@@ -26,7 +26,37 @@ const btnBackToApp = document.getElementById('btnBackToApp');
 // Carregar llista d'usuaris
 async function loadUsers() {
   usersTableBody.innerHTML = '';
+
+  // Obtenim tots els documents de professors
   const snapshot = await db.collection('professors').orderBy('createdAt', 'desc').get();
+
+  // Si no hi ha cap document, podem provar de carregar logs com fallback
+  if (snapshot.empty) {
+    // Buscar tots els usuaris amb subcol·lecció logins
+    const usersWithLogs = await db.collectionGroup('logins')
+      .orderBy('timestamp', 'desc')
+      .limit(50) // pots ajustar
+      .get();
+
+    const emails = new Set();
+    usersWithLogs.forEach(doc => emails.add(doc.ref.parent.parent.id));
+
+    emails.forEach(email => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>-</td>
+        <td>${email}</td>
+        <td>-</td>
+        <td>No</td>
+        <td>No</td>
+        <td>-</td>
+      `;
+      usersTableBody.appendChild(tr);
+    });
+
+    return;
+  }
+
   snapshot.forEach(doc => {
     const data = doc.data();
     const tr = document.createElement('tr');
@@ -45,6 +75,7 @@ async function loadUsers() {
     `;
     usersTableBody.appendChild(tr);
   });
+
   attachUserButtons();
 }
 
