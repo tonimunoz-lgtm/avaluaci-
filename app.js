@@ -24,6 +24,9 @@ let classStudents = [];
 let classActivities = [];
 let deleteMode = false;
 let currentCalcActivityId = null; // Activitat actual per fer càlculs
+let isDeleteMode = false;
+
+
 
 /* Elements */
 const loginScreen = document.getElementById('loginScreen');
@@ -1817,3 +1820,48 @@ function exitDeleteStudentsMode() {
     });
 }
 
+//-----------------------control del mode eliminar
+
+function toggleDeleteStudentsMode() {
+  isDeleteMode = !isDeleteMode;
+
+  classStudents.forEach(stuId => {
+    const li = document.querySelector(`li[data-student-id="${stuId}"]`);
+    if (!li) return;
+
+    const menuBtn = li.querySelector('.menu-btn');
+    if (isDeleteMode) {
+      // Amaga ⋮ individuals
+      if (menuBtn) menuBtn.style.display = 'none';
+
+      // Afegir checkbox si no existeix
+      if (!li.querySelector('.stu-check')) {
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'stu-check ml-2';
+        li.querySelector('.relative').appendChild(checkbox);
+      }
+    } else {
+      // Tornar a mostrar ⋮
+      if (menuBtn) menuBtn.style.display = 'inline-block';
+
+      // Eliminar checkboxes
+      const checkbox = li.querySelector('.stu-check');
+      if (checkbox) checkbox.remove();
+    }
+  });
+
+  // Mostrar/Amagar botó Cancel·lar a la capçalera
+  const cancelBtn = document.getElementById('cancelDeleteStudentsBtn');
+  if (cancelBtn) cancelBtn.style.display = isDeleteMode ? 'inline-block' : 'none';
+}
+
+// Premem els tres puntets → mode eliminar
+document.getElementById('studentsMenuBtn').addEventListener('click', () => {
+  toggleDeleteStudentsMode();
+});
+
+// Premem Cancel·lar → surt del mode
+document.getElementById('cancelDeleteStudentsBtn').addEventListener('click', () => {
+  toggleDeleteStudentsMode();
+});
