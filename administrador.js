@@ -99,34 +99,33 @@ function attachUserButtons() {
 
 // Suspendre usuari
 async function toggleSuspendUser(uid) {
+  try {
+    // Llegim l'estat actual
+    const doc = await db.collection('professors').doc(uid).get();
+    if (!doc.exists) return;
 
-  const doc = await db.collection('professors').doc(uid).get();
-  if (!doc.exists) return;
+    const currentState = doc.data().suspended || false;
+    const newState = !currentState; // Toggle
 
-  const current = doc.data().suspended || false;
+    // Actualitzem Firestore
+    await db.collection('professors').doc(uid).update({ suspended: newState });
 
-  // Invertim l’estat
-  const newState = !current;
+    // Missatge a l'administrador
+    if (newState) {
+      alert("🔹 Usuari suspès correctament. Rebrà un avís al login.");
+    } else {
+      alert("🔹 Usuari reactivat correctament.");
+    }
 
-  await db.collection('professors').doc(uid).update({
-    suspended: newState,
-    suspendedAt: newState ? firebase.firestore.Timestamp.now() : null
-  });
-
-  if (newState) {
-    alert("Usuari suspès correctament. Rebrà un avís al login.");
-    auth.sendPasswordResetEmail(email).catch(() => {});
-  } else {
-    alert("Usuari reactivat correctament.");
-  }
-
-  loadUsers();
+    // Recarregar llista d'usuaris si tens aquesta funció
+    loadUsers();
 
   } catch (e) {
     console.error("Error canviant estat de suspensió:", e);
     alert("⚠️ Error canviant estat de suspensió.");
   }
 }
+
 
 
 // Reset contrasenya
