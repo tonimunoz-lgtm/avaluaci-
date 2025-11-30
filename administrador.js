@@ -28,18 +28,10 @@ const btnMigrateLoggedUsers = document.getElementById('btnMigrateLoggedUsers');
 async function loadUsers() {
   usersTableBody.innerHTML = '';
 
-  // Obtenim tots els documents existents
+  // 1. Carreguem els documents reals
   const snapshot = await db.collection('professors').orderBy('createdAt', 'desc').get();
-  const existingUsers = snapshot.docs.map(d => ({ id: d.id, data: d.data() }));
-
-  if (existingUsers.length === 0) {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td colspan="6" class="text-center p-4 text-gray-500">No hi ha usuaris registrats</td>`;
-    usersTableBody.appendChild(tr);
-    return;
-  }
-
-  existingUsers.forEach(({id, data}) => {
+  snapshot.forEach(doc => {
+    const data = doc.data();
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${data.nom || '-'}</td>
@@ -47,18 +39,41 @@ async function loadUsers() {
       <td>${data.createdAt ? data.createdAt.toDate().toLocaleString() : '-'}</td>
       <td>${data.isAdmin ? 'Sí' : 'No'}</td>
       <td>${data.suspended ? 'Sí' : 'No'}</td>
-      <td class="flex gap-1 flex-wrap">
-        <button class="btn-suspend px-2 py-1 bg-yellow-400 text-white rounded" data-id="${id}">Suspendre</button>
-        <button class="btn-reset px-2 py-1 bg-blue-400 text-white rounded" data-id="${id}">Reset PW</button>
-        <button class="btn-admin-toggle px-2 py-1 bg-indigo-500 text-white rounded" data-id="${id}">${data.isAdmin ? 'Treure admin' : 'Fer admin'}</button>
-        <button class="btn-delete px-2 py-1 bg-red-500 text-white rounded" data-id="${id}">Eliminar</button>
+      <td>
+        <button class="btn-suspend px-2 py-1 bg-yellow-400 text-white rounded" data-id="${doc.id}">Suspendre</button>
+        <button class="btn-reset px-2 py-1 bg-blue-400 text-white rounded" data-id="${doc.id}">Reset PW</button>
+        <button class="btn-admin-toggle px-2 py-1 bg-indigo-500 text-white rounded" data-id="${doc.id}">${data.isAdmin ? 'Treure admin' : 'Fer admin'}</button>
+        <button class="btn-delete px-2 py-1 bg-red-500 text-white rounded" data-id="${doc.id}">Eliminar</button>
       </td>
     `;
     usersTableBody.appendChild(tr);
   });
 
-  attachUserButtons();
+  attachUserButtons(); // Només s’afegeixen listeners a usuaris reals
+
+  // 2. Afegim usuaris que només tenen logins, sense botons
+  const usersWithLogs = await db.collectionGroup('logins').get();
+  const existingUids = snapshot.docs.map(d => d.id);
+  const added = new Set();
+
+  usersWithLogs.forEach(doc => {
+    const uid = doc.ref.parent.parent.id;
+    if (!existingUids.includes(uid) && !added.has(uid)) {
+      added.add(uid);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>-</td>
+        <td>${uid}</td>
+        <td>-</td>
+        <td>No</td>
+        <td>No</td>
+        <td>-</td>
+      `;
+      usersTableBody.appendChild(tr);
+    }
+  });
 }
+
 
 // Assignar esdeveniments als botons de cada fila
 function attachUserButtons() {
