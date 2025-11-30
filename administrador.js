@@ -63,9 +63,9 @@ async function loadUsers() {
       <td>${data.email || '-'}</td>
       <td>${data.createdAt ? data.createdAt.toDate().toLocaleString() : '-'}</td>
       <td>${data.isAdmin ? 'Sí' : 'No'}</td>
-      <td>${data.suspended ? 'Sí' : 'No'}</td>
+     <td>${data.suspended ? 'Sí' : 'No'}</td>
       <td>
-        <button class="btn-suspend px-2 py-1 bg-yellow-400 text-white rounded" data-id="${doc.id}">Suspendre</button>
+        <button class="btn-suspend-toggle px-2 py-1 bg-yellow-400 text-white rounded"data-id="${doc.id}">${data.suspended ? 'Reactivar' : 'Suspendre'}</button>
         <button class="btn-reset px-2 py-1 bg-blue-400 text-white rounded" data-id="${doc.id}">Reset PW</button>
         <button class="btn-admin-toggle px-2 py-1 bg-indigo-500 text-white rounded" data-id="${doc.id}">${data.isAdmin ? 'Treure admin' : 'Fer admin'}</button>
         <button class="btn-delete px-2 py-1 bg-red-500 text-white rounded" data-id="${doc.id}">Eliminar</button>
@@ -79,10 +79,12 @@ async function loadUsers() {
 
 // Assignar esdeveniments als botons de cada fila
 function attachUserButtons() {
-  document.querySelectorAll('.btn-suspend').forEach(btn => {
-    btn.addEventListener('click', () => suspendUser(btn.dataset.id));
+  
+  // --- TOGGLE SUSPENSIÓ ---
+  document.querySelectorAll('.btn-suspend-toggle').forEach(btn => {
+    btn.addEventListener('click', () => toggleSuspendUser(btn.dataset.id));
   });
-  document.querySelectorAll('.btn-reset').forEach(btn => {
+ document.querySelectorAll('.btn-reset').forEach(btn => {
     btn.addEventListener('click', () => resetPassword(btn.dataset.id));
   });
   document.querySelectorAll('.btn-admin-toggle').forEach(btn => {
@@ -96,12 +98,33 @@ function attachUserButtons() {
 // ---------------- ACCIONS ----------------
 
 // Suspendre usuari
-async function suspendUser(uid) {
-  if (!confirm('Estàs segur que vols suspendre aquest usuari?')) return;
-  await db.collection('professors').doc(uid).update({ suspended: true });
-  alert('Usuari suspès per mal ús. Rebrà un correu informant-lo.');
+// Toggle suspensió
+async function toggleSuspendUser(uid) {
+
+  const doc = await db.collection('professors').doc(uid).get();
+  if (!doc.exists) return;
+
+  const current = doc.data().suspended || false;
+  const email = doc.data().email;
+
+  // Invertim l’estat
+  const newState = !current;
+
+  await db.collection('professors').doc(uid).update({
+    suspended: newState,
+    suspendedAt: newState ? firebase.firestore.Timestamp.now() : null
+  });
+
+  if (newState) {
+    alert("Usuari suspès. Rebrà un correu d’avís.");
+    auth.sendPasswordResetEmail(email).catch(() => {});
+  } else {
+    alert("Usuari reactivat correctament.");
+  }
+
   loadUsers();
 }
+
 
 // Reset contrasenya
 async function resetPassword(uid) {
