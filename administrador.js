@@ -210,39 +210,38 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-////migracio professors---------------------------
-const btnMigrateLoggedUsers = document.getElementById('btnMigrateLoggedUsers');
 
-btnMigrateLoggedUsers.addEventListener('click', async () => {
-  if (!confirm('Segur que vols migrar tots els usuaris registrats que encara no tinguin document?')) return;
+// ---------------- MIGRACIÓ USUARIS ----------------
+const btnMigrateOldUsers = document.getElementById('btnMigrateOldUsers');
+btnMigrateOldUsers?.addEventListener('click', migrateOldProfessors);
+
+
+async function migrateOldProfessors() {
+  if (!confirm('Segur que vols migrar els usuaris antics? Afegirà nom, isAdmin, suspended i createdAt.')) return;
 
   try {
     const snapshot = await db.collection('professors').get();
-    const existingUids = snapshot.docs.map(d => d.id);
+    let migratedCount = 0;
 
-    // Busquem tots els usuaris que hagin fet login almenys una vegada
-    const usersSnapshot = await db.collectionGroup('logins').get();
-    let migrated = 0;
+    for (const doc of snapshot.docs) {
+      const data = doc.data();
+      const updates = {};
+      let needsUpdate = false;
 
-    for (const loginDoc of usersSnapshot.docs) {
-      const uid = loginDoc.ref.parent.parent.id; // parent de 'logins' és l'usuari
-      if (!existingUids.includes(uid)) {
-        const email = loginDoc.data().email || '';
-        await db.collection('professors').doc(uid).set({
-          email,
-          nom: '',
-          isAdmin: false,
-          suspended: false,
-          createdAt: firebase.firestore.Timestamp.now()
-        });
-        migrated++;
+      if (!data.nom) { updates.nom = data.email ? data.email.split('@')[0] : ''; needsUpdate = true; }
+      if (data.isAdmin === undefined) { updates.isAdmin = false; needsUpdate = true; }
+      if (data.suspended === undefined) { updates.suspended = false; needsUpdate = true; }
+      if (!data.createdAt) { updates.createdAt = firebase.firestore.Timestamp.now(); needsUpdate = true; }
+
+      if (needsUpdate) {
+        await db.collection('professors').doc(doc.id).update(updates);
+        migratedCount++;
       }
     }
 
-    alert(`Migració completada! ${migrated} nous usuaris creats.`);
-    loadUsers();
-  } catch(e) {
-    console.error(e);
+    alert(`Migració completada! S'han actualitzat ${migratedCount} usuaris antics.`);
+  } catch (e) {
+    console.error('Error migració:', e);
     alert('Error durant la migració: ' + e.message);
   }
-});
+}
