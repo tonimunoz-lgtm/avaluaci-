@@ -24,6 +24,9 @@ let classStudents = [];
 let classActivities = [];
 let deleteMode = false;
 let currentCalcActivityId = null; // Activitat actual per fer càlculs
+let isDeleteMode = false;
+
+
 
 /* Elements */
 const loginScreen = document.getElementById('loginScreen');
@@ -205,7 +208,7 @@ function loadClassesScreen() {
     }
     const ids = doc.data().classes || [];
     if(ids.length === 0){
-      classesGrid.innerHTML = `<div class="col-span-full p-6 bg-white dark:bg-gray-800 rounded shadow text-center">No tens cap classe. Crea la primera!</div>`;
+      classesGrid.innerHTML = `<div class="col-span-full p-6 bg-white dark:bg-gray-800 rounded shadow text-center text-lg">🔰 No tens cap classe activa. <strong class="font-bold">Crea la primera!</strong></div>`;         
       return;
     }
 
@@ -568,6 +571,33 @@ function renderStudentsList(){
     });
   });
 }
+
+//------------------------------------------------nuevo-------------------------------------------------------
+/* ================================
+   MENÚ GLOBAL D'ALUMNES
+================================= */
+
+const studentsMenuBtn = document.getElementById('studentsMenuBtn');
+const studentsMenu = document.getElementById('studentsMenu');
+const deleteStudentsModeBtn = document.getElementById('deleteStudentsModeBtn');
+
+studentsMenuBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    studentsMenu.classList.toggle('hidden');
+});
+
+// Tancar menús quan es clica fora
+document.addEventListener('click', () => {
+    studentsMenu.classList.add('hidden');
+});
+
+/* 🔥 Activar mode d'eliminació múltiple */
+deleteStudentsModeBtn.addEventListener('click', () => {
+    activateDeleteStudentsMode();
+});
+
+
+
 /* ---------------- Notes Grid amb menú activitats ---------------- */
 async function renderNotesGrid() {
   // Neteja taula
@@ -971,8 +1001,6 @@ function updateCalculatedCells() {
     });
   });
 }
-
-
 
 /* ---------------- Helpers Notes & Excel ---------------- */
 function th(txt, cls=''){
@@ -1693,4 +1721,151 @@ termMenu.querySelector('.paste-structure-btn').addEventListener('click', async (
   await Terms.pasteGridStructure(currentTermId);
   alert('Estructura enganxada a la graella!');
   termMenu.classList.add('hidden');
+});
+
+
+
+//----------------------activar eliminar estudiants--------------------
+function activateDeleteStudentsMode() {
+    studentsMenu.classList.add('hidden');
+
+    // Afegim el checkbox a cada alumne
+    document.querySelectorAll('#studentsList li').forEach(li => {
+        // Agafem la columna on hi ha el menú ⋮
+        const menuContainer = li.querySelector('.relative');
+
+        // Amaguem el menú ⋮
+        const menuBtn = li.querySelector('.menu-btn');
+        if (menuBtn) menuBtn.style.display = 'none';
+
+        // Creem el checkbox i l’afegim DINS del mateix container a la dreta
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'stu-check ml-2'; // ml-2: marge a l’esquerra del checkbox
+        menuContainer.appendChild(checkbox);
+    });
+
+    // Afegim menú inferior
+    const footer = document.createElement('div');
+    footer.id = 'studentsDeleteFooter';
+    footer.className = 'mt-3 p-2 bg-red-50 border border-red-200 rounded flex justify-between items-center';
+
+    footer.innerHTML = `
+        <div>
+            <label><input type="checkbox" id="selectAllStudents"> Seleccionar tots</label>
+        </div>
+        <button id="confirmDeleteStudents" class="bg-red-600 text-white px-3 py-1 rounded">
+            Eliminar seleccionats
+        </button>
+    `;
+
+    document.getElementById('studentsList').after(footer);
+
+    // Select all
+    document.getElementById('selectAllStudents').addEventListener('change', e => {
+        document.querySelectorAll('.stu-check').forEach(ch => ch.checked = e.target.checked);
+    });
+
+    // Botó eliminar seleccionats
+    document.getElementById('confirmDeleteStudents').addEventListener('click', () => {
+        deleteSelectedStudents();
+    });
+}
+
+//----------------------funcio eliminar seleccionats--------------------
+function deleteSelectedStudents() {
+    const selected = [...document.querySelectorAll('.stu-check:checked')];
+
+    if (selected.length === 0) {
+        alert('No hi ha alumnes seleccionats.');
+        return;
+    }
+
+    if (!confirm(`Eliminar ${selected.length} alumnes?`)) return;
+
+    const ids = [];
+
+    selected.forEach(ch => {
+        const li = ch.closest('li');
+        const stuName = li.querySelector('.stu-name').textContent;
+
+        // Agafem ID per eliminar-lo de la classe
+        const index = [...studentsList.children].indexOf(li);
+        const stuId = classStudents[index];
+
+        ids.push(stuId);
+    });
+
+    // Actualitzar Firestore
+    const classRef = db.collection('classes').doc(currentClassId);
+
+    classRef.update({
+        alumnes: firebase.firestore.FieldValue.arrayRemove(...ids)
+    }).then(() => {
+        // Tornem a carregar
+        loadClassData();
+        exitDeleteStudentsMode();
+    });
+}
+
+//---------------sortit mode eliminacio----------------------------
+function exitDeleteStudentsMode() {
+    const footer = document.getElementById('studentsDeleteFooter');
+    if (footer) footer.remove();
+
+    // Treure els checkbox del costat dels alumnes
+    document.querySelectorAll('.stu-check').forEach(ch => ch.remove());
+
+    // Mostrar els ⋮ de cada alumne
+    document.querySelectorAll('#studentsList li .menu-btn').forEach(btn => {
+        btn.style.display = 'inline-block';
+    });
+}
+
+//-----------------------control del mode eliminar
+function toggleDeleteStudentsMode() {
+    isDeleteMode = !isDeleteMode;
+
+    classStudents.forEach(stuId => {
+        const li = document.querySelector(`li[data-student-id="${stuId}"]`);
+        if (!li) return;
+
+        const menuBtn = li.querySelector('.menu-btn');
+
+        if (isDeleteMode) {
+            // Amaga ⋮ individuals
+            if (menuBtn) menuBtn.style.display = 'none';
+
+            // Afegir checkbox si no existeix
+            if (!li.querySelector('.stu-check')) {
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'stu-check ml-2';
+                li.querySelector('.relative').appendChild(checkbox);
+            }
+        } else {
+            // Tornar a mostrar ⋮
+            if (menuBtn) menuBtn.style.display = 'inline-block';
+
+            // Eliminar checkboxes
+            const checkbox = li.querySelector('.stu-check');
+            if (checkbox) checkbox.remove();
+        }
+    });
+
+    // Mostrar/Amagar botó Cancel·lar a la capçalera
+    const cancelBtn = document.getElementById('cancelDeleteStudentsBtn');
+    if (cancelBtn) cancelBtn.style.display = isDeleteMode ? 'inline-block' : 'none';
+}
+
+// Premem els tres puntets → mode eliminar
+document.getElementById('studentsMenuBtn').addEventListener('click', () => {
+    toggleDeleteStudentsMode();
+});
+
+// Premem Cancel·lar → surt del mode
+document.getElementById('cancelDeleteStudentsBtn').addEventListener('click', () => {
+    exitDeleteStudentsMode();
+    isDeleteMode = false; // actualitza l'estat del mode
+    document.getElementById('cancelDeleteStudentsBtn').style.display = 'none'; // amaga el botó
 });
