@@ -7,10 +7,19 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions.js"></script>
 </head>
 <body class="bg-gray-100 p-6">
 
-<h1 class="text-3xl font-bold mb-6">Administració d’usuaris</h1>
+<h1 class="text-3xl font-bold mb-4">Administració d’usuaris</h1>
+
+<!-- Filtre -->
+<div class="mb-4 flex gap-2">
+  <input id="filterName" placeholder="Filtrar per nom" class="px-2 py-1 border rounded">
+  <input id="filterEmail" placeholder="Filtrar per email" class="px-2 py-1 border rounded">
+  <button id="btnApplyFilter" class="bg-blue-600 text-white px-3 py-1 rounded">Filtrar</button>
+  <button id="btnClearFilter" class="bg-gray-400 text-white px-3 py-1 rounded">Netejar</button>
+</div>
 
 <div id="usersTableContainer" class="overflow-x-auto bg-white rounded shadow p-4">
   <table id="usersTable" class="w-full text-left">
@@ -18,14 +27,14 @@
       <tr class="bg-gray-200">
         <th class="px-2 py-1">Nom</th>
         <th class="px-2 py-1">Email</th>
-        <th class="px-2 py-1">Data de creació</th>
+        <th class="px-2 py-1">Data creació</th>
         <th class="px-2 py-1">Rol</th>
         <th class="px-2 py-1">Últims accessos</th>
         <th class="px-2 py-1">Accions</th>
       </tr>
     </thead>
     <tbody>
-      <!-- Usuari carregats via JS -->
+      <!-- Carregat via JS -->
     </tbody>
   </table>
 </div>
