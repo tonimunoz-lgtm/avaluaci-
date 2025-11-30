@@ -17,6 +17,7 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+
 /* ---------------- Globals ---------------- */
 let professorUID = null;
 let currentClassId = null;
@@ -24,6 +25,9 @@ let classStudents = [];
 let classActivities = [];
 let deleteMode = false;
 let currentCalcActivityId = null; // Activitat actual per fer càlculs
+let isDeleteMode = false;
+
+
 
 /* Elements */
 const loginScreen = document.getElementById('loginScreen');
@@ -132,16 +136,27 @@ btnLogin.addEventListener('click', () => {
     }).catch(e => alert('Error login: ' + e.message));
 });
 
-btnRegister.addEventListener('click', () => {
+btnLogin.addEventListener('click', async () => {
   const email = document.getElementById('loginEmail').value.trim();
   const pw = document.getElementById('loginPassword').value;
   if (!email || !pw) return alert('Introdueix email i contrasenya');
-  auth.createUserWithEmailAndPassword(email, pw)
-    .then(u => {
-      professorUID = u.user.uid;
-      db.collection('professors').doc(professorUID).set({ email, classes: [] })
-        .then(()=> { setupAfterAuth(u.user); });
-    }).catch(e => alert('Error registre: ' + e.message));
+
+  try {
+    const u = await auth.signInWithEmailAndPassword(email, pw);
+
+    const userDoc = await db.collection('professors').doc(u.user.uid).get();
+    if (userDoc.exists && userDoc.data().suspended) {
+      await auth.signOut();
+      alert("⚠️ El teu compte està suspès.\nContacta amb l’administrador.");
+      return;
+    }
+
+    professorUID = u.user.uid;
+    setupAfterAuth(u.user);
+
+  } catch (e) {
+    alert('Error login: ' + e.message);
+  }
 });
 
 btnRecover.addEventListener('click', () => {
@@ -170,14 +185,33 @@ auth.onAuthStateChanged(user => {
   }
 });
 
-function setupAfterAuth(user) {
+   
+async function setupAfterAuth(user) {
   showApp();
   const email = user.email || '';
   usuariNom.textContent = email.split('@')[0] || email;
 
+  // ----------------- AFEGIR OPCIÓ ADMIN -----------------
+  const userDoc = await db.collection('professors').doc(user.uid).get();
+  if (userDoc.exists && userDoc.data().isAdmin) {
+    // Comprovem que encara no hi ha el botó
+    if (!document.getElementById('btnAdminPanel')) {
+      const adminBtn = document.createElement('button');
+      adminBtn.id = 'btnAdminPanel';
+      adminBtn.className = 'w-full text-left px-2 py-1 hover:bg-gray-100';
+      adminBtn.textContent = 'Administrar';
+      adminBtn.addEventListener('click', () => {
+        window.location.href = 'administrador.html';
+      });
+      document.getElementById('userMenu').appendChild(adminBtn);
+    }
+  }
+
   // Crida automàtica per carregar la graella de classes
   loadClassesScreen();
 }
+
+
 
 /* ---------------- Classes screen ---------------- */
 btnCreateClass.addEventListener('click', ()=> openModal('modalCreateClass'));
@@ -205,7 +239,7 @@ function loadClassesScreen() {
     }
     const ids = doc.data().classes || [];
     if(ids.length === 0){
-      classesGrid.innerHTML = `<div class="col-span-full p-6 bg-white dark:bg-gray-800 rounded shadow text-center">🔰No tens cap classe. Crea la primera!</div>`;
+      classesGrid.innerHTML = `<div class="col-span-full p-6 bg-white dark:bg-gray-800 rounded shadow text-center text-lg">🔰 No tens cap classe activa. <strong class="font-bold">Crea la primera!</strong></div>`;         
       return;
     }
 
@@ -1720,24 +1754,26 @@ termMenu.querySelector('.paste-structure-btn').addEventListener('click', async (
   termMenu.classList.add('hidden');
 });
 
+
+
 //----------------------activar eliminar estudiants--------------------
 function activateDeleteStudentsMode() {
     studentsMenu.classList.add('hidden');
 
     // Afegim el checkbox a cada alumne
     document.querySelectorAll('#studentsList li').forEach(li => {
-       // Agafem la columna on hi ha el menú ⋮
-const menuContainer = li.querySelector('.relative');
+        // Agafem la columna on hi ha el menú ⋮
+        const menuContainer = li.querySelector('.relative');
 
-// Amaguem el menú ⋮
-const menuBtn = li.querySelector('.menu-btn');
-if (menuBtn) menuBtn.style.display = 'none';
+        // Amaguem el menú ⋮
+        const menuBtn = li.querySelector('.menu-btn');
+        if (menuBtn) menuBtn.style.display = 'none';
 
-// Creem el checkbox i l’afegim DINS del mateix container a la dreta
-const checkbox = document.createElement('input');
-checkbox.type = 'checkbox';
-checkbox.className = 'stu-check ml-2'; // ml-2: marge a l’esquerra del checkbox
-menuContainer.appendChild(checkbox);
+        // Creem el checkbox i l’afegim DINS del mateix container a la dreta
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'stu-check ml-2'; // ml-2: marge a l’esquerra del checkbox
+        menuContainer.appendChild(checkbox);
     });
 
     // Afegim menú inferior
@@ -1747,10 +1783,10 @@ menuContainer.appendChild(checkbox);
 
     footer.innerHTML = `
         <div>
-            <label><input type="checkbox" id="selectAllStudents"> Seleccionar tots</label>
+            <label><input type="checkbox" id="selectAllStudents"> Tots</label>
         </div>
         <button id="confirmDeleteStudents" class="bg-red-600 text-white px-3 py-1 rounded">
-            Eliminar seleccionats
+            Eliminar
         </button>
     `;
 
@@ -1783,7 +1819,7 @@ function deleteSelectedStudents() {
     selected.forEach(ch => {
         const li = ch.closest('li');
         const stuName = li.querySelector('.stu-name').textContent;
-        
+
         // Agafem ID per eliminar-lo de la classe
         const index = [...studentsList.children].indexOf(li);
         const stuId = classStudents[index];
@@ -1816,3 +1852,80 @@ function exitDeleteStudentsMode() {
         btn.style.display = 'inline-block';
     });
 }
+
+//-----------------------control del mode eliminar
+function toggleDeleteStudentsMode() {
+    isDeleteMode = !isDeleteMode;
+
+    classStudents.forEach(stuId => {
+        const li = document.querySelector(`li[data-student-id="${stuId}"]`);
+        if (!li) return;
+
+        const menuBtn = li.querySelector('.menu-btn');
+
+        if (isDeleteMode) {
+            // Amaga ⋮ individuals
+            if (menuBtn) menuBtn.style.display = 'none';
+
+            // Afegir checkbox si no existeix
+            if (!li.querySelector('.stu-check')) {
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'stu-check ml-2';
+                li.querySelector('.relative').appendChild(checkbox);
+            }
+        } else {
+            // Tornar a mostrar ⋮
+            if (menuBtn) menuBtn.style.display = 'inline-block';
+
+            // Eliminar checkboxes
+            const checkbox = li.querySelector('.stu-check');
+            if (checkbox) checkbox.remove();
+        }
+    });
+
+    // Mostrar/Amagar botó Cancel·lar a la capçalera
+    const cancelBtn = document.getElementById('cancelDeleteStudentsBtn');
+    if (cancelBtn) cancelBtn.style.display = isDeleteMode ? 'inline-block' : 'none';
+}
+
+// Premem els tres puntets → mode eliminar
+document.getElementById('deleteStudentsModeBtn').addEventListener('click', () => {
+    toggleDeleteStudentsMode(); // aquí entres al mode eliminar
+});
+
+// Premem Cancel·lar → surt del mode
+document.getElementById('cancelDeleteStudentsBtn').addEventListener('click', () => {
+    exitDeleteStudentsMode();
+    isDeleteMode = false; // actualitza l'estat del mode
+    document.getElementById('cancelDeleteStudentsBtn').style.display = 'none'; // amaga el botó
+});
+
+// ----------- SCRIPT PER MARCAR USUARIS COM A ADMIN -----------
+
+// Llista d'usuaris que vols marcar com a administrador
+const adminEmails = [
+  "toni.munoz@institutmatadepera.cat",
+  "tonaco92@gamil.com",
+  "el_teu_email@exemple.com" // posa el teu email
+];
+
+// Funció per actualitzar Firestore
+async function setAdmins() {
+  try {
+    const snapshot = await db.collection('professors').get();
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      if (adminEmails.includes(data.email)) {
+        db.collection('professors').doc(doc.id).update({ isAdmin: true })
+          .then(() => console.log(`Usuari ${data.email} marcat com admin.`))
+          .catch(err => console.error('Error actualitzant:', err));
+      }
+    });
+  } catch (err) {
+    console.error('Error llegint professors:', err);
+  }
+}
+
+// Executar només una vegada
+setAdmins();
