@@ -143,15 +143,18 @@ btnRegister.addEventListener('click', () => {
   auth.createUserWithEmailAndPassword(email, pw)
     .then(u => {
       professorUID = u.user.uid;
-     db.collection('professors').doc(professorUID).set({
-  email,
-  nom: '', // o email.split('@')[0]
-  isAdmin: false,
-  suspended: false,
-  createdAt: firebase.firestore.Timestamp.now(),
-  classes: []
+    //------------------------------------------------
+      db.collection('professors').doc(professorUID).set({
+        email,
+        nom: email.split('@')[0],
+        isAdmin: false,
+        suspended: false,
+        createdAt: firebase.firestore.Timestamp.now(),
+        classes: []
+      }).then(()=> { setupAfterAuth(u.user); });
+    }).catch(e => alert('Error registre: ' + e.message));
 });
- 
+ //-----------------------------------------------
      // db.collection('professors').doc(professorUID).set({ email, classes: [] })
      //   .then(()=> { setupAfterAuth(u.user); });
 //    }).catch(e => alert('Error registre: ' + e.message));
