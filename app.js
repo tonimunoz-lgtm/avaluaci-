@@ -189,9 +189,22 @@ btnLogout.addEventListener('click', ()=> {
   });
 });
 
-auth.onAuthStateChanged(user => {
+auth.onAuthStateChanged(async user => {  // ← async aquí
   if (user) {
+    const userDoc = await db.collection('professors').doc(user.uid).get();
+    if (userDoc.exists && userDoc.data().suspended) {
+        await auth.signOut();
+        alert("⚠️ El teu compte està suspès.\nContacta amb l’administrador.");
+        return;
+    }
     professorUID = user.uid;
+    setupAfterAuth(user);
+  } else {
+    professorUID = null;
+    showLogin();
+  }
+});
+
 
     // ---------- REGISTRAR LOGIN ----------
     db.collection('professors').doc(user.uid).collection('logins')
