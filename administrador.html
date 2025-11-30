@@ -11,6 +11,7 @@
 </head>
 <body class="bg-gray-100">
 
+  <!-- Header -->
   <header class="p-4 bg-white shadow flex justify-between items-center">
     <h1 class="text-2xl font-bold">Administració d’usuaris</h1>
     <div class="flex gap-2">
@@ -19,11 +20,12 @@
     </div>
   </header>
 
+  <!-- Contingut principal -->
   <main class="p-6">
     <!-- Taula d'usuaris -->
     <section class="mb-6">
       <h2 class="text-xl font-semibold mb-2">Usuaris registrats</h2>
-      <table class="w-full table-auto bg-white rounded shadow" id="usersTable">
+      <table class="w-full table-auto bg-white rounded shadow">
         <thead class="bg-gray-200">
           <tr>
             <th class="px-4 py-2">Nom</th>
@@ -36,7 +38,7 @@
         </thead>
         <tbody id="usersTableBody"></tbody>
       </table>
-      <button id="btnAddAdmin" class="mt-3 bg-green-600 text-white px-3 py-1 rounded">Crear nou admin</button>
+      <button id="btnAddAdmin" class="mt-3 bg-green-600 text-white px-3 py-1 rounded">Crear nou usuari</button>
     </section>
 
     <!-- Enviament de correus -->
@@ -46,7 +48,7 @@
       <input type="email" id="emailRecipient" class="border p-2 w-full mb-2">
       <label class="block mb-1">Missatge:</label>
       <textarea id="emailMessage" class="border p-2 w-full mb-2"></textarea>
-      <button id="btnSendEmail" class="bg-indigo-500 text-white px-3 py-1 rounded">Enviar</button>
+      <button id="btnSendEmail" class="bg-blue-600 text-white px-3 py-1 rounded">Enviar</button>
     </section>
 
     <!-- Últims accessos -->
@@ -56,12 +58,7 @@
     </section>
   </main>
 
+  <!-- Script principal -->
   <script type="module" src="administrador.js"></script>
-  <script>
-    // Botó tornar enrere
-    document.getElementById('btnBackToApp').addEventListener('click', () => {
-      window.location.href = 'index.html'; // o la pàgina principal del gestor d'avaluació
-    });
-  </script>
 </body>
 </html>
