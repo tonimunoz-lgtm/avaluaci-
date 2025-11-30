@@ -1859,8 +1859,8 @@ function toggleDeleteStudentsMode() {
 }
 
 // Premem els tres puntets → mode eliminar
-document.getElementById('studentsMenuBtn').addEventListener('click', () => {
-    toggleDeleteStudentsMode();
+document.getElementById('deleteStudentsModeBtn').addEventListener('click', () => {
+    toggleDeleteStudentsMode(); // aquí entres al mode eliminar
 });
 
 // Premem Cancel·lar → surt del mode
