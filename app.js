@@ -189,15 +189,38 @@ btnLogout.addEventListener('click', ()=> {
   });
 });
 
-auth.onAuthStateChanged(user => {
+auth.onAuthStateChanged(async (user) => {
   if (user) {
-    professorUID = user.uid;
-    setupAfterAuth(user);
+    try {
+      const userDoc = await db.collection('professors').doc(user.uid).get();
+
+      if (!userDoc.exists) {
+        // Usuari autenticat però no té document a Firestore
+        await auth.signOut();
+        alert("⚠️ No tens un perfil creat. Contacta amb l'administrador.");
+        return;
+      }
+
+      if (userDoc.data().suspended) {
+        await auth.signOut();
+        alert("⚠️ El teu compte està suspès.\nContacta amb l’administrador.");
+        return;
+      }
+
+      professorUID = user.uid;
+      setupAfterAuth(user);
+
+    } catch (e) {
+      console.error("Error carregant l'usuari:", e);
+      await auth.signOut();
+      showLogin();
+    }
   } else {
     professorUID = null;
     showLogin();
   }
 });
+
  
 
     // ---------- REGISTRAR LOGIN ----------
