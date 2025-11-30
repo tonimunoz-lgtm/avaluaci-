@@ -7,23 +7,23 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.3/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-gray-100">
 
   <header class="p-4 bg-white shadow flex justify-between items-center">
-  <h1 class="text-2xl font-bold">Administració d’usuaris</h1>
-  <div class="flex gap-2">
-    <button id="btnBackToApp" class="bg-gray-600 text-white px-3 py-1 rounded">Tornar</button>
-    <button id="btnLogout" class="bg-red-600 text-white px-3 py-1 rounded">Sortir</button>
-  </div>
-</header>
-
+    <h1 class="text-2xl font-bold">Administració d’usuaris</h1>
+    <div class="flex gap-2">
+      <button id="btnBackToApp" class="bg-gray-600 text-white px-3 py-1 rounded">Tornar</button>
+      <button id="btnLogout" class="bg-red-600 text-white px-3 py-1 rounded">Sortir</button>
+    </div>
+  </header>
 
   <main class="p-6">
     <!-- Taula d'usuaris -->
     <section class="mb-6">
       <h2 class="text-xl font-semibold mb-2">Usuaris registrats</h2>
-      <table class="w-full table-auto bg-white rounded shadow">
+      <table class="w-full table-auto bg-white rounded shadow" id="usersTable">
         <thead class="bg-gray-200">
           <tr>
             <th class="px-4 py-2">Nom</th>
@@ -46,7 +46,7 @@
       <input type="email" id="emailRecipient" class="border p-2 w-full mb-2">
       <label class="block mb-1">Missatge:</label>
       <textarea id="emailMessage" class="border p-2 w-full mb-2"></textarea>
-      <button id="btnSendEmail" class="bg-blue-600 text-white px-3 py-1 rounded">Enviar</button>
+      <button id="btnSendEmail" class="bg-indigo-500 text-white px-3 py-1 rounded">Enviar</button>
     </section>
 
     <!-- Últims accessos -->
@@ -57,5 +57,11 @@
   </main>
 
   <script type="module" src="administrador.js"></script>
+  <script>
+    // Botó tornar enrere
+    document.getElementById('btnBackToApp').addEventListener('click', () => {
+      window.location.href = 'index.html'; // o la pàgina principal del gestor d'avaluació
+    });
+  </script>
 </body>
 </html>
