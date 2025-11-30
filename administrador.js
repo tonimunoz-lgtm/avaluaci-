@@ -65,7 +65,7 @@ async function loadUsers() {
       <td>${data.isAdmin ? 'Sí' : 'No'}</td>
       <td>${data.suspended ? 'Sí' : 'No'}</td>
       <td>
-        <button class="btn-suspend-toggle px-2 py-1 bg-yellow-400 text-white rounded" data-id="${doc.id}">${data.suspended ? 'Reactivar' : 'Suspendre'}</button>
+        <button class="btn-suspend-toggle px-2 py-1 bg-yellow-400 text-white rounded"data-id="${doc.id}">${data.suspended ? 'Reactivar' : 'Suspendre'}</button>
         <button class="btn-reset px-2 py-1 bg-blue-400 text-white rounded" data-id="${doc.id}">Reset PW</button>
         <button class="btn-admin-toggle px-2 py-1 bg-indigo-500 text-white rounded" data-id="${doc.id}">${data.isAdmin ? 'Treure admin' : 'Fer admin'}</button>
         <button class="btn-delete px-2 py-1 bg-red-500 text-white rounded" data-id="${doc.id}">Eliminar</button>
@@ -79,8 +79,10 @@ async function loadUsers() {
 
 // Assignar esdeveniments als botons de cada fila
 function attachUserButtons() {
+  
+   // --- TOGGLE SUSPENSIÓ ---
   document.querySelectorAll('.btn-suspend-toggle').forEach(btn => {
-    btn.addEventListener('click', () => togglesuspendUser(btn.dataset.id));
+    btn.addEventListener('click', () => toggleSuspendUser(btn.dataset.id));
   });
   document.querySelectorAll('.btn-reset').forEach(btn => {
     btn.addEventListener('click', () => resetPassword(btn.dataset.id));
