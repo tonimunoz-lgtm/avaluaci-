@@ -17,6 +17,7 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+
 /* ---------------- Globals ---------------- */
 let professorUID = null;
 let currentClassId = null;
@@ -173,14 +174,32 @@ auth.onAuthStateChanged(user => {
   }
 });
 
-function setupAfterAuth(user) {
+async function setupAfterAuth(user) {
   showApp();
   const email = user.email || '';
   usuariNom.textContent = email.split('@')[0] || email;
 
+  // ----------------- AFEGIR OPCIÓ ADMIN -----------------
+  const userDoc = await db.collection('professors').doc(user.uid).get();
+  if (userDoc.exists && userDoc.data().isAdmin) {
+    // Comprovem que encara no hi ha el botó
+    if (!document.getElementById('btnAdminPanel')) {
+      const adminBtn = document.createElement('button');
+      adminBtn.id = 'btnAdminPanel';
+      adminBtn.className = 'w-full text-left px-2 py-1 hover:bg-gray-100';
+      adminBtn.textContent = 'Administrar';
+      adminBtn.addEventListener('click', () => {
+        window.location.href = 'administrador.html';
+      });
+      document.getElementById('userMenu').appendChild(adminBtn);
+    }
+  }
+
   // Crida automàtica per carregar la graella de classes
   loadClassesScreen();
 }
+
+
 
 /* ---------------- Classes screen ---------------- */
 btnCreateClass.addEventListener('click', ()=> openModal('modalCreateClass'));
@@ -1869,3 +1888,32 @@ document.getElementById('cancelDeleteStudentsBtn').addEventListener('click', () 
     isDeleteMode = false; // actualitza l'estat del mode
     document.getElementById('cancelDeleteStudentsBtn').style.display = 'none'; // amaga el botó
 });
+
+// ----------- SCRIPT PER MARCAR USUARIS COM A ADMIN -----------
+
+// Llista d'usuaris que vols marcar com a administrador
+const adminEmails = [
+  "toni.munoz@institutmatadepera.cat",
+  "tonaco92@gamil.com",
+  "el_teu_email@exemple.com" // posa el teu email
+];
+
+// Funció per actualitzar Firestore
+async function setAdmins() {
+  try {
+    const snapshot = await db.collection('professors').get();
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      if (adminEmails.includes(data.email)) {
+        db.collection('professors').doc(doc.id).update({ isAdmin: true })
+          .then(() => console.log(`Usuari ${data.email} marcat com admin.`))
+          .catch(err => console.error('Error actualitzant:', err));
+      }
+    });
+  } catch (err) {
+    console.error('Error llegint professors:', err);
+  }
+}
+
+// Executar només una vegada
+setAdmins();
