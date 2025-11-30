@@ -108,7 +108,7 @@ async function toggleSuspendUser(uid) {
   if (!doc.exists) return;
 
   const current = doc.data().suspended || false;
-  const email = doc.data().email;
+  const newState = !currentState; // Toggle
 
   // Nou estat (invertit)
   const newState = !current;
@@ -119,14 +119,17 @@ async function toggleSuspendUser(uid) {
   });
 
   if (newState) {
-    // Si s'està SUSPENENT → enviem correu mínim d’avís
-    auth.sendPasswordResetEmail(email).catch(() => {});
-    alert("Usuari suspès.\nRebrà un correu d’avís automàtic.");
+    // Si s'està SUSPENENT
+    alert("Usuari suspès correctament. Rebrà un avís al login.");
   } else {
     alert("Usuari reactivat correctament.");
   }
 
   loadUsers();
+
+   } catch (e) {
+    console.error("Error canviant estat de suspensió:", e);
+    alert("⚠️ Error canviant estat de suspensió.");
 }
 
 
