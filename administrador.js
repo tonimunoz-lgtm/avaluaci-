@@ -211,3 +211,43 @@ window.addEventListener('DOMContentLoaded', () => {
     loadLastLogins();
   });
 });
+
+////migracio professors---------------------------
+const btnMigrateUsers = document.getElementById('btnMigrateUsers');
+
+btnMigrateUsers.addEventListener('click', async () => {
+  if (!confirm('Segur que vols migrar tots els usuaris existents a la col·lecció professors?')) return;
+
+  try {
+    // Obtenim tots els usuaris de Firebase Auth (fins a 1000)
+    const listUsers = await auth.listUsers ? auth.listUsers(1000) : null;
+
+    if (!listUsers) {
+      alert('La funció listUsers només funciona amb Firebase Admin SDK. Aquesta migració és només de prova.');
+      return;
+    }
+
+    let migrated = 0;
+
+    for (const userRecord of listUsers.users) {
+      const docRef = db.collection('professors').doc(userRecord.uid);
+      const doc = await docRef.get();
+      if (!doc.exists) {
+        await docRef.set({
+          email: userRecord.email,
+          nom: userRecord.displayName || '',
+          isAdmin: false,
+          suspended: false,
+          createdAt: firebase.firestore.Timestamp.now()
+        });
+        migrated++;
+      }
+    }
+
+    alert(`Migració completada! ${migrated} usuaris nous creats.`);
+    loadUsers();
+  } catch(e) {
+    console.error(e);
+    alert('Error durant la migració: ' + e.message);
+  }
+});
