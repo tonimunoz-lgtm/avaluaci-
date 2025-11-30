@@ -16,6 +16,12 @@ const db = firebase.firestore();
 // ---------------- Globals ----------------
 const usersTable = document.getElementById('usersTable'); // taula on mostrarem els usuaris
 const btnCreateAdmin = document.getElementById('btnCreateAdmin');
+const btnLogout = document.getElementById('btnLogout');
+btnLogout.addEventListener('click', async () => {
+  await auth.signOut();
+  window.location.href = 'index.html';
+});
+
 
 // ---------------- FUNCIONS ----------------
 
