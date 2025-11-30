@@ -1867,4 +1867,5 @@ document.getElementById('studentsMenuBtn').addEventListener('click', () => {
 document.getElementById('cancelDeleteStudentsBtn').addEventListener('click', () => {
     exitDeleteStudentsMode();
     isDeleteMode = false; // actualitza l'estat del mode
+    document.getElementById('cancelDeleteStudentsBtn').style.display = 'none'; // amaga el botó
 });
