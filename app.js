@@ -131,6 +131,13 @@ btnLogin.addEventListener('click', () => {
   if (!email || !pw) return alert('Introdueix email i contrasenya');
   auth.signInWithEmailAndPassword(email, pw)
     .then(u => {
+          const userDoc = await db.collection('professors').doc(u.user.uid).get();
+    if (userDoc.exists && userDoc.data().suspended) {
+        auth.signOut();
+        alert("⚠️ El teu compte està suspès.\nContacta amb l’administrador.");
+        return;
+    }
+
       professorUID = u.user.uid;
       setupAfterAuth(u.user);
     }).catch(e => alert('Error login: ' + e.message));
@@ -178,6 +185,13 @@ btnLogout.addEventListener('click', ()=> {
 
 auth.onAuthStateChanged(user => {
   if (user) {
+        const userDoc = await db.collection('professors').doc(user.uid).get();
+    if (userDoc.exists && userDoc.data().suspended) {
+        auth.signOut();
+        alert("⚠️ El teu compte està suspès.\nContacta amb l’administrador.");
+        return;
+    }
+
     professorUID = user.uid;
 
     // ---------- REGISTRAR LOGIN ----------
