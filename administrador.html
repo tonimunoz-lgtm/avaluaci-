@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<title>Administració d'usuaris</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js"></script>
+</head>
+<body class="bg-gray-100 p-6">
+
+<h1 class="text-3xl font-bold mb-6">Administració d’usuaris</h1>
+
+<div id="usersTableContainer" class="overflow-x-auto bg-white rounded shadow p-4">
+  <table id="usersTable" class="w-full text-left">
+    <thead>
+      <tr class="bg-gray-200">
+        <th class="px-2 py-1">Nom</th>
+        <th class="px-2 py-1">Email</th>
+        <th class="px-2 py-1">Data de creació</th>
+        <th class="px-2 py-1">Rol</th>
+        <th class="px-2 py-1">Últims accessos</th>
+        <th class="px-2 py-1">Accions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Usuari carregats via JS -->
+    </tbody>
+  </table>
+</div>
+
+<button id="createUserBtn" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded">Crear nou usuari</button>
+
+<!-- Modal Crear Usuari -->
+<div id="createUserModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+  <div class="bg-white p-6 rounded shadow w-96">
+    <h2 class="text-xl font-bold mb-4">Crear nou usuari</h2>
+    <form id="createUserForm" class="flex flex-col gap-2">
+      <input type="text" id="newUserName" placeholder="Nom" class="px-2 py-1 border rounded" required>
+      <input type="email" id="newUserEmail" placeholder="Email" class="px-2 py-1 border rounded" required>
+      <input type="password" id="newUserPassword" placeholder="Contrasenya" class="px-2 py-1 border rounded" required>
+      <label class="flex items-center gap-2">
+        <input type="checkbox" id="newUserAdmin"> Administrador
+      </label>
+      <div class="flex justify-end gap-2 mt-2">
+        <button type="button" id="cancelCreateUserBtn" class="px-3 py-1 bg-gray-300 rounded">Cancelar</button>
+        <button type="submit" class="px-3 py-1 bg-blue-600 text-white rounded">Crear</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="administrador.js"></script>
+</body>
+</html>
