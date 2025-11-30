@@ -213,29 +213,26 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 ////migracio professors---------------------------
-const btnMigrateUsers = document.getElementById('btnMigrateUsers');
+const btnMigrateLoggedUsers = document.getElementById('btnMigrateLoggedUsers');
 
-btnMigrateUsers.addEventListener('click', async () => {
-  if (!confirm('Segur que vols migrar tots els usuaris existents a la col·lecció professors?')) return;
+btnMigrateLoggedUsers.addEventListener('click', async () => {
+  if (!confirm('Segur que vols migrar tots els usuaris registrats que encara no tinguin document?')) return;
 
   try {
-    // Obtenim tots els usuaris de Firebase Auth (fins a 1000)
-    const listUsers = await auth.listUsers ? auth.listUsers(1000) : null;
+    const snapshot = await db.collection('professors').get();
+    const existingUids = snapshot.docs.map(d => d.id);
 
-    if (!listUsers) {
-      alert('La funció listUsers només funciona amb Firebase Admin SDK. Aquesta migració és només de prova.');
-      return;
-    }
-
+    // Busquem tots els usuaris que hagin fet login almenys una vegada
+    const usersSnapshot = await db.collectionGroup('logins').get();
     let migrated = 0;
 
-    for (const userRecord of listUsers.users) {
-      const docRef = db.collection('professors').doc(userRecord.uid);
-      const doc = await docRef.get();
-      if (!doc.exists) {
-        await docRef.set({
-          email: userRecord.email,
-          nom: userRecord.displayName || '',
+    for (const loginDoc of usersSnapshot.docs) {
+      const uid = loginDoc.ref.parent.parent.id; // parent de 'logins' és l'usuari
+      if (!existingUids.includes(uid)) {
+        const email = loginDoc.data().email || '';
+        await db.collection('professors').doc(uid).set({
+          email,
+          nom: '',
           isAdmin: false,
           suspended: false,
           createdAt: firebase.firestore.Timestamp.now()
@@ -244,7 +241,7 @@ btnMigrateUsers.addEventListener('click', async () => {
       }
     }
 
-    alert(`Migració completada! ${migrated} usuaris nous creats.`);
+    alert(`Migració completada! ${migrated} nous usuaris creats.`);
     loadUsers();
   } catch(e) {
     console.error(e);
