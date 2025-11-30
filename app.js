@@ -1720,19 +1720,24 @@ termMenu.querySelector('.paste-structure-btn').addEventListener('click', async (
   termMenu.classList.add('hidden');
 });
 
+//----------------------activar eliminar estudiants--------------------
 function activateDeleteStudentsMode() {
     studentsMenu.classList.add('hidden');
 
     // Afegim el checkbox a cada alumne
     document.querySelectorAll('#studentsList li').forEach(li => {
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.className = 'stu-check mr-2';
-        li.prepend(checkbox);
-        
-        // Amaguem el menú ⋮ de cada alumne
-        const menu = li.querySelector('.menu-btn');
-        if (menu) menu.style.display = 'none';
+       // Agafem la columna on hi ha el menú ⋮
+const menuContainer = li.querySelector('.relative');
+
+// Amaguem el menú ⋮
+const menuBtn = li.querySelector('.menu-btn');
+if (menuBtn) menuBtn.style.display = 'none';
+
+// Creem el checkbox i l’afegim DINS del mateix container a la dreta
+const checkbox = document.createElement('input');
+checkbox.type = 'checkbox';
+checkbox.className = 'stu-check ml-2'; // ml-2: marge a l’esquerra del checkbox
+menuContainer.appendChild(checkbox);
     });
 
     // Afegim menú inferior
