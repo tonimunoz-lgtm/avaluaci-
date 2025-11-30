@@ -8,7 +8,6 @@ let _activeTermId = null;
 let _onChangeCallback = null;
 let _copiedGridStructure = null;
 
-
 // Generar un ID únic per terme
 function makeTermId(name) {
   return `term_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
@@ -151,6 +150,8 @@ export async function addActivityToActiveTerm(activityId) {
   if (_onChangeCallback) _onChangeCallback(_activeTermId);
 }
 
+
+  
 export async function removeActivityFromActiveTerm(activityId) {
   if (!_activeTermId || !_db || !_currentClassId) return;
   const path = `terms.${_activeTermId}.activities`;
