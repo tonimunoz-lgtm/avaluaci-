@@ -19,17 +19,42 @@ const btnSendEmail = document.getElementById('btnSendEmail');
 const lastLoginsContainer = document.getElementById('lastLoginsContainer');
 const btnBackToApp = document.getElementById('btnBackToApp');
 
-// Botó migrar usuaris registrats sense document
-const btnMigrateLoggedUsers = document.getElementById('btnMigrateLoggedUsers');
-
 // ---------------- FUNCIONS ----------------
 
 // Carregar llista d'usuaris
 async function loadUsers() {
   usersTableBody.innerHTML = '';
 
-  // 1. Carreguem els documents reals
+  // Obtenim tots els documents de professors
   const snapshot = await db.collection('professors').orderBy('createdAt', 'desc').get();
+
+  // Si no hi ha cap document, podem provar de carregar logs com fallback
+  if (snapshot.empty) {
+    // Buscar tots els usuaris amb subcol·lecció logins
+    const usersWithLogs = await db.collectionGroup('logins')
+      .orderBy('timestamp', 'desc')
+      .limit(50) // pots ajustar
+      .get();
+
+    const emails = new Set();
+    usersWithLogs.forEach(doc => emails.add(doc.ref.parent.parent.id));
+
+    emails.forEach(email => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>-</td>
+        <td>${email}</td>
+        <td>-</td>
+        <td>No</td>
+        <td>No</td>
+        <td>-</td>
+      `;
+      usersTableBody.appendChild(tr);
+    });
+
+    return;
+  }
+
   snapshot.forEach(doc => {
     const data = doc.data();
     const tr = document.createElement('tr');
@@ -49,31 +74,8 @@ async function loadUsers() {
     usersTableBody.appendChild(tr);
   });
 
-  attachUserButtons(); // Només s’afegeixen listeners a usuaris reals
-
-  // 2. Afegim usuaris que només tenen logins, sense botons
-  const usersWithLogs = await db.collectionGroup('logins').get();
-  const existingUids = snapshot.docs.map(d => d.id);
-  const added = new Set();
-
-  usersWithLogs.forEach(doc => {
-    const uid = doc.ref.parent.parent.id;
-    if (!existingUids.includes(uid) && !added.has(uid)) {
-      added.add(uid);
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>-</td>
-        <td>${uid}</td>
-        <td>-</td>
-        <td>No</td>
-        <td>No</td>
-        <td>-</td>
-      `;
-      usersTableBody.appendChild(tr);
-    }
-  });
+  attachUserButtons();
 }
-
 
 // Assignar esdeveniments als botons de cada fila
 function attachUserButtons() {
@@ -92,6 +94,8 @@ function attachUserButtons() {
 }
 
 // ---------------- ACCIONS ----------------
+
+// Suspendre usuari
 async function suspendUser(uid) {
   if (!confirm('Estàs segur que vols suspendre aquest usuari?')) return;
   await db.collection('professors').doc(uid).update({ suspended: true });
@@ -99,6 +103,7 @@ async function suspendUser(uid) {
   loadUsers();
 }
 
+// Reset contrasenya
 async function resetPassword(uid) {
   const doc = await db.collection('professors').doc(uid).get();
   if (!doc.exists) return;
@@ -109,6 +114,7 @@ async function resetPassword(uid) {
       .catch(e => alert('Error: ' + e.message));
 }
 
+// Toggle admin
 async function toggleAdmin(uid) {
   const doc = await db.collection('professors').doc(uid).get();
   if (!doc.exists) return;
@@ -117,6 +123,7 @@ async function toggleAdmin(uid) {
   loadUsers();
 }
 
+// Eliminar usuari
 async function deleteUser(uid) {
   if (!confirm('Estàs segur que vols eliminar aquest usuari?')) return;
   await db.collection('professors').doc(uid).delete();
@@ -132,6 +139,7 @@ btnAddAdmin.addEventListener('click', async () => {
   const nom = prompt('Nom de l’usuari:') || '';
 
   try {
+    // Creem usuari a Firebase Auth
     const userCredential = await auth.createUserWithEmailAndPassword(email, password);
     await db.collection('professors').doc(userCredential.user.uid).set({
       email,
@@ -143,6 +151,7 @@ btnAddAdmin.addEventListener('click', async () => {
     alert('Nou usuari creat amb permisos d’admin!');
     loadUsers();
   } catch(e) {
+    // Si l'usuari ja existeix, fem update a isAdmin
     const snapshot = await db.collection('professors').where('email', '==', email).get();
     if (!snapshot.empty) {
       const doc = snapshot.docs[0];
@@ -152,40 +161,6 @@ btnAddAdmin.addEventListener('click', async () => {
     } else {
       alert('Error creant l’usuari: ' + e.message);
     }
-  }
-});
-
-// ---------------- MIGRAR USUARIS LOGGED ----------------
-btnMigrateLoggedUsers.addEventListener('click', async () => {
-  if (!confirm('Segur que vols migrar tots els usuaris registrats que encara no tinguin document?')) return;
-
-  try {
-    const snapshot = await db.collection('professors').get();
-    const existingUids = snapshot.docs.map(d => d.id);
-
-    const usersSnapshot = await db.collectionGroup('logins').get();
-    let migrated = 0;
-
-    for (const loginDoc of usersSnapshot.docs) {
-      const uid = loginDoc.ref.parent.parent.id;
-      if (!existingUids.includes(uid)) {
-        const email = loginDoc.data().email || '';
-        await db.collection('professors').doc(uid).set({
-          email,
-          nom: '',
-          isAdmin: false,
-          suspended: false,
-          createdAt: firebase.firestore.Timestamp.now()
-        });
-        migrated++;
-      }
-    }
-
-    alert(`Migració completada! ${migrated} nous usuaris creats.`);
-    loadUsers();
-  } catch(e) {
-    console.error(e);
-    alert('Error durant la migració: ' + e.message);
   }
 });
 
@@ -211,10 +186,12 @@ async function loadLastLogins() {
     div.textContent = `${doc.data().email}: ${logins || 'Cap accés'}`;
     lastLoginsContainer.appendChild(div);
   });
-});
+}
 
 // ---------------- LOGOUT ----------------
-btnLogout.addEventListener('click', () => auth.signOut().then(() => window.location.href = 'index.html'));
+btnLogout.addEventListener('click', () => {
+  auth.signOut().then(() => window.location.href = 'index.html');
+});
 
 // ---------------- TORNAR AL GESTOR ----------------
 if (btnBackToApp) {
@@ -231,4 +208,41 @@ window.addEventListener('DOMContentLoaded', () => {
     loadUsers();
     loadLastLogins();
   });
+});
+
+////migracio professors---------------------------
+const btnMigrateLoggedUsers = document.getElementById('btnMigrateLoggedUsers');
+
+btnMigrateLoggedUsers.addEventListener('click', async () => {
+  if (!confirm('Segur que vols migrar tots els usuaris registrats que encara no tinguin document?')) return;
+
+  try {
+    const snapshot = await db.collection('professors').get();
+    const existingUids = snapshot.docs.map(d => d.id);
+
+    // Busquem tots els usuaris que hagin fet login almenys una vegada
+    const usersSnapshot = await db.collectionGroup('logins').get();
+    let migrated = 0;
+
+    for (const loginDoc of usersSnapshot.docs) {
+      const uid = loginDoc.ref.parent.parent.id; // parent de 'logins' és l'usuari
+      if (!existingUids.includes(uid)) {
+        const email = loginDoc.data().email || '';
+        await db.collection('professors').doc(uid).set({
+          email,
+          nom: '',
+          isAdmin: false,
+          suspended: false,
+          createdAt: firebase.firestore.Timestamp.now()
+        });
+        migrated++;
+      }
+    }
+
+    alert(`Migració completada! ${migrated} nous usuaris creats.`);
+    loadUsers();
+  } catch(e) {
+    console.error(e);
+    alert('Error durant la migració: ' + e.message);
+  }
 });
