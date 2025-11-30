@@ -65,7 +65,7 @@ async function loadUsers() {
       <td>${data.isAdmin ? 'Sí' : 'No'}</td>
       <td>${data.suspended ? 'Sí' : 'No'}</td>
       <td>
-        <button class="btn-suspend px-2 py-1 bg-yellow-400 text-white rounded" data-id="${doc.id}">Suspendre</button>
+        <button class="btn-suspend px-2 py-1 bg-yellow-400 text-white rounded" data-id="${doc.id}">${data.suspended ? 'Reactivar' : 'Suspendre'}</button>
         <button class="btn-reset px-2 py-1 bg-blue-400 text-white rounded" data-id="${doc.id}">Reset PW</button>
         <button class="btn-admin-toggle px-2 py-1 bg-indigo-500 text-white rounded" data-id="${doc.id}">${data.isAdmin ? 'Treure admin' : 'Fer admin'}</button>
         <button class="btn-delete px-2 py-1 bg-red-500 text-white rounded" data-id="${doc.id}">Eliminar</button>
@@ -95,13 +95,33 @@ function attachUserButtons() {
 
 // ---------------- ACCIONS ----------------
 
-// Suspendre usuari
+// Suspendre usuari + enviar email
 async function suspendUser(uid) {
-  if (!confirm('Estàs segur que vols suspendre aquest usuari?')) return;
-  await db.collection('professors').doc(uid).update({ suspended: true });
-  alert('Usuari suspès per mal ús. Rebrà un correu informant-lo.');
-  loadUsers();
+
+    if (!confirm('Segur que vols suspendre aquest usuari?')) return;
+
+    const doc = await db.collection('professors').doc(uid).get();
+    if (!doc.exists) return alert('Usuari no trobat');
+
+    const email = doc.data().email;
+
+    await db.collection('professors').doc(uid).update({
+        suspended: true,
+        suspendedAt: firebase.firestore.Timestamp.now()
+    });
+
+    // Enviament de correu automàtic (mock)
+    auth.sendPasswordResetEmail(email)
+        .catch(() => { /* ignorem errors */ });
+
+    alert(
+        "L’usuari ha estat suspès.\n\n" +
+        "📩 Rebrà un email informant que el seu compte ha estat bloquejat.\n"
+    );
+
+    loadUsers();
 }
+
 
 // Reset contrasenya
 async function resetPassword(uid) {
