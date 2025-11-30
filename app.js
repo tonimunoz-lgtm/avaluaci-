@@ -189,10 +189,15 @@ btnLogout.addEventListener('click', ()=> {
   });
 });
 
-auth.onAuthStateChanged(async user => {
+auth.onAuthStateChanged(user => {
   if (user) {
+    professorUID = user.uid;
+    setupAfterAuth(user);
+  } else {
     professorUID = null;
     showLogin();
+  }
+});
  
 
     // ---------- REGISTRAR LOGIN ----------
