@@ -1752,10 +1752,10 @@ function activateDeleteStudentsMode() {
 
     footer.innerHTML = `
         <div>
-            <label><input type="checkbox" id="selectAllStudents"> Seleccionar tots</label>
+            <label><input type="checkbox" id="selectAllStudents"> Tots</label>
         </div>
         <button id="confirmDeleteStudents" class="bg-red-600 text-white px-3 py-1 rounded">
-            Eliminar seleccionats
+            Eliminar
         </button>
     `;
 
@@ -1859,8 +1859,8 @@ function toggleDeleteStudentsMode() {
 }
 
 // Premem els tres puntets → mode eliminar
-document.getElementById('studentsMenuBtn').addEventListener('click', () => {
-    toggleDeleteStudentsMode();
+document.getElementById('deleteStudentsModeBtn').addEventListener('click', () => {
+    toggleDeleteStudentsMode(); // aquí entres al mode eliminar
 });
 
 // Premem Cancel·lar → surt del mode
