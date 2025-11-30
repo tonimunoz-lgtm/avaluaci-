@@ -208,7 +208,7 @@ function loadClassesScreen() {
     }
     const ids = doc.data().classes || [];
     if(ids.length === 0){
-      classesGrid.innerHTML = `<div class="col-span-full p-6 bg-white dark:bg-gray-800 rounded shadow text-center">🔰No tens cap classe. Crea la primera!</div>`;
+      classesGrid.innerHTML = `<div class="col-span-full p-6 bg-white dark:bg-gray-800 rounded shadow text-center text-lg">🔰 No tens cap classe. <strong class="font-bold">Crea la primera!</strong></div>`;         
       return;
     }
 
