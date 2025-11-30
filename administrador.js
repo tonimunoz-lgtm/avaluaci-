@@ -23,50 +23,80 @@ const lastLoginsContainer = document.getElementById('lastLoginsContainer');
 // ---------------- FUNCIONS ----------------
 
 // Carrega la llista d'usuaris
-async function loadUsers() {
-  usersTable.innerHTML = ''; // buidem el tbody
+const usersTableBody = document.getElementById('usersTableBody');
 
+async function loadUsers() {
+  usersTableBody.innerHTML = ''; // buidem taula
   const snapshot = await db.collection('professors').orderBy('createdAt', 'desc').get();
   snapshot.forEach(doc => {
     const data = doc.data();
     const tr = document.createElement('tr');
-
     tr.innerHTML = `
-      <td>${data.nom || ''}</td>
-      <td>${data.email}</td>
+      <td>${data.nom || '-'}</td>
+      <td>${data.email || '-'}</td>
       <td>${data.createdAt ? data.createdAt.toDate().toLocaleString() : '-'}</td>
       <td>${data.isAdmin ? 'Sí' : 'No'}</td>
       <td>${data.suspended ? 'Sí' : 'No'}</td>
       <td>
-        <button class="btn-admin" data-id="${doc.id}">${data.isAdmin ? 'Treure admin' : 'Fer admin'}</button>
         <button class="btn-suspend" data-id="${doc.id}">Suspendre</button>
+        <button class="btn-reset" data-id="${doc.id}">Reset Password</button>
+        <button class="btn-admin-toggle" data-id="${doc.id}">${data.isAdmin ? 'Treure admin' : 'Fer admin'}</button>
         <button class="btn-delete" data-id="${doc.id}">Eliminar</button>
       </td>
     `;
-    usersTable.appendChild(tr);
+    usersTableBody.appendChild(tr);
   });
 
   attachUserButtons();
 }
+
 
 // Assignar esdeveniments als botons de cada fila
 function attachUserButtons() {
   document.querySelectorAll('.btn-suspend').forEach(btn => {
     btn.addEventListener('click', () => suspendUser(btn.dataset.id));
   });
+  document.querySelectorAll('.btn-reset').forEach(btn => {
+    btn.addEventListener('click', () => resetPassword(btn.dataset.id));
+  });
+  document.querySelectorAll('.btn-admin-toggle').forEach(btn => {
+    btn.addEventListener('click', () => toggleAdmin(btn.dataset.id));
+  });
   document.querySelectorAll('.btn-delete').forEach(btn => {
     btn.addEventListener('click', () => deleteUser(btn.dataset.id));
   });
-  document.querySelectorAll('.btn-admin').forEach(btn => {
-    btn.addEventListener('click', () => toggleAdmin(btn.dataset.id));
-  });
 }
+
 
 // Suspendre usuari
 async function suspendUser(uid) {
   if (!confirm('Estàs segur que vols suspendre aquest usuari?')) return;
   await db.collection('professors').doc(uid).update({ suspended: true });
-  alert('Usuari suspès. Envia un email informant-lo.');
+
+  // Missatge automàtic
+  alert('Usuari suspès per mal ús. Rebrà un correu informant-lo.');
+
+  // Aquí podríem enviar correu automàtic si tens servidor d’email
+  loadUsers();
+}
+
+// Reset contrasenya
+async function resetPassword(uid) {
+  const doc = await db.collection('professors').doc(uid).get();
+  if (!doc.exists) return;
+  const email = doc.data().email;
+  if (!email) return alert('No hi ha email associat a aquest usuari.');
+  auth.sendPasswordResetEmail(email)
+      .then(() => alert('Email de reseteig enviat a ' + email))
+      .catch(e => alert('Error: ' + e.message));
+}
+
+// Fer / treure admin
+async function toggleAdmin(uid) {
+  const doc = await db.collection('professors').doc(uid).get();
+  if (!doc.exists) return;
+  const isAdmin = doc.data().isAdmin || false;
+  await db.collection('professors').doc(uid).update({ isAdmin: !isAdmin });
   loadUsers();
 }
 
@@ -77,14 +107,6 @@ async function deleteUser(uid) {
   loadUsers();
 }
 
-// Fer o treure admin
-async function toggleAdmin(uid) {
-  const doc = await db.collection('professors').doc(uid).get();
-  if (!doc.exists) return;
-  const isAdmin = doc.data().isAdmin || false;
-  await db.collection('professors').doc(uid).update({ isAdmin: !isAdmin });
-  loadUsers();
-}
 
 // Crear un nou admin per usuari existent
 btnCreateAdmin.addEventListener('click', async () => {
@@ -150,4 +172,28 @@ window.addEventListener('DOMContentLoaded', () => {
     loadUsers();
     loadLastLogins();
   });
+});
+
+//crear nous usuaris--------------------
+btnAddAdmin.addEventListener('click', async () => {
+  const email = prompt('Email del nou usuari:');
+  if (!email) return;
+  const password = prompt('Contrasenya:');
+  if (!password) return;
+  const nom = prompt('Nom de l’usuari:') || '';
+
+  try {
+    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+    await db.collection('professors').doc(userCredential.user.uid).set({
+      email,
+      nom,
+      isAdmin: true,
+      suspended: false,
+      createdAt: firebase.firestore.Timestamp.now()
+    });
+    alert('Nou usuari creat amb permisos d’admin!');
+    loadUsers();
+  } catch(e) {
+    alert('Error creant l’usuari: ' + e.message);
+  }
 });
