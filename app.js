@@ -159,6 +159,19 @@ btnLogin.addEventListener('click', async () => {
   }
 });
 
+
+btnRegister.addEventListener('click', () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pw = document.getElementById('loginPassword').value;
+  if (!email || !pw) return alert('Introdueix email i contrasenya');
+  auth.createUserWithEmailAndPassword(email, pw)
+    .then(u => {
+      professorUID = u.user.uid;
+      db.collection('professors').doc(professorUID).set({ email, classes: [] })
+        .then(()=> { setupAfterAuth(u.user); });
+    }).catch(e => alert('Error registre: ' + e.message));
+});
+
 btnRecover.addEventListener('click', () => {
   const email = document.getElementById('loginEmail').value.trim();
   if(!email) return alert('Introdueix el teu email per recuperar la contrasenya');
