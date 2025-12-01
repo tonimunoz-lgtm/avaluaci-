@@ -3,7 +3,6 @@ import { openModal, closeModal, confirmAction } from './modals.js';
 import * as Terms from './terms.js';
 window.Terms = Terms;
 
-
 /* ---------------- FIREBASE CONFIG ---------------- */
 const firebaseConfig = {
   apiKey: "AIzaSyA0P7TWcEw9y9_13yqRhvsgWN5d3YKH7yo",
