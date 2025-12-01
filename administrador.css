@@ -1,6 +1,6 @@
 /* ---------------- Administració d'usuaris ---------------- */
 body.admin-page {
-  background: #f0f4ff; /* suau blau clar de fons de pàgina */
+  background: #f0f4ff;
   font-family: 'Inter', sans-serif;
   color: #1f2937;
 }
@@ -10,20 +10,23 @@ body.admin-page #appRoot {
   padding: 2rem;
   border-radius: 1rem;
   box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+  max-width: 1200px;
+  margin: 2rem auto;
 }
 
-/* Titols */
+/* ---------- TÍTOLS ---------- */
 body.admin-page h1 {
-  color: #1e40af; /* blau fosc */
+  color: #1e40af;
   font-weight: 700;
 }
+
 body.admin-page h2 {
-  color: #2563eb; /* blau vibrant */
+  color: #2563eb;
   font-weight: 600;
   margin-bottom: 0.5rem;
 }
 
-/* Taula usuaris */
+/* ---------- TAULA ---------- */
 body.admin-page table {
   width: 100%;
   border-collapse: collapse;
@@ -33,7 +36,7 @@ body.admin-page table {
 }
 
 body.admin-page th {
-  background-color: #93c5fd; /* blau suau */
+  background-color: #93c5fd;
   color: #1e3a8a;
   padding: 0.75rem;
   text-align: left;
@@ -43,34 +46,25 @@ body.admin-page td {
   padding: 0.5rem;
   border-bottom: 1px solid #d1d5db;
   color: #1f2937;
+  vertical-align: middle;
 }
 
-/* Botons dins la taula */
-body.admin-page .btn-suspend-toggle {
-  background: #facc15; /* groc */
-  color: #1f2937;
+/* ---------- GRUP DE BOTONS DINS TAULA ---------- */
+body.admin-page .action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
 }
 
-body.admin-page .btn-reset {
-  background: #3b82f6; /* blau intens */
-  color: white;
-}
-
-body.admin-page .btn-admin-toggle {
-  background: #8b5cf6; /* morat */
-  color: white;
-}
-
-body.admin-page .btn-delete {
-  background: #ef4444; /* vermell */
-  color: white;
-}
-
+/* ---------- BOTONS GENERALS ---------- */
 body.admin-page button {
-  padding: 0.4rem 0.75rem;
+  padding: 0.45rem 0.8rem;
   border-radius: 0.5rem;
   font-weight: 600;
-  transition: transform 0.2s ease, background 0.2s ease;
+  transition: transform 0.2s ease, filter 0.2s ease;
+  cursor: pointer;
+  white-space: nowrap;
 }
 
 body.admin-page button:hover {
@@ -78,7 +72,58 @@ body.admin-page button:hover {
   filter: brightness(1.1);
 }
 
-/* Inputs de correu i textarea */
+/* Colors específics */
+body.admin-page .btn-suspend-toggle {
+  background: #facc15;
+  color: #1f2937;
+}
+
+body.admin-page .btn-reset {
+  background: #3b82f6;
+  color: white;
+}
+
+body.admin-page .btn-admin-toggle {
+  background: #8b5cf6;
+  color: white;
+}
+
+body.admin-page .btn-delete {
+  background: #ef4444;
+  color: white;
+}
+
+/* ---------- BOTONS GLOBALS (Crear usuari / Migrar / Exportar / Seleccionats) ---------- */
+body.admin-page .tools-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 1rem;
+}
+
+body.admin-page #btnAddAdmin {
+  background: #10b981;
+  color: white;
+}
+
+body.admin-page #btnMigrateOldUsers {
+  background: #6366f1;
+  color: white;
+}
+
+body.admin-page #btnSendEmail {
+  background: #3b82f6;
+  color: white;
+}
+
+body.admin-page .btn-export,
+body.admin-page .btn-delete-selected,
+body.admin-page .btn-email-selected {
+  background: #2563eb;
+  color: white;
+}
+
+/* ---------- INPUTS ---------- */
 body.admin-page input,
 body.admin-page textarea {
   border: 1px solid #93c5fd;
@@ -87,26 +132,20 @@ body.admin-page textarea {
   width: 100%;
 }
 
-/* Botons crear usuari / migrar usuaris / enviar correu */
-body.admin-page #btnAddAdmin {
-  background: #10b981; /* verd vibrant */
-  color: white;
-  margin-top: 1rem;
-}
-body.admin-page #btnMigrateOldUsers {
-  background: #6366f1; /* blau morat */
-  color: white;
-  margin-top: 1rem;
-}
-body.admin-page #btnSendEmail {
-  background: #3b82f6; /* blau intens */
-  color: white;
-}
-
-/* Últims accessos */
+/* ---------- ÚLTIMS ACCESSOS ---------- */
 body.admin-page #lastLoginsContainer div {
-  background: #e0f2fe; /* blau clar */
+  background: #e0f2fe;
   padding: 0.5rem;
   border-radius: 0.5rem;
   margin-bottom: 0.25rem;
+}
+
+/* ---------- RESPONSIVE ---------- */
+@media (max-width: 700px) {
+  body.admin-page table {
+    font-size: 0.85rem;
+  }
+  body.admin-page button {
+    padding: 0.35rem 0.6rem;
+  }
 }
