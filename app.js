@@ -124,15 +124,27 @@ function showApp() {
 }
 
 /* ---------- AUTH ---------- */
-//btnLogin.addEventListener('click', () => {
- // const email = document.getElementById('loginEmail').value.trim();
- // const pw = document.getElementById('loginPassword').value;
+//btnLogin.addEventListener('click', async () => {
+//  const email = document.getElementById('loginEmail').value.trim();
+//  const pw = document.getElementById('loginPassword').value;
 //  if (!email || !pw) return alert('Introdueix email i contrasenya');
-//  auth.signInWithEmailAndPassword(email, pw)
-//    .then(u => {
-//      professorUID = u.user.uid;
-//      setupAfterAuth(u.user);
-//    }).catch(e => alert('Error login: ' + e.message));
+
+//  try {
+//    const u = await auth.signInWithEmailAndPassword(email, pw);
+
+//    const userDoc = await db.collection('professors').doc(u.user.uid).get();
+//    if (userDoc.exists && userDoc.data().suspended) {
+//      await auth.signOut();
+//      alert("⚠️ El teu compte està suspès.\nContacta amb l’administrador.");
+//      return;
+//    }
+
+//    professorUID = u.user.uid;
+//    setupAfterAuth(u.user);
+
+//  } catch (e) {
+//    alert('Error login: ' + e.message);
+//  }
 //});
 
 btnLogin.addEventListener('click', async () => {
@@ -144,10 +156,22 @@ btnLogin.addEventListener('click', async () => {
     const u = await auth.signInWithEmailAndPassword(email, pw);
 
     const userDoc = await db.collection('professors').doc(u.user.uid).get();
-    if (userDoc.exists && userDoc.data().suspended) {
+
+    if (!userDoc.exists) {
       await auth.signOut();
-      alert("⚠️ El teu compte està suspès.\nContacta amb l’administrador.");
-      return;
+      return alert("⚠️ Usuari no trobat. Contacta amb l’administrador.");
+    }
+
+    // 🔹 Comprovació eliminat
+    if (userDoc.data().deleted) {
+      await auth.signOut();
+      return alert("⚠️ El teu compte ha estat eliminat. Pots registrar-te de nou amb aquest email.");
+    }
+
+    // 🔹 Comprovació suspès
+    if (userDoc.data().suspended) {
+      await auth.signOut();
+      return alert("⚠️ El teu compte està suspès.\nContacta amb l’administrador.");
     }
 
     professorUID = u.user.uid;
@@ -158,27 +182,76 @@ btnLogin.addEventListener('click', async () => {
   }
 });
 
+
+//btnRegister.addEventListener('click', async () => {
+//  const email = document.getElementById('loginEmail').value.trim();
+//  const pw = document.getElementById('loginPassword').value;
+//  if (!email || !pw) return alert('Introdueix email i contrasenya');
+
+//  try {
+//    const u = await auth.createUserWithEmailAndPassword(email, pw);
+//    professorUID = u.user.uid;
+
+//    await db.collection('professors').doc(professorUID).set({
+//      email,
+//      nom: email.split('@')[0],
+//      isAdmin: false,
+//      suspended: false,
+//      createdAt: firebase.firestore.Timestamp.now(),
+//      classes: []
+//    });
+
+//    setupAfterAuth(u.user);
+
+//  } catch(e) {
+//    alert('Error registre: ' + e.message);
+//  }
+//});
 btnRegister.addEventListener('click', async () => {
   const email = document.getElementById('loginEmail').value.trim();
   const pw = document.getElementById('loginPassword').value;
   if (!email || !pw) return alert('Introdueix email i contrasenya');
 
   try {
+    // 🔹 Comprovar si ja hi ha un usuari amb aquest email
+    const existingUsers = await db.collection('professors')
+      .where('email', '==', email).get();
+
+    if (!existingUsers.empty) {
+      const userDoc = existingUsers.docs[0];
+      if (userDoc.data().deleted) {
+        // Reactivar usuari eliminat
+        await db.collection('professors').doc(userDoc.id).update({
+          deleted: false,
+          suspended: false
+        });
+
+        const u = await auth.signInWithEmailAndPassword(email, pw);
+        professorUID = u.user.uid;
+        setupAfterAuth(u.user);
+        return alert("Compte reactivat correctament!");
+      } else {
+        return alert("Error registre: L’email ja està en ús.");
+      }
+    }
+
+    // 🔹 Crear usuari nou
     const u = await auth.createUserWithEmailAndPassword(email, pw);
     professorUID = u.user.uid;
-
     await db.collection('professors').doc(professorUID).set({
       email,
       nom: email.split('@')[0],
       isAdmin: false,
       suspended: false,
+      deleted: false,
       createdAt: firebase.firestore.Timestamp.now(),
       classes: []
     });
 
     setupAfterAuth(u.user);
+    alert("Compte creat correctament!");
 
-  } catch(e) {
+  } catch (e) {
     alert('Error registre: ' + e.message);
   }
 });
