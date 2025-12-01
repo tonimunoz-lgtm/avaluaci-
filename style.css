@@ -292,3 +292,15 @@ button:hover { transform: scale(1.03); }
   color: white;
 }
 
+/* Botó tancar llista alumnes només visible en mòbil */
+#closeStudentsMobile {
+  display: none; /* amagat per defecte */
+}
+
+@media (max-width: 768px) {
+  #closeStudentsMobile {
+    display: block; /* visible només en mòbil */
+  }
+}
+
+
