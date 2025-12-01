@@ -128,6 +128,87 @@ function wrapActionsWithUndo() {
   });
 }
 
+// ---------------- ADMIN DROPDOWN FILTERS ----------------
+
+// Crear contenidor de filtres
+const filterContainer = document.createElement('div');
+filterContainer.className = 'flex gap-2 mb-2';
+
+// Funció de crear select
+function createSelect(id, label, options) {
+  const wrapper = document.createElement('div');
+  const lbl = document.createElement('label');
+  lbl.innerText = label + ':';
+  lbl.className = 'mr-1 font-semibold';
+  const select = document.createElement('select');
+  select.id = id;
+  select.className = 'border p-1 rounded';
+  options.forEach(opt => {
+    const option = document.createElement('option');
+    option.value = opt.value;
+    option.text = opt.label;
+    select.appendChild(option);
+  });
+  wrapper.appendChild(lbl);
+  wrapper.appendChild(select);
+  return wrapper;
+}
+
+// Afegir dropdowns
+const adminSelect = createSelect('filterAdmin', 'Admin', [
+  { label: 'Tots', value: '' },
+  { label: 'Sí', value: 'sí' },
+  { label: 'No', value: 'no' }
+]);
+const suspendedSelect = createSelect('filterSuspended', 'Suspès', [
+  { label: 'Tots', value: '' },
+  { label: 'Sí', value: 'sí' },
+  { label: 'No', value: 'no' }
+]);
+const deletedSelect = createSelect('filterDeleted', 'Eliminat', [
+  { label: 'Tots', value: '' },
+  { label: 'Sí', value: 'sí' },
+  { label: 'No', value: 'no' }
+]);
+
+filterContainer.appendChild(adminSelect);
+filterContainer.appendChild(suspendedSelect);
+filterContainer.appendChild(deletedSelect);
+
+// Inserir filtres abans de la taula
+const usersSection = document.querySelector('section.mb-6');
+usersSection.insertBefore(filterContainer, usersSection.querySelector('table'));
+
+// Funció de filtratge combinat
+function applyFilters() {
+  const adminVal = document.getElementById('filterAdmin').value;
+  const suspendedVal = document.getElementById('filterSuspended').value;
+  const deletedVal = document.getElementById('filterDeleted').value;
+
+  document.querySelectorAll('#usersTableBody tr').forEach(tr => {
+    const admin = tr.children[3].innerText.toLowerCase();
+    const suspended = tr.children[4].innerText.toLowerCase();
+    const deleted = tr.children[5].innerText.toLowerCase();
+
+    const show =
+      (!adminVal || admin === adminVal) &&
+      (!suspendedVal || suspended === suspendedVal) &&
+      (!deletedVal || deleted === deletedVal);
+
+    tr.style.display = show ? '' : 'none';
+  });
+}
+
+// Assignar esdeveniments
+[adminSelect, suspendedSelect, deletedSelect].forEach(select => {
+  select.addEventListener('change', applyFilters);
+});
+
+// Mantindre filtre quan la taula es recarrega
+const filterObserver = new MutationObserver(applyFilters);
+filterObserver.observe(document.getElementById('usersTableBody'), { childList: true });
+
+
 // Reaplicar quan es recarrega la taula
 const actionObserver = new MutationObserver(wrapActionsWithUndo);
 actionObserver.observe(document.getElementById('usersTableBody'), { childList: true });
