@@ -130,8 +130,38 @@ function wrapActionsWithUndo() {
 
 -----------
 
+-----------
+// Funció de filtratge combinat
+function applyFilters() {
+  const adminVal = document.getElementById('filterAdmin').value;
+  const suspendedVal = document.getElementById('filterSuspended').value;
+  const deletedVal = document.getElementById('filterDeleted').value;
+
+  document.querySelectorAll('#usersTableBody tr').forEach(tr => {
+    const admin = tr.children[3].innerText.toLowerCase();
+    const suspended = tr.children[4].innerText.toLowerCase();
+    const deleted = tr.children[5].innerText.toLowerCase();
+
+    const show =
+      (!adminVal || admin === adminVal) &&
+      (!suspendedVal || suspended === suspendedVal) &&
+      (!deletedVal || deleted === deletedVal);
+
+    tr.style.display = show ? '' : 'none';
+  });
+}
+
+[adminSelect, suspendedSelect, deletedSelect].forEach(select => {
+  select.addEventListener('change', applyFilters);
+});
+
+const filterObserver = new MutationObserver(applyFilters);
+filterObserver.observe(document.getElementById('usersTableBody'), { childList: true });
+
+const actionObserver = new MutationObserver(wrapActionsWithUndo);
+actionObserver.observe(document.getElementById('usersTableBody'), { childList: true });
   
--------
+
 // ---------------- FILTRAT AVANÇAT PER ESTAT AMB BOTONS ----------------
 const statusFilterContainer = document.createElement('div');
 statusFilterContainer.className = 'flex gap-2 mb-2';
