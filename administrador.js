@@ -64,6 +64,7 @@ async function loadUsers() {
       <td>${data.createdAt ? data.createdAt.toDate().toLocaleString() : '-'}</td>
       <td>${data.isAdmin ? 'Sí' : 'No'}</td>
      <td>${data.suspended ? 'Sí' : 'No'}</td>
+     <td>${data.deleted ? 'Sí' : 'No'}</td>
       <td>
         <button class="btn-suspend-toggle px-2 py-1 bg-yellow-400 text-white rounded"data-id="${doc.id}">${data.suspended ? 'Reactivar' : 'Suspendre'}</button>
         <button class="btn-reset px-2 py-1 bg-blue-400 text-white rounded" data-id="${doc.id}">Reset PW</button>
@@ -149,11 +150,20 @@ async function toggleAdmin(uid) {
 }
 
 // Eliminar usuari
+// Marcar usuari com a eliminat, sense esborrar document
 async function deleteUser(uid) {
   if (!confirm('Estàs segur que vols eliminar aquest usuari?')) return;
-  await db.collection('professors').doc(uid).delete();
-  loadUsers();
+
+  try {
+    await db.collection('professors').doc(uid).update({ deleted: true, suspended: false });
+    alert("Usuari eliminat correctament. Podrà tornar a registrar-se amb aquest email.");
+    loadUsers(); // Recarregar llista d'usuaris
+  } catch (e) {
+    console.error("Error eliminant usuari:", e);
+    alert("⚠️ Error eliminant usuari.");
+  }
 }
+
 
 // Crear nou usuari o admin
 btnAddAdmin.addEventListener('click', async () => {
