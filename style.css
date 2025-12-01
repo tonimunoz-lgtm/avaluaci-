@@ -291,3 +291,18 @@ button:hover { transform: scale(1.03); }
   background: linear-gradient(90deg, #6366f1, #a78bfa);
   color: white;
 }
+
+/* ❌ Botó tancar llista alumnes només visible en mòbil */
+#cancelDeleteStudentsBtn {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  #cancelDeleteStudentsBtn {
+    display: inline-block !important;
+    font-size: 20px;
+    color: red;
+    margin-right: 5px;
+    cursor: pointer;
+  }
+}
