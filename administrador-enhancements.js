@@ -87,56 +87,56 @@ function showToast(message, undoCallback) {
   setTimeout(() => toast.remove(), 5000);
 }
 
-// 6️⃣ Wrap accions existents per Undo
-function wrapActionsWithUndo() {
-  // Suspend toggle
-  document.querySelectorAll('.btn-suspend-toggle').forEach(btn => {
-    btn.onclick = async () => {
-      const uid = btn.dataset.id;
-      const doc = await db.collection('professors').doc(uid).get();
-      const prevState = doc.data().suspended || false;
+// 6️⃣ Delegació d’esdeveniments per botons dinàmics
+const tbody = document.getElementById('usersTableBody');
 
-      await toggleSuspendUser(uid);
-      showToast(`Usuari ${prevState ? 'reactivat' : 'suspès'}`, async () => {
-        await db.collection('professors').doc(uid).update({ suspended: prevState });
-        loadUsers();
-      });
-    };
-  });
+tbody.addEventListener('click', async (e) => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  const uid = btn.dataset.id;
 
-  // Delete
- document.querySelectorAll('.btn-delete').forEach(btn => {
-  btn.onclick = async () => {
-    const uid = btn.dataset.id;
+  // ---------------- SUSPEND ----------------
+  if (btn.classList.contains('btn-suspend-toggle')) {
+    const doc = await db.collection('professors').doc(uid).get();
+    const prevState = doc.data().suspended || false;
+
+    await toggleSuspendUser(uid);
+
+    showToast(`Usuari ${prevState ? 'reactivat' : 'suspès'}`, async () => {
+      await db.collection('professors').doc(uid).update({ suspended: prevState });
+      loadUsers();
+    });
+  }
+
+  // ---------------- DELETE ----------------
+  if (btn.classList.contains('btn-delete')) {
     const doc = await db.collection('professors').doc(uid).get();
     const prevState = doc.data().deleted || false;
 
-    // Mostrem toast primer, amb Undo
+    // Mostrem toast amb Undo
     showToast(`Usuari eliminat`, async () => {
       // Undo: revertim
       await db.collection('professors').doc(uid).update({ deleted: prevState });
       loadUsers();
     });
 
-    // Esperem uns segons abans d'aplicar la eliminació definitiva
+    // Esperem abans d'aplicar eliminació definitiva
     setTimeout(async () => {
+      const docCheck = await db.collection('professors').doc(uid).get();
+      if (!docCheck.data().deleted) return; // Undo clicat
       await db.collection('professors').doc(uid).update({ deleted: true, suspended: false });
       loadUsers();
-    }, 5000); // 5 segons per Undo
-  };
+    }, 5000);
+  }
 });
 
-
-
-// 7️⃣ Observers per reaplicar badges, hover i wrap actions quan canvia tbody
+// 7️⃣ Observers per reaplicar badges i hover
 const observer = new MutationObserver(() => {
   addBadges();
   addHoverEffect();
-  wrapActionsWithUndo();
 });
 observer.observe(document.getElementById('usersTableBody'), { childList: true });
 
 // 8️⃣ Inicialització al carregar
 addBadges();
 addHoverEffect();
-wrapActionsWithUndo();
