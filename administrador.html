@@ -28,6 +28,15 @@
 <section class="mb-6">
   <h2 class="text-xl font-semibold mb-2">Usuaris registrats</h2>
 
+  <!-- Contenidor botons globals -->
+  <div id="tableButtonsContainer" class="mb-3">
+    <button id="btnAddAdmin">Crear nou usuari</button>
+    <button id="btnMigrateOldUsers">Migrar usuaris registrats</button>
+    <button id="btnDeleteSelected">Eliminar seleccionats</button>
+    <button id="btnExportCSV">Exportar CSV</button>
+    <button id="btnEmailSelected">Enviar correu a seleccionats</button>
+  </div>
+
   <table class="w-full table-auto rounded shadow">
     <thead class="bg-gray-200">
       <tr>
@@ -42,15 +51,6 @@
     </thead>
     <tbody id="usersTableBody"></tbody>
   </table>
-
-  <!-- Contenidor botons globals -->
-  <div id="tableButtonsContainer">
-    <button id="btnAddAdmin">Crear nou usuari</button>
-    <button id="btnMigrateOldUsers">Migrar usuaris registrats</button>
-    <button id="btnDeleteSelected">Eliminar seleccionats</button>
-    <button id="btnExportCSV">Exportar CSV</button>
-    <button id="btnEmailSelected">Enviar correu a seleccionats</button>
-  </div>
 </section>
 
 
