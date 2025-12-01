@@ -3,149 +3,163 @@ body.admin-page {
   background: #f0f4ff;
   font-family: 'Inter', sans-serif;
   color: #1f2937;
+  margin: 0;
+  padding: 0;
 }
 
-body.admin-page #appRoot {
+#appRoot {
   background: linear-gradient(135deg, #eef2ff 0%, #ffffff 100%);
   padding: 2rem;
   border-radius: 1rem;
   box-shadow: 0 6px 20px rgba(0,0,0,0.1);
-  max-width: 1200px;
   margin: 2rem auto;
+  max-width: 1200px;
 }
 
-/* ---------- TÍTOLS ---------- */
-body.admin-page h1 {
+/* Titols */
+h1 {
   color: #1e40af;
   font-weight: 700;
 }
 
-body.admin-page h2 {
+h2 {
   color: #2563eb;
   font-weight: 600;
   margin-bottom: 0.5rem;
 }
 
-/* ---------- TAULA ---------- */
-body.admin-page table {
+/* Taula */
+table {
   width: 100%;
   border-collapse: collapse;
   border-radius: 0.75rem;
   overflow: hidden;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  table-layout: fixed; /* evita que la taula s’expandeixi més del contenidor */
 }
 
-body.admin-page th {
+thead {
   background-color: #93c5fd;
-  color: #1e3a8a;
+}
+
+th, td {
   padding: 0.75rem;
   text-align: left;
-}
-
-body.admin-page td {
-  padding: 0.5rem;
   border-bottom: 1px solid #d1d5db;
+  word-wrap: break-word;
+}
+
+th {
+  color: #1e3a8a;
+}
+
+td {
   color: #1f2937;
-  vertical-align: middle;
 }
 
-/* ---------- GRUP DE BOTONS DINS TAULA ---------- */
-body.admin-page .action-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
+/* Badges */
+.badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.5rem;
+  text-align: center;
 }
 
-/* ---------- BOTONS GENERALS ---------- */
-body.admin-page button {
-  padding: 0.45rem 0.8rem;
+/* Botons dins la taula */
+td button {
+  padding: 0.35rem 0.75rem;
   border-radius: 0.5rem;
   font-weight: 600;
-  transition: transform 0.2s ease, filter 0.2s ease;
-  cursor: pointer;
-  white-space: nowrap;
+  transition: transform 0.2s ease, background 0.2s ease;
+  margin: 0.1rem 0;
 }
 
-body.admin-page button:hover {
+td button:hover {
   transform: scale(1.05);
   filter: brightness(1.1);
 }
 
-/* Colors específics */
-body.admin-page .btn-suspend-toggle {
+.btn-suspend-toggle {
   background: #facc15;
   color: #1f2937;
 }
 
-body.admin-page .btn-reset {
+.btn-reset {
   background: #3b82f6;
   color: white;
 }
 
-body.admin-page .btn-admin-toggle {
+.btn-admin-toggle {
   background: #8b5cf6;
   color: white;
 }
 
-body.admin-page .btn-delete {
+.btn-delete {
   background: #ef4444;
   color: white;
 }
 
-/* ---------- BOTONS GLOBALS (Crear usuari / Migrar / Exportar / Seleccionats) ---------- */
-body.admin-page .tools-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 1rem;
-}
-
-body.admin-page #btnAddAdmin {
-  background: #10b981;
-  color: white;
-}
-
-body.admin-page #btnMigrateOldUsers {
-  background: #6366f1;
-  color: white;
-}
-
-body.admin-page #btnSendEmail {
-  background: #3b82f6;
-  color: white;
-}
-
-body.admin-page .btn-export,
-body.admin-page .btn-delete-selected,
-body.admin-page .btn-email-selected {
-  background: #2563eb;
-  color: white;
-}
-
-/* ---------- INPUTS ---------- */
-body.admin-page input,
-body.admin-page textarea {
+/* Inputs i textarea */
+input, textarea {
   border: 1px solid #93c5fd;
   border-radius: 0.5rem;
   padding: 0.5rem;
   width: 100%;
+  box-sizing: border-box;
 }
 
-/* ---------- ÚLTIMS ACCESSOS ---------- */
-body.admin-page #lastLoginsContainer div {
+/* Botons globals sota la taula */
+#tableButtonsContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+#tableButtonsContainer button {
+  flex: 1 1 auto;
+  min-width: 150px;
+  text-align: center;
+}
+
+/* Botons específics */
+#btnAddAdmin {
+  background: #10b981;
+  color: white;
+}
+
+#btnMigrateOldUsers {
+  background: #6366f1;
+  color: white;
+}
+
+#btnSendEmail {
+  background: #3b82f6;
+  color: white;
+}
+
+/* Últims accessos */
+#lastLoginsContainer div {
   background: #e0f2fe;
   padding: 0.5rem;
   border-radius: 0.5rem;
   margin-bottom: 0.25rem;
 }
 
-/* ---------- RESPONSIVE ---------- */
-@media (max-width: 700px) {
-  body.admin-page table {
+/* Hover a files */
+#usersTableBody tr:hover {
+  background-color: #f0f9ff;
+  transition: background 0.2s ease;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  table, th, td {
     font-size: 0.85rem;
   }
-  body.admin-page button {
-    padding: 0.35rem 0.6rem;
+  #tableButtonsContainer {
+    flex-direction: column;
   }
 }
