@@ -105,20 +105,27 @@ function wrapActionsWithUndo() {
   });
 
   // Delete
-  document.querySelectorAll('.btn-delete').forEach(btn => {
-    btn.onclick = async () => {
-      const uid = btn.dataset.id;
-      const doc = await db.collection('professors').doc(uid).get();
-      const prevState = doc.data().deleted || false;
+ document.querySelectorAll('.btn-delete').forEach(btn => {
+  btn.onclick = async () => {
+    const uid = btn.dataset.id;
+    const doc = await db.collection('professors').doc(uid).get();
+    const prevState = doc.data().deleted || false;
 
-      await deleteUser(uid);
-      showToast(`Usuari eliminat`, async () => {
-        await db.collection('professors').doc(uid).update({ deleted: prevState });
-        loadUsers();
-      });
-    };
-  });
-}
+    // Mostrem toast primer, amb Undo
+    showToast(`Usuari eliminat`, async () => {
+      // Undo: revertim
+      await db.collection('professors').doc(uid).update({ deleted: prevState });
+      loadUsers();
+    });
+
+    // Esperem uns segons abans d'aplicar la eliminació definitiva
+    setTimeout(async () => {
+      await db.collection('professors').doc(uid).update({ deleted: true, suspended: false });
+      loadUsers();
+    }, 5000); // 5 segons per Undo
+  };
+});
+
 
 
 // 7️⃣ Observers per reaplicar badges, hover i wrap actions quan canvia tbody
