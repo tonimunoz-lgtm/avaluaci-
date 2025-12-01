@@ -1,10 +1,12 @@
 // ---------------- ADMIN ENHANCEMENTS ----------------
 
-// Afegim input de cerca a la secció de taula
+// 1️⃣ Input de cerca a la secció de taula
 const searchInput = document.createElement('input');
 searchInput.placeholder = 'Cerca per nom, email o estat...';
 searchInput.className = 'border p-2 w-full mb-2 rounded';
-document.querySelector('section.mb-6').insertBefore(searchInput, document.getElementById('usersTableBody').parentNode);
+const usersSection = document.querySelector('section.mb-6');
+const usersTable = document.getElementById('usersTableBody').parentNode; // table
+usersSection.insertBefore(searchInput, usersTable);
 
 // Funció de filtratge
 searchInput.addEventListener('input', () => {
@@ -15,7 +17,7 @@ searchInput.addEventListener('input', () => {
   });
 });
 
-// ---------------- ORDRE COLUMNES ----------------
+// 2️⃣ Ordenació columnes
 document.querySelectorAll('thead th').forEach((th, index) => {
   th.style.cursor = 'pointer';
   th.addEventListener('click', () => {
@@ -34,7 +36,7 @@ document.querySelectorAll('thead th').forEach((th, index) => {
   });
 });
 
-// ---------------- BADGES ESTATS ----------------
+// 3️⃣ Badges d’estats
 function addBadges() {
   document.querySelectorAll('#usersTableBody tr').forEach(tr => {
     const adminCell = tr.children[3];
@@ -49,20 +51,15 @@ function addBadges() {
   });
 }
 
-// Observem canvis a tbody per reaplicar badges després de loadUsers()
-const observer = new MutationObserver(addBadges);
-observer.observe(document.getElementById('usersTableBody'), { childList: true });
-
-// ---------------- HOVER FILA ----------------
+// 4️⃣ Hover a files
 function addHoverEffect() {
   document.querySelectorAll('#usersTableBody tr').forEach(tr => {
     tr.addEventListener('mouseenter', () => tr.style.backgroundColor = '#f0f9ff');
     tr.addEventListener('mouseleave', () => tr.style.backgroundColor = '');
   });
 }
-observer.observe(document.getElementById('usersTableBody'), { childList: true });
 
-// ---------------- TOAST UNDO ----------------
+// 5️⃣ Toast + Undo
 const toastContainer = document.createElement('div');
 toastContainer.style.position = 'fixed';
 toastContainer.style.bottom = '20px';
@@ -87,17 +84,13 @@ function showToast(message, undoCallback) {
   }
 
   toastContainer.appendChild(toast);
-
-  setTimeout(() => {
-    toast.remove();
-  }, 5000);
+  setTimeout(() => toast.remove(), 5000);
 }
 
-// ---------------- WRAP ACCIONS EXISTENTS PER UNDO ----------------
+// 6️⃣ Wrap accions existents per Undo
 function wrapActionsWithUndo() {
   // Suspend toggle
   document.querySelectorAll('.btn-suspend-toggle').forEach(btn => {
-    const originalClick = btn.onclick || (() => {});
     btn.onclick = async () => {
       const uid = btn.dataset.id;
       const doc = await db.collection('professors').doc(uid).get();
@@ -113,7 +106,6 @@ function wrapActionsWithUndo() {
 
   // Delete
   document.querySelectorAll('.btn-delete').forEach(btn => {
-    const originalClick = btn.onclick || (() => {});
     btn.onclick = async () => {
       const uid = btn.dataset.id;
       const doc = await db.collection('professors').doc(uid).get();
@@ -128,11 +120,15 @@ function wrapActionsWithUndo() {
   });
 }
 
-// Reaplicar quan es recarrega la taula
-const actionObserver = new MutationObserver(wrapActionsWithUndo);
-actionObserver.observe(document.getElementById('usersTableBody'), { childList: true });
+// 7️⃣ Observers per reaplicar badges, hover i wrap actions quan canvia tbody
+const observer = new MutationObserver(() => {
+  addBadges();
+  addHoverEffect();
+  wrapActionsWithUndo();
+});
+observer.observe(document.getElementById('usersTableBody'), { childList: true });
 
-// Inicialitzar badges i hover al carregament inicial
+// 8️⃣ Inicialització al carregar
 addBadges();
 addHoverEffect();
 wrapActionsWithUndo();
