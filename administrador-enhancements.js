@@ -6,7 +6,7 @@ searchInput.placeholder = 'Cerca per nom, email o estat...';
 searchInput.className = 'border p-2 w-full mb-2 rounded';
 document.querySelector('section.mb-6').insertBefore(searchInput, document.getElementById('usersTableBody').parentNode);
 
-// Funció de filtratge
+// Funció de filtratge per text
 searchInput.addEventListener('input', () => {
   const filter = searchInput.value.toLowerCase();
   document.querySelectorAll('#usersTableBody tr').forEach(tr => {
@@ -129,12 +129,9 @@ function wrapActionsWithUndo() {
 }
 
 // ---------------- ADMIN DROPDOWN FILTERS ----------------
-
-// Crear contenidor de filtres
 const filterContainer = document.createElement('div');
 filterContainer.className = 'flex gap-2 mb-2';
 
-// Funció de crear select
 function createSelect(id, label, options) {
   const wrapper = document.createElement('div');
   const lbl = document.createElement('label');
@@ -154,7 +151,6 @@ function createSelect(id, label, options) {
   return wrapper;
 }
 
-// Afegir dropdowns
 const adminSelect = createSelect('filterAdmin', 'Admin', [
   { label: 'Tots', value: '' },
   { label: 'Sí', value: 'sí' },
@@ -175,7 +171,6 @@ filterContainer.appendChild(adminSelect);
 filterContainer.appendChild(suspendedSelect);
 filterContainer.appendChild(deletedSelect);
 
-// Inserir filtres abans de la taula
 const usersSection = document.querySelector('section.mb-6');
 usersSection.insertBefore(filterContainer, usersSection.querySelector('table'));
 
@@ -199,29 +194,20 @@ function applyFilters() {
   });
 }
 
-// Assignar esdeveniments
 [adminSelect, suspendedSelect, deletedSelect].forEach(select => {
   select.addEventListener('change', applyFilters);
 });
 
-// Mantindre filtre quan la taula es recarrega
 const filterObserver = new MutationObserver(applyFilters);
 filterObserver.observe(document.getElementById('usersTableBody'), { childList: true });
 
-
-// Reaplicar quan es recarrega la taula
 const actionObserver = new MutationObserver(wrapActionsWithUndo);
 actionObserver.observe(document.getElementById('usersTableBody'), { childList: true });
 
-
-
-// ---------------- FILTRAT AVANÇAT PER ESTAT ----------------
-
-// Crear contenidor de botons
+// ---------------- FILTRAT AVANÇAT PER ESTAT AMB BOTONS ----------------
 const statusFilterContainer = document.createElement('div');
 statusFilterContainer.className = 'flex gap-2 mb-2';
 
-// Funció per crear botó
 function createStatusButton(label, color, filterValue) {
   const btn = document.createElement('button');
   btn.textContent = label;
@@ -259,7 +245,21 @@ function createStatusButton(label, color, filterValue) {
   return btn;
 }
 
-// Inicialitzar badges i hover al carregament inicial
+const adminBtn = createStatusButton('🔵 Admins', '#4f46e5', 'admin');
+const suspendedBtn = createStatusButton('🟡 Suspès', '#facc15', 'suspended');
+const deletedBtn = createStatusButton('🔴 Eliminats', '#ef4444', 'deleted');
+const activeBtn = createStatusButton('🟢 Actius', '#10b981', 'active');
+const allBtn = createStatusButton('🔁 Tots', '#6b7280', 'all');
+
+statusFilterContainer.appendChild(adminBtn);
+statusFilterContainer.appendChild(suspendedBtn);
+statusFilterContainer.appendChild(deletedBtn);
+statusFilterContainer.appendChild(activeBtn);
+statusFilterContainer.appendChild(allBtn);
+
+usersSection.insertBefore(statusFilterContainer, usersSection.querySelector('table'));
+
+// Inicialitzar badges, hover i wrap d’accions
 addBadges();
 addHoverEffect();
 wrapActionsWithUndo();
