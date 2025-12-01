@@ -163,3 +163,31 @@ input, textarea {
     flex-direction: column;
   }
 }
+
+/* Contenidor de botons globals */
+#tableButtonsContainer {
+  display: flex;
+  flex-wrap: wrap;       /* Per fer saltar a la següent fila si no hi caben */
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+/* Botons dins del contenidor */
+#tableButtonsContainer button {
+  flex: 1 1 auto;        /* Creixen per ocupar espai disponible */
+  min-width: 150px;      /* Amplada mínima */
+}
+
+/* Botons dins de la columna Accions */
+body.admin-page td:last-child {
+  display: flex;
+  flex-wrap: wrap;        /* Permet posar els botons en 1-2 files */
+  gap: 0.25rem;           /* Espai entre botons */
+}
+
+body.admin-page td:last-child button {
+  flex: 1 0 70px;        /* Amplada mínima, creix si hi ha espai */
+  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
