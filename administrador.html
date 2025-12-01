@@ -24,26 +24,35 @@
       </div>
     </header>
 
-    <!-- Taula d'usuaris -->
-    <section class="mb-6">
-      <h2 class="text-xl font-semibold mb-2">Usuaris registrats</h2>
-      <table class="w-full table-auto rounded shadow">
-        <thead class="bg-gray-200">
-          <tr>
-            <th class="px-4 py-2">Nom</th>
-            <th class="px-4 py-2">Email</th>
-            <th class="px-4 py-2">Data creació</th>
-            <th class="px-4 py-2">Admin</th>
-            <th class="px-4 py-2">Suspès</th>
-            <th class="px-4 py-2">Eliminat</th>
-            <th class="px-4 py-2">Accions</th>
-          </tr>
-        </thead>
-        <tbody id="usersTableBody"></tbody>
-      </table>
-      <button id="btnAddAdmin" class="mt-3 bg-green-600 text-white px-3 py-1 rounded">Crear nou usuari</button>
-      <button id="btnMigrateOldUsers" class="mt-3 bg-gray-600 text-white px-3 py-1 rounded">Migrar usuaris registrats</button>
-    </section>
+   <!-- Taula d'usuaris -->
+<section class="mb-6">
+  <h2 class="text-xl font-semibold mb-2">Usuaris registrats</h2>
+
+  <table class="w-full table-auto rounded shadow">
+    <thead class="bg-gray-200">
+      <tr>
+        <th class="px-4 py-2">Nom</th>
+        <th class="px-4 py-2">Email</th>
+        <th class="px-4 py-2">Data creació</th>
+        <th class="px-4 py-2">Admin</th>
+        <th class="px-4 py-2">Suspès</th>
+        <th class="px-4 py-2">Eliminat</th>
+        <th class="px-4 py-2">Accions</th>
+      </tr>
+    </thead>
+    <tbody id="usersTableBody"></tbody>
+  </table>
+
+  <!-- Contenidor botons globals -->
+  <div id="tableButtonsContainer">
+    <button id="btnAddAdmin">Crear nou usuari</button>
+    <button id="btnMigrateOldUsers">Migrar usuaris registrats</button>
+    <button id="btnDeleteSelected">Eliminar seleccionats</button>
+    <button id="btnExportCSV">Exportar CSV</button>
+    <button id="btnEmailSelected">Enviar correu a seleccionats</button>
+  </div>
+</section>
+
 
     <!-- Enviament de correus -->
     <section class="mb-6">
