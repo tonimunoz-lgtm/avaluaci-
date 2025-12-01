@@ -213,6 +213,73 @@ filterObserver.observe(document.getElementById('usersTableBody'), { childList: t
 const actionObserver = new MutationObserver(wrapActionsWithUndo);
 actionObserver.observe(document.getElementById('usersTableBody'), { childList: true });
 
+
+
+// ---------------- FILTRAT AVANÇAT PER ESTAT ----------------
+
+// Crear contenidor de botons
+const statusFilterContainer = document.createElement('div');
+statusFilterContainer.className = 'flex gap-2 mb-2';
+
+// Funció per crear botó
+function createStatusButton(label, color, filterValue) {
+  const btn = document.createElement('button');
+  btn.textContent = label;
+  btn.className = `px-3 py-1 rounded text-white font-semibold`;
+  btn.style.backgroundColor = color;
+  btn.onclick = () => {
+    document.querySelectorAll('#usersTableBody tr').forEach(tr => {
+      const admin = tr.children[3].innerText.toLowerCase();
+      const suspended = tr.children[4].innerText.toLowerCase();
+      const deleted = tr.children[5].innerText.toLowerCase();
+
+      let show = false;
+
+      switch(filterValue) {
+        case 'admin':
+          show = admin === 'sí';
+          break;
+        case 'suspended':
+          show = suspended === 'sí';
+          break;
+        case 'deleted':
+          show = deleted === 'sí';
+          break;
+        case 'active':
+          show = suspended === 'no' && deleted === 'no';
+          break;
+        case 'all':
+          show = true;
+          break;
+      }
+
+      tr.style.display = show ? '' : 'none';
+    });
+  };
+  return btn;
+}
+
+// Crear botons
+const adminBtn = createStatusButton('🔵 Admins', '#4f46e5', 'admin');
+const suspendedBtn = createStatusButton('🟡 Suspès', '#facc15', 'suspended');
+const deletedBtn = createStatusButton('🔴 Eliminats', '#ef4444', 'deleted');
+const activeBtn = createStatusButton('🟢 Actius', '#10b981', 'active');
+const allBtn = createStatusButton('🔁 Tots', '#6b7280', 'all');
+
+// Afegir botons al contenidor
+statusFilterContainer.appendChild(adminBtn);
+statusFilterContainer.appendChild(suspendedBtn);
+statusFilterContainer.appendChild(deletedBtn);
+statusFilterContainer.appendChild(activeBtn);
+statusFilterContainer.appendChild(allBtn);
+
+// Inserir abans de la taula
+const usersSection = document.querySelector('section.mb-6');
+usersSection.insertBefore(statusFilterContainer, usersSection.querySelector('table'));
+
+
+
+
 // Inicialitzar badges i hover al carregament inicial
 addBadges();
 addHoverEffect();
