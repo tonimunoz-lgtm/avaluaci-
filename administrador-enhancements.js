@@ -259,27 +259,6 @@ function createStatusButton(label, color, filterValue) {
   return btn;
 }
 
-// Crear botons
-const adminBtn = createStatusButton('🔵 Admins', '#4f46e5', 'admin');
-const suspendedBtn = createStatusButton('🟡 Suspès', '#facc15', 'suspended');
-const deletedBtn = createStatusButton('🔴 Eliminats', '#ef4444', 'deleted');
-const activeBtn = createStatusButton('🟢 Actius', '#10b981', 'active');
-const allBtn = createStatusButton('🔁 Tots', '#6b7280', 'all');
-
-// Afegir botons al contenidor
-statusFilterContainer.appendChild(adminBtn);
-statusFilterContainer.appendChild(suspendedBtn);
-statusFilterContainer.appendChild(deletedBtn);
-statusFilterContainer.appendChild(activeBtn);
-statusFilterContainer.appendChild(allBtn);
-
-// Inserir abans de la taula
-const usersSection = document.querySelector('section.mb-6');
-usersSection.insertBefore(statusFilterContainer, usersSection.querySelector('table'));
-
-
-
-
 // Inicialitzar badges i hover al carregament inicial
 addBadges();
 addHoverEffect();
