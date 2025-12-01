@@ -1,193 +1,112 @@
 /* ---------------- Administració d'usuaris ---------------- */
 body.admin-page {
-  background: #f0f4ff;
+  background: #f0f4ff; /* suau blau clar de fons de pàgina */
   font-family: 'Inter', sans-serif;
   color: #1f2937;
-  margin: 0;
-  padding: 0;
 }
 
-#appRoot {
+body.admin-page #appRoot {
   background: linear-gradient(135deg, #eef2ff 0%, #ffffff 100%);
   padding: 2rem;
   border-radius: 1rem;
   box-shadow: 0 6px 20px rgba(0,0,0,0.1);
-  margin: 2rem auto;
-  max-width: 1200px;
 }
 
 /* Titols */
-h1 {
-  color: #1e40af;
+body.admin-page h1 {
+  color: #1e40af; /* blau fosc */
   font-weight: 700;
 }
-
-h2 {
-  color: #2563eb;
+body.admin-page h2 {
+  color: #2563eb; /* blau vibrant */
   font-weight: 600;
   margin-bottom: 0.5rem;
 }
 
-/* Taula */
-table {
+/* Taula usuaris */
+body.admin-page table {
   width: 100%;
   border-collapse: collapse;
   border-radius: 0.75rem;
   overflow: hidden;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  table-layout: fixed; /* evita que la taula s’expandeixi més del contenidor */
 }
 
-thead {
-  background-color: #93c5fd;
-}
-
-th, td {
+body.admin-page th {
+  background-color: #93c5fd; /* blau suau */
+  color: #1e3a8a;
   padding: 0.75rem;
   text-align: left;
+}
+
+body.admin-page td {
+  padding: 0.5rem;
   border-bottom: 1px solid #d1d5db;
-  word-wrap: break-word;
-}
-
-th {
-  color: #1e3a8a;
-}
-
-td {
   color: #1f2937;
 }
 
-/* Badges */
-.badge {
-  display: inline-block;
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.5rem;
-  text-align: center;
+/* Botons dins la taula */
+body.admin-page .btn-suspend-toggle {
+  background: #facc15; /* groc */
+  color: #1f2937;
 }
 
-/* Botons dins la taula */
-td button {
-  padding: 0.35rem 0.75rem;
+body.admin-page .btn-reset {
+  background: #3b82f6; /* blau intens */
+  color: white;
+}
+
+body.admin-page .btn-admin-toggle {
+  background: #8b5cf6; /* morat */
+  color: white;
+}
+
+body.admin-page .btn-delete {
+  background: #ef4444; /* vermell */
+  color: white;
+}
+
+body.admin-page button {
+  padding: 0.4rem 0.75rem;
   border-radius: 0.5rem;
   font-weight: 600;
   transition: transform 0.2s ease, background 0.2s ease;
-  margin: 0.1rem 0;
 }
 
-td button:hover {
+body.admin-page button:hover {
   transform: scale(1.05);
   filter: brightness(1.1);
 }
 
-.btn-suspend-toggle {
-  background: #facc15;
-  color: #1f2937;
-}
-
-.btn-reset {
-  background: #3b82f6;
-  color: white;
-}
-
-.btn-admin-toggle {
-  background: #8b5cf6;
-  color: white;
-}
-
-.btn-delete {
-  background: #ef4444;
-  color: white;
-}
-
-/* Inputs i textarea */
-input, textarea {
+/* Inputs de correu i textarea */
+body.admin-page input,
+body.admin-page textarea {
   border: 1px solid #93c5fd;
   border-radius: 0.5rem;
   padding: 0.5rem;
   width: 100%;
-  box-sizing: border-box;
 }
 
-/* Botons globals sota la taula */
-#tableButtonsContainer {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+/* Botons crear usuari / migrar usuaris / enviar correu */
+body.admin-page #btnAddAdmin {
+  background: #10b981; /* verd vibrant */
+  color: white;
   margin-top: 1rem;
 }
-
-#tableButtonsContainer button {
-  flex: 1 1 auto;
-  min-width: 150px;
-  text-align: center;
-}
-
-/* Botons específics */
-#btnAddAdmin {
-  background: #10b981;
+body.admin-page #btnMigrateOldUsers {
+  background: #6366f1; /* blau morat */
   color: white;
+  margin-top: 1rem;
 }
-
-#btnMigrateOldUsers {
-  background: #6366f1;
-  color: white;
-}
-
-#btnSendEmail {
-  background: #3b82f6;
+body.admin-page #btnSendEmail {
+  background: #3b82f6; /* blau intens */
   color: white;
 }
 
 /* Últims accessos */
-#lastLoginsContainer div {
-  background: #e0f2fe;
+body.admin-page #lastLoginsContainer div {
+  background: #e0f2fe; /* blau clar */
   padding: 0.5rem;
   border-radius: 0.5rem;
   margin-bottom: 0.25rem;
-}
-
-/* Hover a files */
-#usersTableBody tr:hover {
-  background-color: #f0f9ff;
-  transition: background 0.2s ease;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  table, th, td {
-    font-size: 0.85rem;
-  }
-  #tableButtonsContainer {
-    flex-direction: column;
-  }
-}
-
-/* Contenidor de botons globals */
-#tableButtonsContainer {
-  display: flex;
-  flex-wrap: wrap;       /* Per fer saltar a la següent fila si no hi caben */
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-/* Botons dins del contenidor */
-#tableButtonsContainer button {
-  flex: 1 1 auto;        /* Creixen per ocupar espai disponible */
-  min-width: 150px;      /* Amplada mínima */
-}
-
-/* Botons dins de la columna Accions */
-body.admin-page td:last-child {
-  display: flex;
-  flex-wrap: wrap;        /* Permet posar els botons en 1-2 files */
-  gap: 0.25rem;           /* Espai entre botons */
-}
-
-body.admin-page td:last-child button {
-  flex: 1 0 70px;        /* Amplada mínima, creix si hi ha espai */
-  padding: 0.25rem 0.5rem;
-  font-size: 0.85rem;
-  white-space: nowrap;
 }
