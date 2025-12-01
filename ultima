@@ -3,7 +3,6 @@ import { openModal, closeModal, confirmAction } from './modals.js';
 import * as Terms from './terms.js';
 window.Terms = Terms;
 
-
 /* ---------------- FIREBASE CONFIG ---------------- */
 const firebaseConfig = {
   apiKey: "AIzaSyA0P7TWcEw9y9_13yqRhvsgWN5d3YKH7yo",
@@ -125,16 +124,16 @@ function showApp() {
 }
 
 /* ---------- AUTH ---------- */
-btnLogin.addEventListener('click', () => {
-  const email = document.getElementById('loginEmail').value.trim();
-  const pw = document.getElementById('loginPassword').value;
-  if (!email || !pw) return alert('Introdueix email i contrasenya');
-  auth.signInWithEmailAndPassword(email, pw)
-    .then(u => {
-      professorUID = u.user.uid;
-      setupAfterAuth(u.user);
-    }).catch(e => alert('Error login: ' + e.message));
-});
+//btnLogin.addEventListener('click', () => {
+ // const email = document.getElementById('loginEmail').value.trim();
+ // const pw = document.getElementById('loginPassword').value;
+//  if (!email || !pw) return alert('Introdueix email i contrasenya');
+//  auth.signInWithEmailAndPassword(email, pw)
+//    .then(u => {
+//      professorUID = u.user.uid;
+//      setupAfterAuth(u.user);
+//    }).catch(e => alert('Error login: ' + e.message));
+//});
 
 btnLogin.addEventListener('click', async () => {
   const email = document.getElementById('loginEmail').value.trim();
@@ -158,6 +157,32 @@ btnLogin.addEventListener('click', async () => {
     alert('Error login: ' + e.message);
   }
 });
+
+btnRegister.addEventListener('click', async () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pw = document.getElementById('loginPassword').value;
+  if (!email || !pw) return alert('Introdueix email i contrasenya');
+
+  try {
+    const u = await auth.createUserWithEmailAndPassword(email, pw);
+    professorUID = u.user.uid;
+
+    await db.collection('professors').doc(professorUID).set({
+      email,
+      nom: email.split('@')[0],
+      isAdmin: false,
+      suspended: false,
+      createdAt: firebase.firestore.Timestamp.now(),
+      classes: []
+    });
+
+    setupAfterAuth(u.user);
+
+  } catch(e) {
+    alert('Error registre: ' + e.message);
+  }
+});
+
 
 btnRecover.addEventListener('click', () => {
   const email = document.getElementById('loginEmail').value.trim();
