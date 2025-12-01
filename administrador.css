@@ -1,112 +1,112 @@
-/* ---------------- Administració d'usuaris ---------------- */
+/* ---------------- Només afecta la pàgina d'administració ---------------- */
 body.admin-page {
-  background: #f0f4ff; /* suau blau clar de fons de pàgina */
-  font-family: 'Inter', sans-serif;
+  background: linear-gradient(135deg, #f0f8ff 0%, #e6f2ff 100%);
   color: #1f2937;
+  transition: background 0.3s ease;
 }
 
+/* Contenidor principal */
 body.admin-page #appRoot {
-  background: linear-gradient(135deg, #eef2ff 0%, #ffffff 100%);
-  padding: 2rem;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
   border-radius: 1rem;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+  padding: 2rem;
 }
 
-/* Titols */
-body.admin-page h1 {
-  color: #1e40af; /* blau fosc */
-  font-weight: 700;
-}
-body.admin-page h2 {
-  color: #2563eb; /* blau vibrant */
-  font-weight: 600;
-  margin-bottom: 0.5rem;
+/* Títols */
+body.admin-page h1, body.admin-page h2 {
+  color: #111827;
 }
 
-/* Taula usuaris */
+/* Taula d’usuaris */
 body.admin-page table {
-  width: 100%;
-  border-collapse: collapse;
   border-radius: 0.75rem;
   overflow: hidden;
+  width: 100%;
+  border-collapse: collapse;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
 body.admin-page th {
-  background-color: #93c5fd; /* blau suau */
-  color: #1e3a8a;
+  background: #6366f1;
+  color: white;
+  font-weight: 600;
   padding: 0.75rem;
   text-align: left;
 }
 
 body.admin-page td {
-  padding: 0.5rem;
-  border-bottom: 1px solid #d1d5db;
-  color: #1f2937;
+  padding: 0.6rem;
+  border-bottom: 1px solid #e5e7eb;
 }
 
-/* Botons dins la taula */
-body.admin-page .btn-suspend-toggle {
-  background: #facc15; /* groc */
-  color: #1f2937;
+/* Files alternes */
+body.admin-page tbody tr:nth-child(odd) {
+  background: #f9fafb;
 }
 
-body.admin-page .btn-reset {
-  background: #3b82f6; /* blau intens */
-  color: white;
+body.admin-page tbody tr:nth-child(even) {
+  background: #eef2ff;
 }
 
-body.admin-page .btn-admin-toggle {
-  background: #8b5cf6; /* morat */
-  color: white;
+/* Hover files */
+body.admin-page tbody tr:hover {
+  background: #dbeafe;
+  transition: background 0.3s ease;
 }
 
-body.admin-page .btn-delete {
-  background: #ef4444; /* vermell */
-  color: white;
-}
-
+/* Botons més vius */
 body.admin-page button {
-  padding: 0.4rem 0.75rem;
   border-radius: 0.5rem;
   font-weight: 600;
-  transition: transform 0.2s ease, background 0.2s ease;
+  transition: transform 0.2s ease, background 0.3s ease;
 }
 
 body.admin-page button:hover {
   transform: scale(1.05);
-  filter: brightness(1.1);
 }
 
-/* Inputs de correu i textarea */
-body.admin-page input,
-body.admin-page textarea {
-  border: 1px solid #93c5fd;
-  border-radius: 0.5rem;
-  padding: 0.5rem;
-  width: 100%;
+/* Botons específics amb colors vius */
+body.admin-page .btn-suspend-toggle {
+  background: linear-gradient(90deg, #facc15, #fde68a);
+  color: #1f2937;
 }
 
-/* Botons crear usuari / migrar usuaris / enviar correu */
+body.admin-page .btn-reset {
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  color: white;
+}
+
+body.admin-page .btn-admin-toggle {
+  background: linear-gradient(90deg, #7c3aed, #c084fc);
+  color: white;
+}
+
+body.admin-page .btn-delete {
+  background: linear-gradient(90deg, #ef4444, #f87171);
+  color: white;
+}
+
+/* Botons de crear nou usuari i migrar */
 body.admin-page #btnAddAdmin {
-  background: #10b981; /* verd vibrant */
-  color: white;
-  margin-top: 1rem;
-}
-body.admin-page #btnMigrateOldUsers {
-  background: #6366f1; /* blau morat */
-  color: white;
-  margin-top: 1rem;
-}
-body.admin-page #btnSendEmail {
-  background: #3b82f6; /* blau intens */
+  background: linear-gradient(90deg, #10b981, #34d399);
   color: white;
 }
 
-/* Últims accessos */
-body.admin-page #lastLoginsContainer div {
-  background: #e0f2fe; /* blau clar */
-  padding: 0.5rem;
+body.admin-page #btnMigrateOldUsers {
+  background: linear-gradient(90deg, #6366f1, #a78bfa);
+  color: white;
+}
+
+/* Inputs i textarea per enviar correu */
+body.admin-page input, 
+body.admin-page textarea {
+  border: 1px solid #d1d5db;
   border-radius: 0.5rem;
-  margin-bottom: 0.25rem;
+  padding: 0.5rem;
+}
+
+body.admin-page #btnSendEmail {
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  color: white;
 }
