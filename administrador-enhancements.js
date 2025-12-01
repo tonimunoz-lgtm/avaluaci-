@@ -128,9 +128,9 @@ function wrapActionsWithUndo() {
   });
 }
 
------------
+//-----------
 
------------
+//-----------
 // Funció de filtratge combinat
 function applyFilters() {
   const adminVal = document.getElementById('filterAdmin').value;
