@@ -128,9 +128,52 @@ function wrapActionsWithUndo() {
   });
 }
 
-//-----------
+// ---------------- ADMIN DROPDOWN FILTERS ----------------
+const filterContainer = document.createElement('div');
+filterContainer.className = 'flex gap-2 mb-2';
 
-//-----------
+function createSelect(id, label, options) {
+  const wrapper = document.createElement('div');
+  const lbl = document.createElement('label');
+  lbl.innerText = label + ':';
+  lbl.className = 'mr-1 font-semibold';
+  const select = document.createElement('select');
+  select.id = id;
+  select.className = 'border p-1 rounded';
+  options.forEach(opt => {
+    const option = document.createElement('option');
+    option.value = opt.value;
+    option.text = opt.label;
+    select.appendChild(option);
+  });
+  wrapper.appendChild(lbl);
+  wrapper.appendChild(select);
+  return wrapper;
+}
+
+const adminSelect = createSelect('filterAdmin', 'Admin', [
+  { label: 'Tots', value: '' },
+  { label: 'Sí', value: 'sí' },
+  { label: 'No', value: 'no' }
+]);
+const suspendedSelect = createSelect('filterSuspended', 'Suspès', [
+  { label: 'Tots', value: '' },
+  { label: 'Sí', value: 'sí' },
+  { label: 'No', value: 'no' }
+]);
+const deletedSelect = createSelect('filterDeleted', 'Eliminat', [
+  { label: 'Tots', value: '' },
+  { label: 'Sí', value: 'sí' },
+  { label: 'No', value: 'no' }
+]);
+
+filterContainer.appendChild(adminSelect);
+filterContainer.appendChild(suspendedSelect);
+filterContainer.appendChild(deletedSelect);
+
+const usersSection = document.querySelector('section.mb-6');
+usersSection.insertBefore(filterContainer, usersSection.querySelector('table'));
+
 // Funció de filtratge combinat
 function applyFilters() {
   const adminVal = document.getElementById('filterAdmin').value;
