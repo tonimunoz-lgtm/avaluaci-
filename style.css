@@ -226,25 +226,6 @@ button:hover { transform: scale(1.03); }
     align-items: center;
     z-index: 9999;
   }
-
-/* Botó de tancament mòbil de la llista d'alumnes */
-#closeStudentsMobile {
-  display: none; /* Oculta en pantalles grans */
-}
-
-@media (max-width: 768px) {
-  #closeStudentsMobile {
-    display: block;          /* Mostra només en mòbil */
-    position: absolute;      /* Ja ho tens, només per assegurar */
-    top: 0.5rem;
-    right: 0.5rem;
-    font-size: 2rem;
-    color: #f00;             /* Vermell */
-    cursor: pointer;
-    z-index: 10000;
-  }
-}
-
   
   /* Panell interior */
   #studentsListContent {
