@@ -2130,15 +2130,16 @@ function toggleSendNotesMode() {
     window.__sendNotesModeActive = !window.__sendNotesModeActive;
 
     if (window.__sendNotesModeActive) {
-        showSendModeCheckboxes();
-        showSendSelectedButton();
-        moveExitSendNotesButtonToHeader(); // Nova ubicació
+        showSendModeCheckboxes();      // checkboxes al costat dels tres puntets de cada alumne
+        showSendSelectedButton();      // botó global “Enviar notes seleccionades”
+        showExitSendNotesButtonInHeader(); // X vermella a la capçalera
     } else {
         hideSendModeCheckboxes();
         hideSendSelectedButton();
-        document.getElementById('cancelSendNotesBtn')?.remove();
+        document.getElementById('cancelSendNotesBtn')?.remove(); // amaga la X
     }
 }
+
 
 
 // Mostrar checkboxes a la dreta (al lloc dels tres puntets) i amagar els tres puntets
@@ -2297,5 +2298,29 @@ function moveExitSendNotesButtonToHeader() {
 
     const menuBtn = th.querySelector('#studentsMenuBtn');
     th.insertBefore(btn, menuBtn); // Posiciona just abans del menú de tres puntets
+}
+
+function showExitSendNotesButtonInHeader() {
+    const thContainer = document.querySelector('#studentsListContent .flex.items-center.justify-between');
+    if (!thContainer) return;
+
+    // Evita duplicar
+    let btn = document.getElementById('cancelSendNotesBtn');
+    if (!btn) {
+        btn = document.createElement('button');
+        btn.id = 'cancelSendNotesBtn';
+        btn.className = 'ml-2 text-white bg-red-600 rounded-full w-6 h-6 flex items-center justify-center cursor-pointer';
+        btn.textContent = '×';
+        btn.title = 'Sortir del mode enviar notes';
+        btn.addEventListener('click', () => {
+            toggleSendNotesMode(); // tanca el mode i amaga checkboxes
+        });
+
+        // Insertem just abans del menú de tres puntets
+        const menuBtn = thContainer.querySelector('#studentsMenuBtn');
+        thContainer.insertBefore(btn, menuBtn);
+    }
+
+    btn.style.display = 'inline-flex';
 }
 
