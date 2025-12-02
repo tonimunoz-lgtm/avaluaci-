@@ -2217,16 +2217,20 @@ function showExitSendNotesButton() {
   if (!menuContainer) return;
   if (document.getElementById('btnExitSendNotes')) return;
 
+  // Assegura que el container sigui flex horitzontal
+  menuContainer.style.display = 'flex';
+  menuContainer.style.alignItems = 'center';
+  menuContainer.style.gap = '4px'; // una mica d'espai entre la X i els tres puntets
+
   const btn = document.createElement('button');
   btn.id = 'btnExitSendNotes';
-  btn.className = 'mr-2 text-white bg-red-600 rounded-full w-6 h-6 flex items-center justify-center cursor-pointer';
+  btn.className = 'text-white bg-red-600 rounded-full w-6 h-6 flex items-center justify-center cursor-pointer';
   btn.textContent = '×';
   btn.title = 'Sortir del mode enviar notes';
   btn.addEventListener('click', toggleSendNotesMode);
 
-  // Inserim just abans del botó dels tres puntets
   const menuBtn = menuContainer.querySelector('#studentsMenuBtn');
-  menuContainer.insertBefore(btn, menuBtn);
+  menuContainer.insertBefore(btn, menuBtn); // Ara quedarà just a l'esquerra dels tres puntets
 }
 
 
