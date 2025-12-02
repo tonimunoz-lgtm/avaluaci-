@@ -303,4 +303,7 @@ button:hover { transform: scale(1.03); }
   }
 }
 
+#gradesModeToggle:hover {
+  transform: scale(1.03);
+}
 
