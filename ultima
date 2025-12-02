@@ -182,6 +182,25 @@ btnLogin.addEventListener('click', async () => {
   }
 });
 
+//-------loggin amb google----------------------
+document.getElementById("googleLoginBtn").addEventListener("click", async () => {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  
+  // IMPORTANT → Afegim permís d’enviar mails
+  provider.addScope("https://www.googleapis.com/auth/gmail.send");
+
+  try {
+    const result = await firebase.auth().signInWithPopup(provider);
+
+    window._googleAccessToken = result.credential.accessToken;
+
+    alert("Sessió iniciada correctament!");
+  } catch (err) {
+    console.error(err);
+    alert("Error iniciant sessió amb Google");
+  }
+});
+
 
 //btnRegister.addEventListener('click', async () => {
 //  const email = document.getElementById('loginEmail').value.trim();
