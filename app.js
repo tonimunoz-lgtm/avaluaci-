@@ -226,13 +226,16 @@ async function signInWithGoogleGmail() {
 const googleBtn = document.getElementById("googleLoginBtn");
 
 if (googleBtn) {
-  // Afegim classes CSS igual que altres botons
-  googleBtn.classList.add("bg-indigo-500");
+  // Estil similar als altres botons però més clar
+  googleBtn.classList.add("bg-indigo-300"); // gradient més suau o pots fer un gradient manual
   googleBtn.style.padding = "0.5rem 1rem";
   googleBtn.style.fontWeight = "600";
   googleBtn.style.borderRadius = "0.5rem";
   googleBtn.style.cursor = "pointer";
-
+  googleBtn.style.width = "100%";        // mateixa amplada que els altres botons
+  googleBtn.style.marginTop = "0.5rem";  // separació amb el botó superior
+  googleBtn.style.color = "white";       // text blanc
+  
   // Afegim event listener
   googleBtn.addEventListener("click", async () => {
     const provider = new firebase.auth.GoogleAuthProvider();
