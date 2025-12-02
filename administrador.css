@@ -141,19 +141,3 @@ body.admin-page td:last-child button {
   white-space: nowrap;
 }
 
-/* Rodoneta dins dels botons de filtre */
-.filter-btn .circle {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background-color: rgba(255,255,255,0.4); /* gris suau per defecte */
-  vertical-align: middle;
-  transition: background-color 0.2s;
-}
-
-/* Quan el botó està actiu */
-.filter-btn.active .circle {
-  background-color: white; /* es pot posar un color contrastant */
-}
-
