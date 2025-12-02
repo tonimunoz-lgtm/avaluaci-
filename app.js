@@ -183,6 +183,27 @@ btnLogin.addEventListener('click', async () => {
 });
 
 //-------loggin amb google----------------------
+async function signInWithGoogleGmail() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+
+  // Aquest scope permet enviar mails
+  provider.addScope('https://www.googleapis.com/auth/gmail.send');
+
+  try {
+    const result = await firebase.auth().signInWithPopup(provider);
+
+    // Guardem el token per enviar correus
+    const credential = result.credential;
+    window._googleAccessToken = credential.accessToken;
+
+    alert("Sessió iniciada correctament. Ara pots enviar mails des del teu compte!");
+  } catch (error) {
+    console.error(error);
+    alert("Error iniciant sessió amb Google: " + error.message);
+  }
+}
+
+
 document.getElementById("googleLoginBtn").addEventListener("click", async () => {
   const provider = new firebase.auth.GoogleAuthProvider();
   
@@ -2325,9 +2346,8 @@ async function sendSelectedNotes() {
 
 //-----------Funció per ENVIAR MAIL directament des del Gmail de l’usuari----------------
 async function gmailSendEmail(to, subject, message) {
-  
   if (!window._googleAccessToken) {
-    alert("No tens sessió iniciada amb Google.");
+    alert("Cal iniciar sessió amb Google per enviar mails.");
     return;
   }
 
@@ -2343,25 +2363,31 @@ async function gmailSendEmail(to, subject, message) {
     .replace(/\//g, '_')
     .replace(/=+$/, '');
 
-  const response = await fetch(
-    "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
-    {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${window._googleAccessToken}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        raw: base64Email
-      })
+  try {
+    const response = await fetch(
+      "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${window._googleAccessToken}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ raw: base64Email })
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(errorText);
+      alert("Error enviant el correu: " + errorText);
+      return;
     }
-  );
 
-  if (!response.ok) {
-    console.error(await response.text());
-    throw new Error("Error enviant el correu");
+    alert(`Correu enviat a ${to} correctament!`);
+    return true;
+  } catch (err) {
+    console.error(err);
+    alert("Error enviant el correu: " + err.message);
   }
-
-  return true;
 }
 
