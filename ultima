@@ -203,8 +203,8 @@ async function signInWithGoogleGmail() {
   }
 }
 
-
-/*document.getElementById("googleLoginBtn").addEventListener("click", async () => {
+// Botó login amb Google
+document.getElementById("googleLoginBtn").addEventListener("click", async () => {
   const provider = new firebase.auth.GoogleAuthProvider();
   
   // IMPORTANT → Afegim permís d’enviar mails
@@ -220,10 +220,10 @@ async function signInWithGoogleGmail() {
     console.error(err);
     alert("Error iniciant sessió amb Google");
   }
-});*/
+});
 
-// Botó login amb Google
-const googleBtn = document.getElementById("googleLoginBtn");
+
+/*const googleBtn = document.getElementById("googleLoginBtn");
 
 if (googleBtn) {
   // Estil similar als altres botons però més clar
@@ -254,7 +254,7 @@ if (googleBtn) {
       alert("Error iniciant sessió amb Google: " + err.message);
     }
   });
-}
+}*/
 
 
 
