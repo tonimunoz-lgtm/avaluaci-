@@ -2316,11 +2316,52 @@ async function sendSelectedNotes() {
     const body = await formatStudentNotesForEmail(studentId);
     const subject = `Notes de ${li.querySelector('.stu-name').textContent}`;
 
-    const url = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.open(url, '_blank');
+    await gmailSendEmail(email, subject, body);
+
 
     await new Promise(r => setTimeout(r, 200));
   }
 }
 
+//-----------Funció per ENVIAR MAIL directament des del Gmail de l’usuari----------------
+async function gmailSendEmail(to, subject, message) {
+  
+  if (!window._googleAccessToken) {
+    alert("No tens sessió iniciada amb Google.");
+    return;
+  }
+
+  const email = [
+    `To: ${to}`,
+    `Subject: ${subject}`,
+    "",
+    message
+  ].join("\n");
+
+  const base64Email = btoa(unescape(encodeURIComponent(email)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+
+  const response = await fetch(
+    "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+    {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${window._googleAccessToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        raw: base64Email
+      })
+    }
+  );
+
+  if (!response.ok) {
+    console.error(await response.text());
+    throw new Error("Error enviant el correu");
+  }
+
+  return true;
+}
 
