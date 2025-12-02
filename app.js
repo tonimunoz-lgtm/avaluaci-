@@ -647,6 +647,13 @@ function renderStudentsList(){
   studentsList.innerHTML = '';
   studentsCount.textContent = `(${classStudents.length})`;
 
+  // 🔎 Connectem la barra de cerca
+  const searchInput = document.getElementById('studentSearch');
+  if (searchInput && !searchInput.dataset.bound) {
+      searchInput.addEventListener('input', filterStudentsList);
+      searchInput.dataset.bound = "true"; // Evita duplicar el listener
+  }
+
   if(classStudents.length === 0){
     studentsList.innerHTML = '<li class="text-sm text-gray-400">No hi ha alumnes</li>';
     return;
@@ -2034,3 +2041,14 @@ async function setAdmins() {
 
 // Executar només una vegada
 setAdmins();
+
+//----------------nou
+function filterStudentsList() {
+  const text = studentSearch.value.toLowerCase();
+
+  document.querySelectorAll('#studentsList li').forEach(li => {
+    const name = li.querySelector('.stu-name')?.innerText.toLowerCase() || "";
+    li.style.display = name.includes(text) ? "" : "none";
+  });
+}
+
