@@ -2111,7 +2111,7 @@ window.__sendNotesModeActive = false;
 })();
 
 // -------------------- FUNCIONS DE MODE ENVIAR NOTES --------------------
-/*function toggleSendNotesMode() {
+function toggleSendNotesMode() {
   window.__sendNotesModeActive = !window.__sendNotesModeActive;
 
   if (window.__sendNotesModeActive) {
@@ -2124,22 +2124,6 @@ window.__sendNotesModeActive = false;
     hideExitSendNotesButton();
   }
 }
-*/
-
-function toggleSendNotesMode() {
-    window.__sendNotesModeActive = !window.__sendNotesModeActive;
-
-    if (window.__sendNotesModeActive) {
-        showSendModeCheckboxes();      // checkboxes al costat dels tres puntets de cada alumne
-        showSendSelectedButton();      // botó global “Enviar notes seleccionades”
-        showExitSendNotesButtonInHeader(); // X vermella a la capçalera
-    } else {
-        hideSendModeCheckboxes();
-        hideSendSelectedButton();
-        document.getElementById('cancelSendNotesBtn')?.remove(); // amaga la X
-    }
-}
-
 
 
 // Mostrar checkboxes a la dreta (al lloc dels tres puntets) i amagar els tres puntets
@@ -2180,14 +2164,12 @@ function showSendSelectedButton() {
   if (!container) return;
   if (document.getElementById('btnSendSelectedNotes')) return;
 
- // Elimina o comenta aquesta part
-/*
+
 const btn = document.createElement('button');
 btn.id = 'btnExitSendNotes';
 btn.className = 'mt-2 w-full bg-red-600 text-white px-3 py-2 rounded';
 btn.textContent = '×';
 container.insertBefore(btn, document.getElementById('studentsList'));
-*/
 
 }
 
@@ -2298,29 +2280,5 @@ function moveExitSendNotesButtonToHeader() {
 
     const menuBtn = th.querySelector('#studentsMenuBtn');
     th.insertBefore(btn, menuBtn); // Posiciona just abans del menú de tres puntets
-}
-
-function showExitSendNotesButtonInHeader() {
-    const thContainer = document.querySelector('#studentsListContent .flex.items-center.justify-between');
-    if (!thContainer) return;
-
-    // Evita duplicar
-    let btn = document.getElementById('cancelSendNotesBtn');
-    if (!btn) {
-        btn = document.createElement('button');
-        btn.id = 'cancelSendNotesBtn';
-        btn.className = 'ml-2 text-white bg-red-600 rounded-full w-6 h-6 flex items-center justify-center cursor-pointer';
-        btn.textContent = '×';
-        btn.title = 'Sortir del mode enviar notes';
-        btn.addEventListener('click', () => {
-            toggleSendNotesMode(); // tanca el mode i amaga checkboxes
-        });
-
-        // Insertem just abans del menú de tres puntets
-        const menuBtn = thContainer.querySelector('#studentsMenuBtn');
-        thContainer.insertBefore(btn, menuBtn);
-    }
-
-    btn.style.display = 'inline-flex';
 }
 
