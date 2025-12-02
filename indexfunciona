@@ -49,7 +49,7 @@
         </div>
         <div id="userArea" class="flex items-center gap-2">
           <span id="usuariNom">usuari</span>
-          <button id="userMenuBtn" class="text-gray-600 hover:text-gray-800">⋮</button>
+          <button id="userMenuBtn" class="text-gray-600 hover:text-gray-800 text-2xl">⋮</button>
           <div id="userMenu" class="hidden absolute bg-white border rounded shadow-md p-2">
             <button id="changePasswordBtn" class="w-full text-left px-2 py-1 hover:bg-gray-100">Canviar contrasenya</button>
           </div>
@@ -129,6 +129,13 @@
 </div>
 
 
+  <!-- 🔍 Cercador d’alumnes -->
+<input id="studentSearch"
+       type="text"
+       placeholder="Cerca per nom…"
+       class="w-full mb-3 p-2 border rounded bg-white dark:bg-gray-800" />  
+
+    
   <ul id="studentsList" class="space-y-2"></ul>
   <p class="mt-3 text-xs text-gray-400">Arrossega per ordenar</p>
 </div>
@@ -144,6 +151,11 @@
 per crear un nou grup d'activitats (primer trimestre, segon trimestre, etc.)
 
   </div>
+
+<div class="flex items-center justify-between mb-2">
+  <input id="gridStudentSearch" type="text" placeholder="Cerca alumne a la graella…" class="border rounded px-3 py-1 w-full">
+</div>
+
    
   <div id="gridWrapper" class="w-full">
     <table id="notesTable" class="min-w-full border-collapse">
