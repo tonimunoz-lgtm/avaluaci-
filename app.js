@@ -643,27 +643,33 @@ function removeActivity(actId){
 
 
 /* ---------------- Render Students List amb menú ---------------- */
-function renderStudentsList(){
+function renderStudentsList() {
   studentsList.innerHTML = '';
   studentsCount.textContent = `(${classStudents.length})`;
 
-  // 🔎 Connectem la barra de cerca
+  // Cerca
   const searchInput = document.getElementById('studentSearch');
   if (searchInput && !searchInput.dataset.bound) {
-      searchInput.addEventListener('input', filterStudentsList);
-      searchInput.dataset.bound = "true"; // Evita duplicar el listener
+    searchInput.addEventListener('input', filterStudentsList);
+    searchInput.dataset.bound = "true";
   }
 
-  if(classStudents.length === 0){
+  if (classStudents.length === 0) {
     studentsList.innerHTML = '<li class="text-sm text-gray-400">No hi ha alumnes</li>';
     return;
   }
 
-  classStudents.forEach((stuId, idx)=>{
-    db.collection('alumnes').doc(stuId).get().then(doc=>{
-      const name = doc.exists ? doc.data().nom : 'Desconegut';
+  classStudents.forEach((stuId, idx) => {
+    db.collection('alumnes').doc(stuId).get().then(doc => {
+
+      const data = doc.data() || {};
+      const name = data.nom || 'Desconegut';
+      const email = data.email || '';
+
       const li = document.createElement('li');
       li.className = 'flex items-center justify-between bg-gray-50 dark:bg-gray-900 p-2 rounded';
+      li.dataset.studentId = stuId;
+      if (email) li.dataset.email = email;
 
       li.innerHTML = `
         <div class="flex items-center gap-3">
@@ -672,48 +678,73 @@ function renderStudentsList(){
         </div>
         <div class="relative">
           <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white tooltip">⋮</button>
-          <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10 transition-opacity duration-200 opacity-0">
+          <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10">
             <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
+            <button class="set-email-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Introduir email</button>
             <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>
           </div>
         </div>
       `;
 
+      // Menú
       const menuBtn = li.querySelector('.menu-btn');
       const menu = li.querySelector('.menu');
 
-      menuBtn.addEventListener('click', e=>{
+      menuBtn.addEventListener('click', e => {
         e.stopPropagation();
-        document.querySelectorAll('.menu').forEach(m=> m.classList.add('hidden'));
+        document.querySelectorAll('.menu').forEach(m => m.classList.add('hidden'));
         menu.classList.toggle('hidden');
       });
 
-      li.querySelector('.edit-btn').addEventListener('click', ()=>{
+      // EDITAR
+      li.querySelector('.edit-btn').addEventListener('click', () => {
         const newName = prompt('Introdueix el nou nom:', name);
-        if(!newName || newName.trim()===name) return;
+        if (!newName || newName.trim() === name) return;
+
         db.collection('alumnes').doc(stuId).update({ nom: newName.trim() })
-          .then(()=> loadClassData())
-          .catch(e=> alert('Error editant alumne: '+e.message));
+          .then(() => loadClassData())
+          .catch(e => alert('Error editant alumne: ' + e.message));
       });
 
-      li.querySelector('.delete-btn').addEventListener('click', ()=> removeStudent(stuId));
+      // INTRODUIR EMAIL
+      li.querySelector('.set-email-btn').addEventListener('click', async () => {
+        const current = li.dataset.email || '';
+        const newMail = prompt("Introdueix email:", current);
 
-      // Drag handle
+        if (!newMail) return;
+
+        await db.collection('alumnes').doc(stuId).update({ email: newMail.trim() });
+        li.dataset.email = newMail.trim();
+
+        alert("Email guardat.");
+      });
+
+      // ELIMINAR
+      li.querySelector('.delete-btn').addEventListener('click', () => removeStudent(stuId));
+
+      // DRAG
       const dragHandle = li.querySelector('[draggable]');
-      dragHandle.addEventListener('dragstart', e=>{
-        e.dataTransfer.setData('text/plain', idx.toString());
+      dragHandle.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('text/plain', idx);
       });
-      li.addEventListener('dragover', e=> e.preventDefault());
-      li.addEventListener('drop', e=>{
+      li.addEventListener('dragover', e => e.preventDefault());
+      li.addEventListener('drop', e => {
         e.preventDefault();
         const fromIdx = Number(e.dataTransfer.getData('text/plain'));
         reorderStudents(fromIdx, idx);
       });
 
       studentsList.appendChild(li);
+
+      // SI EL MODE ENVIAR NOTES ÉS ACTIU → AFEGIU CHECKBOXES
+      if (window.__sendNotesModeActive) {
+        showSendModeCheckboxes();
+      }
+
     });
   });
 }
+
 
 //------------------------------------------------nuevo-------------------------------------------------------
 /* ================================
@@ -2063,4 +2094,141 @@ function filterStudentsList() {
     li.style.display = name.includes(text) ? "" : "none";
   });
 }
+
+/* ---------------------- MODE ENVIAR NOTES ---------------------- */
+
+window.__sendNotesModeActive = false;
+
+// Afegim l’opció al menú global dels alumnes
+(function attachGlobalStudentsMenuOption(){
+  const studentsMenu = document.getElementById('studentsMenu');
+  if (!studentsMenu) return;
+
+  if (!studentsMenu.querySelector('.send-notes-mode-btn')) {
+    const btn = document.createElement('button');
+    btn.className = 'send-notes-mode-btn px-3 py-1 w-full text-left hover:bg-gray-100';
+    btn.textContent = 'Enviar notes';
+    btn.addEventListener('click', () => {
+      toggleSendNotesMode();
+      studentsMenu.classList.add('hidden');
+    });
+    studentsMenu.appendChild(btn);
+  }
+})();
+
+//-------Funcions per gestionar el mode — checkboxes + botó global--------------
+function toggleSendNotesMode() {
+  window.__sendNotesModeActive = !window.__sendNotesModeActive;
+
+  if (window.__sendNotesModeActive) {
+    showSendModeCheckboxes();
+    showSendSelectedButton();
+  } else {
+    hideSendModeCheckboxes();
+    hideSendSelectedButton();
+  }
+}
+
+function showSendModeCheckboxes() {
+  document.querySelectorAll('#studentsList li').forEach(li => {
+    if (li.querySelector('.send-note-checkbox')) return;
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 'send-note-checkbox';
+    cb.style.marginRight = '8px';
+
+    const leftDiv = li.querySelector('div:first-child');
+    leftDiv.insertBefore(cb, leftDiv.firstElementChild);
+  });
+}
+
+function hideSendModeCheckboxes() {
+  document.querySelectorAll('.send-note-checkbox').forEach(cb => cb.remove());
+}
+
+function showSendSelectedButton() {
+  const container = document.getElementById('studentsListContent');
+  if (!container) return;
+
+  if (document.getElementById('btnSendSelectedNotes')) return;
+
+  const btn = document.createElement('button');
+  btn.id = 'btnSendSelectedNotes';
+  btn.className = 'mt-2 w-full bg-blue-600 text-white px-3 py-2 rounded';
+  btn.textContent = 'Enviar notes seleccionades';
+  btn.addEventListener('click', sendSelectedNotes);
+
+  container.insertBefore(btn, document.getElementById('studentsList'));
+}
+
+function hideSendSelectedButton() {
+  document.getElementById('btnSendSelectedNotes')?.remove();
+}
+
+// Funció per formatar les notes d’un alumne per enviar per mail------------------------------
+
+async function formatStudentNotesForEmail(studentId) {
+  const doc = await db.collection('alumnes').doc(studentId).get();
+  if (!doc.exists) return 'No hi ha dades.';
+
+  const data = doc.data();
+  const notes = data.notes || {};
+
+  let lines = [];
+
+  for (const actId of classActivities) {
+    let actName = actId;
+
+    try {
+      const aDoc = await db.collection('activitats').doc(actId).get();
+      if (aDoc.exists) actName = aDoc.data().nom || actId;
+    } catch {}
+
+    const val = notes[actId] ?? '';
+    lines.push(`${actName}: ${val}`);
+  }
+
+  if (typeof computeStudentAverageText === "function") {
+    lines.push(`Mitjana: ${computeStudentAverageText(data)}`);
+  }
+
+  return lines.join('\n');
+}
+
+//-------Enviar notes seleccionades
+async function sendSelectedNotes() {
+  const checked = [...document.querySelectorAll('.send-note-checkbox:checked')];
+  if (!checked.length) {
+    alert("Selecciona algun alumne.");
+    return;
+  }
+
+  for (const cb of checked) {
+    const li = cb.closest('li');
+    const studentId = li.dataset.studentId;
+
+    let email = li.dataset.email || '';
+
+    // Si no hi ha email → demanar-lo
+    if (!email) {
+      const newMail = prompt(`Email per ${li.querySelector('.stu-name').textContent}:`);
+      if (!newMail) continue;
+
+      email = newMail.trim();
+      li.dataset.email = email;
+
+      await db.collection('alumnes').doc(studentId).update({ email });
+    }
+
+    const body = await formatStudentNotesForEmail(studentId);
+    const subject = `Notes de ${li.querySelector('.stu-name').textContent}`;
+
+    const url = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(url, '_blank');
+
+    await new Promise(r => setTimeout(r, 200));
+  }
+}
+
 
