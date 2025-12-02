@@ -2197,7 +2197,7 @@ function hideSendSelectedButton() {
 }
 
 // Botó "X vermella" per sortir del mode enviar notes
-function showExitSendNotesButton() {
+/*function showExitSendNotesButton() {
   const container = document.getElementById('studentsListContent');
   if (!container) return;
   if (document.getElementById('btnExitSendNotes')) return;
@@ -2210,7 +2210,25 @@ function showExitSendNotesButton() {
   btn.addEventListener('click', toggleSendNotesMode);
 
   container.appendChild(btn);
+}*/
+
+function showExitSendNotesButton() {
+  const menuContainer = document.querySelector('#studentsListContent .flex.items-center.justify-between .relative');
+  if (!menuContainer) return;
+  if (document.getElementById('btnExitSendNotes')) return;
+
+  const btn = document.createElement('button');
+  btn.id = 'btnExitSendNotes';
+  btn.className = 'mr-2 text-white bg-red-600 rounded-full w-6 h-6 flex items-center justify-center cursor-pointer';
+  btn.textContent = '×';
+  btn.title = 'Sortir del mode enviar notes';
+  btn.addEventListener('click', toggleSendNotesMode);
+
+  // Inserim just abans del botó dels tres puntets
+  const menuBtn = menuContainer.querySelector('#studentsMenuBtn');
+  menuContainer.insertBefore(btn, menuBtn);
 }
+
 
 function hideExitSendNotesButton() {
   document.getElementById('btnExitSendNotes')?.remove();
@@ -2283,15 +2301,19 @@ async function sendSelectedNotes() {
 }
 
 function moveExitSendNotesButtonToHeader() {
-    const th = document.getElementById('thStudents');
+    // Elimina l'actual botó de fora de la capçalera, si existeix
+    const oldBtn = document.getElementById('btnExitSendNotes');
+    if (oldBtn) oldBtn.remove();
+
+    const th = document.querySelector('#studentsListContent .flex.items-center.justify-between .relative');
     if (!th) return;
-    
+
     // Evita duplicar el botó
     let btn = document.getElementById('cancelSendNotesBtn');
     if (!btn) {
         btn = document.createElement('button');
         btn.id = 'cancelSendNotesBtn';
-        btn.className = 'ml-2 text-white bg-red-600 rounded-full w-6 h-6 flex items-center justify-center cursor-pointer';
+        btn.className = 'mr-2 text-white bg-red-600 rounded-full w-6 h-6 flex items-center justify-center cursor-pointer';
         btn.textContent = '×';
         btn.title = 'Sortir del mode enviar notes';
         btn.addEventListener('click', toggleSendNotesMode);
@@ -2300,4 +2322,5 @@ function moveExitSendNotesButtonToHeader() {
     const menuBtn = th.querySelector('#studentsMenuBtn');
     th.insertBefore(btn, menuBtn); // Posiciona just abans del menú de tres puntets
 }
+
 
