@@ -2091,7 +2091,6 @@ function filterStudentsList() {
 }
 
 /* ---------------------- MODE ENVIAR NOTES ---------------------- */
-/* ---------------------- MODE ENVIAR NOTES ---------------------- */
 window.__sendNotesModeActive = false;
 
 // Afegim l’opció al menú global dels alumnes
