@@ -2253,7 +2253,7 @@ function hideSendModeCheckboxes() {
 }
 
 // Botó global "Enviar notes seleccionades"
-function showSendSelectedButton() {
+/*function showSendSelectedButton() {
   const container = document.getElementById('studentsListContent');
   if (!container) return;
   if (document.getElementById('btnSendSelectedNotes')) return;
@@ -2269,10 +2269,67 @@ function showSendSelectedButton() {
 
 function hideSendSelectedButton() {
   document.getElementById('btnSendSelectedNotes')?.remove();
+}*/
+
+// Botó i checkbox "Enviar notes + Tots"
+function showSendSelectedButton() {
+  const container = document.getElementById('studentsListContent');
+  if (!container) return;
+  if (document.getElementById('sendNotesRow')) return; // evita duplicar
+
+  // Crear fila flexible
+  const row = document.createElement('div');
+  row.id = 'sendNotesRow';
+  row.style.display = 'flex';
+  row.style.gap = '0.5rem';
+  row.style.marginBottom = '0.5rem';
+
+  // Botó "Enviar notes"
+  const btn = document.createElement('button');
+  btn.textContent = 'Enviar notes';
+  btn.style.flex = '1';
+  btn.className = 'bg-blue-600 text-white px-3 py-2 rounded font-semibold';
+  btn.addEventListener('click', sendSelectedNotes);
+
+  // Checkbox "Tots"
+  const cbAllContainer = document.createElement('label');
+  cbAllContainer.style.flex = '1';
+  cbAllContainer.style.display = 'flex';
+  cbAllContainer.style.alignItems = 'center';
+  cbAllContainer.style.gap = '0.5rem';
+  cbAllContainer.style.cursor = 'pointer';
+
+  const cbAll = document.createElement('input');
+  cbAll.type = 'checkbox';
+  cbAll.id = 'checkAllStudents';
+
+  const cbAllText = document.createElement('span');
+  cbAllText.textContent = 'Tots';
+
+  cbAllContainer.appendChild(cbAll);
+  cbAllContainer.appendChild(cbAllText);
+
+  // Quan canviï el checkbox "Tots", marcar/desmarcar tots
+  cbAll.addEventListener('change', () => {
+    const allCheckboxes = document.querySelectorAll('.send-note-checkbox');
+    allCheckboxes.forEach(cb => cb.checked = cbAll.checked);
+  });
+
+  row.appendChild(btn);
+  row.appendChild(cbAllContainer);
+
+  // Inserim just abans de la llista d'alumnes
+  const studentsList = document.getElementById('studentsList');
+  container.insertBefore(row, studentsList);
 }
 
-// Botó "X vermella" per sortir del mode enviar notes
+// Amagar la fila quan sortim del mode
+function hideSendSelectedButton() {
+  document.getElementById('sendNotesRow')?.remove();
+}
 
+
+// Botó "X vermella" per sortir del mode enviar notes
 function showExitSendNotesButton() {
   const menuContainer = document.querySelector('#studentsListContent .flex.items-center.justify-between .relative');
   if (!menuContainer) return;
