@@ -2111,6 +2111,26 @@ window.__sendNotesModeActive = false;
 })();
 
 // -------------------- FUNCIONS DE MODE ENVIAR NOTES --------------------
+window.__sendNotesModeActive = false;
+
+// Afegim l’opció al menú global dels alumnes
+(function attachGlobalStudentsMenuOption(){
+  const studentsMenu = document.getElementById('studentsMenu');
+  if (!studentsMenu) return;
+
+  if (!studentsMenu.querySelector('.send-notes-mode-btn')) {
+    const btn = document.createElement('button');
+    btn.className = 'send-notes-mode-btn px-3 py-1 w-full text-left hover:bg-gray-100';
+    btn.textContent = 'Enviar notes';
+    btn.addEventListener('click', () => {
+      toggleSendNotesMode();
+      studentsMenu.classList.add('hidden');
+    });
+    studentsMenu.appendChild(btn);
+  }
+})();
+
+// -------------------- FUNCIONS DE MODE ENVIAR NOTES --------------------
 function toggleSendNotesMode() {
   window.__sendNotesModeActive = !window.__sendNotesModeActive;
 
@@ -2124,7 +2144,6 @@ function toggleSendNotesMode() {
     hideExitSendNotesButton();
   }
 }
-
 
 // Mostrar checkboxes a la dreta (al lloc dels tres puntets) i amagar els tres puntets
 function showSendModeCheckboxes() {
@@ -2164,13 +2183,13 @@ function showSendSelectedButton() {
   if (!container) return;
   if (document.getElementById('btnSendSelectedNotes')) return;
 
+  const btn = document.createElement('button');
+  btn.id = 'btnSendSelectedNotes';
+  btn.className = 'mt-2 w-full bg-blue-600 text-white px-3 py-2 rounded';
+  btn.textContent = 'Enviar notes seleccionades';
+  btn.addEventListener('click', sendSelectedNotes);
 
-const btn = document.createElement('button');
-btn.id = 'btnExitSendNotes';
-btn.className = 'mt-2 w-full bg-red-600 text-white px-3 py-2 rounded';
-btn.textContent = '×';
-container.insertBefore(btn, document.getElementById('studentsList'));
-
+  container.insertBefore(btn, document.getElementById('studentsList'));
 }
 
 function hideSendSelectedButton() {
