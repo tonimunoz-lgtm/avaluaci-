@@ -2468,3 +2468,67 @@ async function gmailSendEmail(to, subject, message) {
   }
 }
 
+// ----------------- Toggle Numeric / Assoliments -----------------
+function addGradesModeToggle() {
+  const container = document.querySelector('#btnSortAlpha').parentNode; // conté tots els botons de la graella
+
+  const wrapper = document.createElement('div');
+  wrapper.style.display = 'inline-flex';
+  wrapper.style.alignItems = 'center';
+  wrapper.style.gap = '0.5rem';
+  wrapper.style.marginLeft = '0.5rem';
+
+  const label = document.createElement('span');
+  label.textContent = 'Mode:';
+  label.style.fontWeight = '600';
+  wrapper.appendChild(label);
+
+  const toggleBtn = document.createElement('button');
+  toggleBtn.id = 'gradesModeToggle';
+  toggleBtn.textContent = 'Numeric';
+  toggleBtn.className = 'bg-indigo-500 text-white px-3 py-1 rounded';
+  toggleBtn.style.cursor = 'pointer';
+
+  toggleBtn.addEventListener('click', () => {
+    toggleBtn.textContent = toggleBtn.textContent === 'Numeric' ? 'Assoliments' : 'Numeric';
+    updateGradeCellsInputMode(toggleBtn.textContent);
+  });
+
+  wrapper.appendChild(toggleBtn);
+
+  const exportBtn = container.querySelector('#btnExport');
+  if (exportBtn) container.insertBefore(wrapper, exportBtn);
+}
+
+// Funció per canviar tipus d’input de les cel·les
+function updateGradeCellsInputMode(mode) {
+  const cells = document.querySelectorAll('#notesTable td input');
+  cells.forEach(cell => {
+    if (mode === 'Assoliments') {
+      cell.dataset.allowed = 'NA,AS,AN,AE';
+      cell.placeholder = 'NA/AS/AN/AE';
+      cell.type = 'text';
+      cell.value = cell.value.toUpperCase();
+    } else {
+      cell.dataset.allowed = '';
+      cell.placeholder = '';
+      cell.type = 'number';
+    }
+  });
+}
+
+// Interceptar input per mode Assoliments
+document.addEventListener('input', (e) => {
+  const cell = e.target;
+  if (!cell.dataset.allowed) return;
+
+  const allowed = cell.dataset.allowed.split(',');
+  if (!allowed.includes(cell.value.toUpperCase())) {
+    cell.value = '';
+  } else {
+    cell.value = cell.value.toUpperCase();
+  }
+});
+
+// Cridem la funció després que es carreguin els botons de la taula
+document.addEventListener('DOMContentLoaded', addGradesModeToggle);
