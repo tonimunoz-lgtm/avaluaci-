@@ -2535,18 +2535,4 @@ document.addEventListener('blur', (e) => {
 // Cridem la funció després que es carreguin els botons de la taula
 document.addEventListener('DOMContentLoaded', addGradesModeToggle);
 
-input.addEventListener('change', async (e) => {
-  const val = e.target.value.trim().toUpperCase();
-  const studentId = e.target.closest('tr').dataset.studentId;
-  const activityId = e.target.dataset.activityId;
-
-  if (!studentId || !activityId) return;
-
-  // Només guardar si hi ha un valor
-  if (val !== '') {
-    await db.collection('alumnes').doc(studentId).update({
-      [`notes.${activityId}`]: val
-    });
-  }
-});
 
