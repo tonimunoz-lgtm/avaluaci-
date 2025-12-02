@@ -110,3 +110,46 @@ body.admin-page #lastLoginsContainer div {
   border-radius: 0.5rem;
   margin-bottom: 0.25rem;
 }
+
+/* Contenidor de botons globals */
+#tableButtonsContainer {
+  display: flex;
+  flex-wrap: wrap;       /* Fa saltar a la següent fila si cal */
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+/* Botons dins del contenidor */
+#tableButtonsContainer button {
+  flex: 1 1 auto;        /* Creixen per ocupar espai disponible */
+  min-width: 140px;      /* Amplada mínima */
+  margin-bottom: 0.25rem;
+}
+
+/* Botons dins de la columna Accions */
+body.admin-page td:last-child {
+  display: flex;
+  flex-wrap: wrap;        /* Permet posar els botons en 1-2 files */
+  gap: 0.25rem;           /* Espai entre botons */
+  justify-content: flex-start;
+}
+
+body.admin-page td:last-child button {
+  flex: 1 0 70px;        /* Amplada mínima, creix si hi ha espai */
+  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+/* Botons de filtre */
+.filter-btn {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+
+/* Estil quan el botó està actiu */
+.filter-btn.active {
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.5) inset, 0 4px 10px rgba(0,0,0,0.2);
+  transform: scale(1.05);
+  filter: brightness(1.2);
+}
