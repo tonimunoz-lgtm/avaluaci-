@@ -1145,6 +1145,20 @@ function updateCalculatedCells() {
   });
 }
 
+//--------------nou per incloure buscador am filtre
+const studentSearchInput = document.getElementById('studentSearch');
+
+studentSearchInput.addEventListener('input', () => {
+  const filter = studentSearchInput.value.toLowerCase();
+  const table = document.getElementById('notesTable');
+
+  table.querySelectorAll('tbody tr').forEach(tr => {
+    const studentName = tr.children[0].textContent.toLowerCase(); // columna Alumne
+    tr.style.display = studentName.includes(filter) ? '' : 'none';
+  });
+});
+
+
 /* ---------------- Helpers Notes & Excel ---------------- */
 function th(txt, cls=''){
   const el = document.createElement('th');
