@@ -260,44 +260,6 @@ statusFilterContainer.appendChild(allBtn);
 
 usersSection.insertBefore(statusFilterContainer, usersSection.querySelector('table'));
 
-function createStatusButton(label, color, filterValue) {
-  const btn = document.createElement('button');
-  btn.className = `px-3 py-1 rounded text-white font-semibold filter-btn`;
-  btn.style.backgroundColor = color;
-
-  // Afegim text + rodoneta
-  const span = document.createElement('span');
-  span.className = 'circle';
-  span.style.marginLeft = '6px';
-  btn.textContent = label;
-  btn.appendChild(span);
-
-  btn.onclick = () => {
-    // Primer, treure active de tots els botons
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-
-    // Marcar aquest com actiu
-    btn.classList.add('active');
-
-    // Aplicar filtratge existent
-    document.querySelectorAll('#usersTableBody tr').forEach(tr => {
-      const admin = tr.children[3].innerText.toLowerCase();
-      const suspended = tr.children[4].innerText.toLowerCase();
-      const deleted = tr.children[5].innerText.toLowerCase();
-
-      let show = false;
-      switch(filterValue) {
-        case 'admin': show = admin === 'sí'; break;
-        case 'suspended': show = suspended === 'sí'; break;
-        case 'deleted': show = deleted === 'sí'; break;
-        case 'active': show = suspended === 'no' && deleted === 'no'; break;
-        case 'all': show = true; break;
-      }
-      tr.style.display = show ? '' : 'none';
-    });
-  };
-  return btn;
-}
 
 
 // Inicialitzar badges, hover i wrap d’accions
