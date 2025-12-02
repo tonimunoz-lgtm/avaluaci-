@@ -1146,6 +1146,14 @@ function updateCalculatedCells() {
 }
 
 //--------------nou per incloure buscador am filtre
+// Al final de renderNotesGrid(), després de notesTbody.appendChild(tr)
+const filter = studentSearchInput.value.toLowerCase();
+notesTbody.querySelectorAll('tr').forEach(tr => {
+    const studentName = tr.children[0].textContent.toLowerCase();
+    tr.style.display = studentName.includes(filter) ? '' : 'none';
+});
+
+
 const studentSearchInput = document.getElementById('studentSearch');
 
 studentSearchInput.addEventListener('input', () => {
