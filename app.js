@@ -203,7 +203,7 @@ async function signInWithGoogleGmail() {
   }
 }
 
-
+// Botó login amb Google
 document.getElementById("googleLoginBtn").addEventListener("click", async () => {
   const provider = new firebase.auth.GoogleAuthProvider();
   
@@ -222,7 +222,7 @@ document.getElementById("googleLoginBtn").addEventListener("click", async () => 
   }
 });
 
-// Botó login amb Google
+
 /*const googleBtn = document.getElementById("googleLoginBtn");
 
 if (googleBtn) {
