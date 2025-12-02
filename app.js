@@ -233,7 +233,7 @@ if (googleBtn) {
   googleBtn.style.borderRadius = "0.5rem";
   googleBtn.style.cursor = "pointer";
   googleBtn.style.width = "100%";        // mateixa amplada que els altres botons
-  googleBtn.style.marginTop = "0.5rem";  // separació amb el botó superior
+  googleBtn.style.marginBottom = "0.5rem";  // separació amb el botó superior
   googleBtn.style.color = "white";       // text blanc
   
   // Afegim event listener
