@@ -204,7 +204,7 @@ async function signInWithGoogleGmail() {
 }
 
 
-document.getElementById("googleLoginBtn").addEventListener("click", async () => {
+/*document.getElementById("googleLoginBtn").addEventListener("click", async () => {
   const provider = new firebase.auth.GoogleAuthProvider();
   
   // IMPORTANT → Afegim permís d’enviar mails
@@ -220,7 +220,39 @@ document.getElementById("googleLoginBtn").addEventListener("click", async () => 
     console.error(err);
     alert("Error iniciant sessió amb Google");
   }
-});
+});*/
+
+// Botó login amb Google
+const googleBtn = document.getElementById("googleLoginBtn");
+
+if (googleBtn) {
+  // Afegim classes CSS igual que altres botons
+  googleBtn.classList.add("bg-indigo-500");
+  googleBtn.style.padding = "0.5rem 1rem";
+  googleBtn.style.fontWeight = "600";
+  googleBtn.style.borderRadius = "0.5rem";
+  googleBtn.style.cursor = "pointer";
+
+  // Afegim event listener
+  googleBtn.addEventListener("click", async () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    // IMPORTANT → Afegim permís d’enviar mails
+    provider.addScope("https://www.googleapis.com/auth/gmail.send");
+
+    try {
+      const result = await firebase.auth().signInWithPopup(provider);
+
+      // Guardem el token per enviar correus
+      window._googleAccessToken = result.credential.accessToken;
+
+      alert("Sessió iniciada correctament! Ara pots enviar mails des del teu compte.");
+    } catch (err) {
+      console.error(err);
+      alert("Error iniciant sessió amb Google: " + err.message);
+    }
+  });
+}
+
 
 
 //btnRegister.addEventListener('click', async () => {
