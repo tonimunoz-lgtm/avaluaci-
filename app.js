@@ -2300,27 +2300,4 @@ async function sendSelectedNotes() {
   }
 }
 
-function moveExitSendNotesButtonToHeader() {
-    // Elimina l'actual botó de fora de la capçalera, si existeix
-    const oldBtn = document.getElementById('btnExitSendNotes');
-    if (oldBtn) oldBtn.remove();
-
-    const th = document.querySelector('#studentsListContent .flex.items-center.justify-between .relative');
-    if (!th) return;
-
-    // Evita duplicar el botó
-    let btn = document.getElementById('cancelSendNotesBtn');
-    if (!btn) {
-        btn = document.createElement('button');
-        btn.id = 'cancelSendNotesBtn';
-        btn.className = 'mr-2 text-white bg-red-600 rounded-full w-6 h-6 flex items-center justify-center cursor-pointer';
-        btn.textContent = '×';
-        btn.title = 'Sortir del mode enviar notes';
-        btn.addEventListener('click', toggleSendNotesMode);
-    }
-
-    const menuBtn = th.querySelector('#studentsMenuBtn');
-    th.insertBefore(btn, menuBtn); // Posiciona just abans del menú de tres puntets
-}
-
 
