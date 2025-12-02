@@ -2518,17 +2518,20 @@ function updateGradeCellsInputMode(mode) {
 }
 
 // Interceptar input per mode Assoliments
-document.addEventListener('input', (e) => {
+// Interceptar input per mode Assoliments, però només validar al sortir de la cel·la
+document.addEventListener('blur', (e) => {
   const cell = e.target;
   if (!cell.dataset.allowed) return;
 
   const allowed = cell.dataset.allowed.split(',');
-  if (!allowed.includes(cell.value.toUpperCase())) {
+  const val = cell.value.toUpperCase().trim();
+  if (!allowed.includes(val) && val !== '') {
+    alert(`Valor no permès! Només: ${allowed.join(', ')}`);
     cell.value = '';
   } else {
-    cell.value = cell.value.toUpperCase();
+    cell.value = val; // autocapitalitza
   }
-});
+}, true); // useCapture=true per capturar l’event abans que es perdi
 
 // Cridem la funció després que es carreguin els botons de la taula
 document.addEventListener('DOMContentLoaded', addGradesModeToggle);
