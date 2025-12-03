@@ -1,13 +1,9 @@
 // classroom.js
 // Funcions per interactuar amb Google Classroom
 const CLASSROOM_API = "https://classroom.googleapis.com/v1";
-
-// ID de la classe concreta de Classroom (canviar segons necessitat)
-const CLASSROOM_COURSE_ID = "ID_DE_LA_CLASSE_AQUI";
+const CLASSROOM_COURSE_ID = "ID_DE_LA_CLASSE_AQUI"; // Canviar per la classe concreta
 
 // ------------------------ FUNCIONS PRINCIPALS ------------------------
-
-// Importar alumnes
 export async function importClassroomStudents() {
     if (!window._googleAccessToken) {
         alert("Has de fer login amb Google abans!");
@@ -16,17 +12,10 @@ export async function importClassroomStudents() {
 
     try {
         const res = await fetch(`${CLASSROOM_API}/courses/${CLASSROOM_COURSE_ID}/students`, {
-            headers: {
-                "Authorization": `Bearer ${window._googleAccessToken}`
-            }
+            headers: { "Authorization": `Bearer ${window._googleAccessToken}` }
         });
 
-        if (!res.ok) {
-            const errText = await res.text();
-            console.error("Error Classroom:", errText);
-            alert("Error accedint a Google Classroom: " + errText);
-            return;
-        }
+        if (!res.ok) throw new Error(await res.text());
 
         const data = await res.json();
         if (!data.students || data.students.length === 0) {
@@ -34,11 +23,7 @@ export async function importClassroomStudents() {
             return;
         }
 
-        data.students.forEach(student => {
-            const fullName = student.profile.name.fullName;
-            addStudentToApp(fullName);
-        });
-
+        data.students.forEach(student => addStudentToApp(student.profile.name.fullName));
         alert("Alumnes importats correctament!");
     } catch (err) {
         console.error("Error al importar alumnes:", err);
@@ -46,7 +31,6 @@ export async function importClassroomStudents() {
     }
 }
 
-// Importar activitats
 export async function importClassroomActivities() {
     if (!window._googleAccessToken) {
         alert("Has de fer login amb Google abans!");
@@ -55,17 +39,10 @@ export async function importClassroomActivities() {
 
     try {
         const res = await fetch(`${CLASSROOM_API}/courses/${CLASSROOM_COURSE_ID}/courseWork`, {
-            headers: {
-                "Authorization": `Bearer ${window._googleAccessToken}`
-            }
+            headers: { "Authorization": `Bearer ${window._googleAccessToken}` }
         });
 
-        if (!res.ok) {
-            const errText = await res.text();
-            console.error("Error Classroom:", errText);
-            alert("Error accedint a Google Classroom: " + errText);
-            return;
-        }
+        if (!res.ok) throw new Error(await res.text());
 
         const data = await res.json();
         if (!data.courseWork || data.courseWork.length === 0) {
@@ -73,11 +50,7 @@ export async function importClassroomActivities() {
             return;
         }
 
-        data.courseWork.forEach(activity => {
-            const title = activity.title;
-            addActivityToApp(title);
-        });
-
+        data.courseWork.forEach(activity => addActivityToApp(activity.title));
         alert("Activitats importades correctament!");
     } catch (err) {
         console.error("Error al importar activitats:", err);
@@ -86,35 +59,55 @@ export async function importClassroomActivities() {
 }
 
 // ------------------------ FUNCIONS D’AFEGIR A LA TEVA APP ------------------------
-
-// Afegeix alumne al sistema sense tocar app.js ni terms.js
 function addStudentToApp(fullName) {
-    const event = new CustomEvent("classroomStudentAdded", { detail: { name: fullName } });
-    document.dispatchEvent(event);
+    document.dispatchEvent(new CustomEvent("classroomStudentAdded", { detail: { name: fullName } }));
 }
 
-// Afegeix activitat al sistema sense tocar app.js ni terms.js
 function addActivityToApp(title) {
-    const event = new CustomEvent("classroomActivityAdded", { detail: { title } });
-    document.dispatchEvent(event);
+    document.dispatchEvent(new CustomEvent("classroomActivityAdded", { detail: { title } }));
 }
 
-// ------------------------ BOTONS ------------------------
-
+// ------------------------ MINI MENÚ DESPLEGABLE ------------------------
 export function setupClassroomButton() {
     const btn = document.getElementById("importClassroom");
     if (!btn) return;
 
-    btn.addEventListener("click", async () => {
-        const action = prompt("Què vols importar? Escriu 'alumnes' o 'activitats':");
-        if (!action) return;
+    // Crear el menú si no existeix
+    let menu = document.getElementById("classroomMiniMenu");
+    if (!menu) {
+        menu = document.createElement("div");
+        menu.id = "classroomMiniMenu";
+        menu.className = "absolute bg-white border rounded shadow p-2 hidden z-50";
+        menu.innerHTML = `
+            <button id="importStudentsBtn" class="px-3 py-1 w-full text-left hover:bg-gray-200">Importar alumnes</button>
+            <button id="importActivitiesBtn" class="px-3 py-1 w-full text-left hover:bg-gray-200">Importar activitats</button>
+        `;
+        document.body.appendChild(menu);
+    }
 
-        if (action.toLowerCase() === "alumnes") {
-            await importClassroomStudents();
-        } else if (action.toLowerCase() === "activitats") {
-            await importClassroomActivities();
-        } else {
-            alert("Acció no vàlida. Escriu 'alumnes' o 'activitats'.");
+    // Mostrar menú
+    btn.addEventListener("click", (e) => {
+        const rect = btn.getBoundingClientRect();
+        menu.style.top = rect.bottom + window.scrollY + "px";
+        menu.style.left = rect.left + window.scrollX + "px";
+        menu.classList.toggle("hidden");
+    });
+
+    // Click fora per tancar
+    document.addEventListener("click", (e) => {
+        if (!btn.contains(e.target) && !menu.contains(e.target)) {
+            menu.classList.add("hidden");
         }
+    });
+
+    // Assignar accions
+    document.getElementById("importStudentsBtn").addEventListener("click", async () => {
+        menu.classList.add("hidden");
+        await importClassroomStudents();
+    });
+
+    document.getElementById("importActivitiesBtn").addEventListener("click", async () => {
+        menu.classList.add("hidden");
+        await importClassroomActivities();
     });
 }
