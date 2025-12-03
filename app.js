@@ -3,6 +3,7 @@ import { openModal, closeModal, confirmAction } from './modals.js';
 import * as Terms from './terms.js';
 window.Terms = Terms;
 
+
 /* ---------------- FIREBASE CONFIG ---------------- */
 const firebaseConfig = {
   apiKey: "AIzaSyA0P7TWcEw9y9_13yqRhvsgWN5d3YKH7yo",
@@ -15,7 +16,6 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
-
 
 /* ---------------- Globals ---------------- */
 let professorUID = null;
@@ -124,213 +124,28 @@ function showApp() {
 }
 
 /* ---------- AUTH ---------- */
-//btnLogin.addEventListener('click', async () => {
-//  const email = document.getElementById('loginEmail').value.trim();
-//  const pw = document.getElementById('loginPassword').value;
-//  if (!email || !pw) return alert('Introdueix email i contrasenya');
-
-//  try {
-//    const u = await auth.signInWithEmailAndPassword(email, pw);
-
-//    const userDoc = await db.collection('professors').doc(u.user.uid).get();
-//    if (userDoc.exists && userDoc.data().suspended) {
-//      await auth.signOut();
-//      alert("⚠️ El teu compte està suspès.\nContacta amb l’administrador.");
-//      return;
-//    }
-
-//    professorUID = u.user.uid;
-//    setupAfterAuth(u.user);
-
-//  } catch (e) {
-//    alert('Error login: ' + e.message);
-//  }
-//});
-
-btnLogin.addEventListener('click', async () => {
+btnLogin.addEventListener('click', () => {
   const email = document.getElementById('loginEmail').value.trim();
   const pw = document.getElementById('loginPassword').value;
   if (!email || !pw) return alert('Introdueix email i contrasenya');
-
-  try {
-    const u = await auth.signInWithEmailAndPassword(email, pw);
-
-    const userDoc = await db.collection('professors').doc(u.user.uid).get();
-
-    if (!userDoc.exists) {
-      await auth.signOut();
-      return alert("⚠️ Usuari no trobat. Contacta amb l’administrador.");
-    }
-
-    // 🔹 Comprovació eliminat
-    if (userDoc.data().deleted) {
-      await auth.signOut();
-      return alert("⚠️ El teu compte ha estat eliminat. Pots registrar-te de nou amb aquest email.");
-    }
-
-    // 🔹 Comprovació suspès
-    if (userDoc.data().suspended) {
-      await auth.signOut();
-      return alert("⚠️ El teu compte està suspès.\nContacta amb l’administrador.");
-    }
-
-    professorUID = u.user.uid;
-    setupAfterAuth(u.user);
-
-  } catch (e) {
-    alert('Error login: ' + e.message);
-  }
+  auth.signInWithEmailAndPassword(email, pw)
+    .then(u => {
+      professorUID = u.user.uid;
+      setupAfterAuth(u.user);
+    }).catch(e => alert('Error login: ' + e.message));
 });
 
-//-------loggin amb google----------------------
-async function signInWithGoogleGmail() {
-  const provider = new firebase.auth.GoogleAuthProvider();
-
-  // Aquest scope permet enviar mails
-  provider.addScope('https://www.googleapis.com/auth/gmail.send');
-
-  try {
-    const result = await firebase.auth().signInWithPopup(provider);
-
-    // Guardem el token per enviar correus
-    const credential = result.credential;
-    window._googleAccessToken = credential.accessToken;
-
-    alert("Sessió iniciada correctament. Ara pots enviar mails des del teu compte!");
-  } catch (error) {
-    console.error(error);
-    alert("Error iniciant sessió amb Google: " + error.message);
-  }
-}
-
-// Botó login amb Google
-document.getElementById("googleLoginBtn").addEventListener("click", async () => {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  
-  // IMPORTANT → Afegim permís d’enviar mails
-  provider.addScope("https://www.googleapis.com/auth/gmail.send");
-
-  try {
-    const result = await firebase.auth().signInWithPopup(provider);
-
-    window._googleAccessToken = result.credential.accessToken;
-
-    alert("Sessió iniciada correctament!");
-  } catch (err) {
-    console.error(err);
-    alert("Error iniciant sessió amb Google");
-  }
-});
-
-
-/*const googleBtn = document.getElementById("googleLoginBtn");
-
-if (googleBtn) {
-  // Estil similar als altres botons però més clar
-  googleBtn.classList.add("bg-indigo-300"); // gradient més suau o pots fer un gradient manual
-  googleBtn.style.padding = "0.5rem 1rem";
-  googleBtn.style.fontWeight = "600";
-  googleBtn.style.borderRadius = "0.5rem";
-  googleBtn.style.cursor = "pointer";
-  googleBtn.style.width = "100%";        // mateixa amplada que els altres botons
-  googleBtn.style.marginBottom = "0.5rem";  // separació amb el botó superior
-  googleBtn.style.color = "white";       // text blanc
-  
-  // Afegim event listener
-  googleBtn.addEventListener("click", async () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    // IMPORTANT → Afegim permís d’enviar mails
-    provider.addScope("https://www.googleapis.com/auth/gmail.send");
-
-    try {
-      const result = await firebase.auth().signInWithPopup(provider);
-
-      // Guardem el token per enviar correus
-      window._googleAccessToken = result.credential.accessToken;
-
-      alert("Sessió iniciada correctament! Ara pots enviar mails des del teu compte.");
-    } catch (err) {
-      console.error(err);
-      alert("Error iniciant sessió amb Google: " + err.message);
-    }
-  });
-}*/
-
-
-
-//btnRegister.addEventListener('click', async () => {
-//  const email = document.getElementById('loginEmail').value.trim();
-//  const pw = document.getElementById('loginPassword').value;
-//  if (!email || !pw) return alert('Introdueix email i contrasenya');
-
-//  try {
-//    const u = await auth.createUserWithEmailAndPassword(email, pw);
-//    professorUID = u.user.uid;
-
-//    await db.collection('professors').doc(professorUID).set({
-//      email,
-//      nom: email.split('@')[0],
-//      isAdmin: false,
-//      suspended: false,
-//      createdAt: firebase.firestore.Timestamp.now(),
-//      classes: []
-//    });
-
-//    setupAfterAuth(u.user);
-
-//  } catch(e) {
-//    alert('Error registre: ' + e.message);
-//  }
-//});
-btnRegister.addEventListener('click', async () => {
+btnRegister.addEventListener('click', () => {
   const email = document.getElementById('loginEmail').value.trim();
   const pw = document.getElementById('loginPassword').value;
   if (!email || !pw) return alert('Introdueix email i contrasenya');
-
-  try {
-    // 🔹 Comprovar si ja hi ha un usuari amb aquest email
-    const existingUsers = await db.collection('professors')
-      .where('email', '==', email).get();
-
-    if (!existingUsers.empty) {
-      const userDoc = existingUsers.docs[0];
-      if (userDoc.data().deleted) {
-        // Reactivar usuari eliminat
-        await db.collection('professors').doc(userDoc.id).update({
-          deleted: false,
-          suspended: false
-        });
-
-        const u = await auth.signInWithEmailAndPassword(email, pw);
-        professorUID = u.user.uid;
-        setupAfterAuth(u.user);
-        return alert("Compte reactivat correctament!");
-      } else {
-        return alert("Error registre: L’email ja està en ús.");
-      }
-    }
-
-    // 🔹 Crear usuari nou
-    const u = await auth.createUserWithEmailAndPassword(email, pw);
-    professorUID = u.user.uid;
-    await db.collection('professors').doc(professorUID).set({
-      email,
-      nom: email.split('@')[0],
-      isAdmin: false,
-      suspended: false,
-      deleted: false,
-      createdAt: firebase.firestore.Timestamp.now(),
-      classes: []
-    });
-
-    setupAfterAuth(u.user);
-    alert("Compte creat correctament!");
-
-  } catch (e) {
-    alert('Error registre: ' + e.message);
-  }
+  auth.createUserWithEmailAndPassword(email, pw)
+    .then(u => {
+      professorUID = u.user.uid;
+      db.collection('professors').doc(professorUID).set({ email, classes: [] })
+        .then(()=> { setupAfterAuth(u.user); });
+    }).catch(e => alert('Error registre: ' + e.message));
 });
-
 
 btnRecover.addEventListener('click', () => {
   const email = document.getElementById('loginEmail').value.trim();
@@ -351,12 +166,6 @@ btnLogout.addEventListener('click', ()=> {
 auth.onAuthStateChanged(user => {
   if (user) {
     professorUID = user.uid;
-
-    // ---------- REGISTRAR LOGIN ----------
-    db.collection('professors').doc(user.uid).collection('logins')
-      .add({ timestamp: firebase.firestore.Timestamp.now() })
-      .catch(e => console.error('Error registrant login:', e));
-
     setupAfterAuth(user);
   } else {
     professorUID = null;
@@ -364,34 +173,14 @@ auth.onAuthStateChanged(user => {
   }
 });
 
-
-   
-async function setupAfterAuth(user) {
+function setupAfterAuth(user) {
   showApp();
   const email = user.email || '';
   usuariNom.textContent = email.split('@')[0] || email;
 
-  // ----------------- AFEGIR OPCIÓ ADMIN -----------------
-  const userDoc = await db.collection('professors').doc(user.uid).get();
-  if (userDoc.exists && userDoc.data().isAdmin) {
-    // Comprovem que encara no hi ha el botó
-    if (!document.getElementById('btnAdminPanel')) {
-      const adminBtn = document.createElement('button');
-      adminBtn.id = 'btnAdminPanel';
-      adminBtn.className = 'w-full text-left px-2 py-1 hover:bg-gray-100';
-      adminBtn.textContent = 'Administrar';
-      adminBtn.addEventListener('click', () => {
-        window.location.href = 'administrador.html';
-      });
-      document.getElementById('userMenu').appendChild(adminBtn);
-    }
-  }
-
   // Crida automàtica per carregar la graella de classes
   loadClassesScreen();
 }
-
-
 
 /* ---------------- Classes screen ---------------- */
 btnCreateClass.addEventListener('click', ()=> openModal('modalCreateClass'));
@@ -718,32 +507,20 @@ function removeActivity(actId){
 
 
 /* ---------------- Render Students List amb menú ---------------- */
-function renderStudentsList() {
+function renderStudentsList(){
   studentsList.innerHTML = '';
   studentsCount.textContent = `(${classStudents.length})`;
 
-  // 🔎 Connectem la barra de cerca
-  const searchInput = document.getElementById('studentSearch');
-  if (searchInput && !searchInput.dataset.bound) {
-    searchInput.addEventListener('input', filterStudentsList);
-    searchInput.dataset.bound = "true"; // Evita duplicar el listener
-  }
-
-  if (classStudents.length === 0) {
+  if(classStudents.length === 0){
     studentsList.innerHTML = '<li class="text-sm text-gray-400">No hi ha alumnes</li>';
     return;
   }
 
-  classStudents.forEach((stuId, idx) => {
-    db.collection('alumnes').doc(stuId).get().then(doc => {
-      const data = doc.data() || {};
-      const name = data.nom || 'Desconegut';
-      const email = data.email || '';
-
+  classStudents.forEach((stuId, idx)=>{
+    db.collection('alumnes').doc(stuId).get().then(doc=>{
+      const name = doc.exists ? doc.data().nom : 'Desconegut';
       const li = document.createElement('li');
       li.className = 'flex items-center justify-between bg-gray-50 dark:bg-gray-900 p-2 rounded';
-      li.dataset.studentId = stuId;
-      if (email) li.dataset.email = email;
 
       li.innerHTML = `
         <div class="flex items-center gap-3">
@@ -752,9 +529,8 @@ function renderStudentsList() {
         </div>
         <div class="relative">
           <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white tooltip">⋮</button>
-          <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10">
+          <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10 transition-opacity duration-200 opacity-0">
             <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
-            <button class="set-email-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700 whitespace-nowrap">Introduir email</button>          
             <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>
           </div>
         </div>
@@ -763,58 +539,38 @@ function renderStudentsList() {
       const menuBtn = li.querySelector('.menu-btn');
       const menu = li.querySelector('.menu');
 
-      menuBtn.addEventListener('click', e => {
+      menuBtn.addEventListener('click', e=>{
         e.stopPropagation();
-        document.querySelectorAll('.menu').forEach(m => m.classList.add('hidden'));
+        document.querySelectorAll('.menu').forEach(m=> m.classList.add('hidden'));
         menu.classList.toggle('hidden');
       });
 
-      // EDITAR
-      li.querySelector('.edit-btn').addEventListener('click', () => {
+      li.querySelector('.edit-btn').addEventListener('click', ()=>{
         const newName = prompt('Introdueix el nou nom:', name);
-        if (!newName || newName.trim() === name) return;
+        if(!newName || newName.trim()===name) return;
         db.collection('alumnes').doc(stuId).update({ nom: newName.trim() })
-          .then(() => loadClassData())
-          .catch(e => alert('Error editant alumne: ' + e.message));
+          .then(()=> loadClassData())
+          .catch(e=> alert('Error editant alumne: '+e.message));
       });
 
-      // INTRODUIR EMAIL
-      li.querySelector('.set-email-btn').addEventListener('click', async () => {
-        const current = li.dataset.email || '';
-        const newMail = prompt("Introdueix email:", current);
-        if (!newMail) return;
+      li.querySelector('.delete-btn').addEventListener('click', ()=> removeStudent(stuId));
 
-        await db.collection('alumnes').doc(stuId).update({ email: newMail.trim() });
-        li.dataset.email = newMail.trim();
-        alert("Email guardat.");
-      });
-
-      // ELIMINAR
-      li.querySelector('.delete-btn').addEventListener('click', () => removeStudent(stuId));
-
-      // DRAG
+      // Drag handle
       const dragHandle = li.querySelector('[draggable]');
-      dragHandle.addEventListener('dragstart', e => {
-        e.dataTransfer.setData('text/plain', idx);
+      dragHandle.addEventListener('dragstart', e=>{
+        e.dataTransfer.setData('text/plain', idx.toString());
       });
-      li.addEventListener('dragover', e => e.preventDefault());
-      li.addEventListener('drop', e => {
+      li.addEventListener('dragover', e=> e.preventDefault());
+      li.addEventListener('drop', e=>{
         e.preventDefault();
         const fromIdx = Number(e.dataTransfer.getData('text/plain'));
         reorderStudents(fromIdx, idx);
       });
 
       studentsList.appendChild(li);
-
-      // SI EL MODE ENVIAR NOTES ÉS ACTIU → AFEGIU CHECKBOXES
-      if (window.__sendNotesModeActive) {
-        showSendModeCheckboxes();
-        showExitSendNotesButton();
-      }
     });
   });
 }
-
 
 //------------------------------------------------nuevo-------------------------------------------------------
 /* ================================
@@ -1245,18 +1001,6 @@ function updateCalculatedCells() {
     });
   });
 }
-
-//--------------nou per incloure buscador am filtre
-const gridStudentSearch = document.getElementById('gridStudentSearch');
-gridStudentSearch.addEventListener('input', () => {
-  const filter = gridStudentSearch.value.toLowerCase();
-  notesTbody.querySelectorAll('tr').forEach(tr => {
-    const studentName = tr.children[0].textContent.toLowerCase();
-    tr.style.display = studentName.includes(filter) ? '' : 'none';
-  });
-});
-
-
 
 /* ---------------- Helpers Notes & Excel ---------------- */
 function th(txt, cls=''){
@@ -2124,366 +1868,4 @@ document.getElementById('cancelDeleteStudentsBtn').addEventListener('click', () 
     exitDeleteStudentsMode();
     isDeleteMode = false; // actualitza l'estat del mode
     document.getElementById('cancelDeleteStudentsBtn').style.display = 'none'; // amaga el botó
-});
-
-// ----------- SCRIPT PER MARCAR USUARIS COM A ADMIN -----------
-
-// Llista d'usuaris que vols marcar com a administrador
-const adminEmails = [
-  "toni.munoz@institutmatadepera.cat",
-  "tonaco92@gamil.com",
-  "el_teu_email@exemple.com" // posa el teu email
-];
-
-// Funció per actualitzar Firestore
-async function setAdmins() {
-  try {
-    const snapshot = await db.collection('professors').get();
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      if (adminEmails.includes(data.email)) {
-        db.collection('professors').doc(doc.id).update({ isAdmin: true })
-          .then(() => console.log(`Usuari ${data.email} marcat com admin.`))
-          .catch(err => console.error('Error actualitzant:', err));
-      }
-    });
-  } catch (err) {
-    console.error('Error llegint professors:', err);
-  }
-}
-
-// Executar només una vegada
-setAdmins();
-
-//----------------nou
-function filterStudentsList() {
-  const text = studentSearch.value.toLowerCase();
-
-  document.querySelectorAll('#studentsList li').forEach(li => {
-    const name = li.querySelector('.stu-name')?.innerText.toLowerCase() || "";
-    li.style.display = name.includes(text) ? "" : "none";
-  });
-}
-
-/* ---------------------- MODE ENVIAR NOTES ---------------------- */
-window.__sendNotesModeActive = false;
-
-// Afegim l’opció al menú global dels alumnes
-(function attachGlobalStudentsMenuOption(){
-  const studentsMenu = document.getElementById('studentsMenu');
-  if (!studentsMenu) return;
-
-  if (!studentsMenu.querySelector('.send-notes-mode-btn')) {
-    const btn = document.createElement('button');
-    btn.className = 'send-notes-mode-btn px-3 py-1 w-full text-left hover:bg-gray-100';
-    btn.textContent = 'Enviar notes';
-    btn.addEventListener('click', () => {
-      toggleSendNotesMode();
-      studentsMenu.classList.add('hidden');
-    });
-    studentsMenu.appendChild(btn);
-  }
-})();
-
-// -------------------- FUNCIONS DE MODE ENVIAR NOTES --------------------
-window.__sendNotesModeActive = false;
-
-// Afegim l’opció al menú global dels alumnes
-(function attachGlobalStudentsMenuOption(){
-  const studentsMenu = document.getElementById('studentsMenu');
-  if (!studentsMenu) return;
-
-  if (!studentsMenu.querySelector('.send-notes-mode-btn')) {
-    const btn = document.createElement('button');
-    btn.className = 'send-notes-mode-btn px-3 py-1 w-full text-left hover:bg-gray-100';
-    btn.textContent = 'Enviar notes';
-    btn.addEventListener('click', () => {
-      toggleSendNotesMode();
-      studentsMenu.classList.add('hidden');
-    });
-    studentsMenu.appendChild(btn);
-  }
-})();
-
-// -------------------- FUNCIONS DE MODE ENVIAR NOTES --------------------
-function toggleSendNotesMode() {
-  window.__sendNotesModeActive = !window.__sendNotesModeActive;
-
-  if (window.__sendNotesModeActive) {
-    showSendModeCheckboxes();
-    showSendSelectedButton();
-    showExitSendNotesButton();
-  } else {
-    hideSendModeCheckboxes();
-    hideSendSelectedButton();
-    hideExitSendNotesButton();
-  }
-}
-
-// Mostrar checkboxes a la dreta (al lloc dels tres puntets) i amagar els tres puntets
-function showSendModeCheckboxes() {
-  document.querySelectorAll('#studentsList li').forEach(li => {
-    if (li.querySelector('.send-note-checkbox')) return;
-
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.className = 'send-note-checkbox';
-    cb.style.marginLeft = '8px';
-    cb.style.marginRight = '0';
-    cb.style.cursor = 'pointer';
-
-    // Amaguem els tres puntets
-    const menuBtn = li.querySelector('.menu-btn');
-    if (menuBtn) menuBtn.style.display = 'none';
-
-    // Afegim el checkbox a la dreta
-    const rightDiv = li.querySelector('div.relative');
-    rightDiv.insertBefore(cb, rightDiv.firstChild);
-  });
-}
-
-// Amagar checkboxes i tornar a mostrar els tres puntets
-function hideSendModeCheckboxes() {
-  document.querySelectorAll('.send-note-checkbox').forEach(cb => {
-    const li = cb.closest('li');
-    const menuBtn = li.querySelector('.menu-btn');
-    if (menuBtn) menuBtn.style.display = '';
-    cb.remove();
-  });
-}
-
-// Botó global "Enviar notes seleccionades"
-/*function showSendSelectedButton() {
-  const container = document.getElementById('studentsListContent');
-  if (!container) return;
-  if (document.getElementById('btnSendSelectedNotes')) return;
-
-  const btn = document.createElement('button');
-  btn.id = 'btnSendSelectedNotes';
-  btn.className = 'mt-2 w-full bg-blue-600 text-white px-3 py-2 rounded';
-  btn.textContent = 'Enviar notes seleccionades';
-  btn.addEventListener('click', sendSelectedNotes);
-
-  container.insertBefore(btn, document.getElementById('studentsList'));
-}
-
-function hideSendSelectedButton() {
-  document.getElementById('btnSendSelectedNotes')?.remove();
-}*/
-
-// Botó i checkbox "Enviar notes + Tots"
-function showSendSelectedButton() {
-  const container = document.getElementById('studentsListContent');
-  if (!container) return;
-  if (document.getElementById('sendNotesRow')) return; // evita duplicar
-
-  // Crear fila flexible
-  const row = document.createElement('div');
-  row.id = 'sendNotesRow';
-  row.style.display = 'flex';
-  row.style.gap = '0.5rem';
-  row.style.marginBottom = '0.5rem';
-
-  // Botó "Enviar notes"
-  const btn = document.createElement('button');
-  btn.textContent = 'Enviar notes';
-  btn.style.flex = '1';
-  btn.className = 'bg-blue-600 text-white px-3 py-2 rounded font-semibold';
-  btn.addEventListener('click', sendSelectedNotes);
-
-  // Checkbox "Tots"
-  const cbAllContainer = document.createElement('label');
-  cbAllContainer.style.flex = '1';
-  cbAllContainer.style.display = 'flex';
-  cbAllContainer.style.alignItems = 'center';
-  cbAllContainer.style.gap = '0.5rem';
-  cbAllContainer.style.cursor = 'pointer';
-
-  const cbAll = document.createElement('input');
-  cbAll.type = 'checkbox';
-  cbAll.id = 'checkAllStudents';
-
-  const cbAllText = document.createElement('span');
-  cbAllText.textContent = 'Tots';
-
-  cbAllContainer.appendChild(cbAll);
-  cbAllContainer.appendChild(cbAllText);
-
-  // Quan canviï el checkbox "Tots", marcar/desmarcar tots
-  cbAll.addEventListener('change', () => {
-    const allCheckboxes = document.querySelectorAll('.send-note-checkbox');
-    allCheckboxes.forEach(cb => cb.checked = cbAll.checked);
-  });
-
-  row.appendChild(btn);
-  row.appendChild(cbAllContainer);
-
-  // Inserim just abans de la llista d'alumnes
-  const studentsList = document.getElementById('studentsList');
-  container.insertBefore(row, studentsList);
-}
-
-// Amagar la fila quan sortim del mode
-function hideSendSelectedButton() {
-  document.getElementById('sendNotesRow')?.remove();
-}
-
-
-// Botó "X vermella" per sortir del mode enviar notes
-function showExitSendNotesButton() {
-  const menuContainer = document.querySelector('#studentsListContent .flex.items-center.justify-between .relative');
-  if (!menuContainer) return;
-  if (document.getElementById('btnExitSendNotes')) return;
-
-  // Assegura que el container sigui flex horitzontal
-  menuContainer.style.display = 'flex';
-  menuContainer.style.alignItems = 'center';
-  menuContainer.style.gap = '4px'; // una mica d'espai entre la X i els tres puntets
-
-  const btn = document.createElement('button');
-  btn.id = 'btnExitSendNotes';
-  btn.className = 'text-white bg-red-600 rounded-full w-6 h-6 flex items-center justify-center cursor-pointer';
-  btn.textContent = '×';
-  btn.title = 'Sortir del mode enviar notes';
-  btn.addEventListener('click', toggleSendNotesMode);
-
-  const menuBtn = menuContainer.querySelector('#studentsMenuBtn');
-  menuContainer.insertBefore(btn, menuBtn); // Ara quedarà just a l'esquerra dels tres puntets
-}
-
-
-function hideExitSendNotesButton() {
-  document.getElementById('btnExitSendNotes')?.remove();
-}
-
-// Funció per formatar les notes d’un alumne per enviar per mail------------------------------
-
-async function formatStudentNotesForEmail(studentId) {
-  const doc = await db.collection('alumnes').doc(studentId).get();
-  if (!doc.exists) return 'No hi ha dades.';
-
-  const data = doc.data();
-  const notes = data.notes || {};
-
-  let lines = [];
-
-  for (const actId of classActivities) {
-    let actName = actId;
-
-    try {
-      const aDoc = await db.collection('activitats').doc(actId).get();
-      if (aDoc.exists) actName = aDoc.data().nom || actId;
-    } catch {}
-
-    const val = notes[actId] ?? '';
-    lines.push(`${actName}: ${val}`);
-  }
-
-  if (typeof computeStudentAverageText === "function") {
-    lines.push(`Mitjana: ${computeStudentAverageText(data)}`);
-  }
-
-  return lines.join('\n');
-}
-
-//-------Enviar notes seleccionades
-async function sendSelectedNotes() {
-  const checked = [...document.querySelectorAll('.send-note-checkbox:checked')];
-  if (!checked.length) {
-    alert("Selecciona algun alumne.");
-    return;
-  }
-
-  for (const cb of checked) {
-    const li = cb.closest('li');
-    const studentId = li.dataset.studentId;
-
-    let email = li.dataset.email || '';
-
-    // Si no hi ha email → demanar-lo
-    if (!email) {
-      const newMail = prompt(`Email per ${li.querySelector('.stu-name').textContent}:`);
-      if (!newMail) continue;
-
-      email = newMail.trim();
-      li.dataset.email = email;
-
-      await db.collection('alumnes').doc(studentId).update({ email });
-    }
-
-    const body = await formatStudentNotesForEmail(studentId);
-    const subject = `Notes de ${li.querySelector('.stu-name').textContent}`;
-
-    await gmailSendEmail(email, subject, body);
-
-
-    await new Promise(r => setTimeout(r, 200));
-  }
-}
-
-//-----------Funció per ENVIAR MAIL directament des del Gmail de l’usuari----------------
-async function gmailSendEmail(to, subject, message) {
-  if (!window._googleAccessToken) {
-    alert("Cal iniciar sessió amb Google per enviar mails.");
-    return;
-  }
-
-  const email = [
-    `To: ${to}`,
-    `Subject: ${subject}`,
-    "",
-    message
-  ].join("\n");
-
-  const base64Email = btoa(unescape(encodeURIComponent(email)))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-
-  try {
-    const response = await fetch(
-      "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${window._googleAccessToken}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ raw: base64Email })
-      }
-    );
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(errorText);
-      alert("Error enviant el correu: " + errorText);
-      return;
-    }
-
-    alert(`Correu enviat a ${to} correctament!`);
-    return true;
-  } catch (err) {
-    console.error(err);
-    alert("Error enviant el correu: " + err.message);
-  }
-}
-
-
-//integrar fitxer classroom.js amb app.js
-import { setupClassroomButton } from './classroom.js';
-setupClassroomButton();
-
-// Escoltem els events per afegir alumnes i activitats
-document.addEventListener("classroomStudentAdded", (e) => {
-    const name = e.detail.name;
-
-    // Funció existent per afegir alumne a la graella
-    addStudentToActiveTerm(name); // o la teva funció d'afegir alumne
-});
-
-document.addEventListener("classroomActivityAdded", (e) => {
-    const title = e.detail.title;
-
-    // Funció existent per afegir activitat a la graella
-    addActivityToActiveTerm(title); // o la teva funció d'afegir activitat
 });
