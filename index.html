@@ -102,13 +102,24 @@
               <button id="btnToggleStudentsMobile" class="block md:hidden bg-indigo-500 text-white px-3 py-1 rounded shadow">👥Alumnes</button>  
               <button id="btnAddStudent" class="bg-purple-600 text-white px-3 py-1 rounded"><span class="text-xl text-white">+</span> Alumne</button>
               <button id="btnAddActivity" class="bg-teal-600 text-white px-3 py-1 rounded"><span class="text-xl text-white">+</span> Activitat</button>
-            <div class="relative">
-              <button id="btnClassroom" class="bg-red-500 text-white px-3 py-1 rounded font-bold">Classroom ▼</button>
-                <div id="classroomMenu"class="menu absolute right-0 mt-2 bg-white border rounded shadow hidden z-50">
-                      <button id="importClassroomStudents" class="px-2 py-1 w-full text-left hover:bg-gray-200 whitespace-nowrap">Importar alumnes</button>
-                      <button id="importClassroomActivities" class="px-2 py-1 w-full text-left hover:bg-gray-200 whitespace-nowrap">Importar activitats</button>
-                </div>
-            </div>
+           <div class="relative inline-block">
+  <button id="btnClassroom" class="bg-red-500 text-white px-3 py-1 rounded">
+    Classroom ▼
+  </button>
+
+  <div id="classroomMenu"
+       class="absolute right-0 mt-2 bg-white border rounded shadow hidden z-50">
+    <button id="importClassroomStudents"
+            class="px-3 py-1 w-full text-left hover:bg-gray-100">
+      Importar alumnes
+    </button>
+    <button id="importClassroomActivities"
+            class="px-3 py-1 w-full text-left hover:bg-gray-100">
+      Importar activitats
+    </button>
+  </div>
+</div>
+
             </div>
           </div>
 
