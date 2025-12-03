@@ -2468,3 +2468,17 @@ async function gmailSendEmail(to, subject, message) {
   }
 }
 
+// Obrir / tancar el menú Classroom
+document.getElementById("btnClassroom").addEventListener("click", () => {
+  document.getElementById("classroomMenu").classList.toggle("hidden");
+});
+
+// Tancar si es clica fora
+document.addEventListener("click", (e) => {
+  const menu = document.getElementById("classroomMenu");
+  const btn = document.getElementById("btnClassroom");
+
+  if (!btn.contains(e.target) && !menu.contains(e.target)) {
+    menu.classList.add("hidden");
+  }
+});
