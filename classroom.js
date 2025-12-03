@@ -63,11 +63,14 @@ export async function loginWithGoogleClassroom() {
 // ------------------ IMPORTAR ALUMNES ------------------
 export async function importClassroomStudents(courseId) {
   try {
-    const accessToken = window._googleAccessToken || await loginWithGoogleClassroom();
+    // Forçar login i obtenir token amb tots els scopes
+    const accessToken = await loginWithGoogleClassroom();
+
     const url = `https://classroom.googleapis.com/v1/courses/${courseId}/students`;
     const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
 
     if (!res.ok) throw new Error(await res.text());
+
     const data = await res.json();
     const students = data.students || [];
     if (students.length === 0) { alert("No s'han trobat alumnes."); return; }
@@ -87,7 +90,6 @@ export async function importClassroomStudents(courseId) {
 
     await batch.commit();
     alert(`${students.length} alumnes importats correctament!`);
-
   } catch (err) {
     console.error("Error import alumnes Classroom:", err);
     alert("Error accedint a Google Classroom: " + err.message);
