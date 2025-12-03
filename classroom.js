@@ -61,15 +61,20 @@ export async function loginWithGoogleClassroom() {
 }
 
 // ------------------ IMPORTAR ALUMNES ------------------
+// ---------- importClassroomStudents final ----------
 export async function importClassroomStudents(courseId) {
   try {
-    // Forçar login i obtenir token amb tots els scopes
+    // Forçar login per obtenir token amb els scopes exactes
     const accessToken = await loginWithGoogleClassroom();
 
     const url = `https://classroom.googleapis.com/v1/courses/${courseId}/students`;
     const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
 
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) {
+      // Leer texto/JSON de error per mostrar més info
+      const txt = await res.text();
+      throw new Error(txt);
+    }
 
     const data = await res.json();
     const students = data.students || [];
@@ -92,9 +97,10 @@ export async function importClassroomStudents(courseId) {
     alert(`${students.length} alumnes importats correctament!`);
   } catch (err) {
     console.error("Error import alumnes Classroom:", err);
-    alert("Error accedint a Google Classroom: " + err.message);
+    alert("Error accedint a Google Classroom: " + (err.message || err));
   }
 }
+
 
 // ------------------ IMPORTAR ACTIVITATS (placeholder) ------------------
 export async function importClassroomActivities(courseId) {
