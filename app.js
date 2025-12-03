@@ -2530,3 +2530,20 @@ document.getElementById("importClassroomActivities").addEventListener("click", a
   if (data.error) alert("Error: " + data.error);
   else alert("Activitats importades correctament!");
 });
+
+// Classroom dropdown toggle
+const btnClassroom = document.getElementById("btnClassroom");
+const classroomMenu = document.getElementById("classroomMenu");
+
+btnClassroom.addEventListener("click", (e) => {
+    e.stopPropagation(); // Evita que el clic es propagui i tanqui el menú immediatament
+    classroomMenu.classList.toggle("hidden");
+});
+
+// Tancar el menú si fem clic fora
+document.addEventListener("click", () => {
+    if (!classroomMenu.classList.contains("hidden")) {
+        classroomMenu.classList.add("hidden");
+    }
+});
+
