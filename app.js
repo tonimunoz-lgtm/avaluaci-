@@ -183,37 +183,20 @@ btnLogin.addEventListener('click', async () => {
 });
 
 //-------loggin amb google----------------------
-//------- LOGIN AMB GOOGLE ----------------------
 async function signInWithGoogleGmail() {
   const provider = new firebase.auth.GoogleAuthProvider();
 
-  // Afegim permisos Gmail
+  // Aquest scope permet enviar mails
   provider.addScope('https://www.googleapis.com/auth/gmail.send');
 
   try {
     const result = await firebase.auth().signInWithPopup(provider);
 
-    // Guardem el token per enviar mails
+    // Guardem el token per enviar correus
     const credential = result.credential;
     window._googleAccessToken = credential.accessToken;
 
-    // 📌 CREACIÓ AUTOMÀTICA DEL PROFESSOR SI NO EXISTEIX
-    const user = result.user;
-    const profRef = firebase.firestore().collection("professors").doc(user.uid);
-    const profDoc = await profRef.get();
-
-    if (!profDoc.exists) {
-      await profRef.set({
-        name: user.displayName || "",
-        email: user.email,
-        createdAt: Date.now(),
-        google: true
-      });
-      console.log("Professor creat automàticament.");
-    }
-
-    alert("Sessió iniciada correctament! Ja pots enviar mails.");
-
+    alert("Sessió iniciada correctament. Ara pots enviar mails des del teu compte!");
   } catch (error) {
     console.error(error);
     alert("Error iniciant sessió amb Google: " + error.message);
@@ -221,8 +204,8 @@ async function signInWithGoogleGmail() {
 }
 
 // Botó login amb Google
-document.getElementById("googleLoginBtn").addEventListener("click", signInWithGoogleGmail);
-
+document.getElementById("googleLoginBtn").addEventListener("click", async () => {
+  const provider = new firebase.auth.GoogleAuthProvider();
   
   // IMPORTANT → Afegim permís d’enviar mails
   provider.addScope("https://www.googleapis.com/auth/gmail.send");
