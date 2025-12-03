@@ -1,77 +1,77 @@
 // classroom.js
 import { addNewTermWithName } from './terms.js'; // si vols afegir alumnes en un terme específic
 
-// ------------------ CONFIGURACIÓ ------------------
-const CLASSROOM_SCOPES = [
-  'https://www.googleapis.com/auth/classroom.courses.readonly',
-  'https://www.googleapis.com/auth/classroom.rosters.readonly'
-];
+let COURSE_ID_DYNAMIC = null;
 
-// ⚠️ Canvia-ho per l'ID de la teva classe concreta de Classroom
-const CLASSROOM_COURSE_ID = 'gse6foyp';
+// Funció que mostra modal i guarda el courseId
+export function showClassroomModal() {
+  const modal = document.getElementById("modalClassroom");
+  modal.classList.remove("hidden");
+
+  document.getElementById("modalClassroomCancel").onclick = () => {
+    modal.classList.add("hidden");
+  };
+
+  const inputCourse = document.getElementById("modalClassroomCourseId");
+
+  document.getElementById("modalClassroomImportStudents").onclick = async () => {
+    const courseId = inputCourse.value.trim();
+    if (!courseId) { alert("Introdueix l’ID del curs."); return; }
+    COURSE_ID_DYNAMIC = courseId;
+    modal.classList.add("hidden");
+    await importClassroomStudents(COURSE_ID_DYNAMIC);
+  };
+
+  document.getElementById("modalClassroomImportActivities").onclick = async () => {
+    const courseId = inputCourse.value.trim();
+    if (!courseId) { alert("Introdueix l’ID del curs."); return; }
+    COURSE_ID_DYNAMIC = courseId;
+    modal.classList.add("hidden");
+    await importClassroomActivities(COURSE_ID_DYNAMIC);
+  };
+}
 
 // ------------------ LOGIN AMB GOOGLE ------------------
 export async function loginWithGoogleClassroom() {
   return new Promise(async (resolve, reject) => {
     try {
       const provider = new firebase.auth.GoogleAuthProvider();
-      CLASSROOM_SCOPES.forEach(scope => provider.addScope(scope));
+      [
+        'https://www.googleapis.com/auth/classroom.courses.readonly',
+        'https://www.googleapis.com/auth/classroom.rosters.readonly',
+        'https://www.googleapis.com/auth/classroom.coursework.me.readonly',
+        'https://www.googleapis.com/auth/classroom.coursework.students'
+      ].forEach(scope => provider.addScope(scope));
 
       const result = await firebase.auth().signInWithPopup(provider);
-
-      // Guardem el token per fer crides a l’API de Classroom
       const credential = result.credential;
       const accessToken = credential.accessToken;
       window._googleAccessToken = accessToken;
-
-      console.log("Sessió iniciada correctament amb Google Classroom!");
       resolve(accessToken);
     } catch (err) {
-      console.error("Error iniciant sessió amb Google Classroom:", err);
+      console.error("Error Google Classroom login:", err);
       reject(err);
     }
   });
 }
 
-// ------------------ OBTENIR ALUMNES DE CLASSROOM ------------------
-async function fetchClassroomStudents(accessToken) {
-  if (!accessToken) throw new Error("No hi ha token d'autenticació.");
-
-  const url = `https://classroom.googleapis.com/v1/courses/${CLASSROOM_COURSE_ID}/students`;
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${accessToken}` }
-  });
-
-  if (!res.ok) {
-    const errData = await res.json();
-    throw new Error(`Error accedint a Google Classroom: ${JSON.stringify(errData)}`);
-  }
-
-  const data = await res.json();
-  return data.students || [];
-}
-
-// ------------------ IMPORTAR ALUMNES A FIRESTORE ------------------
-export async function importClassroomStudents() {
+// ------------------ IMPORTAR ALUMNES ------------------
+export async function importClassroomStudents(courseId) {
   try {
-    let token = window._googleAccessToken;
-    if (!token) {
-      token = await loginWithGoogleClassroom();
-    }
+    const accessToken = window._googleAccessToken || await loginWithGoogleClassroom();
+    const url = `https://classroom.googleapis.com/v1/courses/${courseId}/students`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
 
-    const students = await fetchClassroomStudents(token);
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    const students = data.students || [];
+    if (students.length === 0) { alert("No s'han trobat alumnes."); return; }
 
-    if (students.length === 0) {
-      alert("No s'han trobat alumnes a aquesta classe de Classroom.");
-      return;
-    }
-
-    // Exemple d'importació: afegir-los a la llista de Firestore
     const batch = firebase.firestore().batch();
     const studentsCollection = firebase.firestore().collection('students');
 
     students.forEach(student => {
-      const studentRef = studentsCollection.doc(student.userId); // o generar un id nou
+      const studentRef = studentsCollection.doc(student.userId);
       batch.set(studentRef, {
         name: student.profile.name.fullName,
         email: student.profile.emailAddress,
@@ -84,10 +84,16 @@ export async function importClassroomStudents() {
     alert(`${students.length} alumnes importats correctament!`);
 
   } catch (err) {
-    console.error("Error important alumnes de Classroom:", err);
-    alert("Error accedint a Google Classroom: " + err.message);
+    console.error("Error import alumnes Classroom:", err);
+    alert("Error important alumnes: " + err.message);
   }
 }
+
+// ------------------ IMPORTAR ACTIVITATS (placeholder) ------------------
+export async function importClassroomActivities(courseId) {
+  alert("Funció d'importar activitats encara no implementada.");
+}
+
 
 
 // ------------------------ FUNCIONS D’AFEGIR A LA TEVA APP ------------------------
