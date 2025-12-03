@@ -79,8 +79,8 @@ export function setupClassroomButton() {
         menu.id = "classroomMiniMenu";
         menu.className = "absolute bg-white border rounded shadow p-2 hidden z-50";
         menu.innerHTML = `
-            <button id="importStudentsBtn" class="px-3 py-1 w-full text-left hover:bg-gray-200">Importar alumnes</button>
-            <button id="importActivitiesBtn" class="px-3 py-1 w-full text-left hover:bg-gray-200">Importar activitats</button>
+            <button id="importStudentsBtn" class="px-3 py-1 w-full text-left hover:bg-gray-200 whitespace-nowrap">Importar alumnes</button>
+            <button id="importActivitiesBtn" class="px-3 py-1 w-full text-left hover:bg-gray-200 whitespace-nowrap">Importar activitats</button>
         `;
         document.body.appendChild(menu);
     }
