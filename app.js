@@ -2468,3 +2468,18 @@ async function gmailSendEmail(to, subject, message) {
   }
 }
 
+
+//integrar fitxer classroom.js amb app.js
+import { setupClassroomButton } from './classroom.js';
+
+// Al final de la inicialització del teu app.js
+setupClassroomButton();
+
+// Escoltar l’event i afegir a la UI / BD
+document.addEventListener("classroomStudentAdded", (e) => {
+    const name = e.detail.name;
+
+    // Cridar la teva funció existent per afegir alumne a la graella o llista
+    // Exemple:
+    addStudentToActiveTerm(name); // Si vols guardar-lo directament en term
+});
