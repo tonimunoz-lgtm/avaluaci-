@@ -1,21 +1,19 @@
 // classroom.js
-import { addNewTermWithName } from './terms.js'; // per afegir alumnes a un terme si vols
+import { addNewTermWithName } from './terms.js';
 
 let COURSE_ID_DYNAMIC = null;
 
-// ------------------ MOSTRAR MODAL ------------------
 export function showClassroomModal() {
   const modal = document.getElementById("modalClassroom");
+  if (!modal) return;
   modal.classList.remove("hidden");
 
   const inputCourse = document.getElementById("modalClassroomCourseId");
 
-  // Tancar modal
   document.getElementById("modalClassroomCancel").onclick = () => {
     modal.classList.add("hidden");
   };
 
-  // Importar alumnes
   document.getElementById("modalClassroomImportStudents").onclick = async () => {
     const courseId = inputCourse.value.trim();
     if (!courseId) { alert("Introdueix l’ID del curs."); return; }
@@ -24,7 +22,6 @@ export function showClassroomModal() {
     await importClassroomStudents(COURSE_ID_DYNAMIC);
   };
 
-  // Importar activitats (placeholder)
   document.getElementById("modalClassroomImportActivities").onclick = async () => {
     const courseId = inputCourse.value.trim();
     if (!courseId) { alert("Introdueix l’ID del curs."); return; }
@@ -34,44 +31,35 @@ export function showClassroomModal() {
   };
 }
 
-// ------------------ LOGIN AMB GOOGLE ------------------
 export async function loginWithGoogleClassroom() {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      [
-        'https://www.googleapis.com/auth/classroom.courses.readonly',
-        'https://www.googleapis.com/auth/classroom.rosters.readonly',
-        'https://www.googleapis.com/auth/classroom.coursework.me.readonly',
-        'https://www.googleapis.com/auth/classroom.coursework.students'
-      ].forEach(scope => provider.addScope(scope));
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    [
+      'https://www.googleapis.com/auth/classroom.courses.readonly',
+      'https://www.googleapis.com/auth/classroom.rosters.readonly',
+      'https://www.googleapis.com/auth/classroom.coursework.me.readonly',
+      'https://www.googleapis.com/auth/classroom.coursework.students'
+    ].forEach(scope => provider.addScope(scope));
 
-      const result = await firebase.auth().signInWithPopup(provider);
-
-      // Guardem el token
-      const credential = result.credential;
-      const accessToken = credential.accessToken;
-      window._googleAccessToken = accessToken;
-      resolve(accessToken);
-    } catch (err) {
-      console.error("Error Google Classroom login:", err);
-      reject(err);
-    }
-  });
+    const result = await firebase.auth().signInWithPopup(provider);
+    const credential = result.credential;
+    const accessToken = credential.accessToken;
+    window._googleAccessToken = accessToken;
+    return accessToken;
+  } catch (err) {
+    console.error("Error Google Classroom login:", err);
+    throw err;
+  }
 }
 
-// ------------------ IMPORTAR ALUMNES ------------------
-// ---------- importClassroomStudents final ----------
 export async function importClassroomStudents(courseId) {
   try {
-    // Forçar login per obtenir token amb els scopes exactes
     const accessToken = await loginWithGoogleClassroom();
 
     const url = `https://classroom.googleapis.com/v1/courses/${courseId}/students`;
     const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
 
     if (!res.ok) {
-      // Leer texto/JSON de error per mostrar més info
       const txt = await res.text();
       throw new Error(txt);
     }
@@ -100,6 +88,17 @@ export async function importClassroomStudents(courseId) {
     alert("Error accedint a Google Classroom: " + (err.message || err));
   }
 }
+
+export async function importClassroomActivities(courseId) {
+  alert("Funció d'importar activitats encara no implementada.");
+}
+
+export function setupClassroomButton() {
+  const btn = document.getElementById("importClassroom");
+  if (!btn) return;
+  btn.addEventListener("click", showClassroomModal);
+}
+
 
 
 // ------------------ IMPORTAR ACTIVITATS (placeholder) ------------------
