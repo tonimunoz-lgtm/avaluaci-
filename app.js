@@ -2482,3 +2482,51 @@ document.addEventListener("click", (e) => {
     menu.classList.add("hidden");
   }
 });
+
+// Comprovar si l'usuari està loggejat amb Google
+function requireGoogleLogin() {
+  if (!window._googleAccessToken) {
+    alert("Has d'iniciar sessió amb Google per utilitzar Classroom.");
+    return false;
+  }
+  return true;
+}
+
+// Cridar al backend (que crearem després)
+document.getElementById("importClassroomStudents").addEventListener("click", async () => {
+  if (!requireGoogleLogin()) return;
+
+  alert("Preparant importació…");
+
+  const res = await fetch("https://us-central1-TU_PROJECTE.cloudfunctions.net/importStudents", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      token: window._googleAccessToken,
+      classId: _currentClassId
+    })
+  });
+
+  const data = await res.json();
+
+  if (data.error) alert("Error: " + data.error);
+  else alert("Alumnes importats correctament!");
+});
+
+document.getElementById("importClassroomActivities").addEventListener("click", async () => {
+  if (!requireGoogleLogin()) return;
+
+  const res = await fetch("https://us-central1-TU_PROJECTE.cloudfunctions.net/importActivities", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      token: window._googleAccessToken,
+      classId: _currentClassId
+    })
+  });
+
+  const data = await res.json();
+
+  if (data.error) alert("Error: " + data.error);
+  else alert("Activitats importades correctament!");
+});
