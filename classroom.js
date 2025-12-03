@@ -1,13 +1,13 @@
 // classroom.js
-// Funcions per importar alumnes des de Google Classroom
-
-// URL base de l'API
+// Funcions per interactuar amb Google Classroom
 const CLASSROOM_API = "https://classroom.googleapis.com/v1";
 
-// ID de la classe concreta (pots canviar per un selector dinàmic)
+// ID de la classe concreta de Classroom (canviar segons necessitat)
 const CLASSROOM_COURSE_ID = "ID_DE_LA_CLASSE_AQUI";
 
-// Funció per obtenir alumnes
+// ------------------------ FUNCIONS PRINCIPALS ------------------------
+
+// Importar alumnes
 export async function importClassroomStudents() {
     if (!window._googleAccessToken) {
         alert("Has de fer login amb Google abans!");
@@ -29,16 +29,13 @@ export async function importClassroomStudents() {
         }
 
         const data = await res.json();
-        console.log("Alumnes Classroom:", data.students);
-
         if (!data.students || data.students.length === 0) {
             alert("No hi ha alumnes a aquesta classe Classroom.");
             return;
         }
 
-        // Afegir alumnes al teu llistat
         data.students.forEach(student => {
-            const fullName = `${student.profile.name.fullName}`;
+            const fullName = student.profile.name.fullName;
             addStudentToApp(fullName);
         });
 
@@ -49,25 +46,75 @@ export async function importClassroomStudents() {
     }
 }
 
-// Exemple de funció per afegir alumnes al teu sistema
+// Importar activitats
+export async function importClassroomActivities() {
+    if (!window._googleAccessToken) {
+        alert("Has de fer login amb Google abans!");
+        return;
+    }
+
+    try {
+        const res = await fetch(`${CLASSROOM_API}/courses/${CLASSROOM_COURSE_ID}/courseWork`, {
+            headers: {
+                "Authorization": `Bearer ${window._googleAccessToken}`
+            }
+        });
+
+        if (!res.ok) {
+            const errText = await res.text();
+            console.error("Error Classroom:", errText);
+            alert("Error accedint a Google Classroom: " + errText);
+            return;
+        }
+
+        const data = await res.json();
+        if (!data.courseWork || data.courseWork.length === 0) {
+            alert("No hi ha activitats a aquesta classe Classroom.");
+            return;
+        }
+
+        data.courseWork.forEach(activity => {
+            const title = activity.title;
+            addActivityToApp(title);
+        });
+
+        alert("Activitats importades correctament!");
+    } catch (err) {
+        console.error("Error al importar activitats:", err);
+        alert("Error al importar activitats: " + err.message);
+    }
+}
+
+// ------------------------ FUNCIONS D’AFEGIR A LA TEVA APP ------------------------
+
+// Afegeix alumne al sistema sense tocar app.js ni terms.js
 function addStudentToApp(fullName) {
-    // Depèn de com estigui implementat el teu afegir alumne
-    // Per exemple, si tens una funció que mostra la UI i actualitza la BD:
-    // addStudentToList(fullName);
-
-    console.log("Afegint alumne al sistema:", fullName);
-
-    // Aquí pots cridar el teu modal / funció existent per afegir alumne:
     const event = new CustomEvent("classroomStudentAdded", { detail: { name: fullName } });
     document.dispatchEvent(event);
 }
 
-// Vincular amb el botó
+// Afegeix activitat al sistema sense tocar app.js ni terms.js
+function addActivityToApp(title) {
+    const event = new CustomEvent("classroomActivityAdded", { detail: { title } });
+    document.dispatchEvent(event);
+}
+
+// ------------------------ BOTONS ------------------------
+
 export function setupClassroomButton() {
     const btn = document.getElementById("importClassroom");
     if (!btn) return;
 
-    btn.addEventListener("click", () => {
-        importClassroomStudents();
+    btn.addEventListener("click", async () => {
+        const action = prompt("Què vols importar? Escriu 'alumnes' o 'activitats':");
+        if (!action) return;
+
+        if (action.toLowerCase() === "alumnes") {
+            await importClassroomStudents();
+        } else if (action.toLowerCase() === "activitats") {
+            await importClassroomActivities();
+        } else {
+            alert("Acció no vàlida. Escriu 'alumnes' o 'activitats'.");
+        }
     });
 }
