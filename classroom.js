@@ -8,7 +8,7 @@ const CLASSROOM_SCOPES = [
 ];
 
 // ⚠️ Canvia-ho per l'ID de la teva classe concreta de Classroom
-const CLASSROOM_COURSE_ID = 'ID_DE_LA_CLASSE_AQUI';
+const CLASSROOM_COURSE_ID = 'gse6foyp';
 
 // ------------------ LOGIN AMB GOOGLE ------------------
 export async function loginWithGoogleClassroom() {
