@@ -183,7 +183,7 @@ btnAddAdmin.addEventListener('click', async () => {
       suspended: false,
       createdAt: firebase.firestore.Timestamp.now()
     });
-    alert('Nou usuari creat amb permisos d’admin!');
+    alert('Nou usuari creat!');
     loadUsers();
   } catch(e) {
     // Si l'usuari ja existeix, fem update a isAdmin
