@@ -615,9 +615,9 @@ async function createActivityModal() {
 
     // 🔥 NO posar loadClassData() si tens dubtes!
     // Si vols recarregar:
-    if (typeof loadClassData === "function") {
-        loadClassData();
-    }
+    //if (typeof loadClassData === "function") {
+     //   loadClassData();
+   // }
 }
 
 
