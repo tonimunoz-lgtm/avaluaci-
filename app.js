@@ -1263,20 +1263,20 @@ function renderAverages(){
   notesTfoot.appendChild(trAvg);*/
 
 // ----------------- Mitjana per activitat -----------------
-// ----------------- Mitjana per activitat -----------------
 const trAvg = document.createElement('tr');
 trAvg.className = 'text-sm';
 trAvg.appendChild(th('Mitjana activitat'));
 
+// Si no hi ha activitats, afegim la fila buida i sortim
 if (!classActivities || classActivities.length === 0) {
   notesTfoot.appendChild(trAvg);
 } else {
   classActivities.forEach(actId => {
-    // Agafem els inputs amb data-activity-id corresponent
-    const inputs = Array.from(notesTbody.querySelectorAll('tr'))
-      .map(r => r.querySelector(`input[data-activity-id="${actId}"]`))
+    // Recollim tots els inputs de la columna corresponent a actId
+    const inputs = Array.from(notesTbody.querySelectorAll(`input[data-activity-id="${actId}"]`))
       .filter(Boolean);
 
+    // Convertim a números i calculem mitjana
     const vals = inputs.map(inp => Number(inp.value)).filter(v => !isNaN(v));
     const avg = vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2) : '';
 
@@ -1286,9 +1286,10 @@ if (!classActivities || classActivities.length === 0) {
     trAvg.appendChild(td);
   });
 
-  // ja no afegim cap cel·la extra al final, perquè hem eliminat la columna de la mitjana
+  // Ja no afegim cap cel·la extra al final
   notesTfoot.appendChild(trAvg);
 }
+
 
 
   // ----------------- Fila fórmules -----------------
