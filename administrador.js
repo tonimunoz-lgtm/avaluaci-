@@ -280,3 +280,16 @@ async function migrateOldProfessors() {
     alert('Error durant la migració: ' + e.message);
   }
 }
+
+async function deleteUserCompletely(uid) {
+  try {
+    const deleteUserFn = firebase.functions().httpsCallable('deleteUserCompletely');
+    const res = await deleteUserFn({ uid });
+    alert(res.data.message);
+    loadUsers(); // recarregar la llista d'usuaris
+  } catch (err) {
+    console.error(err);
+    alert("Error eliminant usuari: " + err.message);
+  }
+}
+
