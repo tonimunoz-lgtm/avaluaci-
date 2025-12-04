@@ -179,7 +179,6 @@ if (!docSnap.exists) {
   await profRef.set({
     email: result.user.email,
     name: result.user.displayName || '',
-    photo: result.user.photoURL || '',
     google: true,
     isAdmin: false,        // Important per l’admin
     suspended: false,      // Important per gestió
