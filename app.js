@@ -1240,7 +1240,7 @@ function renderAverages(){
   notesTfoot.innerHTML = '';
 
   // ----------------- Mitjana per activitat -----------------
- /* const trAvg = document.createElement('tr');
+ const trAvg = document.createElement('tr');
   trAvg.className = 'text-sm';
   trAvg.appendChild(th('Mitjana activitat'));
   if(actCount === 0){
@@ -1260,37 +1260,8 @@ function renderAverages(){
   }
 
   //trAvg.appendChild(th('',''));
-  notesTfoot.appendChild(trAvg);*/
-
-// ----------------- Mitjana per activitat -----------------
-const trAvg = document.createElement('tr');
-trAvg.className = 'text-sm';
-trAvg.appendChild(th('Mitjana activitat'));
-
-if (!classActivities || classActivities.length === 0) {
   notesTfoot.appendChild(trAvg);
-} else {
-  classActivities.forEach((actId, colIdx) => {
-    const inputs = [];
 
-    // Recórrer totes les files
-    Array.from(notesTbody.querySelectorAll('tr')).forEach(tr => {
-      // Busquem l'input dins de la fila que coincideixi amb actId
-      const inp = tr.querySelector(`input[data-activity-id="${actId}"]`);
-      if (inp) inputs.push(inp);
-    });
-
-    // Calcular mitjana
-    const vals = inputs.map(inp => Number(inp.value)).filter(v => !isNaN(v));
-    const avg = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2) : '';
-
-    const td = document.createElement('td');
-    td.className = 'border px-2 py-1 text-center font-semibold';
-    td.textContent = avg;
-    trAvg.appendChild(td);
-  });
-
-  notesTfoot.appendChild(trAvg);
 }
 
   // ----------------- Fila fórmules -----------------
