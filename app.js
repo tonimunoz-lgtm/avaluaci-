@@ -124,29 +124,6 @@ function showApp() {
 }
 
 /* ---------- AUTH ---------- */
-//btnLogin.addEventListener('click', async () => {
-//  const email = document.getElementById('loginEmail').value.trim();
-//  const pw = document.getElementById('loginPassword').value;
-//  if (!email || !pw) return alert('Introdueix email i contrasenya');
-
-//  try {
-//    const u = await auth.signInWithEmailAndPassword(email, pw);
-
-//    const userDoc = await db.collection('professors').doc(u.user.uid).get();
-//    if (userDoc.exists && userDoc.data().suspended) {
-//      await auth.signOut();
-//      alert("⚠️ El teu compte està suspès.\nContacta amb l’administrador.");
-//      return;
-//    }
-
-//    professorUID = u.user.uid;
-//    setupAfterAuth(u.user);
-
-//  } catch (e) {
-//    alert('Error login: ' + e.message);
-//  }
-//});
-
 btnLogin.addEventListener('click', async () => {
   const email = document.getElementById('loginEmail').value.trim();
   const pw = document.getElementById('loginPassword').value;
@@ -183,25 +160,42 @@ btnLogin.addEventListener('click', async () => {
 });
 
 //-------loggin amb google----------------------
+//------- LOGIN AMB GOOGLE (crea professor si no existeix) ----------------------
 async function signInWithGoogleGmail() {
   const provider = new firebase.auth.GoogleAuthProvider();
 
-  // Aquest scope permet enviar mails
+  // Permís Gmail Send
   provider.addScope('https://www.googleapis.com/auth/gmail.send');
 
   try {
     const result = await firebase.auth().signInWithPopup(provider);
 
-    // Guardem el token per enviar correus
+    // Guardem token
     const credential = result.credential;
     window._googleAccessToken = credential.accessToken;
 
-    alert("Sessió iniciada correctament. Ara pots enviar mails des del teu compte!");
+    // ✔ CREACIÓ AUTOMÀTICA DEL PROFESSOR
+    const user = result.user;
+    const profRef = db.collection("professors").doc(user.uid);
+    const profDoc = await profRef.get();
+
+    if (!profDoc.exists) {
+      await profRef.set({
+        name: user.displayName || "",
+        email: user.email,
+        google: true,
+        createdAt: Date.now()
+      });
+      console.log("Professor creat automàticament.");
+    }
+
+    alert("Sessió iniciada correctament!");
   } catch (error) {
     console.error(error);
     alert("Error iniciant sessió amb Google: " + error.message);
   }
 }
+
 
 // Botó login amb Google
 document.getElementById("googleLoginBtn").addEventListener("click", async () => {
@@ -222,66 +216,6 @@ document.getElementById("googleLoginBtn").addEventListener("click", async () => 
   }
 });
 
-
-/*const googleBtn = document.getElementById("googleLoginBtn");
-
-if (googleBtn) {
-  // Estil similar als altres botons però més clar
-  googleBtn.classList.add("bg-indigo-300"); // gradient més suau o pots fer un gradient manual
-  googleBtn.style.padding = "0.5rem 1rem";
-  googleBtn.style.fontWeight = "600";
-  googleBtn.style.borderRadius = "0.5rem";
-  googleBtn.style.cursor = "pointer";
-  googleBtn.style.width = "100%";        // mateixa amplada que els altres botons
-  googleBtn.style.marginBottom = "0.5rem";  // separació amb el botó superior
-  googleBtn.style.color = "white";       // text blanc
-  
-  // Afegim event listener
-  googleBtn.addEventListener("click", async () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    // IMPORTANT → Afegim permís d’enviar mails
-    provider.addScope("https://www.googleapis.com/auth/gmail.send");
-
-    try {
-      const result = await firebase.auth().signInWithPopup(provider);
-
-      // Guardem el token per enviar correus
-      window._googleAccessToken = result.credential.accessToken;
-
-      alert("Sessió iniciada correctament! Ara pots enviar mails des del teu compte.");
-    } catch (err) {
-      console.error(err);
-      alert("Error iniciant sessió amb Google: " + err.message);
-    }
-  });
-}*/
-
-
-
-//btnRegister.addEventListener('click', async () => {
-//  const email = document.getElementById('loginEmail').value.trim();
-//  const pw = document.getElementById('loginPassword').value;
-//  if (!email || !pw) return alert('Introdueix email i contrasenya');
-
-//  try {
-//    const u = await auth.createUserWithEmailAndPassword(email, pw);
-//    professorUID = u.user.uid;
-
-//    await db.collection('professors').doc(professorUID).set({
-//      email,
-//      nom: email.split('@')[0],
-//      isAdmin: false,
-//      suspended: false,
-//      createdAt: firebase.firestore.Timestamp.now(),
-//      classes: []
-//    });
-
-//    setupAfterAuth(u.user);
-
-//  } catch(e) {
-//    alert('Error registre: ' + e.message);
-//  }
-//});
 btnRegister.addEventListener('click', async () => {
   const email = document.getElementById('loginEmail').value.trim();
   const pw = document.getElementById('loginPassword').value;
