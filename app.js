@@ -1261,29 +1261,20 @@ function renderAverages(){
 
   //trAvg.appendChild(th('',''));
   notesTfoot.appendChild(trAvg);*/
+
 // ----------------- Mitjana per activitat -----------------
 // ----------------- Mitjana per activitat -----------------
-function renderAverages() {
-  // Neteja el peu de taula
-  notesTfoot.innerHTML = '';
+const trAvg = document.createElement('tr');
+trAvg.className = 'text-sm';
+trAvg.appendChild(th('Mitjana activitat'));
 
-  const trAvg = document.createElement('tr');
-  trAvg.className = 'text-sm';
-
-  // Capçalera inicial
-  trAvg.appendChild(th('Mitjana activitat'));
-
-  // Si no hi ha activitats, afegim cel·la buida i sortim
-  if (!classActivities || classActivities.length === 0) {
-    trAvg.appendChild(th('', ''));
-    notesTfoot.appendChild(trAvg);
-    return;
-  }
-
-  // Per cada activitat, calculem mitjana
+if (!classActivities || classActivities.length === 0) {
+  notesTfoot.appendChild(trAvg);
+} else {
   classActivities.forEach(actId => {
+    // Agafem els inputs amb data-activity-id corresponent
     const inputs = Array.from(notesTbody.querySelectorAll('tr'))
-      .map(tr => tr.querySelector(`input[data-activity-id="${actId}"]`))
+      .map(r => r.querySelector(`input[data-activity-id="${actId}"]`))
       .filter(Boolean);
 
     const vals = inputs.map(inp => Number(inp.value)).filter(v => !isNaN(v));
@@ -1295,6 +1286,7 @@ function renderAverages() {
     trAvg.appendChild(td);
   });
 
+  // ja no afegim cap cel·la extra al final, perquè hem eliminat la columna de la mitjana
   notesTfoot.appendChild(trAvg);
 }
 
