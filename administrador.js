@@ -149,11 +149,20 @@ async function toggleAdmin(uid) {
   loadUsers();
 }
 
+// Eliminar usuari
+// Marcar usuari com a eliminat, sense esborrar document
 async function deleteUser(uid) {
-  if (!confirm('Segur que vols eliminar completament aquest usuari?')) return;
-  await deleteUserCompletely(uid);
-}
+  if (!confirm('Estàs segur que vols eliminar aquest usuari?')) return;
 
+  try {
+    await db.collection('professors').doc(uid).update({ deleted: true, suspended: false });
+    alert("Usuari eliminat correctament. Podrà tornar a registrar-se amb aquest email.");
+    loadUsers(); // Recarregar llista d'usuaris
+  } catch (e) {
+    console.error("Error eliminant usuari:", e);
+    alert("⚠️ Error eliminant usuari.");
+  }
+}
 
 
 // Crear nou usuari o admin
@@ -271,16 +280,3 @@ async function migrateOldProfessors() {
     alert('Error durant la migració: ' + e.message);
   }
 }
-
-async function deleteUserCompletely(uid) {
-  try {
-    const deleteUserFn = firebase.functions().httpsCallable('deleteUserCompletely');
-    const res = await deleteUserFn({ uid });
-    alert(res.data.message);
-    loadUsers(); // recarregar la llista d'usuaris
-  } catch (err) {
-    console.error(err);
-    alert("Error eliminant usuari: " + err.message);
-  }
-}
-
