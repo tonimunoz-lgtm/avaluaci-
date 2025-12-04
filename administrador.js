@@ -149,20 +149,11 @@ async function toggleAdmin(uid) {
   loadUsers();
 }
 
-// Eliminar usuari
-// Marcar usuari com a eliminat, sense esborrar document
 async function deleteUser(uid) {
-  if (!confirm('Estàs segur que vols eliminar aquest usuari?')) return;
-
-  try {
-    await db.collection('professors').doc(uid).update({ deleted: true, suspended: false });
-    alert("Usuari eliminat correctament. Podrà tornar a registrar-se amb aquest email.");
-    loadUsers(); // Recarregar llista d'usuaris
-  } catch (e) {
-    console.error("Error eliminant usuari:", e);
-    alert("⚠️ Error eliminant usuari.");
-  }
+  if (!confirm('Segur que vols eliminar completament aquest usuari?')) return;
+  await deleteUserCompletely(uid);
 }
+
 
 
 // Crear nou usuari o admin
