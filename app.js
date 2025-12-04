@@ -1853,6 +1853,19 @@ btnAddTerm.addEventListener('click', async () => {
   }
 });
 
+const btnAddTerm2 = document.getElementById('btnAddTerm2');
+btnAddTerm2.addEventListener('click', async () => {
+  const name = prompt('Nom del nou grup (p. ex. 2TRIM):');
+  if(!name) return;
+  try {
+    const newId = await Terms.addNewTermWithName(name);
+    // Quan acaba, Terms ja cridarà l'onChange que actualitza la graella i el dropdown
+  } catch(e) {
+    console.error('Error creant terme:', e);
+    alert('Error creant terme: ' + e.message);
+  }
+});
+
 // Botó de menú de graella
 const termMenuBtn = document.getElementById('termMenuBtn');
 const termMenu = document.getElementById('termMenu');
