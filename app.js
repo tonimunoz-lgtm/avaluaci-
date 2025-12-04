@@ -159,34 +159,24 @@ btnLogin.addEventListener('click', async () => {
   }
 });
 
-//------- LOGIN AMB GOOGLE (crea professor si no existeix) ----------------------
 // ---------------- LOGIN AMB GOOGLE I REGISTRE AUTOMÀTIC ----------------
 async function signInWithGoogleGmail() {
   const provider = new firebase.auth.GoogleAuthProvider();
-
-  // Scope per enviar mails
   provider.addScope('https://www.googleapis.com/auth/gmail.send');
 
   try {
     const result = await firebase.auth().signInWithPopup(provider);
-    const user = result.user;
-
-    // Guardem el token per fer crides a l'API de Gmail/Classroom
     const credential = result.credential;
     window._googleAccessToken = credential.accessToken;
 
-    // Referència al document del professor a Firestore
-    const profRef = db.collection('professors').doc(user.uid);
-    const profDoc = await profRef.get();
+    const profRef = db.collection('professors').doc(result.user.uid);
+    const docSnap = await profRef.get();
 
-    // Si no existeix, el creem automàticament
-    if (!profDoc.exists) {
-      const profName = user.displayName || (user.email ? user.email.split('@')[0] : 'Sense nom');
-
+    if (!docSnap.exists) {
+      // Crear usuari nou si no existeix
       await profRef.set({
-        email: user.email,
-        nom: profName,
-        photo: user.photoURL || '',
+        email: result.user.email,
+        name: result.user.displayName || result.user.email.split('@')[0],
         google: true,
         isAdmin: false,
         suspended: false,
@@ -194,17 +184,29 @@ async function signInWithGoogleGmail() {
         classes: [],
         createdAt: firebase.firestore.Timestamp.now()
       });
-
-      alert(`Compte creat automàticament com a professor: ${profName}`);
-    } else {
-      alert(`Sessió iniciada correctament com a ${profDoc.data().nom || user.email}`);
     }
 
-    // Aquí pots cridar la funció que carrega la app després del login
-    setupAfterAuth(user);
+    // 🔹 DESPRÉS DE CREAR/OBTENIR EL DOC: COMPROVAR ESTATS
+    const profDoc = await profRef.get();
+    const profData = profDoc.data();
+
+    if (profData.deleted) {
+      await auth.signOut();
+      return alert("⚠️ El teu compte ha estat eliminat. Pots registrar-te de nou amb aquest email.");
+    }
+
+    if (profData.suspended) {
+      await auth.signOut();
+      return alert("⚠️ El teu compte està suspès.\nContacta amb l’administrador.");
+    }
+
+    // ✅ Tot correcte: assignar UID i carregar UI
+    professorUID = result.user.uid;
+    setupAfterAuth(result.user);
+    alert("Sessió iniciada correctament!");
 
   } catch (error) {
-    console.error("Error iniciant sessió amb Google:", error);
+    console.error(error);
     alert("Error iniciant sessió amb Google: " + error.message);
   }
 }
