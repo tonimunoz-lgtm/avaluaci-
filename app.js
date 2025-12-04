@@ -1244,7 +1244,7 @@ function renderAverages(){
   trAvg.className = 'text-sm';
   trAvg.appendChild(th('Mitjana activitat'));
   if(actCount === 0){
-    trAvg.appendChild(th('',''));
+    //trAvg.appendChild(th('',''));
     notesTfoot.appendChild(trAvg);
     return;
   }
