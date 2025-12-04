@@ -171,17 +171,23 @@ async function signInWithGoogleGmail() {
     window._googleAccessToken = credential.accessToken;
 
     // 👉 Assegurar que el professor existeix a Firestore
-    const profRef = db.collection("professors").doc(result.user.uid);
-    const profDoc = await profRef.get();
+    const profRef = db.collection('professors').doc(result.user.uid);
 
-    if (!profDoc.exists) {
-      await profRef.set({
-        email: result.user.email,
-        createdAt: Date.now(),
-        suspended: false,
-        deleted: false
-      });
-    }
+// Només crear si no existeix
+const docSnap = await profRef.get();
+if (!docSnap.exists) {
+  await profRef.set({
+    email: result.user.email,
+    name: result.user.displayName || '',
+    photo: result.user.photoURL || '',
+    google: true,
+    isAdmin: false,        // Important per l’admin
+    suspended: false,      // Important per gestió
+    deleted: false,        // Important per gestió
+    classes: [],           // Evita errors si el professor encara no té classes
+    createdAt: firebase.firestore.Timestamp.now()
+  });
+}
 
     // 👉 IMPORTANT: actualitzar identitat i carregar UI
     professorUID = result.user.uid;
