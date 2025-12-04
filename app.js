@@ -1261,23 +1261,21 @@ function renderAverages(){
   trAvg.appendChild(th('',''));
   notesTfoot.appendChild(trAvg);*/
 
-  // ----------------- Mitjana per activitat -----------------
+ // ----------------- Mitjana per activitat -----------------
 function renderAverages() {
   // Neteja peu de taula
   notesTfoot.innerHTML = '';
 
-  const actCount = classActivities.length;
-  if (actCount === 0) return;
+  if (!classActivities || classActivities.length === 0) return;
 
   const trAvg = document.createElement('tr');
   trAvg.className = 'text-sm';
   trAvg.appendChild(th('Mitjana activitat')); // capçalera inicial
 
-  // Per cada activitat, calcular mitjana
-  for (let i = 0; i < actCount; i++) {
-    const actId = classActivities[i];
+  // Per cada activitat de classActivities
+  classActivities.forEach(actId => {
     const inputs = Array.from(notesTbody.querySelectorAll('tr'))
-      .map(r => r.querySelector(`input[data-activity-id="${actId}"]`))
+      .map(tr => tr.querySelector(`input[data-activity-id="${actId}"]`))
       .filter(Boolean);
 
     const vals = inputs.map(inp => Number(inp.value)).filter(v => !isNaN(v));
@@ -1287,11 +1285,12 @@ function renderAverages() {
     td.className = 'border px-2 py-1 text-center font-semibold';
     td.textContent = avg;
     trAvg.appendChild(td);
-  }
+  });
 
-  // ✅ No afegim cap cel·la extra al final, perquè hem eliminat la columna de la mitjana individual
+  // 🔹 No afegim cap cel·la extra al final
   notesTfoot.appendChild(trAvg);
 }
+
 
 
   // ----------------- Fila fórmules -----------------
