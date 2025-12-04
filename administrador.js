@@ -179,7 +179,7 @@ btnAddAdmin.addEventListener('click', async () => {
     await db.collection('professors').doc(userCredential.user.uid).set({
       email,
       nom,
-      isAdmin: true,
+      isAdmin: false,
       suspended: false,
       createdAt: firebase.firestore.Timestamp.now()
     });
