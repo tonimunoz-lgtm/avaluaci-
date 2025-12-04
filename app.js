@@ -162,38 +162,39 @@ btnLogin.addEventListener('click', async () => {
 //------- LOGIN AMB GOOGLE (crea professor si no existeix) ----------------------
 async function signInWithGoogleGmail() {
   const provider = new firebase.auth.GoogleAuthProvider();
-
-  // Permís Gmail Send
   provider.addScope('https://www.googleapis.com/auth/gmail.send');
 
   try {
     const result = await firebase.auth().signInWithPopup(provider);
 
-    // Guardem token
     const credential = result.credential;
     window._googleAccessToken = credential.accessToken;
 
-    // ✔ CREACIÓ AUTOMÀTICA DEL PROFESSOR
-    const user = result.user;
-    const profRef = db.collection("professors").doc(user.uid);
+    // 👉 Assegurar que el professor existeix a Firestore
+    const profRef = db.collection("professors").doc(result.user.uid);
     const profDoc = await profRef.get();
 
     if (!profDoc.exists) {
       await profRef.set({
-        name: user.displayName || "",
-        email: user.email,
-        google: true,
-        createdAt: Date.now()
+        email: result.user.email,
+        createdAt: Date.now(),
+        suspended: false,
+        deleted: false
       });
-      console.log("Professor creat automàticament.");
     }
 
+    // 👉 IMPORTANT: actualitzar identitat i carregar UI
+    professorUID = result.user.uid;
+    setupAfterAuth(result.user);
+
     alert("Sessió iniciada correctament!");
+
   } catch (error) {
     console.error(error);
     alert("Error iniciant sessió amb Google: " + error.message);
   }
 }
+
 
 
 // Botó login amb Google
