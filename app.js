@@ -1240,7 +1240,7 @@ function renderAverages(){
   notesTfoot.innerHTML = '';
 
   // ----------------- Mitjana per activitat -----------------
-  /*const trAvg = document.createElement('tr');
+  const trAvg = document.createElement('tr');
   trAvg.className = 'text-sm';
   trAvg.appendChild(th('Mitjana activitat'));
   if(actCount === 0){
@@ -1259,38 +1259,7 @@ function renderAverages(){
     trAvg.appendChild(td);
   }
   trAvg.appendChild(th('',''));
-  notesTfoot.appendChild(trAvg);*/
-
- // ----------------- Mitjana per activitat -----------------
-function renderAverages() {
-  // Neteja peu de taula
-  notesTfoot.innerHTML = '';
-
-  if (!classActivities || classActivities.length === 0) return;
-
-  const trAvg = document.createElement('tr');
-  trAvg.className = 'text-sm';
-  trAvg.appendChild(th('Mitjana activitat')); // capçalera inicial
-
-  // Per cada activitat de classActivities
-  classActivities.forEach(actId => {
-    const inputs = Array.from(notesTbody.querySelectorAll('tr'))
-      .map(tr => tr.querySelector(`input[data-activity-id="${actId}"]`))
-      .filter(Boolean);
-
-    const vals = inputs.map(inp => Number(inp.value)).filter(v => !isNaN(v));
-    const avg = vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2) : '';
-
-    const td = document.createElement('td');
-    td.className = 'border px-2 py-1 text-center font-semibold';
-    td.textContent = avg;
-    trAvg.appendChild(td);
-  });
-
-  // 🔹 No afegim cap cel·la extra al final
   notesTfoot.appendChild(trAvg);
-}
-
 
 
   // ----------------- Fila fórmules -----------------
