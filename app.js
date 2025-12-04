@@ -1262,30 +1262,30 @@ function renderAverages(){
   //trAvg.appendChild(th('',''));
   notesTfoot.appendChild(trAvg);*/
 // ----------------- Mitjana per activitat -----------------
+// ----------------- Mitjana per activitat -----------------
 function renderAverages() {
   // Neteja el peu de taula
   notesTfoot.innerHTML = '';
 
+  const trAvg = document.createElement('tr');
+  trAvg.className = 'text-sm';
+
+  // Capçalera inicial
+  trAvg.appendChild(th('Mitjana activitat'));
+
+  // Si no hi ha activitats, afegim cel·la buida i sortim
   if (!classActivities || classActivities.length === 0) {
-    // Encara que no hi hagi activitats, mostrem la fila amb el text
-    const trEmpty = document.createElement('tr');
-    trEmpty.className = 'text-sm';
-    trEmpty.appendChild(th('Mitjana activitat'));
-    notesTfoot.appendChild(trEmpty);
+    trAvg.appendChild(th('', ''));
+    notesTfoot.appendChild(trAvg);
     return;
   }
 
-  const trAvg = document.createElement('tr');
-  trAvg.className = 'text-sm';
-  trAvg.appendChild(th('Mitjana activitat')); // capçalera inicial
-
+  // Per cada activitat, calculem mitjana
   classActivities.forEach(actId => {
-    // Agafem tots els inputs amb aquest activity-id
     const inputs = Array.from(notesTbody.querySelectorAll('tr'))
       .map(tr => tr.querySelector(`input[data-activity-id="${actId}"]`))
-      .filter(inp => inp !== null);
+      .filter(Boolean);
 
-    // Convertim valors a números i calculem mitjana
     const vals = inputs.map(inp => Number(inp.value)).filter(v => !isNaN(v));
     const avg = vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2) : '';
 
