@@ -1258,7 +1258,7 @@ function renderAverages(){
     td.textContent = avg;
     trAvg.appendChild(td);
   }
-  //trAvg.appendChild(th('',''));
+  trAvg.appendChild(th('',''));
   notesTfoot.appendChild(trAvg);
 
   // ----------------- Fila fórmules -----------------
