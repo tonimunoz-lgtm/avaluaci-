@@ -992,7 +992,7 @@ menuDiv.querySelector('.delete-btn').addEventListener('click', () => {
 
   });
 
-  //headRow.appendChild(th('Mitjana', 'text-right'));
+  headRow.appendChild(th('Mitjana', 'text-right'));
   notesThead.appendChild(headRow);
 
   enableActivityDrag();
@@ -1140,10 +1140,10 @@ input.addEventListener('keydown', e => {
     });
     
     // Mitjana alumne
-    //const avgTd = document.createElement('td');
-    //avgTd.className = 'border px-2 py-1 text-right font-semibold';
-    //avgTd.textContent = computeStudentAverageText(studentData);
-    //tr.appendChild(avgTd);
+    const avgTd = document.createElement('td');
+    avgTd.className = 'border px-2 py-1 text-right font-semibold';
+    avgTd.textContent = computeStudentAverageText(studentData);
+    tr.appendChild(avgTd);
 
     notesTbody.appendChild(tr);
   });
@@ -1240,7 +1240,7 @@ function renderAverages(){
   notesTfoot.innerHTML = '';
 
   // ----------------- Mitjana per activitat -----------------
- const trAvg = document.createElement('tr');
+  const trAvg = document.createElement('tr');
   trAvg.className = 'text-sm';
   trAvg.appendChild(th('Mitjana activitat'));
   if(actCount === 0){
@@ -1258,10 +1258,8 @@ function renderAverages(){
     td.textContent = avg;
     trAvg.appendChild(td);
   }
-
   trAvg.appendChild(th('',''));
   notesTfoot.appendChild(trAvg);
-
 
   // ----------------- Fila fórmules -----------------
   const trForm = document.createElement('tr');
