@@ -1262,7 +1262,6 @@ function renderAverages(){
   //trAvg.appendChild(th('',''));
   notesTfoot.appendChild(trAvg);
 
-}
 
   // ----------------- Fila fórmules -----------------
   const trForm = document.createElement('tr');
