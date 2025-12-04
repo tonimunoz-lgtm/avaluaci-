@@ -992,7 +992,7 @@ menuDiv.querySelector('.delete-btn').addEventListener('click', () => {
 
   });
 
-  headRow.appendChild(th('Mitjana', 'text-right'));
+  //headRow.appendChild(th('Mitjana', 'text-right'));
   notesThead.appendChild(headRow);
 
   enableActivityDrag();
