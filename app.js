@@ -1263,16 +1263,22 @@ function renderAverages(){
   notesTfoot.appendChild(trAvg);*/
 // ----------------- Mitjana per activitat -----------------
 function renderAverages() {
-  // Neteja peu de taula
+  // Neteja el peu de taula
   notesTfoot.innerHTML = '';
 
-  if (!classActivities || classActivities.length === 0) return;
+  if (!classActivities || classActivities.length === 0) {
+    // Encara que no hi hagi activitats, mostrem la fila amb el text
+    const trEmpty = document.createElement('tr');
+    trEmpty.className = 'text-sm';
+    trEmpty.appendChild(th('Mitjana activitat'));
+    notesTfoot.appendChild(trEmpty);
+    return;
+  }
 
   const trAvg = document.createElement('tr');
   trAvg.className = 'text-sm';
   trAvg.appendChild(th('Mitjana activitat')); // capçalera inicial
 
-  // Per cada activitat de classActivities
   classActivities.forEach(actId => {
     // Agafem tots els inputs amb aquest activity-id
     const inputs = Array.from(notesTbody.querySelectorAll('tr'))
@@ -1289,7 +1295,6 @@ function renderAverages() {
     trAvg.appendChild(td);
   });
 
-  // 🔹 Ja no afegim cel·la extra al final
   notesTfoot.appendChild(trAvg);
 }
 
