@@ -160,52 +160,57 @@ btnLogin.addEventListener('click', async () => {
 });
 
 //------- LOGIN AMB GOOGLE (crea professor si no existeix) ----------------------
+// ---------------- LOGIN AMB GOOGLE I REGISTRE AUTOMÀTIC ----------------
 async function signInWithGoogleGmail() {
   const provider = new firebase.auth.GoogleAuthProvider();
+
+  // Scope per enviar mails
   provider.addScope('https://www.googleapis.com/auth/gmail.send');
 
   try {
     const result = await firebase.auth().signInWithPopup(provider);
+    const user = result.user;
 
+    // Guardem el token per fer crides a l'API de Gmail/Classroom
     const credential = result.credential;
     window._googleAccessToken = credential.accessToken;
 
-    // 👉 Assegurar que el professor existeix a Firestore
-    const profRef = db.collection('professors').doc(result.user.uid);
+    // Referència al document del professor a Firestore
+    const profRef = db.collection('professors').doc(user.uid);
+    const profDoc = await profRef.get();
 
-// Només crear si no existeix
-const docSnap = await profRef.get();
-if (!docSnap.exists) {
-  await profRef.set({
-    email: result.user.email,
-    name: result.user.displayName || '',
-    google: true,
-    isAdmin: false,        // Important per l’admin
-    suspended: false,      // Important per gestió
-    deleted: false,        // Important per gestió
-    classes: [],           // Evita errors si el professor encara no té classes
-    createdAt: firebase.firestore.Timestamp.now()
-  });
-}
+    // Si no existeix, el creem automàticament
+    if (!profDoc.exists) {
+      const profName = user.displayName || (user.email ? user.email.split('@')[0] : 'Sense nom');
 
-    // 👉 IMPORTANT: actualitzar identitat i carregar UI
-    professorUID = result.user.uid;
-    setupAfterAuth(result.user);
+      await profRef.set({
+        email: user.email,
+        nom: profName,
+        photo: user.photoURL || '',
+        google: true,
+        isAdmin: false,
+        suspended: false,
+        deleted: false,
+        classes: [],
+        createdAt: firebase.firestore.Timestamp.now()
+      });
 
-    alert("Sessió iniciada correctament!");
+      alert(`Compte creat automàticament com a professor: ${profName}`);
+    } else {
+      alert(`Sessió iniciada correctament com a ${profDoc.data().nom || user.email}`);
+    }
+
+    // Aquí pots cridar la funció que carrega la app després del login
+    setupAfterAuth(user);
 
   } catch (error) {
-    console.error(error);
+    console.error("Error iniciant sessió amb Google:", error);
     alert("Error iniciant sessió amb Google: " + error.message);
   }
 }
 
-
-
-// Botó login amb Google
-document.getElementById("googleLoginBtn").addEventListener("click", async () => {
-  await signInWithGoogleGmail();
-});
+// ---------------- BOTÓ LOGIN ----------------
+document.getElementById("googleLoginBtn").addEventListener("click", signInWithGoogleGmail);
 
 
 btnRegister.addEventListener('click', async () => {
