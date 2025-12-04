@@ -1267,18 +1267,22 @@ const trAvg = document.createElement('tr');
 trAvg.className = 'text-sm';
 trAvg.appendChild(th('Mitjana activitat'));
 
-// Si no hi ha activitats, afegim la fila buida i sortim
 if (!classActivities || classActivities.length === 0) {
   notesTfoot.appendChild(trAvg);
 } else {
-  classActivities.forEach(actId => {
-    // Recollim tots els inputs de la columna corresponent a actId
-    const inputs = Array.from(notesTbody.querySelectorAll(`input[data-activity-id="${actId}"]`))
-      .filter(Boolean);
+  classActivities.forEach((actId, colIdx) => {
+    const inputs = [];
 
-    // Convertim a números i calculem mitjana
+    // Recórrer totes les files
+    Array.from(notesTbody.querySelectorAll('tr')).forEach(tr => {
+      // Busquem l'input dins de la fila que coincideixi amb actId
+      const inp = tr.querySelector(`input[data-activity-id="${actId}"]`);
+      if (inp) inputs.push(inp);
+    });
+
+    // Calcular mitjana
     const vals = inputs.map(inp => Number(inp.value)).filter(v => !isNaN(v));
-    const avg = vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2) : '';
+    const avg = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2) : '';
 
     const td = document.createElement('td');
     td.className = 'border px-2 py-1 text-center font-semibold';
@@ -1286,11 +1290,8 @@ if (!classActivities || classActivities.length === 0) {
     trAvg.appendChild(td);
   });
 
-  // Ja no afegim cap cel·la extra al final
   notesTfoot.appendChild(trAvg);
 }
-
-
 
   // ----------------- Fila fórmules -----------------
   const trForm = document.createElement('tr');
