@@ -992,7 +992,7 @@ menuDiv.querySelector('.delete-btn').addEventListener('click', () => {
 
   });
 
-  headRow.appendChild(th('Mitjana', 'text-right'));
+  headRow.appendChild(th('Comentaris', 'text-right'));
   notesThead.appendChild(headRow);
 
   enableActivityDrag();
@@ -1240,7 +1240,7 @@ function renderAverages(){
   notesTfoot.innerHTML = '';
 
   // ----------------- Mitjana per activitat -----------------
-  const trAvg = document.createElement('tr');
+ /* const trAvg = document.createElement('tr');
   trAvg.className = 'text-sm';
   trAvg.appendChild(th('Mitjana activitat'));
   if(actCount === 0){
@@ -1259,7 +1259,31 @@ function renderAverages(){
     trAvg.appendChild(td);
   }
   trAvg.appendChild(th('',''));
-  notesTfoot.appendChild(trAvg);
+  notesTfoot.appendChild(trAvg);*/
+
+  // ---------- Comentaris ---------- //
+const trComments = document.createElement('tr');
+trComments.className = 'text-sm';
+
+// Primera cel·la: títol
+trComments.appendChild(th('Comentaris'));
+
+// Una cel·la per cada activitat (en blanc)
+for (let i = 0; i < actCount; i++) {
+  const td = document.createElement('td');
+  td.className = 'border px-2 py-1 text-center';
+  td.textContent = ''; 
+  trComments.appendChild(td);
+}
+
+// Última cel·la: cap comentari (ja no hi ha mitjana ni res)
+const tdEmpty = document.createElement('td');
+tdEmpty.className = 'border px-2 py-1';
+tdEmpty.textContent = '';
+trComments.appendChild(tdEmpty);
+
+notesTfoot.appendChild(trComments);
+
 
   // ----------------- Fila fórmules -----------------
   const trForm = document.createElement('tr');
