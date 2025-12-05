@@ -1143,9 +1143,10 @@ input.addEventListener('keydown', e => {
     /*const avgTd = document.createElement('td');
     avgTd.className = 'border px-2 py-1 text-right font-semibold';
     avgTd.textContent = computeStudentAverageText(studentData);
-    tr.appendChild(avgTd);*/
+    tr.appendChild(avgTd);
+    notesTbody.appendChild(tr);*/
 //-------
-// Columna Comentaris
+// Comentaris alumne
 const tdComment = document.createElement('td');
 tdComment.className = 'border px-2 py-1';
 
@@ -1154,10 +1155,10 @@ textarea.className = 'w-full p-1 text-sm';
 textarea.placeholder = 'Comentari...';
 textarea.rows = 2;
 
-// Carregar comentari existent
+// Carregar comentari existent (si hi ha)
 textarea.value = (studentData.comments && studentData.comments[currentClassId]) || '';
 
-// Guardar comentari quan es modifica
+// Guardar quan es modifica
 textarea.addEventListener('change', async () => {
   const update = {};
   update[`comments.${currentClassId}`] = textarea.value;
@@ -1167,9 +1168,10 @@ textarea.addEventListener('change', async () => {
 tdComment.appendChild(textarea);
 tr.appendChild(tdComment);
 
-    
+// Final: afegim la fila a la taula
+notesTbody.appendChild(tr);
+  
 //----------
-    notesTbody.appendChild(tr);
   });
 
  // Final: recalculs de mitjanes i fila fórmules (igual que abans)
