@@ -1140,10 +1140,33 @@ input.addEventListener('keydown', e => {
     });
     
     // Mitjana alumne
-    const avgTd = document.createElement('td');
+    /*const avgTd = document.createElement('td');
     avgTd.className = 'border px-2 py-1 text-right font-semibold';
     avgTd.textContent = computeStudentAverageText(studentData);
-    tr.appendChild(avgTd);
+    tr.appendChild(avgTd);*/
+
+    // Comentaris alumne
+const tdComment = document.createElement('td');
+tdComment.className = 'border px-2 py-1';
+
+const textarea = document.createElement('textarea');
+textarea.className = 'w-full p-1 text-sm';
+textarea.placeholder = 'Comentari...';
+textarea.rows = 2;
+
+// Carregar comentari existent
+textarea.value = (studentData.comments && studentData.comments[currentClassId]) || '';
+
+// Guardar quan es modifica
+textarea.addEventListener('change', async () => {
+  const update = {};
+  update[`comments.${currentClassId}`] = textarea.value;
+  await db.collection('alumnes').doc(studentId).update(update);
+});
+
+tdComment.appendChild(textarea);
+tr.appendChild(tdComment);
+
 
     notesTbody.appendChild(tr);
   });
@@ -1240,7 +1263,7 @@ function renderAverages(){
   notesTfoot.innerHTML = '';
 
   // ----------------- Mitjana per activitat -----------------
- /* const trAvg = document.createElement('tr');
+ const trAvg = document.createElement('tr');
   trAvg.className = 'text-sm';
   trAvg.appendChild(th('Mitjana activitat'));
   if(actCount === 0){
@@ -1259,31 +1282,7 @@ function renderAverages(){
     trAvg.appendChild(td);
   }
   trAvg.appendChild(th('',''));
-  notesTfoot.appendChild(trAvg);*/
-
-  // ---------- Comentaris ---------- //
-const trComments = document.createElement('tr');
-trComments.className = 'text-sm';
-
-// Primera cel·la: títol
-trComments.appendChild(th('Comentaris'));
-
-// Una cel·la per cada activitat (en blanc)
-for (let i = 0; i < actCount; i++) {
-  const td = document.createElement('td');
-  td.className = 'border px-2 py-1 text-center';
-  td.textContent = ''; 
-  trComments.appendChild(td);
-}
-
-// Última cel·la: cap comentari (ja no hi ha mitjana ni res)
-const tdEmpty = document.createElement('td');
-tdEmpty.className = 'border px-2 py-1';
-tdEmpty.textContent = '';
-trComments.appendChild(tdEmpty);
-
-notesTfoot.appendChild(trComments);
-
+  notesTfoot.appendChild(trAvg);
 
   // ----------------- Fila fórmules -----------------
   const trForm = document.createElement('tr');
