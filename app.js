@@ -1139,34 +1139,11 @@ input.addEventListener('keydown', e => {
       tr.appendChild(td);
     });
     
-    // Mitjana alumne
-    /*const avgTd = document.createElement('td');
+    //----------------------------------------- Mitjana alumne
+    const avgTd = document.createElement('td');
     avgTd.className = 'border px-2 py-1 text-right font-semibold';
     avgTd.textContent = computeStudentAverageText(studentData);
-    tr.appendChild(avgTd);*/
-
-    // Comentaris alumne
-const tdComment = document.createElement('td');
-tdComment.className = 'border px-2 py-1';
-
-const textarea = document.createElement('textarea');
-textarea.className = 'w-full p-1 text-sm';
-textarea.placeholder = 'Comentari...';
-textarea.rows = 2;
-
-// Carregar comentari existent
-textarea.value = (studentData.comments && studentData.comments[currentClassId]) || '';
-
-// Guardar quan es modifica
-textarea.addEventListener('change', async () => {
-  const update = {};
-  update[`comments.${currentClassId}`] = textarea.value;
-  await db.collection('alumnes').doc(studentId).update(update);
-});
-
-tdComment.appendChild(textarea);
-tr.appendChild(tdComment);
-
+    tr.appendChild(avgTd);
 
     notesTbody.appendChild(tr);
   });
