@@ -1146,11 +1146,8 @@ input.addEventListener('keydown', e => {
     tr.appendChild(avgTd);
 
     notesTbody.appendChild(tr);
-  });
+  });*/
 
-  // Final: recalculs de mitjanes i fila fórmules (igual que abans)
-  renderAverages();
-}*/
 
 // Columna Comentaris
 const tdComment = document.createElement('td');
@@ -1174,7 +1171,9 @@ textarea.addEventListener('change', async () => {
 tdComment.appendChild(textarea);
 tr.appendChild(tdComment);
 
-
+ // Final: recalculs de mitjanes i fila fórmules (igual que abans)
+  renderAverages();
+}
 
 // Funció per actualitzar cel·les calculades sense recrear tota la taula
 function updateCalculatedCells() {
