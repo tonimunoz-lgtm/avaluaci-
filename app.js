@@ -25,6 +25,7 @@ let classActivities = [];
 let deleteMode = false;
 let currentCalcActivityId = null; // Activitat actual per fer càlculs
 let isDeleteMode = false;
+let _classData = null;
 
 
 
@@ -513,6 +514,7 @@ function loadClassData(){
     document.getElementById('classSub').textContent = `ID: ${doc.id}`;
 
     // Inicialitzar Terms passant db, id i dades de la classe
+    _classData = data;
     Terms.setup(db, currentClassId, data, {
       onChange: (activeTermId) => {
         // Quan el terme actiu canvia, actualitzem classActivities i re-renderitzem la taula
@@ -1461,10 +1463,19 @@ modalApplyCalcBtn.addEventListener('click', async () => {
 });
 
 
-// 📝 PASO 1: Reemplazar la función "buildFormulaButtons()" en app.js
-
 function buildFormulaButtons(){
   formulaButtonsDiv.innerHTML = '';
+
+  // Verificar que tenemos datos de la clase
+  if (!_classData || !_classData.terms) {
+    const errorMsg = document.createElement('div');
+    errorMsg.style.padding = '1rem';
+    errorMsg.style.color = '#d32f2f';
+    errorMsg.style.fontWeight = 'bold';
+    errorMsg.textContent = 'Error: No se pudieron cargar los grupos. Recarga la página.';
+    formulaButtonsDiv.appendChild(errorMsg);
+    return;
+  }
 
   // 🆕 AGREGAR SELECTOR DE PESTAÑAS
   const termContainer = document.createElement('div');
@@ -1472,7 +1483,7 @@ function buildFormulaButtons(){
   termContainer.dataset.isTermContainer = 'true';
   
   const termLabel = document.createElement('label');
-  termLabel.textContent = 'Selecciona pestaña: ';
+  termLabel.textContent = 'Selecciona grupo: ';
   termLabel.style.fontWeight = 'bold';
   termLabel.style.marginRight = '0.5rem';
   termLabel.style.display = 'block';
@@ -1484,12 +1495,12 @@ function buildFormulaButtons(){
   termSelect.style.marginBottom = '1rem';
   
   // Llenar el desplegable con las pestañas disponibles
-  const terms = _classData?.terms || {};
+  const terms = _classData.terms || {};
   const termIds = Object.keys(terms);
   
   if (termIds.length === 0) {
     const opt = document.createElement('option');
-    opt.textContent = 'No hi ha grups disponibles';
+    opt.textContent = 'No hay grupos disponibles';
     opt.disabled = true;
     termSelect.appendChild(opt);
   } else {
@@ -1587,7 +1598,9 @@ function buildFormulaButtons(){
 
 // 🆕 NUEVA FUNCIÓN: Actualizar botones de actividades según pestaña seleccionada
 function updateFormulaActivityButtons(selectedTermId) {
-  const selectedTerm = _classData?.terms?.[selectedTermId];
+  if (!_classData || !_classData.terms) return;
+  
+  const selectedTerm = _classData.terms[selectedTermId];
   if (!selectedTerm) return;
 
   const activities = selectedTerm.activities || [];
@@ -1607,7 +1620,7 @@ function updateFormulaActivityButtons(selectedTermId) {
     emptyMsg.style.fontWeight = 'bold';
     emptyMsg.style.marginTop = '1rem';
     emptyMsg.style.color = '#666';
-    emptyMsg.textContent = `No hi ha activitats a "${termName}"`;
+    emptyMsg.textContent = `No hay actividades en "${termName}"`;
     formulaButtonsDiv.appendChild(emptyMsg);
     return;
   }
@@ -1620,7 +1633,7 @@ function updateFormulaActivityButtons(selectedTermId) {
   termTitle.style.marginBottom = '0.5rem';
   termTitle.style.fontSize = '0.9rem';
   termTitle.style.color = '#333';
-  termTitle.textContent = `Activitats de "${termName}":`;
+  termTitle.textContent = `Actividades de "${termName}":`;
   
   // Insertar después del selector de pestañas
   const termContainer = formulaButtonsDiv.querySelector('[data-is-term-container="true"]');
@@ -1662,13 +1675,24 @@ function updateFormulaActivityButtons(selectedTermId) {
 function buildRoundingButtons(){
   formulaButtonsDiv.innerHTML = '';
 
+  // Verificar que tenemos datos de la clase
+  if (!_classData || !_classData.terms) {
+    const errorMsg = document.createElement('div');
+    errorMsg.style.padding = '1rem';
+    errorMsg.style.color = '#d32f2f';
+    errorMsg.style.fontWeight = 'bold';
+    errorMsg.textContent = 'Error: No se pudieron cargar los grupos. Recarga la página.';
+    formulaButtonsDiv.appendChild(errorMsg);
+    return;
+  }
+
   // Selector de pestañas
   const termContainer = document.createElement('div');
   termContainer.className = 'mb-3 pb-3 border-b';
   termContainer.dataset.isTermContainer = 'true';
   
   const termLabel = document.createElement('label');
-  termLabel.textContent = 'Selecciona pestaña: ';
+  termLabel.textContent = 'Selecciona grupo: ';
   termLabel.style.fontWeight = 'bold';
   termLabel.style.marginRight = '0.5rem';
   termLabel.style.display = 'block';
@@ -1679,12 +1703,12 @@ function buildRoundingButtons(){
   termSelect.className = 'border rounded px-2 py-1 w-full';
   termSelect.style.marginBottom = '1rem';
   
-  const terms = _classData?.terms || {};
+  const terms = _classData.terms || {};
   const termIds = Object.keys(terms);
 
   if (termIds.length === 0) {
     const opt = document.createElement('option');
-    opt.textContent = 'No hi ha grups disponibles';
+    opt.textContent = 'No hay grupos disponibles';
     opt.disabled = true;
     termSelect.appendChild(opt);
   } else {
@@ -1746,7 +1770,9 @@ function buildRoundingButtons(){
 
 // 🆕 NUEVA FUNCIÓN: Actualizar botones de actividades para redondeig
 function updateRoundingActivityButtons(selectedTermId) {
-  const selectedTerm = _classData?.terms?.[selectedTermId];
+  if (!_classData || !_classData.terms) return;
+  
+  const selectedTerm = _classData.terms[selectedTermId];
   if (!selectedTerm) return;
 
   const activities = selectedTerm.activities || [];
@@ -1765,7 +1791,7 @@ function updateRoundingActivityButtons(selectedTermId) {
     emptyMsg.style.fontWeight = 'bold';
     emptyMsg.style.marginTop = '1rem';
     emptyMsg.style.color = '#666';
-    emptyMsg.textContent = `No hi ha activitats a "${termName}"`;
+    emptyMsg.textContent = `No hay actividades en "${termName}"`;
     formulaButtonsDiv.appendChild(emptyMsg);
     return;
   }
@@ -1776,7 +1802,7 @@ function updateRoundingActivityButtons(selectedTermId) {
   termTitle.style.marginTop = '1rem';
   termTitle.style.marginBottom = '0.5rem';
   termTitle.style.fontSize = '0.9rem';
-  termTitle.textContent = `Activitats de "${termName}":`;
+  termTitle.textContent = `Actividades de "${termName}":`;
   
   const termContainer = formulaButtonsDiv.querySelector('[data-is-term-container="true"]');
   if (termContainer && termContainer.nextSibling) {
@@ -1844,20 +1870,21 @@ async function evalFormulaAsync(formula, studentId){
 
   // 3) Substituir nombres de actividades (compatibilidad hacia atrás)
   // Obtener todas las actividades de todos los términos
-  const allActivityIds = new Set();
-  const allTerms = _classData?.terms || {};
-  Object.values(allTerms).forEach(term => {
-    (term.activities || []).forEach(actId => allActivityIds.add(actId));
-  });
+  if (_classData && _classData.terms) {
+    const allActivityIds = new Set();
+    Object.values(_classData.terms).forEach(term => {
+      (term.activities || []).forEach(actId => allActivityIds.add(actId));
+    });
 
-  for(const aid of allActivityIds){
-    const actDoc = await db.collection('activitats').doc(aid).get();
-    const actName = actDoc.exists ? actDoc.data().nom : '';
-    if(!actName) continue;
-    const val = Number(notes[aid]);
-    const safeVal = isNaN(val) ? 0 : val;
-    const regex = new RegExp(actName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-    evalStr = evalStr.replace(regex, safeVal);
+    for(const aid of allActivityIds){
+      const actDoc = await db.collection('activitats').doc(aid).get();
+      const actName = actDoc.exists ? actDoc.data().nom : '';
+      if(!actName) continue;
+      const val = Number(notes[aid]);
+      const safeVal = isNaN(val) ? 0 : val;
+      const regex = new RegExp(actName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+      evalStr = evalStr.replace(regex, safeVal);
+    }
   }
 
   try {
