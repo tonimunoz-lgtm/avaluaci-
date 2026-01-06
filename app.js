@@ -1462,111 +1462,264 @@ modalApplyCalcBtn.addEventListener('click', async () => {
 
 
 // ---------------- Construir botons de fórmules ----------------
+// 📝 PASO 1: Modificar la función "buildFormulaButtons()" en app.js
+// Ahora agregará un desplegable de pestañas ANTES de los botones de actividades
+
 function buildFormulaButtons(){
   formulaButtonsDiv.innerHTML = '';
 
-  // Botons activitats
-  classActivities.forEach(aid=>{
-    db.collection('activitats').doc(aid).get().then(doc=>{
-      const name = doc.exists ? doc.data().nom : '???';
-      const btn = document.createElement('button');
-      btn.type='button';
-      btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
-      btn.textContent = name;
-      btn.addEventListener('click', ()=> addToFormula(name));
-      formulaButtonsDiv.appendChild(btn);
-    });
+  // 🆕 AGREGAR SELECTOR DE PESTAÑAS
+  const termContainer = document.createElement('div');
+  termContainer.className = 'mb-3 pb-3 border-b';
+  
+  const termLabel = document.createElement('label');
+  termLabel.textContent = 'Selecciona pestaña: ';
+  termLabel.style.fontWeight = 'bold';
+  termLabel.style.marginRight = '0.5rem';
+  
+  const termSelect = document.createElement('select');
+  termSelect.id = 'formulaTermSelect';
+  termSelect.className = 'border rounded px-2 py-1';
+  termSelect.style.marginBottom = '1rem';
+  
+  // Llenar el desplegable con las pestañas disponibles
+  const terms = _classData?.terms || {};
+  Object.keys(terms).forEach(termId => {
+    const opt = document.createElement('option');
+    opt.value = termId;
+    opt.textContent = terms[termId].name || termId;
+    if(termId === Terms.getActiveTermId()) opt.selected = true;
+    termSelect.appendChild(opt);
   });
 
-  // Botons operadors
-  ['+', '-', '*', '/', '(', ')'].forEach(op=>{
+  // Cuando cambia la pestaña, actualizar los botones de actividades
+  termSelect.addEventListener('change', () => {
+    updateFormulaActivityButtons();
+  });
+
+  termContainer.appendChild(termLabel);
+  termContainer.appendChild(termSelect);
+  formulaButtonsDiv.appendChild(termContainer);
+
+  // Mostrar inicialmente las actividades de la pestaña seleccionada
+  updateFormulaActivityButtons();
+
+  // Botons operadors (siempre los mismos)
+  ['+', '-', '*', '/', '(', ')'].forEach(op => {
     const btn = document.createElement('button');
-    btn.type='button';
-    btn.className='px-2 py-1 m-1 bg-gray-200 rounded hover:bg-gray-300';
+    btn.type = 'button';
+    btn.className = 'px-2 py-1 m-1 bg-gray-200 rounded hover:bg-gray-300';
     btn.textContent = op;
-    btn.addEventListener('click', ()=> addToFormula(op));
+    btn.addEventListener('click', () => addToFormula(op));
     formulaButtonsDiv.appendChild(btn);
   });
 
   // Botons números 0-10
-  for(let i=0;i<=10;i++){
+  for(let i = 0; i <= 10; i++){
     const btn = document.createElement('button');
-    btn.type='button';
-    btn.className='px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
+    btn.type = 'button';
+    btn.className = 'px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
     btn.textContent = i;
-    btn.addEventListener('click', ()=> addToFormula(i));
+    btn.addEventListener('click', () => addToFormula(i));
     formulaButtonsDiv.appendChild(btn);
   }
 
-  // Botons decimals
-  ['.', ','].forEach(dec=>{
+  // Botons decimales
+  ['.', ','].forEach(dec => {
     const btn = document.createElement('button');
-    btn.type='button';
-    btn.className='px-2 py-1 m-1 bg-yellow-200 rounded hover:bg-yellow-300';
+    btn.type = 'button';
+    btn.className = 'px-2 py-1 m-1 bg-yellow-200 rounded hover:bg-yellow-300';
     btn.textContent = dec;
-    btn.addEventListener('click', ()=> addToFormula('.')); // sempre converteix ',' a '.'
+    btn.addEventListener('click', () => addToFormula('.'));
     formulaButtonsDiv.appendChild(btn);
   });
 
-  // Botó Backspace
+  // Botón Backspace
   const backBtn = document.createElement('button');
-  backBtn.type='button';
-  backBtn.className='px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
+  backBtn.type = 'button';
+  backBtn.className = 'px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
   backBtn.textContent = '⌫';
-  backBtn.addEventListener('click', ()=> formulaField.value = formulaField.value.slice(0,-1));
+  backBtn.addEventListener('click', () => formulaField.value = formulaField.value.slice(0, -1));
   formulaButtonsDiv.appendChild(backBtn);
 }
 
-// Afegir a formula
-function addToFormula(str){
-  formulaField.value += str;
-}
+// 🆕 NUEVA FUNCIÓN: Actualizar botones de actividades según pestaña seleccionada
+function updateFormulaActivityButtons() {
+  const termSelect = document.getElementById('formulaTermSelect');
+  if (!termSelect) return;
 
-function buildRoundingButtons(){
-  formulaButtonsDiv.innerHTML = '';
+  const selectedTermId = termSelect.value;
+  const selectedTerm = _classData?.terms?.[selectedTermId];
+  if (!selectedTerm) return;
 
-  // Botons activitats
-  classActivities.forEach(aid=>{
-    db.collection('activitats').doc(aid).get().then(doc=>{
+  const activities = selectedTerm.activities || [];
+  const termName = selectedTerm.name || selectedTermId;
+
+  // Eliminar botones de actividades anteriores (mantener estructura y operadores)
+  const existingActivityBtns = formulaButtonsDiv.querySelectorAll('[data-is-activity="true"]');
+  existingActivityBtns.forEach(btn => btn.remove());
+
+  // Agregar nuevo título con nombre de la pestaña
+  const termTitle = document.createElement('div');
+  termTitle.style.fontWeight = 'bold';
+  termTitle.style.marginTop = '1rem';
+  termTitle.style.marginBottom = '0.5rem';
+  termTitle.textContent = `Actividades de "${termName}":`;
+  
+  // Insertar el título después del selector de pestañas
+  const termContainer = formulaButtonsDiv.querySelector('[data-is-term-container]');
+  if (termContainer && termContainer.nextSibling) {
+    formulaButtonsDiv.insertBefore(termTitle, formulaButtonsDiv.querySelector('[data-is-activity="true"]') || formulaButtonsDiv.children[1]);
+  } else {
+    formulaButtonsDiv.insertBefore(termTitle, formulaButtonsDiv.children[1]);
+  }
+
+  // Crear botones para cada actividad de la pestaña seleccionada
+  activities.forEach(actId => {
+    db.collection('activitats').doc(actId).get().then(doc => {
       const name = doc.exists ? doc.data().nom : '???';
       const btn = document.createElement('button');
-      btn.type='button';
-      btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
-      btn.textContent = name;
-      btn.addEventListener('click', ()=> addToFormula(name)); // el nom de l'activitat
+      btn.type = 'button';
+      btn.className = 'px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
+      btn.textContent = `${name} (${termName})`;
+      btn.dataset.isActivity = 'true';
+      btn.dataset.termId = selectedTermId;
+      btn.dataset.activityId = actId;
+
+      // Cuando hace clic, agrega un marcador especial que incluya termId e activityId
+      btn.addEventListener('click', () => {
+        // Formato: __TERM_<termId>__ACT_<actId>__
+        const marker = `__TERM_${selectedTermId}__ACT_${actId}__`;
+        addToFormula(marker);
+      });
+
       formulaButtonsDiv.appendChild(btn);
     });
   });
+}
 
-  // Botó Backspace
+// 📝 PASO 2: Modificar "buildRoundingButtons()" para usar multi-pestaña
+function buildRoundingButtons(){
+  formulaButtonsDiv.innerHTML = '';
+
+  // Selector de pestañas
+  const termContainer = document.createElement('div');
+  termContainer.className = 'mb-3 pb-3 border-b';
+  termContainer.dataset.isTermContainer = 'true';
+  
+  const termLabel = document.createElement('label');
+  termLabel.textContent = 'Selecciona pestaña: ';
+  termLabel.style.fontWeight = 'bold';
+  termLabel.style.marginRight = '0.5rem';
+  
+  const termSelect = document.createElement('select');
+  termSelect.id = 'roundingTermSelect';
+  termSelect.className = 'border rounded px-2 py-1';
+  termSelect.style.marginBottom = '1rem';
+  
+  const terms = _classData?.terms || {};
+  Object.keys(terms).forEach(termId => {
+    const opt = document.createElement('option');
+    opt.value = termId;
+    opt.textContent = terms[termId].name || termId;
+    if(termId === Terms.getActiveTermId()) opt.selected = true;
+    termSelect.appendChild(opt);
+  });
+
+  termSelect.addEventListener('change', () => {
+    updateRoundingActivityButtons();
+  });
+
+  termContainer.appendChild(termLabel);
+  termContainer.appendChild(termSelect);
+  formulaButtonsDiv.appendChild(termContainer);
+
+  updateRoundingActivityButtons();
+
+  // Botón Backspace
   const backBtn = document.createElement('button');
-  backBtn.type='button';
-  backBtn.className='px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
+  backBtn.type = 'button';
+  backBtn.className = 'px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
   backBtn.textContent = '⌫';
-  backBtn.addEventListener('click', ()=> formulaField.value = formulaField.value.slice(0,-1));
+  backBtn.addEventListener('click', () => formulaField.value = formulaField.value.slice(0, -1));
   formulaButtonsDiv.appendChild(backBtn);
 
   // Botons 0.5 i 1
-  [0.5,1].forEach(v=>{
+  [0.5, 1].forEach(v => {
     const btn = document.createElement('button');
-    btn.type='button';
-    btn.className='px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
+    btn.type = 'button';
+    btn.className = 'px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
     btn.textContent = v;
-    btn.addEventListener('click', ()=> addToFormula(v)); // afegim directament 0.5 o 1
+    btn.addEventListener('click', () => addToFormula(v));
     formulaButtonsDiv.appendChild(btn);
   });
 }
 
+// 🆕 NUEVA FUNCIÓN: Actualizar botones de actividades para redondeig
+function updateRoundingActivityButtons() {
+  const termSelect = document.getElementById('roundingTermSelect');
+  if (!termSelect) return;
 
-// ---------------- Evaluar fórmula ----------------
+  const selectedTermId = termSelect.value;
+  const selectedTerm = _classData?.terms?.[selectedTermId];
+  if (!selectedTerm) return;
+
+  const activities = selectedTerm.activities || [];
+  const termName = selectedTerm.name || selectedTermId;
+
+  const existingActivityBtns = formulaButtonsDiv.querySelectorAll('[data-is-activity="true"]');
+  existingActivityBtns.forEach(btn => btn.remove());
+
+  const termTitle = document.createElement('div');
+  termTitle.style.fontWeight = 'bold';
+  termTitle.style.marginTop = '1rem';
+  termTitle.style.marginBottom = '0.5rem';
+  termTitle.textContent = `Actividades de "${termName}":`;
+  formulaButtonsDiv.insertBefore(termTitle, formulaButtonsDiv.children[1]);
+
+  activities.forEach(actId => {
+    db.collection('activitats').doc(actId).get().then(doc => {
+      const name = doc.exists ? doc.data().nom : '???';
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
+      btn.textContent = `${name} (${termName})`;
+      btn.dataset.isActivity = 'true';
+      btn.dataset.termId = selectedTermId;
+      btn.dataset.activityId = actId;
+      btn.addEventListener('click', () => {
+        const marker = `__TERM_${selectedTermId}__ACT_${actId}__`;
+        addToFormula(marker);
+      });
+      formulaButtonsDiv.appendChild(btn);
+    });
+  });
+}
+
+// 📝 PASO 3: Modificar "evalFormulaAsync()" para resolver marcadores multi-pestaña
 async function evalFormulaAsync(formula, studentId){
   let evalStr = formula;
 
-  // Primer carreguem totes les notes de l'alumne
+  // Carregar totes les notes de l'alumne
   const studentDoc = await db.collection('alumnes').doc(studentId).get();
   const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
 
-  // 1) Substituir marcadors per ID (ex: __ACT__<actId>)
+  // 1) Substituir marcadores __TERM_<termId>__ACT_<actId>__ por valores
+  const termMarkerRegex = /__TERM_([^_]+)__ACT_([^_]+)__/g;
+  let match;
+  while ((match = termMarkerRegex.exec(formula)) !== null) {
+    const termId = match[1];
+    const actId = match[2];
+    
+    // Obtener la nota de esta actividad
+    const val = Number(notes[actId]);
+    const safeVal = isNaN(val) ? 0 : val;
+    
+    const marker = `__TERM_${termId}__ACT_${actId}__`;
+    evalStr = evalStr.replace(marker, safeVal);
+  }
+
+  // 2) Substituir marcadores antiguos __ACT__<actId> (compatibilidad hacia atrás)
   for(const aid of classActivities){
     const marker = `__ACT__${aid}`;
     const val = Number(notes[aid]);
@@ -1575,14 +1728,13 @@ async function evalFormulaAsync(formula, studentId){
     evalStr = evalStr.replace(reMarker, safeVal);
   }
 
-  // 2) Substituir noms d'activitat per valors (compatibilitat amb fórmules antigues)
+  // 3) Substituir nombres de actividades (compatibilidad hacia atrás)
   for(const aid of classActivities){
     const actDoc = await db.collection('activitats').doc(aid).get();
     const actName = actDoc.exists ? actDoc.data().nom : '';
     if(!actName) continue;
     const val = Number(notes[aid]);
     const safeVal = isNaN(val) ? 0 : val;
-
     const regex = new RegExp(actName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
     evalStr = evalStr.replace(regex, safeVal);
   }
@@ -1590,11 +1742,10 @@ async function evalFormulaAsync(formula, studentId){
   try {
     return Function('"use strict"; return (' + evalStr + ')')();
   } catch(e){
-    console.error('Error evaluating formula:', formula, e);
+    console.error('Error evaluando fórmula:', formula, e);
     return 0;
   }
 }
-
 
 
 
