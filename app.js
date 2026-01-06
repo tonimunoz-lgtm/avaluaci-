@@ -1461,9 +1461,7 @@ modalApplyCalcBtn.addEventListener('click', async () => {
 });
 
 
-// ---------------- Construir botons de fórmules ----------------
-// 📝 PASO 1: Modificar la función "buildFormulaButtons()" en app.js
-// Ahora agregará un desplegable de pestañas ANTES de los botones de actividades
+// 📝 PASO 1: Reemplazar la función "buildFormulaButtons()" en app.js
 
 function buildFormulaButtons(){
   formulaButtonsDiv.innerHTML = '';
@@ -1471,30 +1469,42 @@ function buildFormulaButtons(){
   // 🆕 AGREGAR SELECTOR DE PESTAÑAS
   const termContainer = document.createElement('div');
   termContainer.className = 'mb-3 pb-3 border-b';
+  termContainer.dataset.isTermContainer = 'true';
   
   const termLabel = document.createElement('label');
   termLabel.textContent = 'Selecciona pestaña: ';
   termLabel.style.fontWeight = 'bold';
   termLabel.style.marginRight = '0.5rem';
+  termLabel.style.display = 'block';
+  termLabel.style.marginBottom = '0.5rem';
   
   const termSelect = document.createElement('select');
   termSelect.id = 'formulaTermSelect';
-  termSelect.className = 'border rounded px-2 py-1';
+  termSelect.className = 'border rounded px-2 py-1 w-full';
   termSelect.style.marginBottom = '1rem';
   
   // Llenar el desplegable con las pestañas disponibles
   const terms = _classData?.terms || {};
-  Object.keys(terms).forEach(termId => {
+  const termIds = Object.keys(terms);
+  
+  if (termIds.length === 0) {
     const opt = document.createElement('option');
-    opt.value = termId;
-    opt.textContent = terms[termId].name || termId;
-    if(termId === Terms.getActiveTermId()) opt.selected = true;
+    opt.textContent = 'No hi ha grups disponibles';
+    opt.disabled = true;
     termSelect.appendChild(opt);
-  });
+  } else {
+    termIds.forEach(termId => {
+      const opt = document.createElement('option');
+      opt.value = termId;
+      opt.textContent = terms[termId].name || termId;
+      if(termId === Terms.getActiveTermId()) opt.selected = true;
+      termSelect.appendChild(opt);
+    });
+  }
 
   // Cuando cambia la pestaña, actualizar los botones de actividades
   termSelect.addEventListener('change', () => {
-    updateFormulaActivityButtons();
+    updateFormulaActivityButtons(termSelect.value);
   });
 
   termContainer.appendChild(termLabel);
@@ -1502,74 +1512,120 @@ function buildFormulaButtons(){
   formulaButtonsDiv.appendChild(termContainer);
 
   // Mostrar inicialmente las actividades de la pestaña seleccionada
-  updateFormulaActivityButtons();
+  const initialTermId = termSelect.value;
+  if (initialTermId) {
+    updateFormulaActivityButtons(initialTermId);
+  }
 
-  // Botons operadors (siempre los mismos)
+  // ─────────── SEPARADOR ───────────
+  const separator = document.createElement('div');
+  separator.style.borderTop = '2px solid #e5e7eb';
+  separator.style.margin = '1rem 0';
+  formulaButtonsDiv.appendChild(separator);
+
+  // ─────────── OPERADORES ───────────
+  const operatorsLabel = document.createElement('div');
+  operatorsLabel.style.fontWeight = 'bold';
+  operatorsLabel.style.marginBottom = '0.5rem';
+  operatorsLabel.style.fontSize = '0.9rem';
+  operatorsLabel.textContent = 'Operadores:';
+  formulaButtonsDiv.appendChild(operatorsLabel);
+
   ['+', '-', '*', '/', '(', ')'].forEach(op => {
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'px-2 py-1 m-1 bg-gray-200 rounded hover:bg-gray-300';
+    btn.className = 'px-2 py-1 m-1 bg-gray-200 rounded hover:bg-gray-300 font-semibold';
     btn.textContent = op;
     btn.addEventListener('click', () => addToFormula(op));
     formulaButtonsDiv.appendChild(btn);
   });
 
-  // Botons números 0-10
+  // ─────────── NÚMEROS ───────────
+  const numbersLabel = document.createElement('div');
+  numbersLabel.style.fontWeight = 'bold';
+  numbersLabel.style.marginTop = '1rem';
+  numbersLabel.style.marginBottom = '0.5rem';
+  numbersLabel.style.fontSize = '0.9rem';
+  numbersLabel.textContent = 'Números:';
+  formulaButtonsDiv.appendChild(numbersLabel);
+
   for(let i = 0; i <= 10; i++){
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
+    btn.className = 'px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300 font-semibold';
     btn.textContent = i;
     btn.addEventListener('click', () => addToFormula(i));
     formulaButtonsDiv.appendChild(btn);
   }
 
-  // Botons decimales
+  // ─────────── DECIMALES ───────────
+  const decimalsLabel = document.createElement('div');
+  decimalsLabel.style.fontWeight = 'bold';
+  decimalsLabel.style.marginTop = '1rem';
+  decimalsLabel.style.marginBottom = '0.5rem';
+  decimalsLabel.style.fontSize = '0.9rem';
+  decimalsLabel.textContent = 'Decimales:';
+  formulaButtonsDiv.appendChild(decimalsLabel);
+
   ['.', ','].forEach(dec => {
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'px-2 py-1 m-1 bg-yellow-200 rounded hover:bg-yellow-300';
+    btn.className = 'px-2 py-1 m-1 bg-yellow-200 rounded hover:bg-yellow-300 font-semibold';
     btn.textContent = dec;
     btn.addEventListener('click', () => addToFormula('.'));
     formulaButtonsDiv.appendChild(btn);
   });
 
-  // Botón Backspace
+  // ─────────── BACKSPACE ───────────
   const backBtn = document.createElement('button');
   backBtn.type = 'button';
-  backBtn.className = 'px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
-  backBtn.textContent = '⌫';
+  backBtn.className = 'px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300 font-semibold';
+  backBtn.textContent = '⌫ Retroceso';
   backBtn.addEventListener('click', () => formulaField.value = formulaField.value.slice(0, -1));
   formulaButtonsDiv.appendChild(backBtn);
 }
 
 // 🆕 NUEVA FUNCIÓN: Actualizar botones de actividades según pestaña seleccionada
-function updateFormulaActivityButtons() {
-  const termSelect = document.getElementById('formulaTermSelect');
-  if (!termSelect) return;
-
-  const selectedTermId = termSelect.value;
+function updateFormulaActivityButtons(selectedTermId) {
   const selectedTerm = _classData?.terms?.[selectedTermId];
   if (!selectedTerm) return;
 
   const activities = selectedTerm.activities || [];
   const termName = selectedTerm.name || selectedTermId;
 
-  // Eliminar botones de actividades anteriores (mantener estructura y operadores)
+  // Eliminar botones de actividades anteriores
   const existingActivityBtns = formulaButtonsDiv.querySelectorAll('[data-is-activity="true"]');
   existingActivityBtns.forEach(btn => btn.remove());
 
+  // Eliminar título anterior si existe
+  const oldTitle = formulaButtonsDiv.querySelector('[data-is-activity-title="true"]');
+  if (oldTitle) oldTitle.remove();
+
+  if (activities.length === 0) {
+    const emptyMsg = document.createElement('div');
+    emptyMsg.dataset.isActivityTitle = 'true';
+    emptyMsg.style.fontWeight = 'bold';
+    emptyMsg.style.marginTop = '1rem';
+    emptyMsg.style.color = '#666';
+    emptyMsg.textContent = `No hi ha activitats a "${termName}"`;
+    formulaButtonsDiv.appendChild(emptyMsg);
+    return;
+  }
+
   // Agregar nuevo título con nombre de la pestaña
   const termTitle = document.createElement('div');
+  termTitle.dataset.isActivityTitle = 'true';
   termTitle.style.fontWeight = 'bold';
   termTitle.style.marginTop = '1rem';
   termTitle.style.marginBottom = '0.5rem';
-  termTitle.textContent = `Actividades de "${termName}":`;
+  termTitle.style.fontSize = '0.9rem';
+  termTitle.style.color = '#333';
+  termTitle.textContent = `Activitats de "${termName}":`;
   
-  // Insertar el título después del selector de pestañas
-  const termContainer = formulaButtonsDiv.querySelector('[data-is-term-container]');
+  // Insertar después del selector de pestañas
+  const termContainer = formulaButtonsDiv.querySelector('[data-is-term-container="true"]');
   if (termContainer && termContainer.nextSibling) {
-    formulaButtonsDiv.insertBefore(termTitle, formulaButtonsDiv.querySelector('[data-is-activity="true"]') || formulaButtonsDiv.children[1]);
+    formulaButtonsDiv.insertBefore(termTitle, termContainer.nextSibling);
   } else {
     formulaButtonsDiv.insertBefore(termTitle, formulaButtonsDiv.children[1]);
   }
@@ -1577,14 +1633,18 @@ function updateFormulaActivityButtons() {
   // Crear botones para cada actividad de la pestaña seleccionada
   activities.forEach(actId => {
     db.collection('activitats').doc(actId).get().then(doc => {
-      const name = doc.exists ? doc.data().nom : '???';
+      if (!doc.exists) return;
+      const name = doc.data().nom || '???';
+      
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
-      btn.textContent = `${name} (${termName})`;
+      btn.className = 'px-3 py-2 m-1 bg-indigo-200 rounded hover:bg-indigo-300 font-semibold text-sm';
+      btn.textContent = `${name}`;
       btn.dataset.isActivity = 'true';
       btn.dataset.termId = selectedTermId;
       btn.dataset.activityId = actId;
+      btn.style.display = 'inline-block';
+      btn.style.whiteSpace = 'nowrap';
 
       // Cuando hace clic, agrega un marcador especial que incluya termId e activityId
       btn.addEventListener('click', () => {
@@ -1611,44 +1671,73 @@ function buildRoundingButtons(){
   termLabel.textContent = 'Selecciona pestaña: ';
   termLabel.style.fontWeight = 'bold';
   termLabel.style.marginRight = '0.5rem';
+  termLabel.style.display = 'block';
+  termLabel.style.marginBottom = '0.5rem';
   
   const termSelect = document.createElement('select');
   termSelect.id = 'roundingTermSelect';
-  termSelect.className = 'border rounded px-2 py-1';
+  termSelect.className = 'border rounded px-2 py-1 w-full';
   termSelect.style.marginBottom = '1rem';
   
   const terms = _classData?.terms || {};
-  Object.keys(terms).forEach(termId => {
+  const termIds = Object.keys(terms);
+
+  if (termIds.length === 0) {
     const opt = document.createElement('option');
-    opt.value = termId;
-    opt.textContent = terms[termId].name || termId;
-    if(termId === Terms.getActiveTermId()) opt.selected = true;
+    opt.textContent = 'No hi ha grups disponibles';
+    opt.disabled = true;
     termSelect.appendChild(opt);
-  });
+  } else {
+    termIds.forEach(termId => {
+      const opt = document.createElement('option');
+      opt.value = termId;
+      opt.textContent = terms[termId].name || termId;
+      if(termId === Terms.getActiveTermId()) opt.selected = true;
+      termSelect.appendChild(opt);
+    });
+  }
 
   termSelect.addEventListener('change', () => {
-    updateRoundingActivityButtons();
+    updateRoundingActivityButtons(termSelect.value);
   });
 
   termContainer.appendChild(termLabel);
   termContainer.appendChild(termSelect);
   formulaButtonsDiv.appendChild(termContainer);
 
-  updateRoundingActivityButtons();
+  // Mostrar inicialmente
+  const initialTermId = termSelect.value;
+  if (initialTermId) {
+    updateRoundingActivityButtons(initialTermId);
+  }
+
+  // Separador
+  const separator = document.createElement('div');
+  separator.style.borderTop = '2px solid #e5e7eb';
+  separator.style.margin = '1rem 0';
+  formulaButtonsDiv.appendChild(separator);
 
   // Botón Backspace
   const backBtn = document.createElement('button');
   backBtn.type = 'button';
-  backBtn.className = 'px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
-  backBtn.textContent = '⌫';
+  backBtn.className = 'px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300 font-semibold';
+  backBtn.textContent = '⌫ Retroceso';
   backBtn.addEventListener('click', () => formulaField.value = formulaField.value.slice(0, -1));
   formulaButtonsDiv.appendChild(backBtn);
 
   // Botons 0.5 i 1
+  const multipliersLabel = document.createElement('div');
+  multipliersLabel.style.fontWeight = 'bold';
+  multipliersLabel.style.marginTop = '1rem';
+  multipliersLabel.style.marginBottom = '0.5rem';
+  multipliersLabel.style.fontSize = '0.9rem';
+  multipliersLabel.textContent = 'Redondeo:';
+  formulaButtonsDiv.appendChild(multipliersLabel);
+
   [0.5, 1].forEach(v => {
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
+    btn.className = 'px-3 py-2 m-1 bg-green-200 rounded hover:bg-green-300 font-semibold';
     btn.textContent = v;
     btn.addEventListener('click', () => addToFormula(v));
     formulaButtonsDiv.appendChild(btn);
@@ -1656,41 +1745,66 @@ function buildRoundingButtons(){
 }
 
 // 🆕 NUEVA FUNCIÓN: Actualizar botones de actividades para redondeig
-function updateRoundingActivityButtons() {
-  const termSelect = document.getElementById('roundingTermSelect');
-  if (!termSelect) return;
-
-  const selectedTermId = termSelect.value;
+function updateRoundingActivityButtons(selectedTermId) {
   const selectedTerm = _classData?.terms?.[selectedTermId];
   if (!selectedTerm) return;
 
   const activities = selectedTerm.activities || [];
   const termName = selectedTerm.name || selectedTermId;
 
-  const existingActivityBtns = formulaButtonsDiv.querySelectorAll('[data-is-activity="true"]');
+  // Eliminar botones anteriores
+  const existingActivityBtns = formulaButtonsDiv.querySelectorAll('[data-is-rounding-activity="true"]');
   existingActivityBtns.forEach(btn => btn.remove());
 
+  const oldTitle = formulaButtonsDiv.querySelector('[data-is-rounding-title="true"]');
+  if (oldTitle) oldTitle.remove();
+
+  if (activities.length === 0) {
+    const emptyMsg = document.createElement('div');
+    emptyMsg.dataset.isRoundingTitle = 'true';
+    emptyMsg.style.fontWeight = 'bold';
+    emptyMsg.style.marginTop = '1rem';
+    emptyMsg.style.color = '#666';
+    emptyMsg.textContent = `No hi ha activitats a "${termName}"`;
+    formulaButtonsDiv.appendChild(emptyMsg);
+    return;
+  }
+
   const termTitle = document.createElement('div');
+  termTitle.dataset.isRoundingTitle = 'true';
   termTitle.style.fontWeight = 'bold';
   termTitle.style.marginTop = '1rem';
   termTitle.style.marginBottom = '0.5rem';
-  termTitle.textContent = `Actividades de "${termName}":`;
-  formulaButtonsDiv.insertBefore(termTitle, formulaButtonsDiv.children[1]);
+  termTitle.style.fontSize = '0.9rem';
+  termTitle.textContent = `Activitats de "${termName}":`;
+  
+  const termContainer = formulaButtonsDiv.querySelector('[data-is-term-container="true"]');
+  if (termContainer && termContainer.nextSibling) {
+    formulaButtonsDiv.insertBefore(termTitle, termContainer.nextSibling);
+  } else {
+    formulaButtonsDiv.insertBefore(termTitle, formulaButtonsDiv.children[2]);
+  }
 
   activities.forEach(actId => {
     db.collection('activitats').doc(actId).get().then(doc => {
-      const name = doc.exists ? doc.data().nom : '???';
+      if (!doc.exists) return;
+      const name = doc.data().nom || '???';
+      
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
-      btn.textContent = `${name} (${termName})`;
-      btn.dataset.isActivity = 'true';
+      btn.className = 'px-3 py-2 m-1 bg-indigo-200 rounded hover:bg-indigo-300 font-semibold text-sm';
+      btn.textContent = `${name}`;
+      btn.dataset.isRoundingActivity = 'true';
       btn.dataset.termId = selectedTermId;
       btn.dataset.activityId = actId;
+      btn.style.display = 'inline-block';
+      btn.style.whiteSpace = 'nowrap';
+
       btn.addEventListener('click', () => {
         const marker = `__TERM_${selectedTermId}__ACT_${actId}__`;
         addToFormula(marker);
       });
+
       formulaButtonsDiv.appendChild(btn);
     });
   });
@@ -1729,7 +1843,14 @@ async function evalFormulaAsync(formula, studentId){
   }
 
   // 3) Substituir nombres de actividades (compatibilidad hacia atrás)
-  for(const aid of classActivities){
+  // Obtener todas las actividades de todos los términos
+  const allActivityIds = new Set();
+  const allTerms = _classData?.terms || {};
+  Object.values(allTerms).forEach(term => {
+    (term.activities || []).forEach(actId => allActivityIds.add(actId));
+  });
+
+  for(const aid of allActivityIds){
     const actDoc = await db.collection('activitats').doc(aid).get();
     const actName = actDoc.exists ? actDoc.data().nom : '';
     if(!actName) continue;
@@ -1746,8 +1867,6 @@ async function evalFormulaAsync(formula, studentId){
     return 0;
   }
 }
-
-
 
 
 
