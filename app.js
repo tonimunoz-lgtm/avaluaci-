@@ -1470,6 +1470,87 @@ function addToFormula(str){
 
 // 📝 PASO 1: Reemplazar la función "buildFormulaButtons()" en app.js
 
+// 📝 PASO 1: Actualizar modalApplyCalcBtn para aplicar la fórmula CORRECTAMENTE
+
+modalApplyCalcBtn.addEventListener('click', async () => {
+  if (!currentCalcActivityId) return;
+
+  try {
+    let formulaText = ''; // fórmula de codi (amb marcador per id)
+    let displayFormulaText = ''; // fórmula per mostrar (amb nom activitat)
+
+    switch (calcTypeSelect.value) {
+      case 'numeric':
+        await applyNumeric(Number(numericField.value));
+        formulaText = numericField.value;
+        displayFormulaText = numericField.value;
+        break;
+
+      case 'formula':
+        // 🔥 IMPORTANTE: Aplicar la fórmula ANTES de guardarla
+        await applyFormula(formulaField.value);
+        
+        // Guardem la mateixa cadena tant per codi com per visualització
+        formulaText = formulaField.value;
+        displayFormulaText = formulaField.value;
+        break;
+
+      case 'rounding':
+        if (!formulaField.value.trim()) throw new Error('Selecciona activitat i 0,5 o 1');
+
+        const activityDocs = await Promise.all(classActivities.map(aid => db.collection('activitats').doc(aid).get()));
+        const selectedActivityDoc = activityDocs.find(doc => doc.exists && formulaField.value.startsWith(doc.data().nom));
+        if (!selectedActivityDoc) throw new Error('Activitat no trobada');
+
+        const selectedActivityName = selectedActivityDoc.data().nom;
+        const selectedActivityId = selectedActivityDoc.id;
+        const multiplierStr = formulaField.value.slice(selectedActivityName.length).trim();
+        const multiplier = multiplierStr === '' ? 1 : Number(multiplierStr);
+
+        await applyRounding(formulaField.value);
+
+        if (multiplier === 1) {
+          formulaText = `Math.round(__ACT__${selectedActivityId})`;
+          displayFormulaText = `Math.round(${selectedActivityName})`;
+        } else if (multiplier === 0.5) {
+          formulaText = `Math.round(__ACT__${selectedActivityId}*2)/2`;
+          displayFormulaText = `Math.round(${selectedActivityName}*2)/2`;
+        } else {
+          formulaText = `__ACT__${selectedActivityId}`;
+          displayFormulaText = `${selectedActivityName}`;
+        }
+
+        break;
+
+      default:
+        throw new Error('Tipus de càlcul desconegut');
+    }
+
+    // Guardar a Firestore la informació de fórmula a calculatedActivities
+    if (currentClassId) {
+      await db.collection('classes').doc(currentClassId).update({
+        [`calculatedActivities.${currentCalcActivityId}`]: {
+          calculated: true,
+          formula: formulaText,
+          displayFormula: displayFormulaText
+        }
+      });
+      
+      console.log('✅ Fórmula guardada correctamente:', formulaText);
+    }
+
+    closeModal('modalCalc');
+    renderNotesGrid(); // Re-render para actualizar celdas y fila de fórmulas
+  } catch (e) {
+    console.error(e);
+    alert('Error en aplicar el càlcul: ' + e.message);
+  }
+});
+
+
+
+// 📝 PASO 2: Actualizar buildFormulaButtons para mostrar SOLO el nombre de la actividad
+
 function buildFormulaButtons(){
   formulaButtonsDiv.innerHTML = '';
 
@@ -1501,7 +1582,6 @@ function buildFormulaButtons(){
   termSelect.className = 'border rounded px-2 py-1 w-full';
   termSelect.style.marginBottom = '1rem';
   
-  // Llenar el desplegable con las pestañas disponibles
   const terms = _classData.terms || {};
   const termIds = Object.keys(terms);
   
@@ -1520,7 +1600,6 @@ function buildFormulaButtons(){
     });
   }
 
-  // Cuando cambia la pestaña, actualizar los botones de actividades
   termSelect.addEventListener('change', () => {
     updateFormulaActivityButtons(termSelect.value);
   });
@@ -1529,19 +1608,18 @@ function buildFormulaButtons(){
   termContainer.appendChild(termSelect);
   formulaButtonsDiv.appendChild(termContainer);
 
-  // Mostrar inicialmente las actividades de la pestaña seleccionada
   const initialTermId = termSelect.value;
   if (initialTermId) {
     updateFormulaActivityButtons(initialTermId);
   }
 
-  // ─────────── SEPARADOR ───────────
+  // SEPARADOR
   const separator = document.createElement('div');
   separator.style.borderTop = '2px solid #e5e7eb';
   separator.style.margin = '1rem 0';
   formulaButtonsDiv.appendChild(separator);
 
-  // ─────────── OPERADORES ───────────
+  // OPERADORES
   const operatorsLabel = document.createElement('div');
   operatorsLabel.style.fontWeight = 'bold';
   operatorsLabel.style.marginBottom = '0.5rem';
@@ -1561,7 +1639,7 @@ function buildFormulaButtons(){
     formulaButtonsDiv.appendChild(btn);
   });
 
-  // ─────────── NÚMEROS ───────────
+  // NÚMEROS
   const numbersLabel = document.createElement('div');
   numbersLabel.style.fontWeight = 'bold';
   numbersLabel.style.marginTop = '1rem';
@@ -1582,7 +1660,7 @@ function buildFormulaButtons(){
     formulaButtonsDiv.appendChild(btn);
   }
 
-  // ─────────── DECIMALES ───────────
+  // DECIMALES
   const decimalsLabel = document.createElement('div');
   decimalsLabel.style.fontWeight = 'bold';
   decimalsLabel.style.marginTop = '1rem';
@@ -1603,7 +1681,7 @@ function buildFormulaButtons(){
     formulaButtonsDiv.appendChild(btn);
   });
 
-  // ─────────── BACKSPACE ───────────
+  // BACKSPACE
   const backBtn = document.createElement('button');
   backBtn.type = 'button';
   backBtn.className = 'px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300 font-semibold';
@@ -1615,7 +1693,7 @@ function buildFormulaButtons(){
   formulaButtonsDiv.appendChild(backBtn);
 }
 
-// 🆕 NUEVA FUNCIÓN: Actualizar botones de actividades según pestaña seleccionada
+// 🆕 ACTUALIZAR: Mostrar SOLO el nombre de la actividad (sin el nombre del grupo)
 function updateFormulaActivityButtons(selectedTermId) {
   if (!_classData || !_classData.terms) return;
   
@@ -1625,11 +1703,9 @@ function updateFormulaActivityButtons(selectedTermId) {
   const activities = selectedTerm.activities || [];
   const termName = selectedTerm.name || selectedTermId;
 
-  // Eliminar botones de actividades anteriores
   const existingActivityBtns = formulaButtonsDiv.querySelectorAll('[data-is-activity="true"]');
   existingActivityBtns.forEach(btn => btn.remove());
 
-  // Eliminar título anterior si existe
   const oldTitle = formulaButtonsDiv.querySelector('[data-is-activity-title="true"]');
   if (oldTitle) oldTitle.remove();
 
@@ -1644,7 +1720,6 @@ function updateFormulaActivityButtons(selectedTermId) {
     return;
   }
 
-  // Agregar nuevo título con nombre de la pestaña
   const termTitle = document.createElement('div');
   termTitle.dataset.isActivityTitle = 'true';
   termTitle.style.fontWeight = 'bold';
@@ -1652,9 +1727,8 @@ function updateFormulaActivityButtons(selectedTermId) {
   termTitle.style.marginBottom = '0.5rem';
   termTitle.style.fontSize = '0.9rem';
   termTitle.style.color = '#333';
-  termTitle.textContent = `Actividades de "${termName}":`;
+  termTitle.textContent = `Actividades:`;
   
-  // Insertar después del selector de pestañas
   const termContainer = formulaButtonsDiv.querySelector('[data-is-term-container="true"]');
   if (termContainer && termContainer.nextSibling) {
     formulaButtonsDiv.insertBefore(termTitle, termContainer.nextSibling);
@@ -1662,7 +1736,6 @@ function updateFormulaActivityButtons(selectedTermId) {
     formulaButtonsDiv.insertBefore(termTitle, formulaButtonsDiv.children[1]);
   }
 
-  // Crear botones para cada actividad de la pestaña seleccionada
   activities.forEach(actId => {
     db.collection('activitats').doc(actId).get().then(doc => {
       if (!doc.exists) return;
@@ -1670,18 +1743,20 @@ function updateFormulaActivityButtons(selectedTermId) {
       
       const btn = document.createElement('button');
       btn.type = 'button';
+      // 🎨 Estilo mejorado
       btn.className = 'px-3 py-2 m-1 bg-indigo-200 rounded hover:bg-indigo-300 font-semibold text-sm';
+      // 📝 MOSTRAR SOLO EL NOMBRE DE LA ACTIVIDAD
       btn.textContent = `${name}`;
       btn.dataset.isActivity = 'true';
       btn.dataset.termId = selectedTermId;
       btn.dataset.activityId = actId;
       btn.style.display = 'inline-block';
       btn.style.whiteSpace = 'nowrap';
+      btn.title = `${name} (${termName})`; // El nombre completo aparece al pasar el ratón
 
-      // Cuando hace clic, agrega un marcador especial que incluya termId e activityId
       btn.addEventListener('click', (e) => {
         e.preventDefault();
-        // Formato: __TERM_<termId>__ACT_<actId>__
+        // 🔥 USAR EL MARCADOR CORRECTO: __TERM_<termId>__ACT_<actId>__
         const marker = `__TERM_${selectedTermId}__ACT_${actId}__`;
         addToFormula(marker);
       });
