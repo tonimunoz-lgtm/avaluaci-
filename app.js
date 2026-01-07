@@ -1864,6 +1864,8 @@ function updateRoundingActivityButtons(selectedTermId) {
 }
 
 // 📝 PASO 3: Modificar "evalFormulaAsync()" para resolver marcadores multi-pestaña
+// 📝 REEMPLAZAR COMPLETAMENTE la función evalFormulaAsync()
+
 async function evalFormulaAsync(formula, studentId){
   let evalStr = formula;
 
@@ -1871,9 +1873,13 @@ async function evalFormulaAsync(formula, studentId){
   const studentDoc = await db.collection('alumnes').doc(studentId).get();
   const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
 
-  // 1) Substituir marcadores __TERM_<termId>__ACT_<actId>__ por valores
+  console.log('🔍 Evaluando fórmula:', formula);
+  console.log('📝 Notas del alumno:', notes);
+
+  // 1️⃣ PRIMERO: Substituir marcadores nuevos __TERM_<termId>__ACT_<actId>__
   const termMarkerRegex = /__TERM_([^_]+)__ACT_([^_]+)__/g;
   let match;
+  
   while ((match = termMarkerRegex.exec(formula)) !== null) {
     const termId = match[1];
     const actId = match[2];
@@ -1884,18 +1890,11 @@ async function evalFormulaAsync(formula, studentId){
     
     const marker = `__TERM_${termId}__ACT_${actId}__`;
     evalStr = evalStr.replace(marker, safeVal);
+    
+    console.log(`✅ Reemplazado ${marker} con valor ${safeVal}`);
   }
 
-  // 2) Substituir marcadores antiguos __ACT__<actId> (compatibilidad hacia atrás)
-  for(const aid of classActivities){
-    const marker = `__ACT__${aid}`;
-    const val = Number(notes[aid]);
-    const safeVal = isNaN(val) ? 0 : val;
-    const reMarker = new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-    evalStr = evalStr.replace(reMarker, safeVal);
-  }
-
-  // 3) Substituir nombres de actividades (compatibilidad hacia atrás)
+  // 2️⃣ SEGUNDO: Substituir marcadores antiguos __ACT__<actId> (compatibilidad hacia atrás)
   // Obtener todas las actividades de todos los términos
   if (_classData && _classData.terms) {
     const allActivityIds = new Set();
@@ -1903,23 +1902,65 @@ async function evalFormulaAsync(formula, studentId){
       (term.activities || []).forEach(actId => allActivityIds.add(actId));
     });
 
-    for(const aid of allActivityIds){
+    for (const aid of allActivityIds) {
+      const marker = `__ACT__${aid}`;
+      if (evalStr.includes(marker)) {
+        const val = Number(notes[aid]);
+        const safeVal = isNaN(val) ? 0 : val;
+        const reMarker = new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+        evalStr = evalStr.replace(reMarker, safeVal);
+        console.log(`✅ Reemplazado ${marker} con valor ${safeVal}`);
+      }
+    }
+  }
+
+  // 3️⃣ TERCERO: Substituir nombres de actividades por valores (compatibilidad con fórmulas antiguas)
+  if (_classData && _classData.terms) {
+    const allActivityIds = new Set();
+    Object.values(_classData.terms).forEach(term => {
+      (term.activities || []).forEach(actId => allActivityIds.add(actId));
+    });
+
+    for (const aid of allActivityIds) {
       const actDoc = await db.collection('activitats').doc(aid).get();
       const actName = actDoc.exists ? actDoc.data().nom : '';
-      if(!actName) continue;
+      
+      if (!actName || !evalStr.includes(actName)) continue;
+      
       const val = Number(notes[aid]);
       const safeVal = isNaN(val) ? 0 : val;
       const regex = new RegExp(actName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
       evalStr = evalStr.replace(regex, safeVal);
+      console.log(`✅ Reemplazado nombre "${actName}" con valor ${safeVal}`);
     }
   }
 
+  console.log('🔢 Expresión final a evaluar:', evalStr);
+
   try {
-    return Function('"use strict"; return (' + evalStr + ')')();
+    const result = Function('"use strict"; return (' + evalStr + ')')();
+    console.log('✅ Resultado de evaluación:', result);
+    return result;
   } catch(e){
-    console.error('Error evaluando fórmula:', formula, e);
+    console.error('❌ Error evaluando fórmula:', formula, e);
+    console.error('❌ Expresión que causó error:', evalStr);
     return 0;
   }
+}
+
+// 📝 BONUS: Función auxiliar para debuggear fórmulas
+function debugFormula(formula) {
+  console.group('🔍 DEBUG FÓRMULA');
+  console.log('Fórmula original:', formula);
+  
+  // Buscar todos los marcadores
+  const termMarkers = formula.match(/__TERM_[^_]+__ACT_[^_]+__/g) || [];
+  console.log('Marcadores __TERM_...__ACT_...__ encontrados:', termMarkers);
+  
+  const oldMarkers = formula.match(/__ACT__[^_]+/g) || [];
+  console.log('Marcadores antiguos __ACT__... encontrados:', oldMarkers);
+  
+  console.groupEnd();
 }
 
 
