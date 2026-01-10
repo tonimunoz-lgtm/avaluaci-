@@ -1691,36 +1691,70 @@ function addToFormula(str){
   formulaField.value += str;
 }
 
+// REEMPLAZA la función evalFormulaAsync por ESTA VERSIÓN MEJORADA:
+
 async function evalFormulaAsync(formula, studentId){
   let evalStr = formula;
 
   const studentDoc = await db.collection('alumnes').doc(studentId).get();
   const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
 
-  // Substituir marcadores por ID
-  for(const aid of classActivities){
+  // 🔥 NUEVO: Obtener TODAS las actividades de TODOS los trimestres
+  const allTerms = _classData?.terms || {};
+  const allActivityIds = new Set();
+  
+  // Recopilar TODOS los IDs de actividades de todos los trimestres
+  Object.values(allTerms).forEach(term => {
+    const activities = term.activities || [];
+    activities.forEach(actId => allActivityIds.add(actId));
+  });
+  
+  // También añadir las del trimestre actual
+  classActivities.forEach(actId => allActivityIds.add(actId));
+
+  console.log('Todas las actividades encontradas:', Array.from(allActivityIds));
+
+  // ========================================
+  // 1) Substituir marcadores por ID (ex: __ACT__<actId>)
+  // ========================================
+  for(const aid of allActivityIds){
     const marker = `__ACT__${aid}`;
     const val = Number(notes[aid]);
     const safeVal = isNaN(val) ? 0 : val;
     const reMarker = new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
     evalStr = evalStr.replace(reMarker, safeVal);
+    
+    console.log(`Reemplazando ${marker} con ${safeVal}`);
   }
 
-  // Substituir noms d'activitat por valors
-  for(const aid of classActivities){
+  // ========================================
+  // 2) Substituir noms d'activitat por valores
+  // ========================================
+  for(const aid of allActivityIds){
     const actDoc = await db.collection('activitats').doc(aid).get();
     const actName = actDoc.exists ? actDoc.data().nom : '';
+    
     if(!actName) continue;
+    
     const val = Number(notes[aid]);
     const safeVal = isNaN(val) ? 0 : val;
+    
+    // Escapar caracteres especiales en el nombre
     const regex = new RegExp(actName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
     evalStr = evalStr.replace(regex, safeVal);
+    
+    console.log(`Reemplazando "${actName}" (${aid}) con ${safeVal}`);
   }
 
+  console.log('Fórmula después de reemplazos:', evalStr);
+
   try {
-    return Function('"use strict"; return (' + evalStr + ')')();
+    const result = Function('"use strict"; return (' + evalStr + ')')();
+    console.log('Resultado de la fórmula:', result);
+    return result;
   } catch(e){
     console.error('Error evaluating formula:', formula, e);
+    console.error('Fórmula evaluada:', evalStr);
     return 0;
   }
 }
