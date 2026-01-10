@@ -1292,34 +1292,6 @@ function renderAverages(){
 }
 
 
-
-
-// ============================================================
-// INSTRUCCIONES PARA LIMPIAR app.js
-// ============================================================
-
-// PASO 1: Busca en tu app.js la línea:
-// /* ---------------- Open Calculation Modal ---------------- */
-
-// PASO 2: Encuentra TODO el código DESDE esta línea:
-/* ---------------- Open Calculation Modal ---------------- */
-function openCalcModal(activityId){
-  currentCalcActivityId = activityId; 
-  openModal('modalCalc');
-  document.getElementById('calcType').value = 'numeric';
-  document.getElementById('formulaInputs').classList.add('hidden');
-  document.getElementById('numericInput').classList.remove('hidden');
-  document.getElementById('numericField').value = '';
-  document.getElementById('formulaField').value = '';
-}
-
-// HASTA la línea (inclusive):
-// async function gmailSendEmail(to, subject, message) {
-
-// PASO 3: BORRA TODO ese bloque (es la sección de modales duplicada)
-
-// PASO 4: En su lugar, copia ESTO (código limpio y único):
-
 /* ============================================================
    MODAL CÁLCULO - Cross-Terms Support
    ============================================================ */
