@@ -1305,6 +1305,12 @@ function openCalcModal(activityId){
   document.getElementById('formulaField').value = '';
 }
 /* ---------------- Modal Calcul: Numeric / Formula ---------------- */
+// ============================================================
+// NUEVO: Modal Calcul mejorado para referencias cross-terms
+// ============================================================
+
+// Remplazar la sección "Modal Calcul" en app.js con esto:
+
 const calcTypeSelect = document.getElementById('calcType');
 const numericDiv = document.getElementById('numericInput');
 const numericField = document.getElementById('numericField');
@@ -1313,7 +1319,10 @@ const formulaField = document.getElementById('formulaField');
 const formulaButtonsDiv = document.getElementById('formulaButtons');
 const modalApplyCalcBtn = document.getElementById('modalApplyCalcBtn');
 
-// Canvi tipus càlcul
+// 🔥 NUEVO: Selector de términos para fórmulas cross-term
+let _selectedTermForFormula = null; // término seleccionado en la calculadora
+
+// Cambio tipo cálculo
 calcTypeSelect.addEventListener('change', ()=>{
   if(calcTypeSelect.value==='numeric'){
     numericDiv.classList.remove('hidden');
@@ -1321,11 +1330,11 @@ calcTypeSelect.addEventListener('change', ()=>{
   } else if(calcTypeSelect.value==='formula'){
     numericDiv.classList.add('hidden');
     formulaDiv.classList.remove('hidden');
-    buildFormulaButtons(); // activitats + operadors + números
+    buildFormulaButtons(); 
   } else if(calcTypeSelect.value==='rounding'){
     numericDiv.classList.add('hidden');
     formulaDiv.classList.remove('hidden');
-    buildRoundingButtons(); // ACTIVITATS + 0,5 i 1
+    buildRoundingButtons();
   }
 });
 
@@ -1350,7 +1359,6 @@ async function applyFormula(formula) {
 async function applyRounding(formula) {
   if (!formula.trim()) throw new Error('Selecciona activitat i 0,5 o 1');
 
-  // Llegim totes les activitats
   const activityDocs = await Promise.all(classActivities.map(aid => db.collection('activitats').doc(aid).get()));
   const selectedActivityDoc = activityDocs.find(doc => doc.exists && formula.startsWith(doc.data().nom));
   if (!selectedActivityDoc) throw new Error('Activitat no trobada');
@@ -1375,8 +1383,8 @@ modalApplyCalcBtn.addEventListener('click', async () => {
   if (!currentCalcActivityId) return;
 
   try {
-    let formulaText = ''; // fórmula de codi (amb marcador per id)
-    let displayFormulaText = ''; // fórmula per mostrar (amb nom activitat)
+    let formulaText = '';
+    let displayFormulaText = '';
 
     switch (calcTypeSelect.value) {
       case 'numeric':
@@ -1387,7 +1395,6 @@ modalApplyCalcBtn.addEventListener('click', async () => {
 
       case 'formula':
         await applyFormula(formulaField.value);
-        // Guardem la mateixa cadena tant per codi com per visualització
         formulaText = formulaField.value;
         displayFormulaText = formulaField.value;
         break;
@@ -1395,20 +1402,15 @@ modalApplyCalcBtn.addEventListener('click', async () => {
       case 'rounding':
         if (!formulaField.value.trim()) throw new Error('Selecciona activitat i 0,5 o 1');
 
-        // Trobar l'activitat seleccionada per nom (nom complet) entre les activitats de la classe
         const activityDocs = await Promise.all(classActivities.map(aid => db.collection('activitats').doc(aid).get()));
-        // Busquem el document que coincideixi amb l'inici del string de formulaField (com feies abans)
         const selectedActivityDoc = activityDocs.find(doc => doc.exists && formulaField.value.startsWith(doc.data().nom));
         if (!selectedActivityDoc) throw new Error('Activitat no trobada');
 
         const selectedActivityName = selectedActivityDoc.data().nom;
         const selectedActivityId = selectedActivityDoc.id;
-
-        // Extraiem multiplicador (si hi ha) — p.ex. "Tema1" + "0.5" o "1"
         const multiplierStr = formulaField.value.slice(selectedActivityName.length).trim();
         const multiplier = multiplierStr === '' ? 1 : Number(multiplierStr);
 
-        // Aplicar arrodoniment a cada alumne (usar sempre l'ID per llegir la nota)
         await Promise.all(classStudents.map(async sid => {
           const studentDoc = await db.collection('alumnes').doc(sid).get();
           const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
@@ -1421,7 +1423,6 @@ modalApplyCalcBtn.addEventListener('click', async () => {
           await saveNote(sid, currentCalcActivityId, val);
         }));
 
-        // Guardem la fórmula de codi amb un marcador únic per l'ID (evita ambigüitats)
         if (multiplier === 1) {
           formulaText = `Math.round(__ACT__${selectedActivityId})`;
           displayFormulaText = `Math.round(${selectedActivityName})`;
@@ -1429,7 +1430,6 @@ modalApplyCalcBtn.addEventListener('click', async () => {
           formulaText = `Math.round(__ACT__${selectedActivityId}*2)/2`;
           displayFormulaText = `Math.round(${selectedActivityName}*2)/2`;
         } else {
-          // cas inesperat: guardem la fórmula simple amb marcador
           formulaText = `__ACT__${selectedActivityId}`;
           displayFormulaText = `${selectedActivityName}`;
         }
@@ -1440,9 +1440,7 @@ modalApplyCalcBtn.addEventListener('click', async () => {
         throw new Error('Tipus de càlcul desconegut');
     }
 
-    // Guardar a Firestore la informació de fórmula a calculatedActivities
     if (currentClassId) {
-      // Guardem tant formula (codi) com displayFormula (text per mostrar)
       await db.collection('classes').doc(currentClassId).update({
         [`calculatedActivities.${currentCalcActivityId}`]: {
           calculated: true,
@@ -1453,7 +1451,7 @@ modalApplyCalcBtn.addEventListener('click', async () => {
     }
 
     closeModal('modalCalc');
-    renderNotesGrid(); // Re-render per actualitzar cel·les i fila fórmules
+    renderNotesGrid();
   } catch (e) {
     console.error(e);
     alert('Error en aplicar el càlcul: ' + e.message);
@@ -1461,112 +1459,278 @@ modalApplyCalcBtn.addEventListener('click', async () => {
 });
 
 
-// ---------------- Construir botons de fórmules ----------------
+// ============================================================
+// 🔥 NUEVA FUNCIÓN: buildFormulaButtons CON SELECTOR DE TERMS
+// ============================================================
 function buildFormulaButtons(){
   formulaButtonsDiv.innerHTML = '';
 
-  // Botons activitats
-  classActivities.forEach(aid=>{
-    db.collection('activitats').doc(aid).get().then(doc=>{
-      const name = doc.exists ? doc.data().nom : '???';
-      const btn = document.createElement('button');
-      btn.type='button';
-      btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
-      btn.textContent = name;
-      btn.addEventListener('click', ()=> addToFormula(name));
-      formulaButtonsDiv.appendChild(btn);
-    });
-  });
+  // 🆕 SELECTOR DE TÉRMINOS (solo si hay múltiples términos)
+  const allTerms = _classData?.terms || {};
+  const termIds = Object.keys(allTerms);
 
-  // Botons operadors
+  if (termIds.length > 1) {
+    // Crear contenedor para el selector
+    const selectorContainer = document.createElement('div');
+    selectorContainer.className = 'mb-3 p-2 bg-blue-50 rounded border border-blue-200';
+    selectorContainer.innerHTML = '<label class="text-sm font-semibold text-blue-800">Selecciona pestaña d\'activitats:</label>';
+
+    const termSelect = document.createElement('select');
+    termSelect.className = 'w-full mt-1 border rounded px-2 py-1 bg-white';
+
+    // Opción inicial
+    const optionAll = document.createElement('option');
+    optionAll.value = '';
+    optionAll.textContent = 'Activitats de la pestaña actual';
+    termSelect.appendChild(optionAll);
+
+    // Opción para cada término
+    termIds.forEach(termId => {
+      const opt = document.createElement('option');
+      opt.value = termId;
+      opt.textContent = allTerms[termId].name || termId;
+      termSelect.appendChild(opt);
+    });
+
+    termSelect.addEventListener('change', (e) => {
+      _selectedTermForFormula = e.target.value || null;
+      // Recrear botones de actividades cuando cambias de término
+      const currentButtons = formulaButtonsDiv.querySelectorAll('.activity-buttons-container');
+      if (currentButtons.length > 0) {
+        currentButtons.forEach(btn => btn.remove());
+      }
+      buildActivityButtons();
+    });
+
+    selectorContainer.appendChild(termSelect);
+    formulaButtonsDiv.appendChild(selectorContainer);
+  }
+
+  // Botones de operadores y números (siempre igual)
+  const operatorsContainer = document.createElement('div');
+  operatorsContainer.className = 'operators-container mb-2';
+
   ['+', '-', '*', '/', '(', ')'].forEach(op=>{
     const btn = document.createElement('button');
     btn.type='button';
     btn.className='px-2 py-1 m-1 bg-gray-200 rounded hover:bg-gray-300';
     btn.textContent = op;
     btn.addEventListener('click', ()=> addToFormula(op));
-    formulaButtonsDiv.appendChild(btn);
+    operatorsContainer.appendChild(btn);
   });
+  formulaButtonsDiv.appendChild(operatorsContainer);
 
-  // Botons números 0-10
+  // Números 0-10
+  const numbersContainer = document.createElement('div');
+  numbersContainer.className = 'numbers-container mb-2';
   for(let i=0;i<=10;i++){
     const btn = document.createElement('button');
     btn.type='button';
     btn.className='px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
     btn.textContent = i;
     btn.addEventListener('click', ()=> addToFormula(i));
-    formulaButtonsDiv.appendChild(btn);
+    numbersContainer.appendChild(btn);
   }
+  formulaButtonsDiv.appendChild(numbersContainer);
 
-  // Botons decimals
+  // Decimales
+  const decimalsContainer = document.createElement('div');
+  decimalsContainer.className = 'decimals-container mb-2';
   ['.', ','].forEach(dec=>{
     const btn = document.createElement('button');
     btn.type='button';
     btn.className='px-2 py-1 m-1 bg-yellow-200 rounded hover:bg-yellow-300';
     btn.textContent = dec;
-    btn.addEventListener('click', ()=> addToFormula('.')); // sempre converteix ',' a '.'
-    formulaButtonsDiv.appendChild(btn);
+    btn.addEventListener('click', ()=> addToFormula('.'));
+    decimalsContainer.appendChild(btn);
   });
+  formulaButtonsDiv.appendChild(decimalsContainer);
 
-  // Botó Backspace
+  // Backspace
   const backBtn = document.createElement('button');
   backBtn.type='button';
   backBtn.className='px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
   backBtn.textContent = '⌫';
   backBtn.addEventListener('click', ()=> formulaField.value = formulaField.value.slice(0,-1));
   formulaButtonsDiv.appendChild(backBtn);
+
+  // 🆕 Botones de actividades (será recreado cuando cambies de término)
+  buildActivityButtons();
 }
 
-// Afegir a formula
+// 🆕 NUEVA FUNCIÓN: Botones de actividades según término seleccionado
+function buildActivityButtons(){
+  const activitiesContainer = document.createElement('div');
+  activitiesContainer.className = 'activity-buttons-container mb-2 p-2 bg-indigo-50 rounded';
+
+  let activitiesToShow = [];
+
+  if (_selectedTermForFormula && _classData?.terms?.[_selectedTermForFormula]) {
+    // Mostrar actividades del término seleccionado
+    activitiesToShow = _classData.terms[_selectedTermForFormula].activities || [];
+  } else {
+    // Mostrar actividades del término actual (comportamiento original)
+    activitiesToShow = classActivities;
+  }
+
+  if (activitiesToShow.length === 0) {
+    const emptyMsg = document.createElement('p');
+    emptyMsg.className = 'text-sm text-gray-600 text-center';
+    emptyMsg.textContent = 'Cap activitat en aquesta pestaña';
+    activitiesContainer.appendChild(emptyMsg);
+  } else {
+    activitiesToShow.forEach(aid => {
+      db.collection('activitats').doc(aid).get().then(doc => {
+        if (!doc.exists) return;
+        const name = doc.data().nom;
+        const btn = document.createElement('button');
+        btn.type='button';
+        btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300 font-semibold';
+        btn.textContent = name;
+        
+        // 🆕 Si estamos en un término diferente, añadir prefijo al nombre
+        let buttonText = name;
+        if (_selectedTermForFormula) {
+          const termName = _classData.terms[_selectedTermForFormula].name;
+          buttonText = `[${termName}] ${name}`;
+        }
+        btn.textContent = buttonText;
+        
+        btn.addEventListener('click', () => addToFormula(name));
+        activitiesContainer.appendChild(btn);
+      });
+    });
+  }
+
+  formulaButtonsDiv.appendChild(activitiesContainer);
+}
+
+// ============================================================
+// 🔥 NUEVA FUNCIÓN: buildRoundingButtons CON SELECTOR DE TERMS
+// ============================================================
+function buildRoundingButtons(){
+  formulaButtonsDiv.innerHTML = '';
+
+  // 🆕 SELECTOR DE TÉRMINOS (solo si hay múltiples términos)
+  const allTerms = _classData?.terms || {};
+  const termIds = Object.keys(allTerms);
+
+  if (termIds.length > 1) {
+    const selectorContainer = document.createElement('div');
+    selectorContainer.className = 'mb-3 p-2 bg-blue-50 rounded border border-blue-200';
+    selectorContainer.innerHTML = '<label class="text-sm font-semibold text-blue-800">Selecciona pestaña d\'activitats:</label>';
+
+    const termSelect = document.createElement('select');
+    termSelect.className = 'w-full mt-1 border rounded px-2 py-1 bg-white';
+
+    const optionAll = document.createElement('option');
+    optionAll.value = '';
+    optionAll.textContent = 'Activitats de la pestaña actual';
+    termSelect.appendChild(optionAll);
+
+    termIds.forEach(termId => {
+      const opt = document.createElement('option');
+      opt.value = termId;
+      opt.textContent = allTerms[termId].name || termId;
+      termSelect.appendChild(opt);
+    });
+
+    termSelect.addEventListener('change', (e) => {
+      _selectedTermForFormula = e.target.value || null;
+      const currentActivities = formulaButtonsDiv.querySelectorAll('.rounding-activities-container');
+      if (currentActivities.length > 0) {
+        currentActivities.forEach(act => act.remove());
+      }
+      buildRoundingActivityButtons();
+    });
+
+    selectorContainer.appendChild(termSelect);
+    formulaButtonsDiv.appendChild(selectorContainer);
+  }
+
+  // Botones 0.5 y 1
+  const roundingValuesContainer = document.createElement('div');
+  roundingValuesContainer.className = 'rounding-values-container mb-2';
+  [0.5, 1].forEach(v => {
+    const btn = document.createElement('button');
+    btn.type='button';
+    btn.className='px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300 font-semibold';
+    btn.textContent = v;
+    btn.addEventListener('click', () => addToFormula(v));
+    roundingValuesContainer.appendChild(btn);
+  });
+  formulaButtonsDiv.appendChild(roundingValuesContainer);
+
+  // Backspace
+  const backBtn = document.createElement('button');
+  backBtn.type='button';
+  backBtn.className='px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
+  backBtn.textContent = '⌫';
+  backBtn.addEventListener('click', () => formulaField.value = formulaField.value.slice(0,-1));
+  formulaButtonsDiv.appendChild(backBtn);
+
+  // 🆕 Botones de actividades para rounding
+  buildRoundingActivityButtons();
+}
+
+// 🆕 NUEVA FUNCIÓN: Botones de actividades para rounding
+function buildRoundingActivityButtons(){
+  const activitiesContainer = document.createElement('div');
+  activitiesContainer.className = 'rounding-activities-container mb-2 p-2 bg-indigo-50 rounded';
+
+  let activitiesToShow = [];
+
+  if (_selectedTermForFormula && _classData?.terms?.[_selectedTermForFormula]) {
+    activitiesToShow = _classData.terms[_selectedTermForFormula].activities || [];
+  } else {
+    activitiesToShow = classActivities;
+  }
+
+  if (activitiesToShow.length === 0) {
+    const emptyMsg = document.createElement('p');
+    emptyMsg.className = 'text-sm text-gray-600 text-center';
+    emptyMsg.textContent = 'Cap activitat en aquesta pestaña';
+    activitiesContainer.appendChild(emptyMsg);
+  } else {
+    activitiesToShow.forEach(aid => {
+      db.collection('activitats').doc(aid).get().then(doc => {
+        if (!doc.exists) return;
+        const name = doc.data().nom;
+        const btn = document.createElement('button');
+        btn.type='button';
+        btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300 font-semibold';
+        
+        let buttonText = name;
+        if (_selectedTermForFormula) {
+          const termName = _classData.terms[_selectedTermForFormula].name;
+          buttonText = `[${termName}] ${name}`;
+        }
+        btn.textContent = buttonText;
+        
+        btn.addEventListener('click', () => addToFormula(name));
+        activitiesContainer.appendChild(btn);
+      });
+    });
+  }
+
+  formulaButtonsDiv.appendChild(activitiesContainer);
+}
+
+// Función auxiliar para añadir a la fórmula (ya existía)
 function addToFormula(str){
   formulaField.value += str;
 }
 
-function buildRoundingButtons(){
-  formulaButtonsDiv.innerHTML = '';
-
-  // Botons activitats
-  classActivities.forEach(aid=>{
-    db.collection('activitats').doc(aid).get().then(doc=>{
-      const name = doc.exists ? doc.data().nom : '???';
-      const btn = document.createElement('button');
-      btn.type='button';
-      btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300';
-      btn.textContent = name;
-      btn.addEventListener('click', ()=> addToFormula(name)); // el nom de l'activitat
-      formulaButtonsDiv.appendChild(btn);
-    });
-  });
-
-  // Botó Backspace
-  const backBtn = document.createElement('button');
-  backBtn.type='button';
-  backBtn.className='px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
-  backBtn.textContent = '⌫';
-  backBtn.addEventListener('click', ()=> formulaField.value = formulaField.value.slice(0,-1));
-  formulaButtonsDiv.appendChild(backBtn);
-
-  // Botons 0.5 i 1
-  [0.5,1].forEach(v=>{
-    const btn = document.createElement('button');
-    btn.type='button';
-    btn.className='px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
-    btn.textContent = v;
-    btn.addEventListener('click', ()=> addToFormula(v)); // afegim directament 0.5 o 1
-    formulaButtonsDiv.appendChild(btn);
-  });
-}
-
-
-// ---------------- Evaluar fórmula ----------------
+// ============================================================
+// 🔥 MEJORADA: evalFormulaAsync PARA SOPORTAR CROSS-TERMS
+// ============================================================
 async function evalFormulaAsync(formula, studentId){
   let evalStr = formula;
 
-  // Primer carreguem totes les notes de l'alumne
   const studentDoc = await db.collection('alumnes').doc(studentId).get();
   const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
 
-  // 1) Substituir marcadors per ID (ex: __ACT__<actId>)
+  // 1) Substituir marcadores por ID (ex: __ACT__<actId>)
   for(const aid of classActivities){
     const marker = `__ACT__${aid}`;
     const val = Number(notes[aid]);
@@ -1575,14 +1739,26 @@ async function evalFormulaAsync(formula, studentId){
     evalStr = evalStr.replace(reMarker, safeVal);
   }
 
-  // 2) Substituir noms d'activitat per valors (compatibilitat amb fórmules antigues)
+  // 2) 🆕 Substituir marcadores cross-term (formato: __TERM__<termId>__ACT__<actId>)
+  const allTerms = _classData?.terms || {};
+  for(const termId of Object.keys(allTerms)){
+    const termActivities = allTerms[termId].activities || [];
+    for(const aid of termActivities){
+      const marker = `__TERM__${termId}__ACT__${aid}`;
+      const val = Number(notes[aid]);
+      const safeVal = isNaN(val) ? 0 : val;
+      const reMarker = new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+      evalStr = evalStr.replace(reMarker, safeVal);
+    }
+  }
+
+  // 3) Substituir noms d'activitat por valors (compatibilitat)
   for(const aid of classActivities){
     const actDoc = await db.collection('activitats').doc(aid).get();
     const actName = actDoc.exists ? actDoc.data().nom : '';
     if(!actName) continue;
     const val = Number(notes[aid]);
     const safeVal = isNaN(val) ? 0 : val;
-
     const regex = new RegExp(actName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
     evalStr = evalStr.replace(regex, safeVal);
   }
@@ -1594,7 +1770,6 @@ async function evalFormulaAsync(formula, studentId){
     return 0;
   }
 }
-
 
 
 
