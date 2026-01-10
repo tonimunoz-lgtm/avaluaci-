@@ -1296,13 +1296,12 @@ function renderAverages(){
   });
 }
 
-
 /* ============================================================
-   MODAL CÁLCULO - Cross-Terms Support
+   MODAL CÁLCULO - Con Asistente de Fórmulas Mejorado
    ============================================================ */
 
-let _classData = null; // Variable global para acceso a términos
-let _selectedTermForFormula = null; // Término seleccionado en la calculadora
+let _classData = null;
+let _selectedTermForFormula = null;
 
 function openCalcModal(activityId){
   currentCalcActivityId = activityId; 
@@ -1312,7 +1311,10 @@ function openCalcModal(activityId){
   document.getElementById('numericInput').classList.remove('hidden');
   document.getElementById('numericField').value = '';
   document.getElementById('formulaField').value = '';
-  _selectedTermForFormula = null; // Reset selector
+  _selectedTermForFormula = null;
+  
+  // 🔥 NUEVO: Limpiar validación
+  clearFormulaValidation();
 }
 
 const calcTypeSelect = document.getElementById('calcType');
@@ -1323,6 +1325,10 @@ const formulaField = document.getElementById('formulaField');
 const formulaButtonsDiv = document.getElementById('formulaButtons');
 const modalApplyCalcBtn = document.getElementById('modalApplyCalcBtn');
 
+// 🔥 NUEVO: Contenedores de validación
+let formulaValidationDiv = null;
+let formulaPreviewDiv = null;
+
 // Cambio tipo cálculo
 calcTypeSelect.addEventListener('change', ()=>{
   if(calcTypeSelect.value==='numeric'){
@@ -1332,6 +1338,7 @@ calcTypeSelect.addEventListener('change', ()=>{
     numericDiv.classList.add('hidden');
     formulaDiv.classList.remove('hidden');
     buildFormulaButtons(); 
+    setupFormulaValidation(); // 🔥 NUEVO
   } else if(calcTypeSelect.value==='rounding'){
     numericDiv.classList.add('hidden');
     formulaDiv.classList.remove('hidden');
@@ -1339,7 +1346,153 @@ calcTypeSelect.addEventListener('change', ()=>{
   }
 });
 
-// Helpers
+// ============================================================
+// 🔥 NUEVO: Sistema de Validación en Tiempo Real
+// ============================================================
+
+function setupFormulaValidation() {
+  // Crear contenedores si no existen
+  if (!formulaValidationDiv) {
+    formulaValidationDiv = document.createElement('div');
+    formulaValidationDiv.id = 'formulaValidation';
+    formulaValidationDiv.className = 'mt-2 p-3 rounded text-sm';
+    formulaField.parentNode.insertBefore(formulaValidationDiv, formulaField.nextSibling);
+  }
+  
+  if (!formulaPreviewDiv) {
+    formulaPreviewDiv = document.createElement('div');
+    formulaPreviewDiv.id = 'formulaPreview';
+    formulaPreviewDiv.className = 'mt-2 p-3 rounded bg-green-50 border border-green-200 text-sm hidden';
+    formulaValidationDiv.parentNode.insertBefore(formulaPreviewDiv, formulaValidationDiv.nextSibling);
+  }
+
+  // 🔥 NUEVO: Permitir edición inline - hacer contentEditable
+  formulaField.addEventListener('input', validateFormula);
+  formulaField.addEventListener('click', () => {
+    // Permitir que el cursor se posicione en cualquier lugar
+    formulaField.focus();
+  });
+}
+
+function clearFormulaValidation() {
+  if (formulaValidationDiv) formulaValidationDiv.innerHTML = '';
+  if (formulaPreviewDiv) formulaPreviewDiv.classList.add('hidden');
+}
+
+function validateFormula() {
+  const formula = formulaField.value.trim();
+  
+  if (!formula) {
+    clearFormulaValidation();
+    return;
+  }
+
+  const validation = checkFormulaValidity(formula);
+  
+  // Mostrar validación
+  if (formulaValidationDiv) {
+    if (validation.valid) {
+      formulaValidationDiv.innerHTML = `<span style="color: green; font-weight: bold;">✅ Fórmula válida</span>`;
+      formulaValidationDiv.className = 'mt-2 p-3 rounded text-sm bg-green-50 border border-green-200';
+      
+      // Mostrar previsualización
+      showFormulaPreview(formula);
+    } else {
+      formulaValidationDiv.innerHTML = `<span style="color: red; font-weight: bold;">❌ Error: ${validation.error}</span>`;
+      formulaValidationDiv.className = 'mt-2 p-3 rounded text-sm bg-red-50 border border-red-200';
+      
+      if (formulaPreviewDiv) {
+        formulaPreviewDiv.classList.add('hidden');
+      }
+    }
+  }
+}
+
+function checkFormulaValidity(formula) {
+  // Contar paréntesis
+  const openParens = (formula.match(/\(/g) || []).length;
+  const closeParens = (formula.match(/\)/g) || []).length;
+  
+  if (openParens !== closeParens) {
+    return {
+      valid: false,
+      error: `Paréntesis desbalanceados (abrir: ${openParens}, cerrar: ${closeParens})`
+    };
+  }
+
+  // Validar caracteres permitidos
+  const validChars = /^[a-zA-Z0-9+\-*/(). ,áéíóúàèìòùäëïöü\[\]_]*$/;
+  if (!validChars.test(formula)) {
+    return {
+      valid: false,
+      error: 'Caracteres inválidos detectados'
+    };
+  }
+
+  // Validar que no termine en operador
+  if (/[+\-*/]$/.test(formula.trim())) {
+    return {
+      valid: false,
+      error: 'La fórmula no puede terminar en un operador'
+    };
+  }
+
+  // Validar operadores duplicados
+  if (/[+\-*/]{2,}/.test(formula)) {
+    return {
+      valid: false,
+      error: 'Operadores duplicados detectados'
+    };
+  }
+
+  return { valid: true, error: null };
+}
+
+function showFormulaPreview(formula) {
+  if (!formulaPreviewDiv) return;
+
+  // Simular cálculo con valores de ejemplo
+  const exampleResult = simulateFormulaWithExamples(formula);
+  
+  if (exampleResult !== null && !isNaN(exampleResult)) {
+    formulaPreviewDiv.innerHTML = `
+      <strong>📊 Previsualización:</strong><br>
+      Si todos los alumnos tuvieran nota <strong>6</strong>:<br>
+      Resultado = <strong>${exampleResult.toFixed(2)}</strong>
+    `;
+    formulaPreviewDiv.classList.remove('hidden');
+  }
+}
+
+function simulateFormulaWithExamples(formula) {
+  try {
+    let evalStr = formula;
+    
+    // Reemplazar nombres de actividades con ejemplo (6)
+    const allTerms = _classData?.terms || {};
+    Object.values(allTerms).forEach(term => {
+      const activities = term.activities || [];
+      activities.forEach(actId => {
+        db.collection('activitats').doc(actId).get().then(doc => {
+          if (doc.exists) {
+            const actName = doc.data().nom;
+            const regex = new RegExp(actName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+            evalStr = evalStr.replace(regex, '6');
+          }
+        });
+      });
+    });
+    
+    return Function('"use strict"; return (' + evalStr + ')')();
+  } catch(e) {
+    return null;
+  }
+}
+
+// ============================================================
+// HELPERS (sin cambios)
+// ============================================================
+
 async function applyNumeric(val) {
   if (isNaN(val)) throw new Error('Introdueix un número vàlid');
   await Promise.all(classStudents.map(sid => saveNote(sid, currentCalcActivityId, val)));
@@ -1347,6 +1500,13 @@ async function applyNumeric(val) {
 
 async function applyFormula(formula) {
   if (!formula.trim()) throw new Error('Formula buida');
+  
+  // Validar antes de aplicar
+  const validation = checkFormulaValidity(formula);
+  if (!validation.valid) {
+    throw new Error('Fórmula inválida: ' + validation.error);
+  }
+  
   await Promise.all(classStudents.map(async sid => {
     const result = await evalFormulaAsync(formula, sid);
     await saveNote(sid, currentCalcActivityId, result);
@@ -1454,19 +1614,17 @@ modalApplyCalcBtn.addEventListener('click', async () => {
   }
 });
 
-// Build Formula Buttons con selector de términos
+// Build Formula Buttons (sin cambios respecto a versión anterior)
 function buildFormulaButtons(){
   formulaButtonsDiv.innerHTML = '';
 
-  console.log('buildFormulaButtons - _classData:', _classData); // 🔍 DEBUG
+  console.log('buildFormulaButtons - _classData:', _classData);
   
   const allTerms = _classData?.terms || {};
   const termIds = Object.keys(allTerms);
   
-  console.log('Términos encontrados:', termIds); // 🔍 DEBUG
-  console.log('Cantidad de términos:', termIds.length); // 🔍 DEBUG
+  console.log('Términos encontrados:', termIds);
 
-  // Selector de términos (solo si hay múltiples)
   if (termIds.length > 1) {
     const selectorContainer = document.createElement('div');
     selectorContainer.className = 'mb-3 p-2 bg-blue-50 rounded border border-blue-200';
@@ -1485,16 +1643,11 @@ function buildFormulaButtons(){
       opt.value = termId;
       const termName = allTerms[termId].name || termId;
       opt.textContent = termName;
-      
-      console.log(`Opción añadida: ${termName} (${termId})`); // 🔍 DEBUG
-      
       termSelect.appendChild(opt);
     });
 
     termSelect.addEventListener('change', (e) => {
       _selectedTermForFormula = e.target.value || null;
-      console.log('Término seleccionado:', _selectedTermForFormula); // 🔍 DEBUG
-      
       const currentButtons = formulaButtonsDiv.querySelectorAll('.activity-buttons-container');
       if (currentButtons.length > 0) {
         currentButtons.forEach(btn => btn.remove());
@@ -1504,8 +1657,6 @@ function buildFormulaButtons(){
 
     selectorContainer.appendChild(termSelect);
     formulaButtonsDiv.appendChild(selectorContainer);
-  } else {
-    console.warn('⚠️ No hay múltiples términos, no se muestra selector'); // 🔍 DEBUG
   }
 
   // Operadores
@@ -1516,7 +1667,7 @@ function buildFormulaButtons(){
     btn.type='button';
     btn.className='px-2 py-1 m-1 bg-gray-200 rounded hover:bg-gray-300';
     btn.textContent = op;
-    btn.addEventListener('click', ()=> addToFormula(op));
+    btn.addEventListener('click', ()=> insertAtCursor(op));
     operatorsContainer.appendChild(btn);
   });
   formulaButtonsDiv.appendChild(operatorsContainer);
@@ -1529,7 +1680,7 @@ function buildFormulaButtons(){
     btn.type='button';
     btn.className='px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
     btn.textContent = i;
-    btn.addEventListener('click', ()=> addToFormula(i));
+    btn.addEventListener('click', ()=> insertAtCursor(i));
     numbersContainer.appendChild(btn);
   }
   formulaButtonsDiv.appendChild(numbersContainer);
@@ -1542,7 +1693,7 @@ function buildFormulaButtons(){
     btn.type='button';
     btn.className='px-2 py-1 m-1 bg-yellow-200 rounded hover:bg-yellow-300';
     btn.textContent = dec;
-    btn.addEventListener('click', ()=> addToFormula('.'));
+    btn.addEventListener('click', ()=> insertAtCursor('.'));
     decimalsContainer.appendChild(btn);
   });
   formulaButtonsDiv.appendChild(decimalsContainer);
@@ -1552,20 +1703,47 @@ function buildFormulaButtons(){
   backBtn.type='button';
   backBtn.className='px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
   backBtn.textContent = '⌫';
-  backBtn.addEventListener('click', ()=> formulaField.value = formulaField.value.slice(0,-1));
+  backBtn.addEventListener('click', deleteAtCursor);
   formulaButtonsDiv.appendChild(backBtn);
 
   buildActivityButtons();
 }
 
+// 🔥 NUEVO: Insertar en la posición del cursor
+function insertAtCursor(str) {
+  const start = formulaField.selectionStart;
+  const end = formulaField.selectionEnd;
+  const text = formulaField.value;
+  
+  formulaField.value = text.substring(0, start) + str + text.substring(end);
+  
+  // Mover el cursor después del texto insertado
+  setTimeout(() => {
+    formulaField.focus();
+    formulaField.setSelectionRange(start + String(str).length, start + String(str).length);
+  }, 0);
+  
+  validateFormula();
+}
 
-// ============================================================
-// TAMBIÉN: Mejora buildActivityButtons para debugging
-// ============================================================
+// 🔥 NUEVO: Borrar en la posición del cursor
+function deleteAtCursor() {
+  const start = formulaField.selectionStart;
+  if (start > 0) {
+    const text = formulaField.value;
+    formulaField.value = text.substring(0, start - 1) + text.substring(start);
+    
+    setTimeout(() => {
+      formulaField.focus();
+      formulaField.setSelectionRange(start - 1, start - 1);
+    }, 0);
+    
+    validateFormula();
+  }
+}
 
 function buildActivityButtons(){
-  console.log('buildActivityButtons - _selectedTermForFormula:', _selectedTermForFormula); // 🔍 DEBUG
-  console.log('buildActivityButtons - _classData:', _classData); // 🔍 DEBUG
+  console.log('buildActivityButtons - _selectedTermForFormula:', _selectedTermForFormula);
 
   const activitiesContainer = document.createElement('div');
   activitiesContainer.className = 'activity-buttons-container mb-2 p-2 bg-indigo-50 rounded';
@@ -1574,10 +1752,8 @@ function buildActivityButtons(){
 
   if (_selectedTermForFormula && _classData?.terms?.[_selectedTermForFormula]) {
     activitiesToShow = _classData.terms[_selectedTermForFormula].activities || [];
-    console.log(`Actividades de término ${_selectedTermForFormula}:`, activitiesToShow); // 🔍 DEBUG
   } else {
     activitiesToShow = classActivities;
-    console.log('Actividades del término actual:', activitiesToShow); // 🔍 DEBUG
   }
 
   if (activitiesToShow.length === 0) {
@@ -1585,15 +1761,10 @@ function buildActivityButtons(){
     emptyMsg.className = 'text-sm text-gray-600 text-center';
     emptyMsg.textContent = 'Cap activitat en aquesta pestanya';
     activitiesContainer.appendChild(emptyMsg);
-    console.warn('⚠️ No hay actividades para mostrar'); // 🔍 DEBUG
   } else {
     activitiesToShow.forEach(aid => {
       db.collection('activitats').doc(aid).get().then(doc => {
-        if (!doc.exists) {
-          console.warn(`⚠️ Actividad ${aid} no encontrada en Firestore`); // 🔍 DEBUG
-          return;
-        }
-        
+        if (!doc.exists) return;
         const name = doc.data().nom;
         const btn = document.createElement('button');
         btn.type='button';
@@ -1606,7 +1777,7 @@ function buildActivityButtons(){
         }
         btn.textContent = buttonText;
         
-        btn.addEventListener('click', () => addToFormula(name));
+        btn.addEventListener('click', () => insertAtCursor(name));
         activitiesContainer.appendChild(btn);
       });
     });
@@ -1654,7 +1825,6 @@ function buildRoundingButtons(){
     formulaButtonsDiv.appendChild(selectorContainer);
   }
 
-  // Valores rounding
   const roundingValuesContainer = document.createElement('div');
   roundingValuesContainer.className = 'rounding-values-container mb-2';
   [0.5, 1].forEach(v => {
@@ -1662,17 +1832,16 @@ function buildRoundingButtons(){
     btn.type='button';
     btn.className='px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300 font-semibold';
     btn.textContent = v;
-    btn.addEventListener('click', () => addToFormula(v));
+    btn.addEventListener('click', () => insertAtCursor(v));
     roundingValuesContainer.appendChild(btn);
   });
   formulaButtonsDiv.appendChild(roundingValuesContainer);
 
-  // Backspace
   const backBtn = document.createElement('button');
   backBtn.type='button';
   backBtn.className='px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
   backBtn.textContent = '⌫';
-  backBtn.addEventListener('click', () => formulaField.value = formulaField.value.slice(0,-1));
+  backBtn.addEventListener('click', deleteAtCursor);
   formulaButtonsDiv.appendChild(backBtn);
 
   buildRoundingActivityButtons();
@@ -1711,7 +1880,7 @@ function buildRoundingActivityButtons(){
         }
         btn.textContent = buttonText;
         
-        btn.addEventListener('click', () => addToFormula(name));
+        btn.addEventListener('click', () => insertAtCursor(name));
         activitiesContainer.appendChild(btn);
       });
     });
@@ -1720,49 +1889,30 @@ function buildRoundingActivityButtons(){
   formulaButtonsDiv.appendChild(activitiesContainer);
 }
 
-function addToFormula(str){
-  formulaField.value += str;
-}
-
-// REEMPLAZA la función evalFormulaAsync por ESTA VERSIÓN MEJORADA:
-
 async function evalFormulaAsync(formula, studentId){
   let evalStr = formula;
 
   const studentDoc = await db.collection('alumnes').doc(studentId).get();
   const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
 
-  // 🔥 NUEVO: Obtener TODAS las actividades de TODOS los trimestres
   const allTerms = _classData?.terms || {};
   const allActivityIds = new Set();
   
-  // Recopilar TODOS los IDs de actividades de todos los trimestres
   Object.values(allTerms).forEach(term => {
     const activities = term.activities || [];
     activities.forEach(actId => allActivityIds.add(actId));
   });
   
-  // También añadir las del trimestre actual
   classActivities.forEach(actId => allActivityIds.add(actId));
 
-  console.log('Todas las actividades encontradas:', Array.from(allActivityIds));
-
-  // ========================================
-  // 1) Substituir marcadores por ID (ex: __ACT__<actId>)
-  // ========================================
   for(const aid of allActivityIds){
     const marker = `__ACT__${aid}`;
     const val = Number(notes[aid]);
     const safeVal = isNaN(val) ? 0 : val;
     const reMarker = new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
     evalStr = evalStr.replace(reMarker, safeVal);
-    
-    console.log(`Reemplazando ${marker} con ${safeVal}`);
   }
 
-  // ========================================
-  // 2) Substituir noms d'activitat por valores
-  // ========================================
   for(const aid of allActivityIds){
     const actDoc = await db.collection('activitats').doc(aid).get();
     const actName = actDoc.exists ? actDoc.data().nom : '';
@@ -1772,22 +1922,15 @@ async function evalFormulaAsync(formula, studentId){
     const val = Number(notes[aid]);
     const safeVal = isNaN(val) ? 0 : val;
     
-    // Escapar caracteres especiales en el nombre
     const regex = new RegExp(actName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
     evalStr = evalStr.replace(regex, safeVal);
-    
-    console.log(`Reemplazando "${actName}" (${aid}) con ${safeVal}`);
   }
-
-  console.log('Fórmula después de reemplazos:', evalStr);
 
   try {
     const result = Function('"use strict"; return (' + evalStr + ')')();
-    console.log('Resultado de la fórmula:', result);
     return result;
   } catch(e){
     console.error('Error evaluating formula:', formula, e);
-    console.error('Fórmula evaluada:', evalStr);
     return 0;
   }
 }
