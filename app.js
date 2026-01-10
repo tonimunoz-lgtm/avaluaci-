@@ -998,7 +998,7 @@ menuDiv.querySelector('.delete-btn').addEventListener('click', () => {
 
   });
 
-  //headRow.appendChild(th('Mitjana', 'text-right'));
+  headRow.appendChild(th('Mitjana', 'text-right'));
   notesThead.appendChild(headRow);
 
   enableActivityDrag();
@@ -1145,7 +1145,21 @@ input.addEventListener('keydown', e => {
       tr.appendChild(td);
     });
     
-   
+    //----------------------------------------- Mitjana alumne
+    const avgTd = document.createElement('td');
+    avgTd.className = 'border px-2 py-1 text-right font-semibold';
+    avgTd.textContent = computeStudentAverageText(studentData);
+    tr.appendChild(avgTd);
+
+    
+    notesTbody.appendChild(tr);
+
+  });
+
+ // Final: recalculs de mitjanes i fila fórmules (igual que abans)
+  renderAverages();
+}
+
 // Funció per actualitzar cel·les calculades sense recrear tota la taula
 function updateCalculatedCells() {
   db.collection('classes').doc(currentClassId).get().then(doc => {
@@ -1221,14 +1235,39 @@ function computeStudentAverageText(studentData){
 
 function renderAverages(){
   // Actualitzar mitjanes alumnes
- 
+  Array.from(notesTbody.children).forEach(tr=>{
+    const inputs = Array.from(tr.querySelectorAll('input')).map(i=> Number(i.value)).filter(v=> !isNaN(v));
+    const lastTd = tr.querySelectorAll('td')[tr.querySelectorAll('td').length - 1];
+    lastTd.textContent = inputs.length ? (inputs.reduce((a,b)=>a+b,0)/inputs.length).toFixed(2) : '';
+  });
 
   const actCount = classActivities.length;
   notesTfoot.innerHTML = '';
 
+  // ----------------- Mitjana per activitat -----------------
+ const trAvg = document.createElement('tr');
+  trAvg.className = 'text-sm';
+  trAvg.appendChild(th('Mitjana activitat'));
+  if(actCount === 0){
+    trAvg.appendChild(th('',''));
+    notesTfoot.appendChild(trAvg);
+    return;
+  }
+
+  for(let i=0;i<actCount;i++){
+    const inputs = Array.from(notesTbody.querySelectorAll('tr')).map(r => r.querySelectorAll('input')[i]).filter(Boolean);
+    const vals = inputs.map(inp => Number(inp.value)).filter(v=> !isNaN(v));
+    const avg = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2) : '';
+    const td = document.createElement('td');
+    td.className = 'border px-2 py-1 text-center font-semibold';
+    td.textContent = avg;
+    trAvg.appendChild(td);
+  }
+  trAvg.appendChild(th('',''));
+  notesTfoot.appendChild(trAvg);
 
   // ----------------- Fila fórmules -----------------
-const trForm = document.createElement('tr');
+  const trForm = document.createElement('tr');
   trForm.className = 'formulas-row text-sm bg-gray-100';
   const td0 = document.createElement('td');
   td0.textContent = 'Fórmula';
@@ -1248,10 +1287,14 @@ const trForm = document.createElement('tr');
       trForm.appendChild(td);
     }
 
-    // 🔥 ELIMINADA: const tdLast = ... (la celda vacía de la derecha)
+    const tdLast = document.createElement('td');
+    tdLast.textContent = '';
+    tdLast.className = 'border px-2 py-1 text-center font-medium';
+    trForm.appendChild(tdLast);
 
     formulaTfoot.appendChild(trForm);
   });
+}
 
 
 /* ============================================================
