@@ -499,29 +499,35 @@ btnBack.addEventListener('click', ()=> {
 });
 
 /* ---------------- Load Class Data ---------------- */
+/* ---------------- Load Class Data ---------------- */
 function loadClassData(){
   if(!currentClassId) return;
   db.collection('classes').doc(currentClassId).get().then(doc=>{
     if(!doc.exists) { alert('Classe no trobada'); return; }
     const data = doc.data();
-     _classData = data;
+    _classData = data; // 🔥 ASEGURATE QUE ESTO ESTÉ AQUÍ
 
     // Guardem dades locals com abans
     classStudents = data.alumnes || [];
-    // NO assignem classActivities directament des d'aquí; els activitats s'obtindran del terme actiu.
-    // classActivities = data.activitats || [];
     document.getElementById('classTitle').textContent = data.nom || 'Sense nom';
     document.getElementById('classSub').textContent = `ID: ${doc.id}`;
 
     // Inicialitzar Terms passant db, id i dades de la classe
     Terms.setup(db, currentClassId, data, {
       onChange: (activeTermId) => {
+        // 🔥 NUEVO: Actualizar _classData cada vez que cambia el término
+        db.collection('classes').doc(currentClassId).get().then(updatedDoc => {
+          if(updatedDoc.exists) {
+            _classData = updatedDoc.data(); // Actualizar con datos frescos
+            console.log('_classData actualizado:', _classData);
+          }
+        });
+
         // Quan el terme actiu canvia, actualitzem classActivities i re-renderitzem la taula
         const acts = Terms.getActiveTermActivities();
         classActivities = Array.isArray(acts) ? acts : [];
-        // També actualitzem calculatedActivities si vols (si ho guardes dins del terme)
-        // calculatedActivities = (data.terms && data.terms[activeTermId] && data.terms[activeTermId].calculatedActivities) || {};
         renderNotesGrid(); // renderitza la taula amb activitats del terme actiu
+        
         // Actualitzar títol per incloure nom terme al costat de nom classe
         const titleEl = document.getElementById('classTitle');
         if(titleEl) titleEl.textContent = `${data.nom} - ${Terms.getActiveTermName() || ''}`;
@@ -530,7 +536,6 @@ function loadClassData(){
 
     // Render llista d'alumnes i altres UI
     renderStudentsList();
-    // renderNotesGrid() serà cridat per l'onChange del setup
   }).catch(e=> console.error(e));
 }
 
@@ -1453,8 +1458,13 @@ modalApplyCalcBtn.addEventListener('click', async () => {
 function buildFormulaButtons(){
   formulaButtonsDiv.innerHTML = '';
 
+  console.log('buildFormulaButtons - _classData:', _classData); // 🔍 DEBUG
+  
   const allTerms = _classData?.terms || {};
   const termIds = Object.keys(allTerms);
+  
+  console.log('Términos encontrados:', termIds); // 🔍 DEBUG
+  console.log('Cantidad de términos:', termIds.length); // 🔍 DEBUG
 
   // Selector de términos (solo si hay múltiples)
   if (termIds.length > 1) {
@@ -1473,12 +1483,18 @@ function buildFormulaButtons(){
     termIds.forEach(termId => {
       const opt = document.createElement('option');
       opt.value = termId;
-      opt.textContent = allTerms[termId].name || termId;
+      const termName = allTerms[termId].name || termId;
+      opt.textContent = termName;
+      
+      console.log(`Opción añadida: ${termName} (${termId})`); // 🔍 DEBUG
+      
       termSelect.appendChild(opt);
     });
 
     termSelect.addEventListener('change', (e) => {
       _selectedTermForFormula = e.target.value || null;
+      console.log('Término seleccionado:', _selectedTermForFormula); // 🔍 DEBUG
+      
       const currentButtons = formulaButtonsDiv.querySelectorAll('.activity-buttons-container');
       if (currentButtons.length > 0) {
         currentButtons.forEach(btn => btn.remove());
@@ -1488,6 +1504,8 @@ function buildFormulaButtons(){
 
     selectorContainer.appendChild(termSelect);
     formulaButtonsDiv.appendChild(selectorContainer);
+  } else {
+    console.warn('⚠️ No hay múltiples términos, no se muestra selector'); // 🔍 DEBUG
   }
 
   // Operadores
@@ -1540,7 +1558,15 @@ function buildFormulaButtons(){
   buildActivityButtons();
 }
 
+
+// ============================================================
+// TAMBIÉN: Mejora buildActivityButtons para debugging
+// ============================================================
+
 function buildActivityButtons(){
+  console.log('buildActivityButtons - _selectedTermForFormula:', _selectedTermForFormula); // 🔍 DEBUG
+  console.log('buildActivityButtons - _classData:', _classData); // 🔍 DEBUG
+
   const activitiesContainer = document.createElement('div');
   activitiesContainer.className = 'activity-buttons-container mb-2 p-2 bg-indigo-50 rounded';
 
@@ -1548,8 +1574,10 @@ function buildActivityButtons(){
 
   if (_selectedTermForFormula && _classData?.terms?.[_selectedTermForFormula]) {
     activitiesToShow = _classData.terms[_selectedTermForFormula].activities || [];
+    console.log(`Actividades de término ${_selectedTermForFormula}:`, activitiesToShow); // 🔍 DEBUG
   } else {
     activitiesToShow = classActivities;
+    console.log('Actividades del término actual:', activitiesToShow); // 🔍 DEBUG
   }
 
   if (activitiesToShow.length === 0) {
@@ -1557,10 +1585,15 @@ function buildActivityButtons(){
     emptyMsg.className = 'text-sm text-gray-600 text-center';
     emptyMsg.textContent = 'Cap activitat en aquesta pestanya';
     activitiesContainer.appendChild(emptyMsg);
+    console.warn('⚠️ No hay actividades para mostrar'); // 🔍 DEBUG
   } else {
     activitiesToShow.forEach(aid => {
       db.collection('activitats').doc(aid).get().then(doc => {
-        if (!doc.exists) return;
+        if (!doc.exists) {
+          console.warn(`⚠️ Actividad ${aid} no encontrada en Firestore`); // 🔍 DEBUG
+          return;
+        }
+        
         const name = doc.data().nom;
         const btn = document.createElement('button');
         btn.type='button';
