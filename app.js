@@ -504,6 +504,7 @@ function loadClassData(){
   db.collection('classes').doc(currentClassId).get().then(doc=>{
     if(!doc.exists) { alert('Classe no trobada'); return; }
     const data = doc.data();
+     _classData = data;
 
     // Guardem dades locals com abans
     classStudents = data.alumnes || [];
@@ -1293,23 +1294,49 @@ function renderAverages(){
 
 
 
+// ============================================================
+// INSTRUCCIONES PARA LIMPIAR app.js
+// ============================================================
+
+// PASO 1: Busca en tu app.js la línea:
+// /* ---------------- Open Calculation Modal ---------------- */
+
+// PASO 2: Encuentra TODO el código DESDE esta línea:
 /* ---------------- Open Calculation Modal ---------------- */
 function openCalcModal(activityId){
   currentCalcActivityId = activityId; 
   openModal('modalCalc');
-  // Reset modal
   document.getElementById('calcType').value = 'numeric';
   document.getElementById('formulaInputs').classList.add('hidden');
   document.getElementById('numericInput').classList.remove('hidden');
   document.getElementById('numericField').value = '';
   document.getElementById('formulaField').value = '';
 }
-/* ---------------- Modal Calcul: Numeric / Formula ---------------- */
-// ============================================================
-// NUEVO: Modal Calcul mejorado para referencias cross-terms
-// ============================================================
 
-// Remplazar la sección "Modal Calcul" en app.js con esto:
+// HASTA la línea (inclusive):
+// async function gmailSendEmail(to, subject, message) {
+
+// PASO 3: BORRA TODO ese bloque (es la sección de modales duplicada)
+
+// PASO 4: En su lugar, copia ESTO (código limpio y único):
+
+/* ============================================================
+   MODAL CÁLCULO - Cross-Terms Support
+   ============================================================ */
+
+let _classData = null; // Variable global para acceso a términos
+let _selectedTermForFormula = null; // Término seleccionado en la calculadora
+
+function openCalcModal(activityId){
+  currentCalcActivityId = activityId; 
+  openModal('modalCalc');
+  document.getElementById('calcType').value = 'numeric';
+  document.getElementById('formulaInputs').classList.add('hidden');
+  document.getElementById('numericInput').classList.remove('hidden');
+  document.getElementById('numericField').value = '';
+  document.getElementById('formulaField').value = '';
+  _selectedTermForFormula = null; // Reset selector
+}
 
 const calcTypeSelect = document.getElementById('calcType');
 const numericDiv = document.getElementById('numericInput');
@@ -1318,9 +1345,6 @@ const formulaDiv = document.getElementById('formulaInputs');
 const formulaField = document.getElementById('formulaField');
 const formulaButtonsDiv = document.getElementById('formulaButtons');
 const modalApplyCalcBtn = document.getElementById('modalApplyCalcBtn');
-
-// 🔥 NUEVO: Selector de términos para fórmulas cross-term
-let _selectedTermForFormula = null; // término seleccionado en la calculadora
 
 // Cambio tipo cálculo
 calcTypeSelect.addEventListener('change', ()=>{
@@ -1338,15 +1362,12 @@ calcTypeSelect.addEventListener('change', ()=>{
   }
 });
 
-// ─────────── Helpers ───────────
-
-// Numeric
+// Helpers
 async function applyNumeric(val) {
   if (isNaN(val)) throw new Error('Introdueix un número vàlid');
   await Promise.all(classStudents.map(sid => saveNote(sid, currentCalcActivityId, val)));
 }
 
-// Formula
 async function applyFormula(formula) {
   if (!formula.trim()) throw new Error('Formula buida');
   await Promise.all(classStudents.map(async sid => {
@@ -1355,7 +1376,6 @@ async function applyFormula(formula) {
   }));
 }
 
-// Rounding
 async function applyRounding(formula) {
   if (!formula.trim()) throw new Error('Selecciona activitat i 0,5 o 1');
 
@@ -1378,7 +1398,7 @@ async function applyRounding(formula) {
   }));
 }
 
-// ─────────── Event Listener ───────────
+// Event Listener Principal
 modalApplyCalcBtn.addEventListener('click', async () => {
   if (!currentCalcActivityId) return;
 
@@ -1433,7 +1453,6 @@ modalApplyCalcBtn.addEventListener('click', async () => {
           formulaText = `__ACT__${selectedActivityId}`;
           displayFormulaText = `${selectedActivityName}`;
         }
-
         break;
 
       default:
@@ -1458,19 +1477,15 @@ modalApplyCalcBtn.addEventListener('click', async () => {
   }
 });
 
-
-// ============================================================
-// 🔥 NUEVA FUNCIÓN: buildFormulaButtons CON SELECTOR DE TERMS
-// ============================================================
+// Build Formula Buttons con selector de términos
 function buildFormulaButtons(){
   formulaButtonsDiv.innerHTML = '';
 
-  // 🆕 SELECTOR DE TÉRMINOS (solo si hay múltiples términos)
   const allTerms = _classData?.terms || {};
   const termIds = Object.keys(allTerms);
 
+  // Selector de términos (solo si hay múltiples)
   if (termIds.length > 1) {
-    // Crear contenedor para el selector
     const selectorContainer = document.createElement('div');
     selectorContainer.className = 'mb-3 p-2 bg-blue-50 rounded border border-blue-200';
     selectorContainer.innerHTML = '<label class="text-sm font-semibold text-blue-800">Selecciona pestaña d\'activitats:</label>';
@@ -1478,13 +1493,11 @@ function buildFormulaButtons(){
     const termSelect = document.createElement('select');
     termSelect.className = 'w-full mt-1 border rounded px-2 py-1 bg-white';
 
-    // Opción inicial
     const optionAll = document.createElement('option');
     optionAll.value = '';
     optionAll.textContent = 'Activitats de la pestaña actual';
     termSelect.appendChild(optionAll);
 
-    // Opción para cada término
     termIds.forEach(termId => {
       const opt = document.createElement('option');
       opt.value = termId;
@@ -1494,7 +1507,6 @@ function buildFormulaButtons(){
 
     termSelect.addEventListener('change', (e) => {
       _selectedTermForFormula = e.target.value || null;
-      // Recrear botones de actividades cuando cambias de término
       const currentButtons = formulaButtonsDiv.querySelectorAll('.activity-buttons-container');
       if (currentButtons.length > 0) {
         currentButtons.forEach(btn => btn.remove());
@@ -1506,10 +1518,9 @@ function buildFormulaButtons(){
     formulaButtonsDiv.appendChild(selectorContainer);
   }
 
-  // Botones de operadores y números (siempre igual)
+  // Operadores
   const operatorsContainer = document.createElement('div');
   operatorsContainer.className = 'operators-container mb-2';
-
   ['+', '-', '*', '/', '(', ')'].forEach(op=>{
     const btn = document.createElement('button');
     btn.type='button';
@@ -1520,7 +1531,7 @@ function buildFormulaButtons(){
   });
   formulaButtonsDiv.appendChild(operatorsContainer);
 
-  // Números 0-10
+  // Números
   const numbersContainer = document.createElement('div');
   numbersContainer.className = 'numbers-container mb-2';
   for(let i=0;i<=10;i++){
@@ -1554,11 +1565,9 @@ function buildFormulaButtons(){
   backBtn.addEventListener('click', ()=> formulaField.value = formulaField.value.slice(0,-1));
   formulaButtonsDiv.appendChild(backBtn);
 
-  // 🆕 Botones de actividades (será recreado cuando cambies de término)
   buildActivityButtons();
 }
 
-// 🆕 NUEVA FUNCIÓN: Botones de actividades según término seleccionado
 function buildActivityButtons(){
   const activitiesContainer = document.createElement('div');
   activitiesContainer.className = 'activity-buttons-container mb-2 p-2 bg-indigo-50 rounded';
@@ -1566,17 +1575,15 @@ function buildActivityButtons(){
   let activitiesToShow = [];
 
   if (_selectedTermForFormula && _classData?.terms?.[_selectedTermForFormula]) {
-    // Mostrar actividades del término seleccionado
     activitiesToShow = _classData.terms[_selectedTermForFormula].activities || [];
   } else {
-    // Mostrar actividades del término actual (comportamiento original)
     activitiesToShow = classActivities;
   }
 
   if (activitiesToShow.length === 0) {
     const emptyMsg = document.createElement('p');
     emptyMsg.className = 'text-sm text-gray-600 text-center';
-    emptyMsg.textContent = 'Cap activitat en aquesta pestaña';
+    emptyMsg.textContent = 'Cap activitat en aquesta pestanya';
     activitiesContainer.appendChild(emptyMsg);
   } else {
     activitiesToShow.forEach(aid => {
@@ -1586,9 +1593,7 @@ function buildActivityButtons(){
         const btn = document.createElement('button');
         btn.type='button';
         btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300 font-semibold';
-        btn.textContent = name;
         
-        // 🆕 Si estamos en un término diferente, añadir prefijo al nombre
         let buttonText = name;
         if (_selectedTermForFormula) {
           const termName = _classData.terms[_selectedTermForFormula].name;
@@ -1605,13 +1610,9 @@ function buildActivityButtons(){
   formulaButtonsDiv.appendChild(activitiesContainer);
 }
 
-// ============================================================
-// 🔥 NUEVA FUNCIÓN: buildRoundingButtons CON SELECTOR DE TERMS
-// ============================================================
 function buildRoundingButtons(){
   formulaButtonsDiv.innerHTML = '';
 
-  // 🆕 SELECTOR DE TÉRMINOS (solo si hay múltiples términos)
   const allTerms = _classData?.terms || {};
   const termIds = Object.keys(allTerms);
 
@@ -1648,7 +1649,7 @@ function buildRoundingButtons(){
     formulaButtonsDiv.appendChild(selectorContainer);
   }
 
-  // Botones 0.5 y 1
+  // Valores rounding
   const roundingValuesContainer = document.createElement('div');
   roundingValuesContainer.className = 'rounding-values-container mb-2';
   [0.5, 1].forEach(v => {
@@ -1669,11 +1670,9 @@ function buildRoundingButtons(){
   backBtn.addEventListener('click', () => formulaField.value = formulaField.value.slice(0,-1));
   formulaButtonsDiv.appendChild(backBtn);
 
-  // 🆕 Botones de actividades para rounding
   buildRoundingActivityButtons();
 }
 
-// 🆕 NUEVA FUNCIÓN: Botones de actividades para rounding
 function buildRoundingActivityButtons(){
   const activitiesContainer = document.createElement('div');
   activitiesContainer.className = 'rounding-activities-container mb-2 p-2 bg-indigo-50 rounded';
@@ -1689,7 +1688,7 @@ function buildRoundingActivityButtons(){
   if (activitiesToShow.length === 0) {
     const emptyMsg = document.createElement('p');
     emptyMsg.className = 'text-sm text-gray-600 text-center';
-    emptyMsg.textContent = 'Cap activitat en aquesta pestaña';
+    emptyMsg.textContent = 'Cap activitat en aquesta pestanya';
     activitiesContainer.appendChild(emptyMsg);
   } else {
     activitiesToShow.forEach(aid => {
@@ -1716,21 +1715,17 @@ function buildRoundingActivityButtons(){
   formulaButtonsDiv.appendChild(activitiesContainer);
 }
 
-// Función auxiliar para añadir a la fórmula (ya existía)
 function addToFormula(str){
   formulaField.value += str;
 }
 
-// ============================================================
-// 🔥 MEJORADA: evalFormulaAsync PARA SOPORTAR CROSS-TERMS
-// ============================================================
 async function evalFormulaAsync(formula, studentId){
   let evalStr = formula;
 
   const studentDoc = await db.collection('alumnes').doc(studentId).get();
   const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
 
-  // 1) Substituir marcadores por ID (ex: __ACT__<actId>)
+  // Substituir marcadores por ID
   for(const aid of classActivities){
     const marker = `__ACT__${aid}`;
     const val = Number(notes[aid]);
@@ -1739,20 +1734,7 @@ async function evalFormulaAsync(formula, studentId){
     evalStr = evalStr.replace(reMarker, safeVal);
   }
 
-  // 2) 🆕 Substituir marcadores cross-term (formato: __TERM__<termId>__ACT__<actId>)
-  const allTerms = _classData?.terms || {};
-  for(const termId of Object.keys(allTerms)){
-    const termActivities = allTerms[termId].activities || [];
-    for(const aid of termActivities){
-      const marker = `__TERM__${termId}__ACT__${aid}`;
-      const val = Number(notes[aid]);
-      const safeVal = isNaN(val) ? 0 : val;
-      const reMarker = new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-      evalStr = evalStr.replace(reMarker, safeVal);
-    }
-  }
-
-  // 3) Substituir noms d'activitat por valors (compatibilitat)
+  // Substituir noms d'activitat por valors
   for(const aid of classActivities){
     const actDoc = await db.collection('activitats').doc(aid).get();
     const actName = actDoc.exists ? actDoc.data().nom : '';
@@ -1771,6 +1753,9 @@ async function evalFormulaAsync(formula, studentId){
   }
 }
 
+// ============================================================
+// FIN MODAL CÁLCULO
+// ============================================================
 
 
 
