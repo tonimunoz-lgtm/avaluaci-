@@ -1350,6 +1350,8 @@ calcTypeSelect.addEventListener('change', ()=>{
 // 🔥 NUEVO: Sistema de Validación en Tiempo Real
 // ============================================================
 
+// REEMPLAZA el setupFormulaValidation() y añade ESTAS NUEVAS FUNCIONES:
+
 function setupFormulaValidation() {
   // Crear contenedores si no existen
   if (!formulaValidationDiv) {
@@ -1366,14 +1368,111 @@ function setupFormulaValidation() {
     formulaValidationDiv.parentNode.insertBefore(formulaPreviewDiv, formulaValidationDiv.nextSibling);
   }
 
-  // 🔥 NUEVO: Permitir edición inline - hacer contentEditable
+  // 🔥 NUEVO: Crear indicador de cursor
+  let cursorIndicatorDiv = document.getElementById('cursorIndicator');
+  if (!cursorIndicatorDiv) {
+    cursorIndicatorDiv = document.createElement('div');
+    cursorIndicatorDiv.id = 'cursorIndicator';
+    cursorIndicatorDiv.className = 'mt-2 p-3 rounded bg-blue-50 border border-blue-200 text-sm font-mono';
+    cursorIndicatorDiv.style.whiteSpace = 'pre-wrap';
+    cursorIndicatorDiv.style.wordBreak = 'break-all';
+    formulaPreviewDiv.parentNode.insertBefore(cursorIndicatorDiv, formulaPreviewDiv.nextSibling);
+  }
+
   formulaField.addEventListener('input', validateFormula);
-  formulaField.addEventListener('click', () => {
-    // Permitir que el cursor se posicione en cualquier lugar
-    formulaField.focus();
-  });
+  formulaField.addEventListener('click', updateCursorIndicator);
+  formulaField.addEventListener('keydown', updateCursorIndicator);
+  formulaField.addEventListener('keyup', updateCursorIndicator);
+  formulaField.addEventListener('focus', updateCursorIndicator);
 }
 
+// 🔥 NUEVO: Actualizar indicador del cursor
+function updateCursorIndicator() {
+  const cursorIndicatorDiv = document.getElementById('cursorIndicator');
+  if (!cursorIndicatorDiv) return;
+
+  const text = formulaField.value;
+  const cursorPos = formulaField.selectionStart;
+  
+  if (!text) {
+    cursorIndicatorDiv.innerHTML = '<span style="color: #999;">Sin fórmula aún...</span>';
+    return;
+  }
+
+  // Crear visualización con cursor
+  const before = text.substring(0, cursorPos);
+  const after = text.substring(cursorPos);
+  
+  // Escapar caracteres especiales HTML
+  const beforeSafe = escapeHtml(before);
+  const afterSafe = escapeHtml(after);
+  
+  // Mostrar fórmula con indicador de cursor
+  cursorIndicatorDiv.innerHTML = `
+    <div>
+      <strong style="color: #1e40af;">📍 Posición del cursor:</strong>
+      <div style="margin-top: 8px; background: white; padding: 8px; border-radius: 4px; border: 1px solid #93c5fd;">
+        <span style="color: #666;">${beforeSafe}</span><span style="background: #3b82f6; color: white; animation: blink 1s infinite; padding: 2px 4px; border-radius: 2px;">│</span><span style="color: #666;">${afterSafe}</span>
+      </div>
+      <div style="margin-top: 6px; font-size: 12px; color: #666;">
+        Carácter ${cursorPos} de ${text.length}
+      </div>
+    </div>
+    <style>
+      @keyframes blink {
+        0%, 49% { opacity: 1; }
+        50%, 100% { opacity: 0.3; }
+      }
+    </style>
+  `;
+}
+
+// 🔥 NUEVO: Escapar caracteres especiales HTML
+function escapeHtml(text) {
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+// RESTO DE FUNCIONES - Reemplaza insertAtCursor y deleteAtCursor:
+
+function insertAtCursor(str) {
+  const start = formulaField.selectionStart;
+  const end = formulaField.selectionEnd;
+  const text = formulaField.value;
+  
+  formulaField.value = text.substring(0, start) + str + text.substring(end);
+  
+  // Mover el cursor después del texto insertado
+  setTimeout(() => {
+    formulaField.focus();
+    formulaField.setSelectionRange(start + String(str).length, start + String(str).length);
+    updateCursorIndicator(); // 🔥 ACTUALIZAR INDICADOR
+  }, 0);
+  
+  validateFormula();
+}
+
+function deleteAtCursor() {
+  const start = formulaField.selectionStart;
+  if (start > 0) {
+    const text = formulaField.value;
+    formulaField.value = text.substring(0, start - 1) + text.substring(start);
+    
+    setTimeout(() => {
+      formulaField.focus();
+      formulaField.setSelectionRange(start - 1, start - 1);
+      updateCursorIndicator(); // 🔥 ACTUALIZAR INDICADOR
+    }, 0);
+    
+    validateFormula();
+  }
+}
 function clearFormulaValidation() {
   if (formulaValidationDiv) formulaValidationDiv.innerHTML = '';
   if (formulaPreviewDiv) formulaPreviewDiv.classList.add('hidden');
