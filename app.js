@@ -25,8 +25,116 @@ let classActivities = [];
 let deleteMode = false;
 let currentCalcActivityId = null; // Activitat actual per fer càlculs
 let isDeleteMode = false;
+let currentCommentStudentId = null;
+let currentCommentStudentName = null;
 
+// 🔥 FUNCIONES GLOBALES DE COMENTARIOS (DEBEN ESTAR AQUÍ)
+function openCommentsModal(studentId, studentName, currentComment) {
+  currentCommentStudentId = studentId;
+  currentCommentStudentName = studentName;
+  
+  // Crear modal dinámicamente si no existe
+  let modal = document.getElementById('modalComments');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'modalComments';
+    modal.className = 'fixed inset-0 hidden items-center justify-center z-50';
+    modal.style.display = 'none';
+    modal.innerHTML = `
+      <div class="modal-backdrop absolute inset-0" onclick="closeCommentsModal()"></div>
+      <div class="bg-white rounded shadow-lg z-10 w-full max-w-md p-6 flex flex-col gap-4">
+        <div class="flex justify-between items-center">
+          <h2 id="modalCommentsTitle" class="text-xl font-bold"></h2>
+          <button onclick="closeCommentsModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #666;">×</button>
+        </div>
+        
+        <textarea 
+          id="commentTextarea" 
+          class="border rounded p-3 w-full h-32 resize-none focus:ring-2 focus:ring-blue-400 focus:outline-none"
+          placeholder="Escribe aquí los comentarios del alumno..."
+          maxlength="500"
+        ></textarea>
+        
+        <div class="text-xs text-gray-500">
+          <span id="commentChars">0</span>/500 caracteres
+        </div>
+        
+        <div class="flex gap-2">
+          <button onclick="closeCommentsModal()" class="flex-1 px-3 py-2 rounded bg-gray-300 hover:bg-gray-400 text-black font-semibold cursor-pointer">
+            Cancelar
+          </button>
+          <button onclick="saveComment()" class="flex-1 px-3 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold cursor-pointer">
+            Guardar
+          </button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    
+    // Event listener para el textarea
+    document.getElementById('commentTextarea').addEventListener('input', updateCommentChars);
+  }
+  
+  // Poblar modal
+  document.getElementById('modalCommentsTitle').textContent = `Comentarios: ${studentName}`;
+  const textarea = document.getElementById('commentTextarea');
+  textarea.value = currentComment;
+  updateCommentChars();
+  
+  // Mostrar modal
+  modal.classList.remove('hidden');
+  modal.style.display = 'flex';
+  textarea.focus();
+}
 
+function closeCommentsModal() {
+  const modal = document.getElementById('modalComments');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+  }
+  currentCommentStudentId = null;
+  currentCommentStudentName = null;
+}
+
+function updateCommentChars() {
+  const textarea = document.getElementById('commentTextarea');
+  if (!textarea) return;
+  const charsDiv = document.getElementById('commentChars');
+  if (!charsDiv) return;
+  const chars = textarea.value.length;
+  charsDiv.textContent = chars;
+}
+
+async function saveComment() {
+  if (!currentCommentStudentId) return;
+  
+  const textarea = document.getElementById('commentTextarea');
+  const comment = textarea.value.trim();
+  
+  try {
+    // Guardar en Firestore
+    await db.collection('alumnes').doc(currentCommentStudentId).update({
+      [`comentarios.${currentClassId}`]: comment
+    });
+    
+    console.log('Comentario guardado:', comment);
+    
+    // Cerrar modal PRIMERO
+    closeCommentsModal();
+    
+    // Recargar la tabla para mostrar el nuevo comentario
+    setTimeout(() => {
+      renderNotesGrid();
+    }, 100);
+    
+  } catch (e) {
+    console.error('Error guardando comentario:', e);
+    alert('Error guardando comentario: ' + e.message);
+  }
+}
+
+// FIN DE FUNCIONES GLOBALES
 
 /* Elements */
 const loginScreen = document.getElementById('loginScreen');
@@ -296,128 +404,7 @@ auth.onAuthStateChanged(user => {
     showLogin();
   }
 });
-
-
-// ============================================================
-// PASO 3: Añade estas funciones GLOBALES (antes de setupAfterAuth)
-// ============================================================
-
-// Variables globales para comentarios
-let currentCommentStudentId = null;
-let currentCommentStudentName = null;
-
-// Modal de comentarios
-function openCommentsModal(studentId, studentName, currentComment) {
-  currentCommentStudentId = studentId;
-  currentCommentStudentName = studentName;
-  
-  // Crear modal dinámicamente si no existe
-  let modal = document.getElementById('modalComments');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'modalComments';
-    modal.className = 'fixed inset-0 hidden items-center justify-center z-50';
-    modal.innerHTML = `
-      <div class="modal-backdrop absolute inset-0"></div>
-      <div class="bg-white rounded shadow-lg z-10 w-full max-w-md p-6 flex flex-col gap-4">
-        <div class="flex justify-between items-center">
-          <h2 id="modalCommentsTitle" class="text-xl font-bold"></h2>
-          <button class="text-gray-500 hover:text-gray-700 text-2xl" onclick="closeCommentsModal()">×</button>
-        </div>
-        
-        <textarea 
-          id="commentTextarea" 
-          class="border rounded p-3 w-full h-32 resize-none focus:ring-2 focus:ring-blue-400 focus:outline-none"
-          placeholder="Escribe aquí los comentarios del alumno..."
-        ></textarea>
-        
-        <div class="text-xs text-gray-500">
-          <span id="commentChars">0</span>/500 caracteres
-        </div>
-        
-        <div class="flex gap-2">
-          <button onclick="closeCommentsModal()" class="flex-1 px-3 py-2 rounded bg-gray-300 hover:bg-gray-400 text-black">
-            Cancelar
-          </button>
-          <button onclick="saveComment()" class="flex-1 px-3 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold">
-            Guardar
-          </button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(modal);
-  }
-  
-  // Poblar modal
-  document.getElementById('modalCommentsTitle').textContent = `Comentarios: ${studentName}`;
-  const textarea = document.getElementById('commentTextarea');
-  textarea.value = currentComment;
-  updateCommentChars();
-  
-  // Contador de caracteres
-  textarea.addEventListener('input', updateCommentChars);
-  
-  // Mostrar modal
-  modal.classList.remove('hidden');
-  modal.style.display = 'flex';
-  textarea.focus();
-}
-
-function closeCommentsModal() {
-  const modal = document.getElementById('modalComments');
-  if (modal) {
-    modal.classList.add('hidden');
-    modal.style.display = 'none';
-  }
-  currentCommentStudentId = null;
-  currentCommentStudentName = null;
-}
-
-function updateCommentChars() {
-  const textarea = document.getElementById('commentTextarea');
-  const charsDiv = document.getElementById('commentChars');
-  const chars = textarea.value.length;
-  charsDiv.textContent = Math.min(chars, 500);
-  
-  // Limitar a 500 caracteres
-  if (chars > 500) {
-    textarea.value = textarea.value.substring(0, 500);
-  }
-}
-
-async function saveComment() {
-  if (!currentCommentStudentId) return;
-  
-  const textarea = document.getElementById('commentTextarea');
-  const comment = textarea.value.trim();
-  
-  try {
-    // Guardar en Firestore
-    await db.collection('alumnes').doc(currentCommentStudentId).update({
-      [`comentarios.${currentClassId}`]: comment
-    });
-    
-    closeCommentsModal();
-    
-    // Recargar la taula para mostrar el nuevo comentario
-    renderNotesGrid();
-    
-  } catch (e) {
-    console.error('Error guardando comentario:', e);
-    alert('Error guardando comentario: ' + e.message);
-  }
-}
-
-// Cerrar modal al hacer clic en el backdrop
-document.addEventListener('click', (e) => {
-  const modal = document.getElementById('modalComments');
-  if (modal && e.target === modal) {
-    closeCommentsModal();
-  }
-});
-
-
-   
+ 
 async function setupAfterAuth(user) {
   showApp();
   const email = user.email || '';
