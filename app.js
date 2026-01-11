@@ -40,11 +40,11 @@ window.openCommentsModal = function(studentId, studentName, currentComment) {
     modal.id = 'modalComments';
     modal.className = 'fixed inset-0 hidden items-center justify-center z-50';
     modal.innerHTML = `
-      <div class="modal-backdrop absolute inset-0" style="background: rgba(0,0,0,0.2);" onclick="window.closeCommentsModal()"></div>
+      <div class="modal-backdrop absolute inset-0" style="background: rgba(0,0,0,0.2);"></div>
       <div class="bg-white rounded shadow-lg z-10 w-full max-w-md p-6 flex flex-col gap-4">
         <div class="flex justify-between items-center">
           <h2 id="modalCommentsTitle" class="text-xl font-bold"></h2>
-          <button onclick="window.closeCommentsModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #666;">×</button>
+          <button style="background: none; border: none; font-size: 28px; cursor: pointer; color: #666;">×</button>
         </div>
         
         <textarea 
@@ -60,10 +60,10 @@ window.openCommentsModal = function(studentId, studentName, currentComment) {
         </div>
         
         <div class="flex gap-2">
-          <button onclick="window.closeCommentsModal()" class="flex-1 px-3 py-2 rounded bg-gray-300 hover:bg-gray-400 text-black font-semibold cursor-pointer border-none">
+          <button class="flex-1 px-3 py-2 rounded bg-gray-300 hover:bg-gray-400 text-black font-semibold cursor-pointer border-none">
             Cancelar
           </button>
-          <button onclick="window.saveComment()" class="flex-1 px-3 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold cursor-pointer border-none">
+          <button class="flex-1 px-3 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold cursor-pointer border-none">
             Guardar
           </button>
         </div>
@@ -71,8 +71,26 @@ window.openCommentsModal = function(studentId, studentName, currentComment) {
     `;
     document.body.appendChild(modal);
     
-    // Event listener para el textarea
+    // Event listeners - AHORA SIN ATRIBUTOS ONCLICK
+    const closeBtn = modal.querySelector('.bg-white button:first-of-type');
+    const cancelBtn = modal.querySelector('.flex-1:nth-of-type(1)');
+    const saveBtn = modal.querySelector('.flex-1:nth-of-type(2)');
+    const backdropDiv = modal.querySelector('.modal-backdrop');
     const textarea = document.getElementById('commentTextarea');
+    
+    // Cerrar al pulsar X
+    closeBtn.addEventListener('click', window.closeCommentsModal);
+    
+    // Cerrar al pulsar Cancelar
+    cancelBtn.addEventListener('click', window.closeCommentsModal);
+    
+    // Guardar al pulsar Guardar
+    saveBtn.addEventListener('click', window.saveComment);
+    
+    // Cerrar al pulsar en el fondo
+    backdropDiv.addEventListener('click', window.closeCommentsModal);
+    
+    // Event listener para el textarea
     textarea.addEventListener('input', window.updateCommentChars);
   }
   
