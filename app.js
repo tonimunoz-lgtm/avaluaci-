@@ -1374,12 +1374,23 @@ function setupFormulaValidation() {
     cursorIndicatorDiv.className = 'mt-2 p-3 rounded bg-blue-50 border border-blue-200 text-sm font-mono';
     cursorIndicatorDiv.style.whiteSpace = 'pre-wrap';
     cursorIndicatorDiv.style.wordBreak = 'break-all';
+    cursorIndicatorDiv.style.lineHeight = '1.6';
     formulaPreviewDiv.parentNode.insertBefore(cursorIndicatorDiv, formulaPreviewDiv.nextSibling);
   }
 
-  formulaField.addEventListener('input', validateFormula);
+  // Permitir edición normal en el campo
+  formulaField.readOnly = false;
+  
+  formulaField.addEventListener('input', () => {
+    validateFormula();
+    updateCursorIndicator();
+  });
+  
   formulaField.addEventListener('click', updateCursorIndicator);
-  formulaField.addEventListener('keydown', updateCursorIndicator);
+  formulaField.addEventListener('keydown', (e) => {
+    // Permitir todas las teclas normales
+    setTimeout(updateCursorIndicator, 0);
+  });
   formulaField.addEventListener('keyup', updateCursorIndicator);
   formulaField.addEventListener('focus', updateCursorIndicator);
 }
@@ -1409,11 +1420,11 @@ function updateCursorIndicator() {
   cursorIndicatorDiv.innerHTML = `
     <div>
       <strong style="color: #1e40af;">📍 Posición del cursor:</strong>
-      <div style="margin-top: 8px; background: white; padding: 8px; border-radius: 4px; border: 1px solid #93c5fd;">
-        <span style="color: #666;">${beforeSafe}</span><span style="background: #3b82f6; color: white; animation: blink 1s infinite; padding: 2px 4px; border-radius: 2px;">│</span><span style="color: #666;">${afterSafe}</span>
+      <div style="margin-top: 8px; background: white; padding: 10px; border-radius: 4px; border: 2px solid #3b82f6; font-family: monospace;">
+        <span style="color: #333;">${beforeSafe}</span><span style="background: #3b82f6; color: white; animation: blink 1s infinite; padding: 1px 2px; border-radius: 2px; font-weight: bold;">|</span><span style="color: #333;">${afterSafe}</span>
       </div>
       <div style="margin-top: 6px; font-size: 12px; color: #666;">
-        Carácter ${cursorPos} de ${text.length}
+        Carácter <strong>${cursorPos}</strong> de <strong>${text.length}</strong>
       </div>
     </div>
     <style>
@@ -1772,7 +1783,7 @@ function buildFormulaButtons(){
   buildActivityButtons();
 }
 
-// 🔥 NUEVO: Insertar en la posición del cursor
+// 🔥 MEJORADO: insertAtCursor ahora se usa para botones
 function insertAtCursor(str) {
   const start = formulaField.selectionStart;
   const end = formulaField.selectionEnd;
@@ -1784,12 +1795,13 @@ function insertAtCursor(str) {
   setTimeout(() => {
     formulaField.focus();
     formulaField.setSelectionRange(start + String(str).length, start + String(str).length);
-    updateCursorIndicator(); // 🔥 ACTUALIZAR INDICADOR
+    updateCursorIndicator();
   }, 0);
   
   validateFormula();
 }
 
+// 🔥 MEJORADO: deleteAtCursor ahora se usa para el botón backspace
 function deleteAtCursor() {
   const start = formulaField.selectionStart;
   if (start > 0) {
@@ -1799,7 +1811,7 @@ function deleteAtCursor() {
     setTimeout(() => {
       formulaField.focus();
       formulaField.setSelectionRange(start - 1, start - 1);
-      updateCursorIndicator(); // 🔥 ACTUALIZAR INDICADOR
+      updateCursorIndicator();
     }, 0);
     
     validateFormula();
