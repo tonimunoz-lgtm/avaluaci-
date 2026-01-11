@@ -1350,8 +1350,6 @@ calcTypeSelect.addEventListener('change', ()=>{
 // 🔥 NUEVO: Sistema de Validación en Tiempo Real
 // ============================================================
 
-// REEMPLAZA el setupFormulaValidation() y añade ESTAS NUEVAS FUNCIONES:
-
 function setupFormulaValidation() {
   // Crear contenedores si no existen
   if (!formulaValidationDiv) {
@@ -1439,40 +1437,6 @@ function escapeHtml(text) {
   return text.replace(/[&<>"']/g, m => map[m]);
 }
 
-// RESTO DE FUNCIONES - Reemplaza insertAtCursor y deleteAtCursor:
-
-function insertAtCursor(str) {
-  const start = formulaField.selectionStart;
-  const end = formulaField.selectionEnd;
-  const text = formulaField.value;
-  
-  formulaField.value = text.substring(0, start) + str + text.substring(end);
-  
-  // Mover el cursor después del texto insertado
-  setTimeout(() => {
-    formulaField.focus();
-    formulaField.setSelectionRange(start + String(str).length, start + String(str).length);
-    updateCursorIndicator(); // 🔥 ACTUALIZAR INDICADOR
-  }, 0);
-  
-  validateFormula();
-}
-
-function deleteAtCursor() {
-  const start = formulaField.selectionStart;
-  if (start > 0) {
-    const text = formulaField.value;
-    formulaField.value = text.substring(0, start - 1) + text.substring(start);
-    
-    setTimeout(() => {
-      formulaField.focus();
-      formulaField.setSelectionRange(start - 1, start - 1);
-      updateCursorIndicator(); // 🔥 ACTUALIZAR INDICADOR
-    }, 0);
-    
-    validateFormula();
-  }
-}
 function clearFormulaValidation() {
   if (formulaValidationDiv) formulaValidationDiv.innerHTML = '';
   if (formulaPreviewDiv) formulaPreviewDiv.classList.add('hidden');
@@ -1820,12 +1784,12 @@ function insertAtCursor(str) {
   setTimeout(() => {
     formulaField.focus();
     formulaField.setSelectionRange(start + String(str).length, start + String(str).length);
+    updateCursorIndicator(); // 🔥 ACTUALIZAR INDICADOR
   }, 0);
   
   validateFormula();
 }
 
-// 🔥 NUEVO: Borrar en la posición del cursor
 function deleteAtCursor() {
   const start = formulaField.selectionStart;
   if (start > 0) {
@@ -1835,6 +1799,7 @@ function deleteAtCursor() {
     setTimeout(() => {
       formulaField.focus();
       formulaField.setSelectionRange(start - 1, start - 1);
+      updateCursorIndicator(); // 🔥 ACTUALIZAR INDICADOR
     }, 0);
     
     validateFormula();
