@@ -629,7 +629,6 @@ btnBack.addEventListener('click', ()=> {
 });
 
 /* ---------------- Load Class Data ---------------- */
-/* ---------------- Load Class Data ---------------- */
 function loadClassData(){
   if(!currentClassId) return;
   db.collection('classes').doc(currentClassId).get().then(doc=>{
@@ -668,7 +667,6 @@ function loadClassData(){
     renderStudentsList();
   }).catch(e=> console.error(e));
 }
-
 
 /* ---------------- Students ---------------- */
 btnAddStudent.addEventListener('click', ()=> openModal('modalAddStudent'));
@@ -756,7 +754,6 @@ async function createActivityModal() {
    // }
 }
 
-
 function removeActivity(actId){
   confirmAction('Eliminar activitat', 'Esborrar activitat i totes les notes relacionades?', async ()=> {
     try {
@@ -784,7 +781,6 @@ function removeActivity(actId){
     }
   });
 }
-
 
 /* ---------------- Render Students List amb menú ---------------- */
 function renderStudentsList() {
@@ -884,8 +880,6 @@ function renderStudentsList() {
   });
 }
 
-
-//------------------------------------------------nuevo-------------------------------------------------------
 /* ================================
    MENÚ GLOBAL D'ALUMNES
 ================================= */
@@ -1377,29 +1371,47 @@ function computeStudentAverageText(studentData){
   return (vals.reduce((s,n)=> s+n,0)/vals.length).toFixed(2);
 }
 
+// 🔥 CORRECCIÓN EN renderAverages() - Ignorar columna de comentarios
+
 function renderAverages(){
-  // Actualitzar mitjanes alumnes
+  // Actualitzar mitjanes alumnes (SIN contar la columna de comentarios)
   Array.from(notesTbody.children).forEach(tr=>{
-    const inputs = Array.from(tr.querySelectorAll('input')).map(i=> Number(i.value)).filter(v=> !isNaN(v));
-    const lastTd = tr.querySelectorAll('td')[tr.querySelectorAll('td').length - 1];
-    lastTd.textContent = inputs.length ? (inputs.reduce((a,b)=>a+b,0)/inputs.length).toFixed(2) : '';
+    const inputs = Array.from(tr.querySelectorAll('input[type="number"]'))
+      .map(i=> Number(i.value))
+      .filter(v=> !isNaN(v));
+    
+    // Buscar la celda de comentarios (es la última) y actualizarla
+    const allTds = tr.querySelectorAll('td');
+    const commentTd = allTds[allTds.length - 1]; // Última celda
+    
+    // Actualizar el promedio en la penúltima celda
+    if (allTds.length > 1) {
+      const averageTd = allTds[allTds.length - 2];
+      averageTd.textContent = inputs.length ? (inputs.reduce((a,b)=>a+b,0)/inputs.length).toFixed(2) : '';
+    }
   });
 
   const actCount = classActivities.length;
   notesTfoot.innerHTML = '';
 
-  // ----------------- Mitjana per activitat -----------------
- const trAvg = document.createElement('tr');
+  // Fila de promedio por actividad
+  const trAvg = document.createElement('tr');
   trAvg.className = 'text-sm';
   trAvg.appendChild(th('Mitjana activitat'));
+  
   if(actCount === 0){
     trAvg.appendChild(th('',''));
+    trAvg.appendChild(th('',''));  // 🔥 Celda vacía para columna comentarios
     notesTfoot.appendChild(trAvg);
     return;
   }
 
   for(let i=0;i<actCount;i++){
-    const inputs = Array.from(notesTbody.querySelectorAll('tr')).map(r => r.querySelectorAll('input')[i]).filter(Boolean);
+    const inputs = Array.from(notesTbody.querySelectorAll('tr')).map(r => {
+      const input = r.querySelectorAll('input[type="number"]')[i];
+      return input;
+    }).filter(Boolean);
+    
     const vals = inputs.map(inp => Number(inp.value)).filter(v=> !isNaN(v));
     const avg = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2) : '';
     const td = document.createElement('td');
@@ -1407,10 +1419,12 @@ function renderAverages(){
     td.textContent = avg;
     trAvg.appendChild(td);
   }
+  
+  // 🔥 Celda vacía para la columna de comentarios
   trAvg.appendChild(th('',''));
   notesTfoot.appendChild(trAvg);
 
-  // ----------------- Fila fórmules -----------------
+  // Fila de fórmulas
   const trForm = document.createElement('tr');
   trForm.className = 'formulas-row text-sm bg-gray-100';
   const td0 = document.createElement('td');
@@ -1418,7 +1432,7 @@ function renderAverages(){
   td0.className = 'border px-2 py-1 font-medium text-center';
   trForm.appendChild(td0);
 
-  // Llegim fórmules de Firestore
+  // Leer fórmulas de Firestore
   db.collection('classes').doc(currentClassId).get().then(doc=>{
     if(!doc.exists) return;
     const calculatedActs = doc.data().calculatedActivities || {};
@@ -1431,6 +1445,7 @@ function renderAverages(){
       trForm.appendChild(td);
     }
 
+    // 🔥 Celda vacía para la columna de comentarios en la fila de fórmulas
     const tdLast = document.createElement('td');
     tdLast.textContent = '';
     tdLast.className = 'border px-2 py-1 text-center font-medium';
