@@ -28,8 +28,8 @@ let isDeleteMode = false;
 let currentCommentStudentId = null;
 let currentCommentStudentName = null;
 
-// 🔥 FUNCIONES GLOBALES DE COMENTARIOS (DEBEN ESTAR AQUÍ)
-function openCommentsModal(studentId, studentName, currentComment) {
+// 🔥 FUNCIONES GLOBALES - Asignadas a window
+window.openCommentsModal = function(studentId, studentName, currentComment) {
   currentCommentStudentId = studentId;
   currentCommentStudentName = studentName;
   
@@ -39,13 +39,12 @@ function openCommentsModal(studentId, studentName, currentComment) {
     modal = document.createElement('div');
     modal.id = 'modalComments';
     modal.className = 'fixed inset-0 hidden items-center justify-center z-50';
-    modal.style.display = 'none';
     modal.innerHTML = `
-      <div class="modal-backdrop absolute inset-0" onclick="closeCommentsModal()"></div>
+      <div class="modal-backdrop absolute inset-0" style="background: rgba(0,0,0,0.2);" onclick="window.closeCommentsModal()"></div>
       <div class="bg-white rounded shadow-lg z-10 w-full max-w-md p-6 flex flex-col gap-4">
         <div class="flex justify-between items-center">
           <h2 id="modalCommentsTitle" class="text-xl font-bold"></h2>
-          <button onclick="closeCommentsModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #666;">×</button>
+          <button onclick="window.closeCommentsModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #666;">×</button>
         </div>
         
         <textarea 
@@ -53,6 +52,7 @@ function openCommentsModal(studentId, studentName, currentComment) {
           class="border rounded p-3 w-full h-32 resize-none focus:ring-2 focus:ring-blue-400 focus:outline-none"
           placeholder="Escribe aquí los comentarios del alumno..."
           maxlength="500"
+          style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;"
         ></textarea>
         
         <div class="text-xs text-gray-500">
@@ -60,10 +60,10 @@ function openCommentsModal(studentId, studentName, currentComment) {
         </div>
         
         <div class="flex gap-2">
-          <button onclick="closeCommentsModal()" class="flex-1 px-3 py-2 rounded bg-gray-300 hover:bg-gray-400 text-black font-semibold cursor-pointer">
+          <button onclick="window.closeCommentsModal()" class="flex-1 px-3 py-2 rounded bg-gray-300 hover:bg-gray-400 text-black font-semibold cursor-pointer border-none">
             Cancelar
           </button>
-          <button onclick="saveComment()" class="flex-1 px-3 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold cursor-pointer">
+          <button onclick="window.saveComment()" class="flex-1 px-3 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold cursor-pointer border-none">
             Guardar
           </button>
         </div>
@@ -72,22 +72,23 @@ function openCommentsModal(studentId, studentName, currentComment) {
     document.body.appendChild(modal);
     
     // Event listener para el textarea
-    document.getElementById('commentTextarea').addEventListener('input', updateCommentChars);
+    const textarea = document.getElementById('commentTextarea');
+    textarea.addEventListener('input', window.updateCommentChars);
   }
   
   // Poblar modal
   document.getElementById('modalCommentsTitle').textContent = `Comentarios: ${studentName}`;
   const textarea = document.getElementById('commentTextarea');
   textarea.value = currentComment;
-  updateCommentChars();
+  window.updateCommentChars();
   
   // Mostrar modal
   modal.classList.remove('hidden');
   modal.style.display = 'flex';
   textarea.focus();
-}
+};
 
-function closeCommentsModal() {
+window.closeCommentsModal = function() {
   const modal = document.getElementById('modalComments');
   if (modal) {
     modal.classList.add('hidden');
@@ -95,21 +96,26 @@ function closeCommentsModal() {
   }
   currentCommentStudentId = null;
   currentCommentStudentName = null;
-}
+};
 
-function updateCommentChars() {
+window.updateCommentChars = function() {
   const textarea = document.getElementById('commentTextarea');
   if (!textarea) return;
   const charsDiv = document.getElementById('commentChars');
   if (!charsDiv) return;
   const chars = textarea.value.length;
   charsDiv.textContent = chars;
-}
+};
 
-async function saveComment() {
-  if (!currentCommentStudentId) return;
+window.saveComment = async function() {
+  if (!currentCommentStudentId) {
+    alert('Error: No hay estudiante seleccionado');
+    return;
+  }
   
   const textarea = document.getElementById('commentTextarea');
+  if (!textarea) return;
+  
   const comment = textarea.value.trim();
   
   try {
@@ -118,10 +124,10 @@ async function saveComment() {
       [`comentarios.${currentClassId}`]: comment
     });
     
-    console.log('Comentario guardado:', comment);
+    console.log('Comentario guardado para:', currentCommentStudentName);
     
-    // Cerrar modal PRIMERO
-    closeCommentsModal();
+    // Cerrar modal
+    window.closeCommentsModal();
     
     // Recargar la tabla para mostrar el nuevo comentario
     setTimeout(() => {
@@ -132,7 +138,7 @@ async function saveComment() {
     console.error('Error guardando comentario:', e);
     alert('Error guardando comentario: ' + e.message);
   }
-}
+};
 
 // FIN DE FUNCIONES GLOBALES
 
