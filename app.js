@@ -1374,15 +1374,14 @@ function computeStudentAverageText(studentData){
   return (vals.reduce((s,n)=> s+n,0)/vals.length).toFixed(2);
 }
 
-
 // 🔥 CORRECCIÓN EN renderAverages() - Ignorar columna de comentarios
 function renderAverages(){
   // Actualitzar mitjanes alumnes
-  Array.from(notesTbody.children).forEach(tr=>{
-    const inputs = Array.from(tr.querySelectorAll('input')).map(i=> Number(i.value)).filter(v=> !isNaN(v));
-    const lastTd = tr.querySelectorAll('td')[tr.querySelectorAll('td').length - 1];
-    lastTd.textContent = inputs.length ? (inputs.reduce((a,b)=>a+b,0)/inputs.length).toFixed(2) : '';
-  });
+  //Array.from(notesTbody.children).forEach(tr=>{
+   // const inputs = Array.from(tr.querySelectorAll('input')).map(i=> Number(i.value)).filter(v=> !isNaN(v));
+  //  const lastTd = tr.querySelectorAll('td')[tr.querySelectorAll('td').length - 1];
+  //  lastTd.textContent = inputs.length ? (inputs.reduce((a,b)=>a+b,0)/inputs.length).toFixed(2) : '';
+ // });
 
   const actCount = classActivities.length;
   notesTfoot.innerHTML = '';
