@@ -1279,7 +1279,10 @@ input.addEventListener('keydown', e => {
     
     // Obtener comentario guardado
     const comment = studentData.comentarios?.[currentClassId] || '';
-    commentTd.textContent = comment ? comment.split(' ')[0] + (comment.split(' ').length > 1 ? '...' : '') : '(sin comentario)';
+    const displayComment = comment ? comment.split(' ')[0] + (comment.split(' ').length > 1 ? '...' : '') : '(sin comentario)';
+    
+    // Crear un contenedor para ocultar el cálculo pero mostrar el comentario
+    commentTd.innerHTML = `<span style="display: block;">${displayComment}</span>`;
     commentTd.title = comment || 'Haz clic para añadir comentario';
     
     // Click para abrir modal de comentarios
