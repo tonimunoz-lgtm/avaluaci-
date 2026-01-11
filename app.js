@@ -1371,6 +1371,7 @@ function computeStudentAverageText(studentData){
   return (vals.reduce((s,n)=> s+n,0)/vals.length).toFixed(2);
 }
 
+
 // 🔥 CORRECCIÓN EN renderAverages() - Ignorar columna de comentarios
 
 function renderAverages(){
@@ -1380,11 +1381,8 @@ function renderAverages(){
       .map(i=> Number(i.value))
       .filter(v=> !isNaN(v));
     
-    // Buscar la celda de comentarios (es la última) y actualizarla
+    // Actualizar el promedio en la penúltima celda (antes de comentarios)
     const allTds = tr.querySelectorAll('td');
-    const commentTd = allTds[allTds.length - 1]; // Última celda
-    
-    // Actualizar el promedio en la penúltima celda
     if (allTds.length > 1) {
       const averageTd = allTds[allTds.length - 2];
       averageTd.textContent = inputs.length ? (inputs.reduce((a,b)=>a+b,0)/inputs.length).toFixed(2) : '';
@@ -1394,19 +1392,22 @@ function renderAverages(){
   const actCount = classActivities.length;
   notesTfoot.innerHTML = '';
 
-  // Fila de promedio por actividad (SIN celda para comentarios)
+  // Fila de promedio por actividad
   const trAvg = document.createElement('tr');
   trAvg.className = 'text-sm';
   trAvg.appendChild(th('Mitjana activitat'));
   
   if(actCount === 0){
+    trAvg.appendChild(th('',''));
     notesTfoot.appendChild(trAvg);
     return;
   }
 
   for(let i=0;i<actCount;i++){
     const inputs = Array.from(notesTbody.querySelectorAll('tr')).map(r => {
-      const input = r.querySelectorAll('input[type="number"]')[i];
+      const tds = r.querySelectorAll('td');
+      // El input está en la celda td[i+1] (porque td[0] es el nombre)
+      const input = tds[i+1]?.querySelector('input[type="number"]');
       return input;
     }).filter(Boolean);
     
@@ -1418,9 +1419,10 @@ function renderAverages(){
     trAvg.appendChild(td);
   }
   
+  trAvg.appendChild(th('',''));
   notesTfoot.appendChild(trAvg);
 
-  // Fila de fórmulas (SIN celda para comentarios)
+  // Fila de fórmulas
   const trForm = document.createElement('tr');
   trForm.className = 'formulas-row text-sm bg-gray-100';
   const td0 = document.createElement('td');
@@ -1441,10 +1443,14 @@ function renderAverages(){
       trForm.appendChild(td);
     }
 
+    const tdLast = document.createElement('td');
+    tdLast.textContent = '';
+    tdLast.className = 'border px-2 py-1 text-center font-medium';
+    trForm.appendChild(tdLast);
+
     formulaTfoot.appendChild(trForm);
   });
 }
-
 /* ============================================================
    MODAL CÁLCULO - Con Asistente de Fórmulas Mejorado
    ============================================================ */
