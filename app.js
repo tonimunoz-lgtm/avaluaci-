@@ -1374,77 +1374,11 @@ function computeStudentAverageText(studentData){
 
 // 🔥 CORRECCIÓN EN renderAverages() - Ignorar columna de comentarios
 
-function renderAverages(){
-  // Actualitzar mitjanes alumnes (SIN contar la columna de comentarios)
-  Array.from(notesTbody.children).forEach(tr=>{
-    const inputs = Array.from(tr.querySelectorAll('input[type="number"]'))
-      .map(i=> Number(i.value))
-      .filter(v=> !isNaN(v));
-    
-    // Buscar la celda de comentarios (es la última) y actualizarla
-    const allTds = tr.querySelectorAll('td');
-    const commentTd = allTds[allTds.length - 1]; // Última celda
-    
-    // Actualizar el promedio en la penúltima celda
-    if (allTds.length > 1) {
-      const averageTd = allTds[allTds.length - 2];
-      averageTd.textContent = inputs.length ? (inputs.reduce((a,b)=>a+b,0)/inputs.length).toFixed(2) : '';
-    }
-  });
 
-  const actCount = classActivities.length;
-  notesTfoot.innerHTML = '';
 
-  // Fila de promedio por actividad (SIN celda para comentarios)
-  const trAvg = document.createElement('tr');
-  trAvg.className = 'text-sm';
-  trAvg.appendChild(th('Mitjana activitat'));
-  
-  if(actCount === 0){
-    notesTfoot.appendChild(trAvg);
-    return;
-  }
 
-  for(let i=0;i<actCount;i++){
-    const inputs = Array.from(notesTbody.querySelectorAll('tr')).map(r => {
-      const input = r.querySelectorAll('input[type="number"]')[i];
-      return input;
-    }).filter(Boolean);
-    
-    const vals = inputs.map(inp => Number(inp.value)).filter(v=> !isNaN(v));
-    const avg = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2) : '';
-    const td = document.createElement('td');
-    td.className = 'border px-2 py-1 text-center font-semibold';
-    td.textContent = avg;
-    trAvg.appendChild(td);
-  }
-  
-  notesTfoot.appendChild(trAvg);
 
-  // Fila de fórmulas (SIN celda para comentarios)
-  const trForm = document.createElement('tr');
-  trForm.className = 'formulas-row text-sm bg-gray-100';
-  const td0 = document.createElement('td');
-  td0.textContent = 'Fórmula';
-  td0.className = 'border px-2 py-1 font-medium text-center';
-  trForm.appendChild(td0);
 
-  // Leer fórmulas de Firestore
-  db.collection('classes').doc(currentClassId).get().then(doc=>{
-    if(!doc.exists) return;
-    const calculatedActs = doc.data().calculatedActivities || {};
-
-    for(let i=0;i<actCount;i++){
-      const actId = classActivities[i];
-      const td = document.createElement('td');
-      td.className = 'border px-2 py-1 text-center font-medium';
-      td.textContent = calculatedActs[actId]?.formula || '';
-      trForm.appendChild(td);
-    }
-
-    formulaTfoot.appendChild(trForm);
-  });
-}
 /* ============================================================
    MODAL CÁLCULO - Con Asistente de Fórmulas Mejorado
    ============================================================ */
