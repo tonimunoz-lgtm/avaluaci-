@@ -1381,8 +1381,11 @@ function renderAverages(){
       .map(i=> Number(i.value))
       .filter(v=> !isNaN(v));
     
-    // Actualizar el promedio en la penúltima celda (antes de comentarios)
+    // Buscar la celda de comentarios (es la última) y actualizarla
     const allTds = tr.querySelectorAll('td');
+    const commentTd = allTds[allTds.length - 1]; // Última celda
+    
+    // Actualizar el promedio en la penúltima celda
     if (allTds.length > 1) {
       const averageTd = allTds[allTds.length - 2];
       averageTd.textContent = inputs.length ? (inputs.reduce((a,b)=>a+b,0)/inputs.length).toFixed(2) : '';
@@ -1392,22 +1395,19 @@ function renderAverages(){
   const actCount = classActivities.length;
   notesTfoot.innerHTML = '';
 
-  // Fila de promedio por actividad
+  // Fila de promedio por actividad (SIN celda para comentarios)
   const trAvg = document.createElement('tr');
   trAvg.className = 'text-sm';
   trAvg.appendChild(th('Mitjana activitat'));
   
   if(actCount === 0){
-    trAvg.appendChild(th('',''));
     notesTfoot.appendChild(trAvg);
     return;
   }
 
   for(let i=0;i<actCount;i++){
     const inputs = Array.from(notesTbody.querySelectorAll('tr')).map(r => {
-      const tds = r.querySelectorAll('td');
-      // El input está en la celda td[i+1] (porque td[0] es el nombre)
-      const input = tds[i+1]?.querySelector('input[type="number"]');
+      const input = r.querySelectorAll('input[type="number"]')[i];
       return input;
     }).filter(Boolean);
     
@@ -1419,10 +1419,9 @@ function renderAverages(){
     trAvg.appendChild(td);
   }
   
-  trAvg.appendChild(th('',''));
   notesTfoot.appendChild(trAvg);
 
-  // Fila de fórmulas
+  // Fila de fórmulas (SIN celda para comentarios)
   const trForm = document.createElement('tr');
   trForm.className = 'formulas-row text-sm bg-gray-100';
   const td0 = document.createElement('td');
@@ -1442,11 +1441,6 @@ function renderAverages(){
       td.textContent = calculatedActs[actId]?.formula || '';
       trForm.appendChild(td);
     }
-
-    const tdLast = document.createElement('td');
-    tdLast.textContent = '';
-    tdLast.className = 'border px-2 py-1 text-center font-medium';
-    trForm.appendChild(tdLast);
 
     formulaTfoot.appendChild(trForm);
   });
