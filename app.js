@@ -1366,86 +1366,12 @@ function setupFormulaValidation() {
     formulaValidationDiv.parentNode.insertBefore(formulaPreviewDiv, formulaValidationDiv.nextSibling);
   }
 
-  // 🔥 NUEVO: Crear indicador de cursor
-  let cursorIndicatorDiv = document.getElementById('cursorIndicator');
-  if (!cursorIndicatorDiv) {
-    cursorIndicatorDiv = document.createElement('div');
-    cursorIndicatorDiv.id = 'cursorIndicator';
-    cursorIndicatorDiv.className = 'mt-2 p-3 rounded bg-blue-50 border border-blue-200 text-sm font-mono';
-    cursorIndicatorDiv.style.whiteSpace = 'pre-wrap';
-    cursorIndicatorDiv.style.wordBreak = 'break-all';
-    cursorIndicatorDiv.style.lineHeight = '1.6';
-    formulaPreviewDiv.parentNode.insertBefore(cursorIndicatorDiv, formulaPreviewDiv.nextSibling);
-  }
-
-  // Permitir edición normal en el campo
-  formulaField.readOnly = false;
-  
-  formulaField.addEventListener('input', () => {
-    validateFormula();
-    updateCursorIndicator();
+  // 🔥 NUEVO: Permitir edición inline - hacer contentEditable
+  formulaField.addEventListener('input', validateFormula);
+  formulaField.addEventListener('click', () => {
+    // Permitir que el cursor se posicione en cualquier lugar
+    formulaField.focus();
   });
-  
-  formulaField.addEventListener('click', updateCursorIndicator);
-  formulaField.addEventListener('keydown', (e) => {
-    // Permitir todas las teclas normales
-    setTimeout(updateCursorIndicator, 0);
-  });
-  formulaField.addEventListener('keyup', updateCursorIndicator);
-  formulaField.addEventListener('focus', updateCursorIndicator);
-}
-
-// 🔥 NUEVO: Actualizar indicador del cursor
-function updateCursorIndicator() {
-  const cursorIndicatorDiv = document.getElementById('cursorIndicator');
-  if (!cursorIndicatorDiv) return;
-
-  const text = formulaField.value;
-  const cursorPos = formulaField.selectionStart;
-  
-  if (!text) {
-    cursorIndicatorDiv.innerHTML = '<span style="color: #999;">Sin fórmula aún...</span>';
-    return;
-  }
-
-  // Crear visualización con cursor
-  const before = text.substring(0, cursorPos);
-  const after = text.substring(cursorPos);
-  
-  // Escapar caracteres especiales HTML
-  const beforeSafe = escapeHtml(before);
-  const afterSafe = escapeHtml(after);
-  
-  // Mostrar fórmula con indicador de cursor
-  cursorIndicatorDiv.innerHTML = `
-    <div>
-      <strong style="color: #1e40af;">📍 Posición del cursor:</strong>
-      <div style="margin-top: 8px; background: white; padding: 10px; border-radius: 4px; border: 2px solid #3b82f6; font-family: monospace;">
-        <span style="color: #333;">${beforeSafe}</span><span style="background: #3b82f6; color: white; animation: blink 1s infinite; padding: 1px 2px; border-radius: 2px; font-weight: bold;">|</span><span style="color: #333;">${afterSafe}</span>
-      </div>
-      <div style="margin-top: 6px; font-size: 12px; color: #666;">
-        Carácter <strong>${cursorPos}</strong> de <strong>${text.length}</strong>
-      </div>
-    </div>
-    <style>
-      @keyframes blink {
-        0%, 49% { opacity: 1; }
-        50%, 100% { opacity: 0.3; }
-      }
-    </style>
-  `;
-}
-
-// 🔥 NUEVO: Escapar caracteres especiales HTML
-function escapeHtml(text) {
-  const map = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;'
-  };
-  return text.replace(/[&<>"']/g, m => map[m]);
 }
 
 function clearFormulaValidation() {
@@ -1783,7 +1709,7 @@ function buildFormulaButtons(){
   buildActivityButtons();
 }
 
-// 🔥 MEJORADO: insertAtCursor ahora se usa para botones
+// 🔥 NUEVO: Insertar en la posición del cursor
 function insertAtCursor(str) {
   const start = formulaField.selectionStart;
   const end = formulaField.selectionEnd;
@@ -1795,13 +1721,12 @@ function insertAtCursor(str) {
   setTimeout(() => {
     formulaField.focus();
     formulaField.setSelectionRange(start + String(str).length, start + String(str).length);
-    updateCursorIndicator();
   }, 0);
   
   validateFormula();
 }
 
-// 🔥 MEJORADO: deleteAtCursor ahora se usa para el botón backspace
+// 🔥 NUEVO: Borrar en la posición del cursor
 function deleteAtCursor() {
   const start = formulaField.selectionStart;
   if (start > 0) {
@@ -1811,7 +1736,6 @@ function deleteAtCursor() {
     setTimeout(() => {
       formulaField.focus();
       formulaField.setSelectionRange(start - 1, start - 1);
-      updateCursorIndicator();
     }, 0);
     
     validateFormula();
