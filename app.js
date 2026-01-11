@@ -1394,14 +1394,12 @@ function renderAverages(){
   const actCount = classActivities.length;
   notesTfoot.innerHTML = '';
 
-  // Fila de promedio por actividad
+  // Fila de promedio por actividad (SIN celda para comentarios)
   const trAvg = document.createElement('tr');
   trAvg.className = 'text-sm';
   trAvg.appendChild(th('Mitjana activitat'));
   
   if(actCount === 0){
-    trAvg.appendChild(th('',''));
-    trAvg.appendChild(th('',''));  // 🔥 Celda vacía para columna comentarios
     notesTfoot.appendChild(trAvg);
     return;
   }
@@ -1420,11 +1418,9 @@ function renderAverages(){
     trAvg.appendChild(td);
   }
   
-  // 🔥 Celda vacía para la columna de comentarios
-  trAvg.appendChild(th('',''));
   notesTfoot.appendChild(trAvg);
 
-  // Fila de fórmulas
+  // Fila de fórmulas (SIN celda para comentarios)
   const trForm = document.createElement('tr');
   trForm.className = 'formulas-row text-sm bg-gray-100';
   const td0 = document.createElement('td');
@@ -1444,12 +1440,6 @@ function renderAverages(){
       td.textContent = calculatedActs[actId]?.formula || '';
       trForm.appendChild(td);
     }
-
-    // 🔥 Celda vacía para la columna de comentarios en la fila de fórmulas
-    const tdLast = document.createElement('td');
-    tdLast.textContent = '';
-    tdLast.className = 'border px-2 py-1 text-center font-medium';
-    trForm.appendChild(tdLast);
 
     formulaTfoot.appendChild(trForm);
   });
