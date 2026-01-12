@@ -13,15 +13,14 @@
   // Esperar a que el entorno básico de app.js esté listo  
   const waitForAppInit = setInterval(() => {  
     // Verificamos si las variables clave que app.js ya expone al window están presentes.  
-    // No verificamos renderNotesGrid aquí porque puede que no esté expuesta directamente  
-    // o que su disponibilidad sea más tardía/dinámica.  
-    if (!window.db || typeof window.currentClassId === 'undefined') {  
-      console.log('⏳ Esperando app.js y variables globales...');  
+    // La corrección clave está aquí: typeof window.currentClassId === 'undefined'  
+    if (!window.db || typeof window.currentClassId === 'undefined' || window.currentClassId === null) {  
+      console.log('⏳ Esperando app.js y variables globales (db, currentClassId)...');  
       return;  
     }  
   
     clearInterval(waitForAppInit);  
-    console.log('✅ App.js y variables globales cargadas, iniciando integración...');  
+    console.log('✅ App.js y variables globales (db, currentClassId) cargadas, iniciando integración...');  
       
     // Una vez que el entorno básico está listo, intentamos hookear renderNotesGrid  
     // y el modal de comentarios. Esto se intentará SOLO UNA VEZ.  
@@ -97,24 +96,8 @@
         return;  
       }  
   
-      // El activityId se debe obtener de forma robusta.  
-      // Podemos usar el dataset.id del TH si app.js lo pusiera ahí,  
-      // pero como no podemos modificar app.js, lo deduciremos de otra forma.  
-      // Sin embargo, ¡app.js ya pone un id de actividad en el TH que tiene el menú!  
-      // Vamos a asumir que tu app.js lo está haciendo o lo hará.  
-      // Si el TH no tiene un ID, es más complejo.  
       let activityId = null;  
-      // Tu app.js en renderNotesGrid sí usa 'classActivities' y las 'actDocs'  
-      // para construir el thead. El activityId debería poder obtenerse del contexto  
-      // de la columna si app.js lo hubiera puesto en el TH.  
-      // Pero como no lo hace, y no podemos modificar app.js,  
-      // necesitamos una forma de deducirlo.  
-  
-      // La lógica en tu 'getActivityIdFromMenu' es intentar sacarlo del input.  
-      // Esta lógica la llevamos aquí directamente y la mejoramos.  
-  
       // Intentamos encontrar el activityId desde el input en la misma columna.  
-      // Esto requiere que al menos una fila de tbody esté presente.  
       const columnIndex = Array.from(th.parentNode.children).indexOf(th);  
       if (columnIndex > 0) { // Ignoramos la primera columna 'Alumne'  
           const firstDataRow = document.querySelector('#notesTbody tr');  
@@ -128,8 +111,6 @@
       }  
   
       if (!activityId) {  
-        // Fallback: Si no se encontró el activityId, no se inyectan los botones.  
-        // Esto ocurrirá para columnas no de actividad o si la estructura esperada no está.  
         // console.warn('⚠️ No se pudo determinar el activityId para este menú. Saltando inyección.');  
         return;  
       }  
@@ -171,7 +152,10 @@
         e.preventDefault();  
         e.stopPropagation(); // Evita que se cierre el menú inmediatamente  
         if (!activityId) return alert('Error: ID de actividad no encontrado.');  
+          
+        // Asumimos que EvaluationSystem es global  
         const scale = await EvaluationSystem.getActivityScale(activityId);  
+        // Asumimos que EvaluationUI es global  
         EvaluationUI.createActivityScaleModal(activityId, scale.id);  
         menu.classList.add('hidden'); // Oculta el menú después de clickear  
       });  
@@ -182,10 +166,10 @@
         if (!activityId) return alert('Error: ID de actividad no encontrado.');  
           
         // Asumiendo que window.db está disponible globalmente.  
-        // Si no lo está, esta parte fallará y necesitaríamos un 'hack' más profundo.  
         const activityDoc = await window.db.collection('activitats').doc(activityId).get();  
         const activityName = activityDoc.exists ? activityDoc.data().nom : 'Actividad desconocida';  
   
+        // Asumimos que EvaluationUI es global  
         EvaluationUI.createRubricModal(activityId, activityName);  
         menu.classList.add('hidden'); // Oculta el menú después de clickear  
       });  
@@ -212,7 +196,6 @@
   
     if (!originalOpenComments) {  
       // Si openCommentsModal aún no está disponible, lo reintentamos.  
-      // Esto es crucial para la restricción de no modificar app.js.  
       console.log('⚠️ openCommentsModal aún no disponible. Reintentando hook en 1s...');  
       setTimeout(addFeedbackButtonToCommentsModal, 1000);  
       return;  
@@ -253,11 +236,14 @@
               const studentDoc = await window.db.collection('alumnes').doc(studentId).get();  
               const studentData = studentDoc.exists ? studentDoc.data() : {};  
   
+              // Asumimos que EvaluationSystem es global  
+              const activityScale = await EvaluationSystem.getActivityScale(selectedActivityId);  
               const score = studentData.notes?.[selectedActivityId] || '';  
   
               // Cerrar el modal actual de comentarios antes de abrir el de feedback  
               window.closeCommentsModal();  
   
+              // Asumimos que EvaluationUI es global  
               EvaluationUI.createFeedbackModal(  
                   studentId,  
                   studentName,  
