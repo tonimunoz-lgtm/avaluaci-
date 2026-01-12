@@ -1,6 +1,9 @@
 /**
  * INTEGRACIÓN DEL SISTEMA DE EVALUACIÓN
  * Se ejecuta automáticamente y añade botones sin modificar app.js
+ * 
+ * NOTA: Este archivo se ejecuta en global scope
+ * Usa MutationObserver para detectar cambios en la tabla
  */
 
 (function() {
@@ -9,51 +12,57 @@
   
   // Esperar a que EvaluationSystem esté listo
   let initAttempts = 0;
-  const maxAttempts = 30;
+  const maxAttempts = 40;
   
-  const waitForAppInit = setInterval(() => {
+  const waitForModules = setInterval(() => {
     initAttempts++;
     
-    // Verificar que existan los sistemas de evaluación
     const hasEvalSystem = window.EvaluationSystem !== undefined;
     const hasEvalUI = window.EvaluationUI !== undefined;
-    const hasRenderGrid = typeof window.renderNotesGrid === 'function';
     
-    console.log(`⏳ Intento ${initAttempts}/${maxAttempts} - renderGrid: ${hasRenderGrid}, EvalSystem: ${hasEvalSystem}, EvalUI: ${hasEvalUI}`);
+    console.log(`⏳ Intento ${initAttempts}/${maxAttempts} - EvalSystem: ${hasEvalSystem}, EvalUI: ${hasEvalUI}`);
     
-    if (hasEvalSystem && hasEvalUI && hasRenderGrid) {
-      clearInterval(waitForAppInit);
+    if (hasEvalSystem && hasEvalUI) {
+      clearInterval(waitForModules);
       console.log('✅ Sistemas de evaluación cargados, inicializando...');
       initializeEvaluationIntegration();
       return;
     }
     
     if (initAttempts >= maxAttempts) {
-      console.error('❌ Timeout: No se cargaron los módulos necesarios');
-      clearInterval(waitForAppInit);
+      console.error('❌ Timeout esperando módulos');
+      clearInterval(waitForModules);
     }
-  }, 500);
+  }, 300);
 
-  async function initializeEvaluationIntegration() {
-    // Hook en renderNotesGrid para inyectar opciones de escala
-    const originalRenderNotesGrid = window.renderNotesGrid;
+  function initializeEvaluationIntegration() {
+    // Usar MutationObserver para detectar cambios en la tabla
+    const tableWrapper = document.getElementById('notesTable-wrapper');
     
-    window.renderNotesGrid = async function() {
-      console.log('📊 renderNotesGrid ejecutándose...');
-      
-      // Ejecutar renderizado original
-      const result = await originalRenderNotesGrid.call(this);
-      
-      // INYECTAR BOTONES DE ESCALA EN MENÚ DE ACTIVIDADES
+    if (!tableWrapper) {
+      console.error('❌ notesTable-wrapper no encontrado');
+      return;
+    }
+
+    const observer = new MutationObserver((mutations) => {
+      console.log('🔍 Detectado cambio en tabla');
       setTimeout(() => {
-        console.log('💉 Inyectando botones...');
         injectScaleButtons();
-      }, 500);
-      
-      return result;
-    };
+      }, 300);
+    });
+
+    observer.observe(tableWrapper, {
+      childList: true,
+      subtree: true,
+      attributes: false
+    });
+
+    console.log('✅ MutationObserver configurado');
     
-    console.log('✅ renderNotesGrid hooked correctamente');
+    // También inyectar botones ahora por si ya existe la tabla
+    setTimeout(() => {
+      injectScaleButtons();
+    }, 1000);
   }
 
   /**
@@ -62,23 +71,20 @@
   function injectScaleButtons() {
     // Buscar menús dentro de headers de tabla
     const menus = document.querySelectorAll('thead th .menu');
-    console.log(`📍 Encontrados ${menus.length} menús de actividades en el header`);
+    console.log(`📍 Encontrados ${menus.length} menús de actividades`);
     
     if (menus.length === 0) {
-      console.warn('⚠️ No se encontraron menús. La tabla puede estar vacía.');
       return;
     }
     
     menus.forEach((menu, idx) => {
       // No duplicar si ya existe el botón
       if (menu.querySelector('.scale-btn')) {
-        console.log(`⏭️ Menú ${idx} ya tiene botones`);
         return;
       }
       
       const deleteBtn = menu.querySelector('.delete-btn');
       if (!deleteBtn) {
-        console.log(`⏭️ Menú ${idx} sin delete-btn`);
         return;
       }
 
@@ -92,12 +98,14 @@
       scaleBtn.style.borderTop = '1px solid #e5e7eb';
       scaleBtn.style.marginTop = '4px';
       scaleBtn.style.paddingTop = '6px';
+      scaleBtn.style.cursor = 'pointer';
 
       // Crear botón de rúbrica
       const rubricBtn = document.createElement('button');
       rubricBtn.className = 'rubric-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700';
       rubricBtn.textContent = '📋 Rúbrica';
       rubricBtn.type = 'button';
+      rubricBtn.style.cursor = 'pointer';
 
       // Event listeners
       scaleBtn.addEventListener('click', async (e) => {
@@ -112,9 +120,14 @@
           return;
         }
 
-        const scale = await EvaluationSystem.getActivityScale(activityId);
-        console.log('📊 Escala actual:', scale);
-        EvaluationUI.createActivityScaleModal(activityId, scale.id);
+        try {
+          const scale = await EvaluationSystem.getActivityScale(activityId);
+          console.log('📊 Escala actual:', scale.name);
+          EvaluationUI.createActivityScaleModal(activityId, scale.id);
+        } catch (err) {
+          console.error('Error:', err);
+          alert('Error: ' + err.message);
+        }
       });
 
       rubricBtn.addEventListener('click', async (e) => {
@@ -138,8 +151,8 @@
           const activityName = activityDoc.data().nom;
           EvaluationUI.createRubricModal(activityId, activityName);
         } catch (err) {
-          console.error('Error obteniendo actividad:', err);
-          alert('Error obteniendo informació de l\'activitat');
+          console.error('Error:', err);
+          alert('Error: ' + err.message);
         }
       });
 
@@ -237,21 +250,26 @@
         
         feedbackBtn.addEventListener('click', async () => {
           // Detectar cuál es la actividad actual
-          // Buscar si hay un menú abierto
-          const openMenu = document.querySelector('thead th .menu:not(.hidden)');
           let activityId = null;
           
+          // Opción 1: Buscar si hay un menú abierto
+          const openMenu = document.querySelector('thead th .menu:not(.hidden)');
           if (openMenu) {
             activityId = getActivityIdFromHeader(openMenu);
           }
           
-          // Si no hay menú abierto, buscar en app.js
-          if (!activityId && window.currentCalcActivityId) {
-            activityId = window.currentCalcActivityId;
+          // Opción 2: Si no hay menú, buscar en window.currentCalcActivityId (creado por app.js)
+          if (!activityId) {
+            // Buscar en todos los inputs visibles cuál fue el último clicado
+            const inputs = document.querySelectorAll('input[data-activity-id]');
+            if (inputs.length > 0) {
+              // Usar el primer input como fallback
+              activityId = inputs[0].dataset.activityId;
+            }
           }
           
           if (!activityId) {
-            alert('Selecciona una activitat primer (haz clic en ⋮ de una activitat)');
+            alert('Selecciona una activitat primer (haz clic en ⋮ de una activitat o en una cel·la de nota)');
             return;
           }
 
@@ -288,18 +306,19 @@
         });
         
         // Insertar antes del botón Guardar
-        buttonsContainer.insertBefore(feedbackBtn, buttonsContainer.children[buttonsContainer.children.length - 1]);
+        const lastBtn = buttonsContainer.children[buttonsContainer.children.length - 1];
+        buttonsContainer.insertBefore(feedbackBtn, lastBtn);
       }, 100);
     };
     
     console.log('✅ Feedback button hook configurado');
   }
 
-  // Ejecutar integraciones cuando el sistema esté listo
+  // Ejecutar integraciones cuando los módulos estén listos
   setTimeout(() => {
     console.log('🚀 Ejecutando integraciones finales...');
     addFeedbackButton();
     console.log('✅ Integración completada');
-  }, 3000);
+  }, 2000);
 
 })();
