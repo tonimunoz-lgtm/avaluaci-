@@ -84,13 +84,16 @@ window.EvaluationUI = (function() {
    */
   function createScaleInput(activityId, currentValue = '', scaleId = 'NUMERIC') {
     const scale = EvaluationSystem.getScaleById(scaleId);
-    const input = document.createElement('input');
     
     if (scale.type === 'number') {
+      const input = document.createElement('input');
       input.type = 'number';
       input.min = 0;
       input.max = 10;
       input.step = 0.5;
+      input.value = currentValue;
+      input.className = 'table-input text-center rounded border p-1 w-full';
+      return input;
     } else {
       // Para assoliments, crear select
       const select = document.createElement('select');
@@ -111,10 +114,6 @@ window.EvaluationUI = (function() {
       
       return select;
     }
-    
-    input.value = currentValue;
-    input.className = 'table-input text-center rounded border p-1 w-full';
-    return input;
   }
 
   /**
@@ -181,7 +180,6 @@ window.EvaluationUI = (function() {
     });
 
     saveBtn.addEventListener('click', async () => {
-      // Aquí guardaria la rúbrica
       alert('Rúbrica guardada!');
       modal.remove();
     });
@@ -315,24 +313,29 @@ window.EvaluationUI = (function() {
       const feedback = feedbackText.value;
       if (!feedback) return alert('Afegeix un feedback primer');
 
-      // Obtener email del alumno
-      const studentDoc = await db.collection('alumnes').doc(studentId).get();
-      const studentEmail = studentDoc.data().email;
+      try {
+        // Obtener email del alumno
+        const studentDoc = await firebase.firestore().collection('alumnes').doc(studentId).get();
+        const studentEmail = studentDoc.data().email;
 
-      if (!studentEmail) {
-        alert('El alumne no té email registrat');
-        return;
-      }
+        if (!studentEmail) {
+          alert('El alumne no té email registrat');
+          return;
+        }
 
-      // Preparar email
-      const subject = `Feedback activitat: ${activityName}`;
-      const message = `Hola,\n\nAquí teniu el feedback de ${studentName} per l'activitat "${activityName}":\n\n${feedback}\n\nSalutacions cordials`;
+        // Preparar email
+        const subject = `Feedback activitat: ${activityName}`;
+        const message = `Hola,\n\nAquí teniu el feedback de ${studentName} per l'activitat "${activityName}":\n\n${feedback}\n\nSalutacions cordials`;
 
-      // Enviar (usa la función gmailSendEmail de app.js)
-      if (typeof gmailSendEmail === 'function') {
-        await gmailSendEmail(studentEmail, subject, message);
-        feedbackText.value = '';
-        modal.remove();
+        // Enviar (usa la función gmailSendEmail de app.js)
+        if (typeof gmailSendEmail === 'function') {
+          await gmailSendEmail(studentEmail, subject, message);
+          feedbackText.value = '';
+          modal.remove();
+        }
+      } catch (err) {
+        console.error('Error enviant feedback:', err);
+        alert('Error: ' + err.message);
       }
     });
   }
