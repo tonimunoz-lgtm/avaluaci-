@@ -7,24 +7,23 @@
   
   console.log('🔧 Evaluation Integration iniciando...');
   
-  // Esperar a que DOM esté listo
+  // Esperar a que EvaluationSystem esté listo
   let initAttempts = 0;
-  const maxAttempts = 20;
+  const maxAttempts = 30;
   
   const waitForAppInit = setInterval(() => {
     initAttempts++;
     
-    // Verificar que existan las funciones y el DB
-    const hasDB = window.db !== undefined;
-    const hasRenderGrid = typeof window.renderNotesGrid === 'function';
+    // Verificar que existan los sistemas de evaluación
     const hasEvalSystem = window.EvaluationSystem !== undefined;
     const hasEvalUI = window.EvaluationUI !== undefined;
+    const hasRenderGrid = typeof window.renderNotesGrid === 'function';
     
-    console.log(`⏳ Intento ${initAttempts}/${maxAttempts} - DB: ${hasDB}, renderGrid: ${hasRenderGrid}, EvalSystem: ${hasEvalSystem}, EvalUI: ${hasEvalUI}`);
+    console.log(`⏳ Intento ${initAttempts}/${maxAttempts} - renderGrid: ${hasRenderGrid}, EvalSystem: ${hasEvalSystem}, EvalUI: ${hasEvalUI}`);
     
-    if (hasDB && hasRenderGrid && hasEvalSystem && hasEvalUI) {
+    if (hasEvalSystem && hasEvalUI && hasRenderGrid) {
       clearInterval(waitForAppInit);
-      console.log('✅ App.js y EvaluationSystem cargados, inicializando...');
+      console.log('✅ Sistemas de evaluación cargados, inicializando...');
       initializeEvaluationIntegration();
       return;
     }
@@ -33,7 +32,7 @@
       console.error('❌ Timeout: No se cargaron los módulos necesarios');
       clearInterval(waitForAppInit);
     }
-  }, 300);
+  }, 500);
 
   async function initializeEvaluationIntegration() {
     // Hook en renderNotesGrid para inyectar opciones de escala
@@ -49,7 +48,7 @@
       setTimeout(() => {
         console.log('💉 Inyectando botones...');
         injectScaleButtons();
-      }, 300);
+      }, 500);
       
       return result;
     };
@@ -66,14 +65,14 @@
     console.log(`📍 Encontrados ${menus.length} menús de actividades en el header`);
     
     if (menus.length === 0) {
-      console.warn('⚠️ No se encontraron menús. Esperando más tiempo...');
-      setTimeout(() => injectScaleButtons(), 500);
+      console.warn('⚠️ No se encontraron menús. La tabla puede estar vacía.');
       return;
     }
     
     menus.forEach((menu, idx) => {
       // No duplicar si ya existe el botón
       if (menu.querySelector('.scale-btn')) {
+        console.log(`⏭️ Menú ${idx} ya tiene botones`);
         return;
       }
       
@@ -130,10 +129,18 @@
           return;
         }
 
-        const activityDoc = await db.collection('activitats').doc(activityId).get();
-        const activityName = activityDoc.data().nom;
-
-        EvaluationUI.createRubricModal(activityId, activityName);
+        try {
+          const activityDoc = await db.collection('activitats').doc(activityId).get();
+          if (!activityDoc.exists) {
+            alert('Activitat no trobada');
+            return;
+          }
+          const activityName = activityDoc.data().nom;
+          EvaluationUI.createRubricModal(activityId, activityName);
+        } catch (err) {
+          console.error('Error obteniendo actividad:', err);
+          alert('Error obteniendo informació de l\'activitat');
+        }
       });
 
       // Insertar botones en el menú (antes del delete)
@@ -146,7 +153,6 @@
 
   /**
    * Obtener ID de actividad desde el header
-   * Busca el data-activity-id en el th más cercano
    */
   function getActivityIdFromHeader(menuElement) {
     try {
@@ -157,14 +163,13 @@
         return null;
       }
 
-      // El ID debería estar en un atributo data o en el contenido
-      // Intentar obtenerlo del thead
+      // Obtener el índice de esta columna
       const headerRow = th.parentNode;
       const columnIndex = Array.from(headerRow.children).indexOf(th);
       
       console.log(`📍 Columna índice: ${columnIndex}`);
 
-      // Buscar en el tbody la primera fila y obtener el input
+      // Buscar en el tbody
       const tbody = document.querySelector('tbody');
       if (!tbody) {
         console.error('❌ No se encontró tbody');
@@ -219,36 +224,50 @@
         const modal = document.getElementById('modalComments');
         if (!modal || modal.querySelector('.feedback-btn')) return;
         
-        const saveBtn = modal.querySelector('.flex-1:nth-of-type(2)');
-        if (saveBtn) {
-          const feedbackBtn = document.createElement('button');
-          feedbackBtn.className = 'feedback-btn px-3 py-2 rounded bg-purple-600 hover:bg-purple-700 text-white font-semibold cursor-pointer border-none';
-          feedbackBtn.textContent = '🤖 Generar feedback';
-          feedbackBtn.style.marginRight = '8px';
-          feedbackBtn.type = 'button';
+        const buttonsContainer = modal.querySelector('.flex.gap-2');
+        if (!buttonsContainer) {
+          console.warn('⚠️ No se encontró contenedor de botones');
+          return;
+        }
+
+        const feedbackBtn = document.createElement('button');
+        feedbackBtn.className = 'feedback-btn px-3 py-2 rounded bg-purple-600 hover:bg-purple-700 text-white font-semibold cursor-pointer border-none flex-1';
+        feedbackBtn.textContent = '🤖 Generar feedback';
+        feedbackBtn.type = 'button';
+        
+        feedbackBtn.addEventListener('click', async () => {
+          // Detectar cuál es la actividad actual
+          // Buscar si hay un menú abierto
+          const openMenu = document.querySelector('thead th .menu:not(.hidden)');
+          let activityId = null;
           
-          feedbackBtn.addEventListener('click', async () => {
-            // Obtener el activityId del contexto actual
-            // Buscar cuál es la actividad que está siendo editada
-            const activeMenuBtn = document.querySelector('.menu-btn[style*="display"]');
-            
-            // Otra forma: buscar la última actividad clicada en el menú
-            const lastClickedMenu = document.querySelector('.menu:not(.hidden)');
-            let activityId = null;
-            
-            if (lastClickedMenu) {
-              activityId = getActivityIdFromHeader(lastClickedMenu);
-            }
-            
-            if (!activityId) {
-              alert('Selecciona una activitat primer (haz clic en ⋮ de una actividad)');
+          if (openMenu) {
+            activityId = getActivityIdFromHeader(openMenu);
+          }
+          
+          // Si no hay menú abierto, buscar en app.js
+          if (!activityId && window.currentCalcActivityId) {
+            activityId = window.currentCalcActivityId;
+          }
+          
+          if (!activityId) {
+            alert('Selecciona una activitat primer (haz clic en ⋮ de una activitat)');
+            return;
+          }
+
+          try {
+            const studentDoc = await db.collection('alumnes').doc(studentId).get();
+            if (!studentDoc.exists) {
+              alert('Alumne no trobat');
               return;
             }
-
-            const studentDoc = await db.collection('alumnes').doc(studentId).get();
             const studentData = studentDoc.data();
             
             const activityDoc = await db.collection('activitats').doc(activityId).get();
+            if (!activityDoc.exists) {
+              alert('Activitat no trobada');
+              return;
+            }
             const activityName = activityDoc.data().nom;
             
             const score = studentData.notes?.[activityId] || '';
@@ -262,12 +281,18 @@
               activityName,
               score
             );
-          });
-          
-          saveBtn.parentNode.insertBefore(feedbackBtn, saveBtn);
-        }
+          } catch (err) {
+            console.error('Error generando feedback:', err);
+            alert('Error: ' + err.message);
+          }
+        });
+        
+        // Insertar antes del botón Guardar
+        buttonsContainer.insertBefore(feedbackBtn, buttonsContainer.children[buttonsContainer.children.length - 1]);
       }, 100);
     };
+    
+    console.log('✅ Feedback button hook configurado');
   }
 
   // Ejecutar integraciones cuando el sistema esté listo
@@ -275,6 +300,6 @@
     console.log('🚀 Ejecutando integraciones finales...');
     addFeedbackButton();
     console.log('✅ Integración completada');
-  }, 2000);
+  }, 3000);
 
 })();
