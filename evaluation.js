@@ -1,328 +1,264 @@
 /**
- * INTEGRACIÓN DEL SISTEMA DE EVALUACIÓN
- * Se ejecuta automáticamente y añade botones sin modificar app.js
- * 
- * NOTA: Este archivo se ejecuta en global scope
- * Usa MutationObserver para detectar cambios en la tabla
+ * SISTEMA DE EVALUACIÓN POR ASSOLIMENTS
+ * Módulo independiente para gestionar escalas de evaluación
+ * No requiere cambios en app.js
  */
 
-(function() {
+window.EvaluationSystem = (function() {
   
-  console.log('🔧 Evaluation Integration iniciando...');
-  
-  // Esperar a que EvaluationSystem esté listo
-  let initAttempts = 0;
-  const maxAttempts = 40;
-  
-  const waitForModules = setInterval(() => {
-    initAttempts++;
-    
-    const hasEvalSystem = window.EvaluationSystem !== undefined;
-    const hasEvalUI = window.EvaluationUI !== undefined;
-    
-    console.log(`⏳ Intento ${initAttempts}/${maxAttempts} - EvalSystem: ${hasEvalSystem}, EvalUI: ${hasEvalUI}`);
-    
-    if (hasEvalSystem && hasEvalUI) {
-      clearInterval(waitForModules);
-      console.log('✅ Sistemas de evaluación cargados, inicializando...');
-      initializeEvaluationIntegration();
-      return;
+  // Escalas de evaluación disponibles
+  const SCALES = {
+    NUMERIC: {
+      id: 'numeric',
+      name: 'Numèrica (0-10)',
+      values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+      type: 'number'
+    },
+    ASSOLIMENTS: {
+      id: 'assoliments',
+      name: 'Assoliments',
+      values: ['NA', 'AS', 'AN', 'AE'],
+      type: 'letter'
     }
-    
-    if (initAttempts >= maxAttempts) {
-      console.error('❌ Timeout esperando módulos');
-      clearInterval(waitForModules);
-    }
-  }, 300);
+  };
 
-  function initializeEvaluationIntegration() {
-    // Usar MutationObserver para detectar cambios en la tabla
-    const tableWrapper = document.getElementById('notesTable-wrapper');
-    
-    if (!tableWrapper) {
-      console.error('❌ notesTable-wrapper no encontrado');
-      return;
-    }
-
-    const observer = new MutationObserver((mutations) => {
-      console.log('🔍 Detectado cambio en tabla');
-      setTimeout(() => {
-        injectScaleButtons();
-      }, 300);
-    });
-
-    observer.observe(tableWrapper, {
-      childList: true,
-      subtree: true,
-      attributes: false
-    });
-
-    console.log('✅ MutationObserver configurado');
-    
-    // También inyectar botones ahora por si ya existe la tabla
-    setTimeout(() => {
-      injectScaleButtons();
-    }, 1000);
-  }
+  // Mapeo de assoliments a valores numéricos (para búsqueda de correlación, NO para cálculos)
+  const ASSOLIMENTS_VALUES = {
+    'NA': 4,  // No Assolit
+    'AS': 5, // Assolit amb suport
+    'AN': 7, // Assolit normalment
+    'AE': 9    // Assolit excepcionalmen
+  };
 
   /**
-   * Inyectar botones de escala en el menú de cada actividad
+   * Obtener escala de una actividad
    */
-  function injectScaleButtons() {
-    // Buscar menús dentro de headers de tabla
-    const menus = document.querySelectorAll('thead th .menu');
-    console.log(`📍 Encontrados ${menus.length} menús de actividades`);
-    
-    if (menus.length === 0) {
-      return;
-    }
-    
-    menus.forEach((menu, idx) => {
-      // No duplicar si ya existe el botón
-      if (menu.querySelector('.scale-btn')) {
-        return;
-      }
-      
-      const deleteBtn = menu.querySelector('.delete-btn');
-      if (!deleteBtn) {
-        return;
-      }
-
-      console.log(`✏️ Inyectando botones en menú ${idx}`);
-
-      // Crear contenedor para botones en una línea
-      const buttonsContainer = document.createElement('div');
-      buttonsContainer.className = 'flex gap-1 px-1 py-1 w-full';
-      buttonsContainer.style.borderTop = '1px solid #e5e7eb';
-      buttonsContainer.style.marginTop = '4px';
-      
-      // Crear botón de escala
-      const scaleBtn = document.createElement('button');
-      scaleBtn.className = 'scale-btn flex-1 px-2 py-1 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded';
-      scaleBtn.textContent = '⚖️ Tipus';
-      scaleBtn.type = 'button';
-      scaleBtn.style.cursor = 'pointer';
-
-      // Crear botón de rúbrica
-      const rubricBtn = document.createElement('button');
-      rubricBtn.className = 'rubric-btn flex-1 px-2 py-1 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded';
-      rubricBtn.textContent = '📋 Rúbrica';
-      rubricBtn.type = 'button';
-      rubricBtn.style.cursor = 'pointer';
-
-      // Event listeners
-      scaleBtn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const activityId = getActivityIdFromHeader(menu);
-        console.log('⚖️ Scale button clicked, activityId:', activityId);
-        
-        if (!activityId) {
-          alert('Error identificando activitat');
-          return;
-        }
-
-        try {
-          const scale = await EvaluationSystem.getActivityScale(activityId);
-          console.log('📊 Escala actual:', scale.name);
-          EvaluationUI.createActivityScaleModal(activityId, scale.id);
-        } catch (err) {
-          console.error('Error:', err);
-          alert('Error: ' + err.message);
-        }
-      });
-
-      rubricBtn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const activityId = getActivityIdFromHeader(menu);
-        console.log('📋 Rubric button clicked, activityId:', activityId);
-        
-        if (!activityId) {
-          alert('Error identificando activitat');
-          return;
-        }
-
-        try {
-          const activityDoc = await db.collection('activitats').doc(activityId).get();
-          if (!activityDoc.exists) {
-            alert('Activitat no trobada');
-            return;
-          }
-          const activityName = activityDoc.data().nom;
-          EvaluationUI.createRubricModal(activityId, activityName);
-        } catch (err) {
-          console.error('Error:', err);
-          alert('Error: ' + err.message);
-        }
-      });
-
-      // Insertar botones en el menú (antes del delete)
-      menu.insertBefore(buttonsContainer, deleteBtn);
-      buttonsContainer.appendChild(scaleBtn);
-      buttonsContainer.appendChild(rubricBtn);
-      
-      console.log(`✅ Botones inyectados en menú ${idx}`);
-    });
-  }
-
-  /**
-   * Obtener ID de actividad desde el header
-   */
-  function getActivityIdFromHeader(menuElement) {
+  async function getActivityScale(activityId) {
     try {
-      // Buscar el th que contiene este menú
-      let th = menuElement.closest('th');
-      if (!th) {
-        console.error('❌ No se encontró th');
-        return null;
-      }
-
-      // Obtener el índice de esta columna
-      const headerRow = th.parentNode;
-      const columnIndex = Array.from(headerRow.children).indexOf(th);
+      const doc = await db.collection('activitats').doc(activityId).get();
+      if (!doc.exists) return SCALES.NUMERIC;
       
-      console.log(`📍 Columna índice: ${columnIndex}`);
-
-      // Buscar en el tbody
-      const tbody = document.querySelector('tbody');
-      if (!tbody) {
-        console.error('❌ No se encontró tbody');
-        return null;
-      }
-
-      const firstRow = tbody.querySelector('tr');
-      if (!firstRow) {
-        console.error('❌ No hay filas');
-        return null;
-      }
-
-      const cellAtIndex = firstRow.children[columnIndex];
-      if (!cellAtIndex) {
-        console.error('❌ No se encontró celda en índice', columnIndex);
-        return null;
-      }
-
-      const input = cellAtIndex.querySelector('input');
-      if (!input || !input.dataset.activityId) {
-        console.error('❌ No se encontró input o activity ID');
-        return null;
-      }
-
-      const activityId = input.dataset.activityId;
-      console.log(`✅ ActivityId encontrado: ${activityId}`);
-      
-      return activityId;
+      const data = doc.data();
+      return SCALES[data.evaluationScale] || SCALES.NUMERIC;
     } catch (e) {
-      console.error('❌ Error obteniendo activityId:', e);
+      console.error('Error obteniendo escala:', e);
+      return SCALES.NUMERIC;
+    }
+  }
+
+  /**
+   * Establecer escala de una actividad
+   */
+  async function setActivityScale(activityId, scaleId) {
+    try {
+      await db.collection('activitats').doc(activityId).update({
+        evaluationScale: scaleId
+      });
+      return true;
+    } catch (e) {
+      console.error('Error estableciendo escala:', e);
+      return false;
+    }
+  }
+
+  /**
+   * Crear o actualizar una rúbrica
+   */
+  async function saveRubric(activityId, rubricData) {
+    try {
+      await db.collection('activitats').doc(activityId).update({
+        rubric: rubricData,
+        rubricEnabled: true
+      });
+      return true;
+    } catch (e) {
+      console.error('Error guardando rúbrica:', e);
+      return false;
+    }
+  }
+
+  /**
+   * Obtener rúbrica de una actividad
+   */
+  async function getRubric(activityId) {
+    try {
+      const doc = await db.collection('activitats').doc(activityId).get();
+      if (!doc.exists) return null;
+      
+      return doc.data().rubric || null;
+    } catch (e) {
+      console.error('Error obteniendo rúbrica:', e);
       return null;
     }
   }
 
   /**
-   * Inyectar botón de feedback en el modal de comentarios
+   * Generar rúbrica automática con IA (Claude API)
    */
-  function addFeedbackButton() {
-    const originalOpenComments = window.openCommentsModal;
-    
-    if (!originalOpenComments) {
-      console.warn('⚠️ openCommentsModal no encontrado');
-      return;
+  async function generateRubricWithAI(activityName, activityDescription, evaluationScale) {
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [
+            {
+              role: 'user',
+              content: `Genera una rúbrica de evaluación en CATALAN per a aquesta activitat.
+
+Activitat: ${activityName}
+Descripció: ${activityDescription || 'Sense descripció'}
+Escala: ${evaluationScale === 'assoliments' ? 'NA, AS, AN, AE' : '0-10'}
+
+Si es assoliments, proporciona 4 criteris (un per cada nivell: NA, AS, AN, AE).
+Si es numèrica, proporciona 4-5 criteris amb descriptors pels rangs.
+
+Format JSON:
+{
+  "criteria": [
+    {
+      "name": "Nom del criteri",
+      "description": "Descripció general",
+      "levels": [
+        {"level": "NA/AS/AN/AE o 0-2, 3-5, 6-8, 9-10", "descriptor": "Descripció concisa"}
+      ]
     }
-    
-    window.openCommentsModal = function(studentId, studentName, currentComment) {
-      // Llamar original
-      originalOpenComments.call(this, studentId, studentName, currentComment);
+  ]
+}
+
+Tota la rúbrica ha d'estar en CATALAN i ser positiva/constructiva.`
+            }
+          ]
+        })
+      });
+
+      if (!response.ok) {
+        console.error('Error API:', response.status);
+        return null;
+      }
+
+      const data = await response.json();
+      const content = data.content[0].text;
       
-      // Agregar botón de feedback
-      setTimeout(() => {
-        const modal = document.getElementById('modalComments');
-        if (!modal || modal.querySelector('.feedback-btn')) return;
-        
-        const buttonsContainer = modal.querySelector('.flex.gap-2');
-        if (!buttonsContainer) {
-          console.warn('⚠️ No se encontró contenedor de botones');
-          return;
-        }
-
-        const feedbackBtn = document.createElement('button');
-        feedbackBtn.className = 'feedback-btn px-3 py-2 rounded bg-purple-600 hover:bg-purple-700 text-white font-semibold cursor-pointer border-none flex-1';
-        feedbackBtn.textContent = '🤖 Generar feedback';
-        feedbackBtn.type = 'button';
-        
-        feedbackBtn.addEventListener('click', async () => {
-          // Detectar cuál es la actividad actual
-          let activityId = null;
-          
-          // Opción 1: Buscar si hay un menú abierto
-          const openMenu = document.querySelector('thead th .menu:not(.hidden)');
-          if (openMenu) {
-            activityId = getActivityIdFromHeader(openMenu);
-          }
-          
-          // Opción 2: Si no hay menú, buscar en window.currentCalcActivityId (creado por app.js)
-          if (!activityId) {
-            // Buscar en todos los inputs visibles cuál fue el último clicado
-            const inputs = document.querySelectorAll('input[data-activity-id]');
-            if (inputs.length > 0) {
-              // Usar el primer input como fallback
-              activityId = inputs[0].dataset.activityId;
-            }
-          }
-          
-          if (!activityId) {
-            alert('Selecciona una activitat primer (haz clic en ⋮ de una activitat o en una cel·la de nota)');
-            return;
-          }
-
-          try {
-            const studentDoc = await db.collection('alumnes').doc(studentId).get();
-            if (!studentDoc.exists) {
-              alert('Alumne no trobat');
-              return;
-            }
-            const studentData = studentDoc.data();
-            
-            const activityDoc = await db.collection('activitats').doc(activityId).get();
-            if (!activityDoc.exists) {
-              alert('Activitat no trobada');
-              return;
-            }
-            const activityName = activityDoc.data().nom;
-            
-            const score = studentData.notes?.[activityId] || '';
-            
-            console.log('🎯 Generando feedback para:', { studentName, activityName, score, activityId });
-            
-            EvaluationUI.createFeedbackModal(
-              studentId,
-              studentName,
-              activityId,
-              activityName,
-              score
-            );
-          } catch (err) {
-            console.error('Error generando feedback:', err);
-            alert('Error: ' + err.message);
-          }
-        });
-        
-        // Insertar antes del botón Guardar
-        const lastBtn = buttonsContainer.children[buttonsContainer.children.length - 1];
-        buttonsContainer.insertBefore(feedbackBtn, lastBtn);
-      }, 100);
-    };
-    
-    console.log('✅ Feedback button hook configurado');
+      // Extraer JSON de la respuesta
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) return null;
+      
+      return JSON.parse(jsonMatch[0]);
+    } catch (e) {
+      console.error('Error generando rúbrica:', e);
+      return null;
+    }
   }
 
-  // Ejecutar integraciones cuando los módulos estén listos
-  setTimeout(() => {
-    console.log('🚀 Ejecutando integraciones finales...');
-    addFeedbackButton();
-    console.log('✅ Integración completada');
-  }, 2000);
+  /**
+   * Generar feedback automático para un alumno (con IA)
+   */
+  async function generateStudentFeedback(studentName, activityName, score, evaluationScale, rubric) {
+    try {
+      const scaleType = evaluationScale === 'assoliments' ? 'assoliments' : 'numèrica';
+      
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 500,
+          messages: [
+            {
+              role: 'user',
+              content: `Genera un feedback positiu i constructiu en CATALAN per a un alumne.
 
+Alumne: ${studentName}
+Activitat: ${activityName}
+Qualificació: ${score} (escala: ${scaleType})
+${rubric ? `Rúbrica:\n${JSON.stringify(rubric, null, 2)}` : ''}
+
+Requeriments:
+- Massa breu (2-3 frases)
+- Positiu i motivador
+- Direccionado a FAMÍLIES (es per enviar-los per correu)
+- Inclou punts forts i àrees de millora
+- EN CATALAN
+
+Resposta:
+`
+            }
+          ]
+        })
+      });
+
+      if (!response.ok) {
+        console.error('Error API:', response.status);
+        return null;
+      }
+
+      const data = await response.json();
+      return data.content[0].text.trim();
+    } catch (e) {
+      console.error('Error generando feedback:', e);
+      return null;
+    }
+  }
+
+  /**
+   * Validar que un valor cumple con la escala
+   */
+  function isValidScore(score, scaleId) {
+    const scale = SCALES[scaleId] || SCALES.NUMERIC;
+    return scale.values.includes(score);
+  }
+
+  /**
+   * Convertir assoliment a número (solo para referencia, NO para cálculos)
+   */
+  function assolimentToNumber(assoliment) {
+    return ASSOLIMENTS_VALUES[assoliment] || 0;
+  }
+
+  /**
+   * Verificar si una actividad usa evaluación numérica
+   * (para excluir assoliments de fórmulas)
+   */
+  async function isNumericActivity(activityId) {
+    const scale = await getActivityScale(activityId);
+    return scale.id === 'NUMERIC';
+  }
+
+  /**
+   * Obtener todas las escalas disponibles
+   */
+  function getAvailableScales() {
+    return Object.values(SCALES);
+  }
+
+  /**
+   * Obtener escala por ID
+   */
+  function getScaleById(scaleId) {
+    return SCALES[scaleId] || SCALES.NUMERIC;
+  }
+
+  // Exportar API pública
+  return {
+    SCALES,
+    ASSOLIMENTS_VALUES,
+    getActivityScale,
+    setActivityScale,
+    saveRubric,
+    getRubric,
+    generateRubricWithAI,
+    generateStudentFeedback,
+    isValidScore,
+    assolimentToNumber,
+    isNumericActivity,
+    getAvailableScales,
+    getScaleById
+  };
 })();
