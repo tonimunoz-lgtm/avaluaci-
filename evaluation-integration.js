@@ -170,20 +170,17 @@
    */
   function getActivityIdFromHeader(menuElement) {
     try {
-      // Buscar el th que contiene este menú
       let th = menuElement.closest('th');
       if (!th) {
         console.error('❌ No se encontró th');
         return null;
       }
 
-      // Obtener el índice de esta columna
       const headerRow = th.parentNode;
       const columnIndex = Array.from(headerRow.children).indexOf(th);
       
       console.log(`📍 Columna índice: ${columnIndex}`);
 
-      // Buscar en el tbody
       const tbody = document.querySelector('tbody');
       if (!tbody) {
         console.error('❌ No se encontró tbody');
@@ -230,10 +227,8 @@
     }
     
     window.openCommentsModal = function(studentId, studentName, currentComment) {
-      // Llamar original
       originalOpenComments.call(this, studentId, studentName, currentComment);
       
-      // Agregar botón de feedback
       setTimeout(() => {
         const modal = document.getElementById('modalComments');
         if (!modal || modal.querySelector('.feedback-btn')) return;
@@ -301,7 +296,6 @@
     console.log('✅ Feedback button hook configurado');
   }
 
-  // Ejecutar integraciones cuando los módulos estén listos
   setTimeout(() => {
     console.log('🚀 Ejecutando integraciones finales...');
     addFeedbackButton();
