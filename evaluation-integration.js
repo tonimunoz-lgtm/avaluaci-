@@ -90,22 +90,19 @@
 
       console.log(`✏️ Inyectando botones en menú ${idx}`);
 
-      // Crear contenedor para botones en una línea
-      const buttonsContainer = document.createElement('div');
-      buttonsContainer.className = 'flex gap-1 px-1 py-1 w-full';
-      buttonsContainer.style.borderTop = '1px solid #e5e7eb';
-      buttonsContainer.style.marginTop = '4px';
-      
       // Crear botón de escala
       const scaleBtn = document.createElement('button');
-      scaleBtn.className = 'scale-btn flex-1 px-2 py-1 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded';
-      scaleBtn.textContent = '⚖️ Tipus';
+      scaleBtn.className = 'scale-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700';
+      scaleBtn.textContent = '⚖️ Tipus avaluació';
       scaleBtn.type = 'button';
+      scaleBtn.style.borderTop = '1px solid #e5e7eb';
+      scaleBtn.style.marginTop = '4px';
+      scaleBtn.style.paddingTop = '6px';
       scaleBtn.style.cursor = 'pointer';
 
       // Crear botón de rúbrica
       const rubricBtn = document.createElement('button');
-      rubricBtn.className = 'rubric-btn flex-1 px-2 py-1 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded';
+      rubricBtn.className = 'rubric-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700';
       rubricBtn.textContent = '📋 Rúbrica';
       rubricBtn.type = 'button';
       rubricBtn.style.cursor = 'pointer';
@@ -160,9 +157,8 @@
       });
 
       // Insertar botones en el menú (antes del delete)
-      menu.insertBefore(buttonsContainer, deleteBtn);
-      buttonsContainer.appendChild(scaleBtn);
-      buttonsContainer.appendChild(rubricBtn);
+      menu.insertBefore(rubricBtn, deleteBtn);
+      menu.insertBefore(scaleBtn, deleteBtn);
       
       console.log(`✅ Botones inyectados en menú ${idx}`);
     });
