@@ -1,34 +1,30 @@
 /**
  * INTEGRACIÓN DEL SISTEMA DE EVALUACIÓN
- * Se ejecuta automáticamente y añade botones sin modificar app.js
- * 
- * NOTA: Este archivo se ejecuta en global scope
- * Usa MutationObserver para detectar cambios en la tabla
+ * Solo botón Tipus avaluació, sin rúbrica
+ * Mantiene colores y tamaño de celdas
  */
 
 (function() {
   
   console.log('🔧 Evaluation Integration iniciando...');
-  
-  // Esperar a que EvaluationSystem y EvaluationUI estén listos
+
   let initAttempts = 0;
   const maxAttempts = 40;
-  
+
   const waitForModules = setInterval(() => {
     initAttempts++;
-    
     const hasEvalSystem = window.EvaluationSystem !== undefined;
     const hasEvalUI = window.EvaluationUI !== undefined;
-    
+
     console.log(`⏳ Intento ${initAttempts}/${maxAttempts} - EvalSystem: ${hasEvalSystem}, EvalUI: ${hasEvalUI}`);
-    
+
     if (hasEvalSystem && hasEvalUI) {
       clearInterval(waitForModules);
       console.log('✅ Sistemas de evaluación cargados, inicializando...');
       initializeEvaluationIntegration();
       return;
     }
-    
+
     if (initAttempts >= maxAttempts) {
       console.error('❌ Timeout esperando módulos');
       clearInterval(waitForModules);
@@ -37,13 +33,9 @@
 
   function initializeEvaluationIntegration() {
     const tableWrapper = document.getElementById('notesTable-wrapper');
-    if (!tableWrapper) {
-      console.error('❌ notesTable-wrapper no encontrado');
-      return;
-    }
+    if (!tableWrapper) return;
 
     const observer = new MutationObserver((mutations) => {
-      console.log('🔍 Detectado cambio en tabla');
       setTimeout(() => {
         injectScaleButtons();
         refreshAllActivityInputs();
@@ -56,16 +48,13 @@
       attributes: false
     });
 
-    console.log('✅ MutationObserver configurado');
-
-    // Inicializar botones y inputs al cargar
     setTimeout(() => {
       injectScaleButtons();
       refreshAllActivityInputs();
     }, 1000);
   }
 
-  /** INYECCIÓN DE BOTONES **/
+  /** INYECTAR SOLO BOTÓN TIPUS AVALUACIÓ **/
   function injectScaleButtons() {
     const menus = document.querySelectorAll('thead th .menu');
     if (!menus.length) return;
@@ -75,7 +64,6 @@
       const deleteBtn = menu.querySelector('.delete-btn');
       if (!deleteBtn) return;
 
-      // Botón escala
       const scaleBtn = document.createElement('button');
       scaleBtn.className = 'scale-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700 whitespace-nowrap';
       scaleBtn.textContent = '⚖️ Tipus avaluació';
@@ -92,7 +80,7 @@
           const scale = await EvaluationSystem.getActivityScale(activityId);
           EvaluationUI.createActivityScaleModal(activityId, scale.id);
 
-          // Después de guardar la escala, actualizar inputs
+          // Actualizar celdas al guardar
           const saveBtn = document.querySelector('#activityScaleModal .saveBtn');
           if (saveBtn) {
             saveBtn.addEventListener('click', async () => {
@@ -105,36 +93,10 @@
         }
       });
 
-      // Botón rúbrica
-      const rubricBtn = document.createElement('button');
-      rubricBtn.className = 'rubric-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700 whitespace-nowrap';
-      rubricBtn.textContent = '📋 Rúbrica';
-      rubricBtn.type = 'button';
-      rubricBtn.style.cursor = 'pointer';
-
-      rubricBtn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const activityId = getActivityIdFromHeader(menu);
-        if (!activityId) return alert('Error identificando activitat');
-
-        try {
-          const activityDoc = await firebase.firestore().collection('activitats').doc(activityId).get();
-          if (!activityDoc.exists) return alert('Activitat no trobada');
-          const activityName = activityDoc.data().nom;
-          EvaluationUI.createRubricModal(activityId, activityName);
-        } catch (err) {
-          console.error(err);
-          alert('Error: ' + err.message);
-        }
-      });
-
-      menu.insertBefore(rubricBtn, deleteBtn);
       menu.insertBefore(scaleBtn, deleteBtn);
     });
   }
 
-  /** OBTENER ID ACTIVIDAD **/
   function getActivityIdFromHeader(menuElement) {
     const th = menuElement.closest('th');
     if (!th) return null;
@@ -147,7 +109,7 @@
     return input?.dataset.activityId || null;
   }
 
-  /** REFRESCAR TODOS LOS INPUTS **/
+  /** REFRESCAR TODAS LAS ACTIVIDADES **/
   async function refreshAllActivityInputs() {
     const tbody = document.querySelector('tbody');
     if (!tbody) return;
@@ -158,7 +120,7 @@
     }
   }
 
-  /** REFRESCAR INPUTS DE UNA ACTIVIDAD **/
+  /** REFRESCAR UNA ACTIVIDAD **/
   async function refreshInputsForActivity(activityId) {
     const scale = await EvaluationSystem.getActivityScale(activityId);
     const tbody = document.querySelector('tbody');
@@ -183,7 +145,26 @@
       if (studentId) newInput.dataset.studentId = studentId;
       newInput.dataset.activityId = activityId;
 
-      // Guardar cambios
+      // Estilos similares a la tabla original
+      newInput.style.width = '60px';
+      newInput.style.padding = '2px 4px';
+      newInput.style.textAlign = 'center';
+      newInput.classList.add('table-input');
+
+      // Colores según valor
+      if (scale.id === 'ASSOLIMENTS') {
+        newInput.addEventListener('change', () => {
+          applyAssolimentColor(newInput);
+        });
+        applyAssolimentColor(newInput);
+      } else {
+        newInput.addEventListener('change', () => {
+          applyNumericColor(newInput);
+        });
+        applyNumericColor(newInput);
+      }
+
+      // Guardar en Firestore
       newInput.addEventListener('change', async () => {
         if (!studentId) return;
         const value = newInput.value;
@@ -194,6 +175,52 @@
 
       cell.innerHTML = '';
       cell.appendChild(newInput);
+    }
+  }
+
+  /** COLORES ASSOLIMENTS **/
+  function applyAssolimentColor(input) {
+    const val = input.value;
+    switch(val) {
+      case 'NA':
+        input.style.backgroundColor = '#d1d5db'; // gris
+        input.style.color = '#000';
+        break;
+      case 'AS':
+        input.style.backgroundColor = '#facc15'; // amarillo
+        input.style.color = '#000';
+        break;
+      case 'AN':
+        input.style.backgroundColor = '#f97316'; // naranja
+        input.style.color = '#fff';
+        break;
+      case 'AE':
+        input.style.backgroundColor = '#16a34a'; // verde
+        input.style.color = '#fff';
+        break;
+      default:
+        input.style.backgroundColor = '';
+        input.style.color = '';
+    }
+  }
+
+  /** COLORES NUMÉRICOS **/
+  function applyNumericColor(input) {
+    const val = parseFloat(input.value);
+    if (isNaN(val)) {
+      input.style.backgroundColor = '';
+      input.style.color = '';
+      return;
+    }
+    if (val < 5) {
+      input.style.backgroundColor = '#f87171'; // rojo
+      input.style.color = '#fff';
+    } else if (val < 7) {
+      input.style.backgroundColor = '#fbbf24'; // amarillo
+      input.style.color = '#000';
+    } else {
+      input.style.backgroundColor = '#34d399'; // verde
+      input.style.color = '#000';
     }
   }
 
