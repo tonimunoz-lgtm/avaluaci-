@@ -1122,7 +1122,7 @@ menuDiv.querySelector('.delete-btn').addEventListener('click', () => {
 
   });
 
-  headRow.appendChild(th('Comentarios', 'text-center'));
+  headRow.appendChild(th('Comentaris', 'text-center'));
   notesThead.appendChild(headRow);
 
   enableActivityDrag();
