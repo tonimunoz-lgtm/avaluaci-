@@ -1,27 +1,32 @@
 /**
  * INTEGRACIÓN DEL SISTEMA DE EVALUACIÓN
  * Se ejecuta automáticamente y añade botones sin modificar app.js
- * 
- * INSTRUCCIONES:
- * 1. Incluir en HTML DESPUÉS de app.js:
- *    <script src="evaluation.js"></script>
- *    <script src="evaluationUI.js"></script>
- *    <script src="evaluation-integration.js"></script>
  */
 
 (function() {
   
-  // Esperar a que DOM esté listo
+  console.log('🔧 Evaluation Integration iniciando...');
+  
+  // Esperar a que DOM esté listo y app.js esté cargado
   const waitForAppInit = setInterval(() => {
-    if (!window.db || !window.currentClassId) return;
+    if (!window.db || !window.currentClassId === undefined) {
+      console.log('⏳ Esperando app.js...');
+      return;
+    }
     
     clearInterval(waitForAppInit);
+    console.log('✅ App.js cargado, inicializando integración...');
     initializeEvaluationIntegration();
   }, 500);
 
   async function initializeEvaluationIntegration() {
     // Hook en renderNotesGrid para inyectar opciones de escala
     const originalRenderNotesGrid = window.renderNotesGrid;
+    
+    if (!originalRenderNotesGrid) {
+      console.error('❌ renderNotesGrid no encontrado');
+      return;
+    }
     
     window.renderNotesGrid = async function() {
       // Ejecutar renderizado original
@@ -30,29 +35,41 @@
       // INYECTAR BOTONES DE ESCALA EN MENÚ DE ACTIVIDADES
       setTimeout(() => {
         injectScaleButtons();
-      }, 100);
+      }, 200);
       
       return result;
     };
+    
+    console.log('✅ renderNotesGrid hooked');
   }
 
   /**
    * Inyectar botones de escala en el menú de cada actividad
    */
   function injectScaleButtons() {
-    const menus = document.querySelectorAll('.menu');
+    const menus = document.querySelectorAll('th .menu');
+    console.log(`📍 Encontrados ${menus.length} menús de actividades`);
     
-    menus.forEach(menu => {
+    menus.forEach((menu, idx) => {
       // No duplicar si ya existe el botón
-      if (menu.querySelector('.scale-btn')) return;
+      if (menu.querySelector('.scale-btn')) {
+        console.log(`⏭️ Menú ${idx} ya tiene botones, saltando...`);
+        return;
+      }
       
       const deleteBtn = menu.querySelector('.delete-btn');
-      if (!deleteBtn) return;
+      if (!deleteBtn) {
+        console.log(`⏭️ Menú ${idx} sin delete-btn`);
+        return;
+      }
+
+      console.log(`✏️ Inyectando botones en menú ${idx}`);
 
       // Crear botón de escala
       const scaleBtn = document.createElement('button');
       scaleBtn.className = 'scale-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700';
       scaleBtn.textContent = '⚖️ Tipus avaluació';
+      scaleBtn.type = 'button';
       scaleBtn.style.borderTop = '1px solid #e5e7eb';
       scaleBtn.style.marginTop = '4px';
       scaleBtn.style.paddingTop = '6px';
@@ -61,10 +78,32 @@
       const rubricBtn = document.createElement('button');
       rubricBtn.className = 'rubric-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700';
       rubricBtn.textContent = '📋 Rúbrica';
+      rubricBtn.type = 'button';
 
-      // Obtener ID de la actividad del contexto
-      rubricBtn.addEventListener('click', async (e) => {
+      // Event listeners
+      scaleBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
         const activityId = getActivityIdFromMenu(menu);
+        console.log('🔄 Escala button clicked, activityId:', activityId);
+        
+        if (!activityId) {
+          alert('Error identificando activitat');
+          return;
+        }
+
+        const scale = await EvaluationSystem.getActivityScale(activityId);
+        EvaluationUI.createActivityScaleModal(activityId, scale.id);
+      });
+
+      rubricBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const activityId = getActivityIdFromMenu(menu);
+        console.log('📋 Rúbrica button clicked, activityId:', activityId);
+        
         if (!activityId) {
           alert('Error identificando activitat');
           return;
@@ -76,21 +115,11 @@
         EvaluationUI.createRubricModal(activityId, activityName);
       });
 
-      scaleBtn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const activityId = getActivityIdFromMenu(menu);
-        if (!activityId) {
-          alert('Error identificando activitat');
-          return;
-        }
-
-        const scale = await EvaluationSystem.getActivityScale(activityId);
-        EvaluationUI.createActivityScaleModal(activityId, scale.id);
-      });
-
-      // Insertar botones en el menú
+      // Insertar botones en el menú (antes del delete)
       menu.insertBefore(rubricBtn, deleteBtn);
       menu.insertBefore(scaleBtn, deleteBtn);
+      
+      console.log(`✅ Botones inyectados en menú ${idx}`);
     });
   }
 
@@ -98,103 +127,114 @@
    * Obtener ID de actividad desde el elemento del menú
    */
   function getActivityIdFromMenu(menu) {
-    // El menú está en el header de la tabla
-    // Buscar hacia arriba hasta encontrar el <th> que contiene el ID
+    // El menú está dentro de un th
     let th = menu.closest('th');
     
-    if (th) {
-      // El ID está en la primera columna de datos (input en tbody)
-      const headerIndex = Array.from(th.parentNode.children).indexOf(th);
-      const firstRow = document.querySelector('tbody tr');
-      
-      if (firstRow && firstRow.children[headerIndex]) {
-        const input = firstRow.children[headerIndex].querySelector('input');
-        if (input) {
-          return input.dataset.activityId;
-        }
-      }
+    if (!th) {
+      console.error('❌ No se encontró th para este menú');
+      return null;
     }
+
+    // Obtener el índice de esta columna en el header
+    const headerRow = th.parentNode;
+    const columnIndex = Array.from(headerRow.children).indexOf(th);
     
-    return null;
+    console.log(`📍 Columna índice: ${columnIndex}`);
+
+    // Buscar en el tbody la primera fila, columna correspondiente
+    const tbody = document.querySelector('tbody');
+    if (!tbody) {
+      console.error('❌ No se encontró tbody');
+      return null;
+    }
+
+    const firstRow = tbody.querySelector('tr');
+    if (!firstRow) {
+      console.error('❌ No hay filas en tbody');
+      return null;
+    }
+
+    const cellAtIndex = firstRow.children[columnIndex];
+    if (!cellAtIndex) {
+      console.error('❌ No se encontró celda en índice', columnIndex);
+      return null;
+    }
+
+    const input = cellAtIndex.querySelector('input');
+    if (!input) {
+      console.error('❌ No se encontró input en celda');
+      return null;
+    }
+
+    const activityId = input.dataset.activityId;
+    console.log(`✅ ActivityId encontrado: ${activityId}`);
+    
+    return activityId;
   }
 
   /**
-   * Hook en los inputs de notas para cambiar tipo según escala
-   */
-  async function enhanceNoteInputs() {
-    const inputs = document.querySelectorAll('input[data-activity-id]');
-    
-    for (const input of inputs) {
-      const activityId = input.dataset.activityId;
-      const scale = await EvaluationSystem.getActivityScale(activityId);
-      
-      if (scale.id === 'ASSOLIMENTS') {
-        // Convertir input a select
-        const select = EvaluationUI.createScaleInput(
-          activityId,
-          input.value,
-          'ASSOLIMENTS'
-        );
-        input.replaceWith(select);
-      }
-    }
-  }
-
-  /**
-   * Inyectar botón de feedback en el menú de comentarios
+   * Inyectar botón de feedback en el modal de comentarios
    */
   function addFeedbackButton() {
-    // Cuando se abre el modal de comentarios, agregar botón de feedback
     const originalOpenComments = window.openCommentsModal;
     
-    if (originalOpenComments) {
-      window.openCommentsModal = function(studentId, studentName, currentComment) {
-        // Llamar original
-        originalOpenComments.call(this, studentId, studentName, currentComment);
-        
-        // Agregar botón de feedback
-        setTimeout(() => {
-          const modal = document.getElementById('modalComments');
-          if (!modal || modal.querySelector('.feedback-btn')) return;
-          
-          const saveBtn = modal.querySelector('.flex-1:nth-of-type(2)');
-          if (saveBtn) {
-            const feedbackBtn = document.createElement('button');
-            feedbackBtn.className = 'feedback-btn px-3 py-2 rounded bg-purple-600 hover:bg-purple-700 text-white font-semibold cursor-pointer border-none';
-            feedbackBtn.textContent = '🤖 Generar feedback';
-            feedbackBtn.style.marginRight = '8px';
-            
-            feedbackBtn.addEventListener('click', async () => {
-              // Obtener datos necesarios
-              const currentActivityId = window.currentCalcActivityId;
-              const studentDoc = await db.collection('alumnes').doc(studentId).get();
-              const studentData = studentDoc.data();
-              
-              const activityDoc = await db.collection('activitats').doc(currentActivityId).get();
-              const activityName = activityDoc.data().nom;
-              
-              const score = studentData.notes?.[currentActivityId] || '';
-              
-              EvaluationUI.createFeedbackModal(
-                studentId,
-                studentName,
-                currentActivityId,
-                activityName,
-                score
-              );
-            });
-            
-            saveBtn.parentNode.insertBefore(feedbackBtn, saveBtn);
-          }
-        }, 100);
-      };
+    if (!originalOpenComments) {
+      console.warn('⚠️ openCommentsModal no encontrado');
+      return;
     }
+    
+    window.openCommentsModal = function(studentId, studentName, currentComment) {
+      // Llamar original
+      originalOpenComments.call(this, studentId, studentName, currentComment);
+      
+      // Agregar botón de feedback
+      setTimeout(() => {
+        const modal = document.getElementById('modalComments');
+        if (!modal || modal.querySelector('.feedback-btn')) return;
+        
+        const saveBtn = modal.querySelector('.flex-1:nth-of-type(2)');
+        if (saveBtn) {
+          const feedbackBtn = document.createElement('button');
+          feedbackBtn.className = 'feedback-btn px-3 py-2 rounded bg-purple-600 hover:bg-purple-700 text-white font-semibold cursor-pointer border-none';
+          feedbackBtn.textContent = '🤖 Generar feedback';
+          feedbackBtn.style.marginRight = '8px';
+          feedbackBtn.type = 'button';
+          
+          feedbackBtn.addEventListener('click', async () => {
+            const currentActivityId = window.currentCalcActivityId;
+            if (!currentActivityId) {
+              alert('Selecciona una activitat primer');
+              return;
+            }
+
+            const studentDoc = await db.collection('alumnes').doc(studentId).get();
+            const studentData = studentDoc.data();
+            
+            const activityDoc = await db.collection('activitats').doc(currentActivityId).get();
+            const activityName = activityDoc.data().nom;
+            
+            const score = studentData.notes?.[currentActivityId] || '';
+            
+            EvaluationUI.createFeedbackModal(
+              studentId,
+              studentName,
+              currentActivityId,
+              activityName,
+              score
+            );
+          });
+          
+          saveBtn.parentNode.insertBefore(feedbackBtn, saveBtn);
+        }
+      }, 100);
+    };
   }
 
   // Ejecutar integraciones cuando el sistema esté listo
   setTimeout(() => {
-    enhanceNoteInputs();
+    console.log('🚀 Ejecutando integraciones finales...');
     addFeedbackButton();
-  }, 1000);
+    console.log('✅ Integración completada');
+  }, 1500);
 
 })();
