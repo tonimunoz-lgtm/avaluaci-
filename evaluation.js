@@ -9,13 +9,13 @@ window.EvaluationSystem = (function() {
   // Escalas de evaluación disponibles
   const SCALES = {
     NUMERIC: {
-      id: 'numeric',
+      id: 'NUMERIC',
       name: 'Numèrica (0-10)',
       values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
       type: 'number'
     },
     ASSOLIMENTS: {
-      id: 'assoliments',
+      id: 'ASSOLIMENTS',
       name: 'Assoliments',
       values: ['NA', 'AS', 'AN', 'AE'],
       type: 'letter'
@@ -24,10 +24,10 @@ window.EvaluationSystem = (function() {
 
   // Mapeo de assoliments a valores numéricos (para búsqueda de correlación, NO para cálculos)
   const ASSOLIMENTS_VALUES = {
-    'NA': 4,  // No Assolit
-    'AS': 5, // Assolit amb suport
-    'AN': 7, // Assolit normalment
-    'AE': 9    // Assolit excepcionalmen
+    'NA': 0,
+    'AS': 3.5,
+    'AN': 6.5,
+    'AE': 9
   };
 
   /**
@@ -35,11 +35,12 @@ window.EvaluationSystem = (function() {
    */
   async function getActivityScale(activityId) {
     try {
-      const doc = await db.collection('activitats').doc(activityId).get();
+      const doc = await firebase.firestore().collection('activitats').doc(activityId).get();
       if (!doc.exists) return SCALES.NUMERIC;
       
       const data = doc.data();
-      return SCALES[data.evaluationScale] || SCALES.NUMERIC;
+      const scaleId = data.evaluationScale || 'NUMERIC';
+      return SCALES[scaleId] || SCALES.NUMERIC;
     } catch (e) {
       console.error('Error obteniendo escala:', e);
       return SCALES.NUMERIC;
@@ -51,7 +52,7 @@ window.EvaluationSystem = (function() {
    */
   async function setActivityScale(activityId, scaleId) {
     try {
-      await db.collection('activitats').doc(activityId).update({
+      await firebase.firestore().collection('activitats').doc(activityId).update({
         evaluationScale: scaleId
       });
       return true;
@@ -66,7 +67,7 @@ window.EvaluationSystem = (function() {
    */
   async function saveRubric(activityId, rubricData) {
     try {
-      await db.collection('activitats').doc(activityId).update({
+      await firebase.firestore().collection('activitats').doc(activityId).update({
         rubric: rubricData,
         rubricEnabled: true
       });
@@ -82,7 +83,7 @@ window.EvaluationSystem = (function() {
    */
   async function getRubric(activityId) {
     try {
-      const doc = await db.collection('activitats').doc(activityId).get();
+      const doc = await firebase.firestore().collection('activitats').doc(activityId).get();
       if (!doc.exists) return null;
       
       return doc.data().rubric || null;
@@ -112,7 +113,7 @@ window.EvaluationSystem = (function() {
 
 Activitat: ${activityName}
 Descripció: ${activityDescription || 'Sense descripció'}
-Escala: ${evaluationScale === 'assoliments' ? 'NA, AS, AN, AE' : '0-10'}
+Escala: ${evaluationScale === 'ASSOLIMENTS' ? 'NA, AS, AN, AE' : '0-10'}
 
 Si es assoliments, proporciona 4 criteris (un per cada nivell: NA, AS, AN, AE).
 Si es numèrica, proporciona 4-5 criteris amb descriptors pels rangs.
@@ -144,7 +145,6 @@ Tota la rúbrica ha d'estar en CATALAN i ser positiva/constructiva.`
       const data = await response.json();
       const content = data.content[0].text;
       
-      // Extraer JSON de la respuesta
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (!jsonMatch) return null;
       
@@ -160,7 +160,7 @@ Tota la rúbrica ha d'estar en CATALAN i ser positiva/constructiva.`
    */
   async function generateStudentFeedback(studentName, activityName, score, evaluationScale, rubric) {
     try {
-      const scaleType = evaluationScale === 'assoliments' ? 'assoliments' : 'numèrica';
+      const scaleType = evaluationScale === 'ASSOLIMENTS' ? 'assoliments' : 'numèrica';
       
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -224,7 +224,6 @@ Resposta:
 
   /**
    * Verificar si una actividad usa evaluación numérica
-   * (para excluir assoliments de fórmulas)
    */
   async function isNumericActivity(activityId) {
     const scale = await getActivityScale(activityId);
