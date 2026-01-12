@@ -46,7 +46,7 @@
       console.log('🔍 Detectado cambio en tabla');
       setTimeout(() => {
         injectScaleButtons();
-        replaceInputsBasedOnScale();
+        replaceInputsForAssoliments();
       }, 300);
     });
 
@@ -61,7 +61,7 @@
     // Inicializar botones y inputs al cargar
     setTimeout(() => {
       injectScaleButtons();
-      replaceInputsBasedOnScale();
+      replaceInputsForAssoliments();
     }, 1000);
   }
 
@@ -105,14 +105,6 @@
         try {
           const scale = await EvaluationSystem.getActivityScale(activityId);
           EvaluationUI.createActivityScaleModal(activityId, scale.id);
-
-          // Hook: cuando se guarde la escala, actualizar los inputs
-          const originalSave = EvaluationUI.createActivityScaleModal;
-          EvaluationUI.createActivityScaleModal = async function(actId, currentScaleId) {
-            await originalSave(actId, currentScaleId);
-            replaceInputsForActivity(actId);
-          };
-
         } catch (err) {
           console.error('Error:', err);
           alert('Error: ' + err.message);
@@ -168,9 +160,9 @@
   }
 
   /**
-   * Reemplazar todos los inputs según su escala
+   * Reemplaza inputs numéricos por selects si la actividad es ASSOLIMENTS
    */
-  async function replaceInputsBasedOnScale() {
+  async function replaceInputsForAssoliments() {
     const tbody = document.querySelector('tbody');
     if (!tbody) return;
 
@@ -178,45 +170,28 @@
     for (const row of rows) {
       const cells = row.children;
       for (const cell of cells) {
-        const input = cell.querySelector('input, select');
+        const input = cell.querySelector('input[type="number"]');
         if (!input || !input.dataset.activityId) continue;
-        replaceInputsForActivity(input.dataset.activityId);
+
+        const activityId = input.dataset.activityId;
+        const scale = await EvaluationSystem.getActivityScale(activityId);
+        if (scale.id === 'ASSOLIMENTS') {
+          const currentValue = input.value;
+          const select = EvaluationUI.createScaleInput(activityId, currentValue, scale.id);
+          cell.innerHTML = '';
+          cell.appendChild(select);
+
+          // Guardar cambio al seleccionar valor
+          select.addEventListener('change', async () => {
+            const studentId = cell.dataset.studentId;
+            if (!studentId) return;
+            const value = select.value;
+            await firebase.firestore().collection('alumnes').doc(studentId).update({
+              [`notes.${activityId}`]: value
+            });
+          });
+        }
       }
-    }
-  }
-
-  /**
-   * Reemplaza inputs de una actividad específica según su escala
-   */
-  async function replaceInputsForActivity(activityId) {
-    const scale = await EvaluationSystem.getActivityScale(activityId);
-    const tbody = document.querySelector('tbody');
-    if (!tbody) return;
-
-    const rows = tbody.querySelectorAll('tr');
-    for (const row of rows) {
-      const cell = Array.from(row.children).find(c => {
-        const inp = c.querySelector('input, select');
-        return inp?.dataset.activityId === activityId;
-      });
-      if (!cell) continue;
-
-      const oldInput = cell.querySelector('input, select');
-      const studentId = cell.dataset.studentId;
-      const currentValue = oldInput?.value || '';
-
-      const newInput = EvaluationUI.createScaleInput(activityId, currentValue, scale.id);
-      cell.innerHTML = '';
-      cell.appendChild(newInput);
-
-      // Guardar cambio
-      newInput.addEventListener('change', async () => {
-        if (!studentId) return;
-        const value = newInput.value;
-        await firebase.firestore().collection('alumnes').doc(studentId).update({
-          [`notes.${activityId}`]: value
-        });
-      });
     }
   }
 
