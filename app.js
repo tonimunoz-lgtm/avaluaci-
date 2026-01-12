@@ -2685,25 +2685,6 @@ function hideSendModeCheckboxes() {
   });
 }
 
-// Botó global "Enviar notes seleccionades"
-/*function showSendSelectedButton() {
-  const container = document.getElementById('studentsListContent');
-  if (!container) return;
-  if (document.getElementById('btnSendSelectedNotes')) return;
-
-  const btn = document.createElement('button');
-  btn.id = 'btnSendSelectedNotes';
-  btn.className = 'mt-2 w-full bg-blue-600 text-white px-3 py-2 rounded';
-  btn.textContent = 'Enviar notes seleccionades';
-  btn.addEventListener('click', sendSelectedNotes);
-
-  container.insertBefore(btn, document.getElementById('studentsList'));
-}
-
-function hideSendSelectedButton() {
-  document.getElementById('btnSendSelectedNotes')?.remove();
-}*/
-
 // Botó i checkbox "Enviar notes + Tots"
 function showSendSelectedButton() {
   const container = document.getElementById('studentsListContent');
@@ -2812,9 +2793,9 @@ async function formatStudentNotesForEmail(studentId) {
     lines.push(`${actName}: ${val}`);
   }
 
-  if (typeof computeStudentAverageText === "function") {
-    lines.push(`Mitjana: ${computeStudentAverageText(data)}`);
-  }
+ // if (typeof computeStudentAverageText === "function") {
+  //  lines.push(`Mitjana: ${computeStudentAverageText(data)}`);
+ // }
 
   return lines.join('\n');
 }
