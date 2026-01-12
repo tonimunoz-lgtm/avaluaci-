@@ -92,7 +92,7 @@
 
       // Crear botón de escala
       const scaleBtn = document.createElement('button');
-      scaleBtn.className = 'scale-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700';
+      scaleBtn.className = 'scale-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700 whitespace-nowrap';
       scaleBtn.textContent = '⚖️ Tipus avaluació';
       scaleBtn.type = 'button';
       scaleBtn.style.borderTop = '1px solid #e5e7eb';
@@ -102,7 +102,7 @@
 
       // Crear botón de rúbrica
       const rubricBtn = document.createElement('button');
-      rubricBtn.className = 'rubric-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700';
+      rubricBtn.className = 'rubric-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700 whitespace-nowrap';
       rubricBtn.textContent = '📋 Rúbrica';
       rubricBtn.type = 'button';
       rubricBtn.style.cursor = 'pointer';
