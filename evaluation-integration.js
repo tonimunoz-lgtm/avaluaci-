@@ -1,322 +1,240 @@
-/**  
- * INTEGRACIÓN DEL SISTEMA DE EVALUACIÓN  
- * Se ejecuta automáticamente y añade botones sin modificar app.js  
- */  
+/**
+ * INTEGRACIÓN DEL SISTEMA DE EVALUACIÓN
+ * Se ejecuta automáticamente y añade botones sin modificar app.js
+ */
+
+(function() {
   
-(function() {  
+  console.log('🔧 Evaluation Integration iniciando...');
   
-  console.log('🔧 Evaluation Integration iniciando...');  
-  
-  // Usamos un flag para controlar si la inicialización principal ya ocurrió  
-  let integrationInitialized = false;  
-  
-  // Esperar a que el entorno básico de app.js esté listo  
-  const waitForAppInit = setInterval(() => {  
-    // Verificamos si las variables clave que app.js ya expone al window están presentes.  
-    // La corrección clave está aquí: typeof window.currentClassId === 'undefined'  
-    if (!window.db || typeof window.currentClassId === 'undefined' || window.currentClassId === null) {  
-      console.log('⏳ Esperando app.js y variables globales (db, currentClassId)...');  
-      return;  
-    }  
-  
-    clearInterval(waitForAppInit);  
-    console.log('✅ App.js y variables globales (db, currentClassId) cargadas, iniciando integración...');  
+  // Esperar a que DOM esté listo y app.js esté cargado
+  const waitForAppInit = setInterval(() => {
+    if (!window.db || !window.currentClassId === undefined) {
+      console.log('⏳ Esperando app.js...');
+      return;
+    }
+    
+    clearInterval(waitForAppInit);
+    console.log('✅ App.js cargado, inicializando integración...');
+    initializeEvaluationIntegration();
+  }, 500);
+
+  async function initializeEvaluationIntegration() {
+    // Hook en renderNotesGrid para inyectar opciones de escala
+    const originalRenderNotesGrid = window.renderNotesGrid;
+    
+    if (!originalRenderNotesGrid) {
+      console.error('❌ renderNotesGrid no encontrado');
+      return;
+    }
+    
+    window.renderNotesGrid = async function() {
+      // Ejecutar renderizado original
+      const result = await originalRenderNotesGrid.call(this);
       
-    // Una vez que el entorno básico está listo, intentamos hookear renderNotesGrid  
-    // y el modal de comentarios. Esto se intentará SOLO UNA VEZ.  
-    if (!integrationInitialized) {  
-      initializeEvaluationIntegrationHooks();  
-      integrationInitialized = true;  
-    }  
-  }, 500); // Ajusta este tiempo si los logs de espera siguen siendo excesivos  
-  
-  async function initializeEvaluationIntegrationHooks() {  
-    // Intentar hookear renderNotesGrid, que es fundamental para los botones de actividad.  
-    // Esto se hará de forma recurrente si renderNotesGrid no está presente al inicio.  
-    attemptRenderNotesGridHook();  
-  
-    // Hookear el modal de comentarios (este debería ser más directo)  
-    addFeedbackButtonToCommentsModal();  
-  
-    console.log('✅ Integración principal solicitada. Esperando renderizado de tabla...');  
-  }  
-  
-  // --- Funciones para manejar el hook de renderNotesGrid y la inyección de botones ---  
-  
-  function attemptRenderNotesGridHook() {  
-    // Si renderNotesGrid ya fue hookeado, no hacemos nada  
-    if (window.__originalRenderNotesGridHooked) {  
-      // console.log('renderNotesGrid ya está hookeado.');  
-      return;  
-    }  
-  
-    const originalRenderNotesGrid = window.renderNotesGrid;  
-  
-    if (!originalRenderNotesGrid) {  
-      // Si renderNotesGrid aún no está disponible, lo reintentamos más tarde  
-      // Esto es crucial para la restricción de no modificar app.js, ya que  
-      // window.renderNotesGrid puede aparecer dinámicamente.  
-      console.log('⚠️ renderNotesGrid aún no disponible. Reintentando hook en 1s...');  
-      setTimeout(attemptRenderNotesGridHook, 1000);  
-      return;  
-    }  
-  
-    // Marca que ya hemos hookeado para no hacerlo de nuevo  
-    window.__originalRenderNotesGridHooked = true;  
-    window.renderNotesGrid = async function() {  
-      // Ejecutar el renderizado original  
-      const result = await originalRenderNotesGrid.call(this);  
-  
-      // INYECTAR BOTONES DE ESCALA Y RÚBRICA EN EL MENÚ DE ACTIVIDADES  
-      // Damos un poco de tiempo para que la tabla se redibuje completamente  
-      setTimeout(() => {  
-        injectScaleAndRubricButtons();  
-      }, 300); // Ajusta este tiempo si los botones no aparecen consistentemente  
-  
-      return result;  
-    };  
-    console.log('✅ renderNotesGrid hookeado con éxito.');  
-  }  
-  
-  
-  /**  
-   * Inyectar botones de escala y rúbrica en el menú de cada actividad  
-   */  
-  function injectScaleAndRubricButtons() {  
-    // Selector más específico para evitar conflictos y asegurar que sea el menú correcto  
-    // Buscamos los menús dentro de los TH del THEAD de la tabla de notas  
-    const menus = document.querySelectorAll('#notesThead th .menu');  
-    // console.log(`📍 Encontrados ${menus.length} menús de actividades para inyección.`);  
-  
-    menus.forEach((menu) => {  
-      // Obtener el TH padre del menú  
-      const th = menu.closest('th');  
-      if (!th) {  
-        // console.warn('⚠️ Menú sin TH padre encontrado. Saltando inyección.');  
-        return;  
-      }  
-  
-      let activityId = null;  
-      // Intentamos encontrar el activityId desde el input en la misma columna.  
-      const columnIndex = Array.from(th.parentNode.children).indexOf(th);  
-      if (columnIndex > 0) { // Ignoramos la primera columna 'Alumne'  
-          const firstDataRow = document.querySelector('#notesTbody tr');  
-          if (firstDataRow) {  
-              const cellInColumn = firstDataRow.querySelector(`td:nth-child(${columnIndex + 1})`);  
-              const inputInCell = cellInColumn ? cellInColumn.querySelector('input[data-activity-id]') : null;  
-              if (inputInCell) {  
-                  activityId = inputInCell.dataset.activityId;  
-              }  
-          }  
-      }  
-  
-      if (!activityId) {  
-        // console.warn('⚠️ No se pudo determinar el activityId para este menú. Saltando inyección.');  
-        return;  
-      }  
-        
-      // No duplicar si ya existe el botón, usando un ID único por actividad.  
-      if (menu.querySelector(`#scale-btn-${activityId}`)) {  
-        // console.log(`⏭️ Menú para actividad ${activityId} ya tiene botones, saltando...`);  
-        return;  
-      }  
-  
-      const deleteBtn = menu.querySelector('.delete-btn');  
-      if (!deleteBtn) {  
-        // console.warn(`⏭️ Menú para actividad ${activityId} sin delete-btn. Saltando inyección.`);  
-        return;  
-      }  
-  
-      // console.log(`✏️ Inyectando botones en menú para actividad: ${activityId}`);  
-  
-      // Crear botón de escala  
-      const scaleBtn = document.createElement('button');  
-      scaleBtn.className = 'scale-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700';  
-      scaleBtn.textContent = '⚖️ Tipus avaluació';  
-      scaleBtn.type = 'button';  
-      scaleBtn.style.borderTop = '1px solid #e5e7eb';  
-      scaleBtn.style.marginTop = '4px';  
-      scaleBtn.style.paddingTop = '6px';  
-      scaleBtn.id = `scale-btn-${activityId}`; // Añadimos un ID para evitar duplicados  
-  
-      // Crear botón de rúbrica  
-      const rubricBtn = document.createElement('button');  
-      rubricBtn.className = 'rubric-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700';  
-      rubricBtn.textContent = '📋 Rúbrica';  
-      rubricBtn.type = 'button';  
-      rubricBtn.id = `rubric-btn-${activityId}`; // Añadimos un ID para evitar duplicados  
-  
-  
-      // --- Event Listeners para los nuevos botones ---  
-      scaleBtn.addEventListener('click', async (e) => {  
-        e.preventDefault();  
-        e.stopPropagation(); // Evita que se cierre el menú inmediatamente  
-        if (!activityId) return alert('Error: ID de actividad no encontrado.');  
-          
-        // Asumimos que EvaluationSystem es global  
-        const scale = await EvaluationSystem.getActivityScale(activityId);  
-        // Asumimos que EvaluationUI es global  
-        EvaluationUI.createActivityScaleModal(activityId, scale.id);  
-        menu.classList.add('hidden'); // Oculta el menú después de clickear  
-      });  
-  
-      rubricBtn.addEventListener('click', async (e) => {  
-        e.preventDefault();  
-        e.stopPropagation(); // Evita que se cierre el menú inmediatamente  
-        if (!activityId) return alert('Error: ID de actividad no encontrado.');  
-          
-        // Asumiendo que window.db está disponible globalmente.  
-        const activityDoc = await window.db.collection('activitats').doc(activityId).get();  
-        const activityName = activityDoc.exists ? activityDoc.data().nom : 'Actividad desconocida';  
-  
-        // Asumimos que EvaluationUI es global  
-        EvaluationUI.createRubricModal(activityId, activityName);  
-        menu.classList.add('hidden'); // Oculta el menú después de clickear  
-      });  
-  
-      // Insertar botones en el menú (antes del delete)  
-      menu.insertBefore(rubricBtn, deleteBtn);  
-      menu.insertBefore(scaleBtn, rubricBtn); // Insertar scaleBtn antes de rubricBtn  
-        
-      // console.log(`✅ Botones inyectados en menú para actividad: ${activityId}`);  
-    });  
-  }  
-  
-  /**  
-   * Modifica el modal de comentarios para añadir el botón de feedback.  
-   */  
-  function addFeedbackButtonToCommentsModal() {  
-    // Si el hook ya está, no hacemos nada (para evitar duplicados en re-intentos)  
-    if (window.__commentsModalHooked) {  
-      // console.log('openCommentsModal ya está hookeado.');  
-      return;  
-    }  
-  
-    const originalOpenComments = window.openCommentsModal;  
-  
-    if (!originalOpenComments) {  
-      // Si openCommentsModal aún no está disponible, lo reintentamos.  
-      console.log('⚠️ openCommentsModal aún no disponible. Reintentando hook en 1s...');  
-      setTimeout(addFeedbackButtonToCommentsModal, 1000);  
-      return;  
-    }  
+      // INYECTAR BOTONES DE ESCALA EN MENÚ DE ACTIVIDADES
+      setTimeout(() => {
+        injectScaleButtons();
+      }, 200);
       
-    window.__commentsModalHooked = true; // Marca que ya hookeamos  
-    window.openCommentsModal = function(studentId, studentName, currentComment) {  
-      // Llamar original  
-      originalOpenComments.call(this, studentId, studentName, currentComment);  
-  
-      // Agregar botón de feedback después de que el modal original esté creado  
-      setTimeout(async () => { // Hacemos async el setTimeout para usar await dentro  
-        const modal = document.getElementById('modalComments');  
-        if (!modal) return; // Si el modal no se creó, salimos  
-  
-        // Aseguramos que el botón no se duplique si el modal se reusa  
-        if (modal.querySelector('.feedback-btn-ai')) return;  
-  
-        const saveBtn = modal.querySelector('.flex-1:nth-of-type(2)'); // Botón "Guardar"  
-        if (saveBtn) {  
-          const feedbackBtn = document.createElement('button');  
-          feedbackBtn.className = 'feedback-btn-ai px-3 py-2 rounded bg-purple-600 hover:bg-purple-700 text-white font-semibold cursor-pointer border-none';  
-          feedbackBtn.textContent = '🤖 Generar feedback AI';  
-          feedbackBtn.style.marginRight = '8px';  
-          feedbackBtn.type = 'button';  
-  
-          feedbackBtn.addEventListener('click', async () => {  
-              // Obtener la actividad seleccionada para el feedback  
-              const selectActivityForFeedback = document.getElementById('selectActivityForFeedback');  
-              if (!selectActivityForFeedback || !selectActivityForFeedback.value) {  
-                  alert('Por favor, selecciona una actividad para generar el feedback.');  
-                  return;  
-              }  
-              const selectedActivityId = selectActivityForFeedback.value;  
-              const selectedActivityName = selectActivityForFeedback.options[selectActivityForFeedback.selectedIndex].text;  
-  
-              // Asumiendo que window.db está disponible globalmente.  
-              const studentDoc = await window.db.collection('alumnes').doc(studentId).get();  
-              const studentData = studentDoc.exists ? studentDoc.data() : {};  
-  
-              // Asumimos que EvaluationSystem es global  
-              const activityScale = await EvaluationSystem.getActivityScale(selectedActivityId);  
-              const score = studentData.notes?.[selectedActivityId] || '';  
-  
-              // Cerrar el modal actual de comentarios antes de abrir el de feedback  
-              window.closeCommentsModal();  
-  
-              // Asumimos que EvaluationUI es global  
-              EvaluationUI.createFeedbackModal(  
-                  studentId,  
-                  studentName,  
-                  selectedActivityId,  
-                  selectedActivityName,  
-                  score  
-              );  
-          });  
-  
-          // Insertar antes del botón "Guardar"  
-          saveBtn.parentNode.insertBefore(feedbackBtn, saveBtn);  
-  
-          // AÑADIR SELECTOR DE ACTIVIDADES al modal de comentarios  
-          const textarea = document.getElementById('commentTextarea');  
-          if (textarea) {  
-              const activitySelectContainer = document.createElement('div');  
-              activitySelectContainer.className = 'flex flex-col gap-2 mb-2 p-2 bg-gray-50 rounded border border-gray-200';  
-              activitySelectContainer.innerHTML = `  
-                  <label for="selectActivityForFeedback" class="text-sm font-semibold text-gray-700">Selecciona activitat per feedback AI:</label>  
-                  <select id="selectActivityForFeedback" class="w-full p-2 border rounded bg-white"></select>  
-              `;  
-              // Insertar el selector justo después del título del modal  
-              const titleEl = modal.querySelector('.bg-white h2');  
-              if (titleEl) {  
-                  titleEl.after(activitySelectContainer);  
-              } else {  
-                  // Fallback si no se encuentra el h2, insertar antes del textarea  
-                  textarea.before(activitySelectContainer);  
-              }  
-  
-  
-              const selectElement = document.getElementById('selectActivityForFeedback');  
-              const defaultOption = document.createElement('option');  
-              defaultOption.value = '';  
-              defaultOption.textContent = '--- Selecciona una activitat ---';  
-              selectElement.appendChild(defaultOption);  
-  
-              // Asumiendo que window.classActivities está disponible globalmente  
-              if (window.classActivities && window.classActivities.length > 0) {  
-                  // Obtener nombres de actividad de forma asíncrona y poblar  
-                  // Usamos Promise.all para esperar a que todas las actividades se carguen  
-                  const activityPromises = window.classActivities.map(actId =>  
-                      window.db.collection('activitats').doc(actId).get().then(doc => {  
-                          if (doc.exists) {  
-                              return { id: actId, nom: doc.data().nom };  
-                          }  
-                          return null;  
-                      }).catch(e => {  
-                          console.error(`Error al cargar actividad ${actId} para selector:`, e);  
-                          return null;  
-                      })  
-                  );  
-  
-                  const activities = await Promise.all(activityPromises);  
-                  activities.filter(Boolean).forEach(act => { // Filtrar nulos  
-                      const option = document.createElement('option');  
-                      option.value = act.id;  
-                      option.textContent = act.nom;  
-                      selectElement.appendChild(option);  
-                  });  
-  
-              } else {  
-                  const noActivitiesOption = document.createElement('option');  
-                  noActivitiesOption.value = '';  
-                  noActivitiesOption.textContent = 'No hi ha activitats en aquest terme.';  
-                  noActivitiesOption.disabled = true;  
-                  selectElement.appendChild(noActivitiesOption);  
-              }  
-          }  
-        }  
-      }, 100); // Pequeño retardo para que el modal de comentarios termine de renderizarse  
-    };  
-    console.log('✅ openCommentsModal hookeado con éxito.');  
-  }  
-  
-})();  
+      return result;
+    };
+    
+    console.log('✅ renderNotesGrid hooked');
+  }
+
+  /**
+   * Inyectar botones de escala en el menú de cada actividad
+   */
+  function injectScaleButtons() {
+    const menus = document.querySelectorAll('th .menu');
+    console.log(`📍 Encontrados ${menus.length} menús de actividades`);
+    
+    menus.forEach((menu, idx) => {
+      // No duplicar si ya existe el botón
+      if (menu.querySelector('.scale-btn')) {
+        console.log(`⏭️ Menú ${idx} ya tiene botones, saltando...`);
+        return;
+      }
+      
+      const deleteBtn = menu.querySelector('.delete-btn');
+      if (!deleteBtn) {
+        console.log(`⏭️ Menú ${idx} sin delete-btn`);
+        return;
+      }
+
+      console.log(`✏️ Inyectando botones en menú ${idx}`);
+
+      // Crear botón de escala
+      const scaleBtn = document.createElement('button');
+      scaleBtn.className = 'scale-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700';
+      scaleBtn.textContent = '⚖️ Tipus avaluació';
+      scaleBtn.type = 'button';
+      scaleBtn.style.borderTop = '1px solid #e5e7eb';
+      scaleBtn.style.marginTop = '4px';
+      scaleBtn.style.paddingTop = '6px';
+
+      // Crear botón de rúbrica
+      const rubricBtn = document.createElement('button');
+      rubricBtn.className = 'rubric-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700';
+      rubricBtn.textContent = '📋 Rúbrica';
+      rubricBtn.type = 'button';
+
+      // Event listeners
+      scaleBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const activityId = getActivityIdFromMenu(menu);
+        console.log('🔄 Escala button clicked, activityId:', activityId);
+        
+        if (!activityId) {
+          alert('Error identificando activitat');
+          return;
+        }
+
+        const scale = await EvaluationSystem.getActivityScale(activityId);
+        EvaluationUI.createActivityScaleModal(activityId, scale.id);
+      });
+
+      rubricBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const activityId = getActivityIdFromMenu(menu);
+        console.log('📋 Rúbrica button clicked, activityId:', activityId);
+        
+        if (!activityId) {
+          alert('Error identificando activitat');
+          return;
+        }
+
+        const activityDoc = await db.collection('activitats').doc(activityId).get();
+        const activityName = activityDoc.data().nom;
+
+        EvaluationUI.createRubricModal(activityId, activityName);
+      });
+
+      // Insertar botones en el menú (antes del delete)
+      menu.insertBefore(rubricBtn, deleteBtn);
+      menu.insertBefore(scaleBtn, deleteBtn);
+      
+      console.log(`✅ Botones inyectados en menú ${idx}`);
+    });
+  }
+
+  /**
+   * Obtener ID de actividad desde el elemento del menú
+   */
+  function getActivityIdFromMenu(menu) {
+    // El menú está dentro de un th
+    let th = menu.closest('th');
+    
+    if (!th) {
+      console.error('❌ No se encontró th para este menú');
+      return null;
+    }
+
+    // Obtener el índice de esta columna en el header
+    const headerRow = th.parentNode;
+    const columnIndex = Array.from(headerRow.children).indexOf(th);
+    
+    console.log(`📍 Columna índice: ${columnIndex}`);
+
+    // Buscar en el tbody la primera fila, columna correspondiente
+    const tbody = document.querySelector('tbody');
+    if (!tbody) {
+      console.error('❌ No se encontró tbody');
+      return null;
+    }
+
+    const firstRow = tbody.querySelector('tr');
+    if (!firstRow) {
+      console.error('❌ No hay filas en tbody');
+      return null;
+    }
+
+    const cellAtIndex = firstRow.children[columnIndex];
+    if (!cellAtIndex) {
+      console.error('❌ No se encontró celda en índice', columnIndex);
+      return null;
+    }
+
+    const input = cellAtIndex.querySelector('input');
+    if (!input) {
+      console.error('❌ No se encontró input en celda');
+      return null;
+    }
+
+    const activityId = input.dataset.activityId;
+    console.log(`✅ ActivityId encontrado: ${activityId}`);
+    
+    return activityId;
+  }
+
+  /**
+   * Inyectar botón de feedback en el modal de comentarios
+   */
+  function addFeedbackButton() {
+    const originalOpenComments = window.openCommentsModal;
+    
+    if (!originalOpenComments) {
+      console.warn('⚠️ openCommentsModal no encontrado');
+      return;
+    }
+    
+    window.openCommentsModal = function(studentId, studentName, currentComment) {
+      // Llamar original
+      originalOpenComments.call(this, studentId, studentName, currentComment);
+      
+      // Agregar botón de feedback
+      setTimeout(() => {
+        const modal = document.getElementById('modalComments');
+        if (!modal || modal.querySelector('.feedback-btn')) return;
+        
+        const saveBtn = modal.querySelector('.flex-1:nth-of-type(2)');
+        if (saveBtn) {
+          const feedbackBtn = document.createElement('button');
+          feedbackBtn.className = 'feedback-btn px-3 py-2 rounded bg-purple-600 hover:bg-purple-700 text-white font-semibold cursor-pointer border-none';
+          feedbackBtn.textContent = '🤖 Generar feedback';
+          feedbackBtn.style.marginRight = '8px';
+          feedbackBtn.type = 'button';
+          
+          feedbackBtn.addEventListener('click', async () => {
+            const currentActivityId = window.currentCalcActivityId;
+            if (!currentActivityId) {
+              alert('Selecciona una activitat primer');
+              return;
+            }
+
+            const studentDoc = await db.collection('alumnes').doc(studentId).get();
+            const studentData = studentDoc.data();
+            
+            const activityDoc = await db.collection('activitats').doc(currentActivityId).get();
+            const activityName = activityDoc.data().nom;
+            
+            const score = studentData.notes?.[currentActivityId] || '';
+            
+            EvaluationUI.createFeedbackModal(
+              studentId,
+              studentName,
+              currentActivityId,
+              activityName,
+              score
+            );
+          });
+          
+          saveBtn.parentNode.insertBefore(feedbackBtn, saveBtn);
+        }
+      }, 100);
+    };
+  }
+
+  // Ejecutar integraciones cuando el sistema esté listo
+  setTimeout(() => {
+    console.log('🚀 Ejecutando integraciones finales...');
+    addFeedbackButton();
+    console.log('✅ Integración completada');
+  }, 1500);
+
+})();
