@@ -22,7 +22,7 @@ window.EvaluationSystem = (function() {
     }
   };
 
-  // Mapeo de assoliments a valores numéricos (para búsqueda de correlación, NO para cálculos)
+  // Mapeo de assoliments a valores numéricos (para referencia, NO para cálculos)
   const ASSOLIMENTS_VALUES = {
     'NA': 0,
     'AS': 3.5,
@@ -95,46 +95,22 @@ window.EvaluationSystem = (function() {
 
   /**
    * Generar rúbrica automática con IA (Claude API)
+   * 🔹 CORRECCIÓN: Usar proxy para evitar CORS desde navegador
    */
   async function generateRubricWithAI(activityName, activityDescription, evaluationScale) {
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      // URL de proxy o backend que haga la petición a Anthropics API
+      const proxyUrl = '/api/anthropic-rubric'; // <-- configurar en tu servidor
+      const payload = {
+        activityName,
+        activityDescription,
+        evaluationScale
+      };
+
+      const response = await fetch(proxyUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          messages: [
-            {
-              role: 'user',
-              content: `Genera una rúbrica de evaluación en CATALAN per a aquesta activitat.
-
-Activitat: ${activityName}
-Descripció: ${activityDescription || 'Sense descripció'}
-Escala: ${evaluationScale === 'ASSOLIMENTS' ? 'NA, AS, AN, AE' : '0-10'}
-
-Si es assoliments, proporciona 4 criteris (un per cada nivell: NA, AS, AN, AE).
-Si es numèrica, proporciona 4-5 criteris amb descriptors pels rangs.
-
-Format JSON:
-{
-  "criteria": [
-    {
-      "name": "Nom del criteri",
-      "description": "Descripció general",
-      "levels": [
-        {"level": "NA/AS/AN/AE o 0-2, 3-5, 6-8, 9-10", "descriptor": "Descripció concisa"}
-      ]
-    }
-  ]
-}
-
-Tota la rúbrica ha d'estar en CATALAN i ser positiva/constructiva.`
-            }
-          ]
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
@@ -143,12 +119,7 @@ Tota la rúbrica ha d'estar en CATALAN i ser positiva/constructiva.`
       }
 
       const data = await response.json();
-      const content = data.content[0].text;
-      
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) return null;
-      
-      return JSON.parse(jsonMatch[0]);
+      return data.rubric || null;
     } catch (e) {
       console.error('Error generando rúbrica:', e);
       return null;
@@ -157,41 +128,17 @@ Tota la rúbrica ha d'estar en CATALAN i ser positiva/constructiva.`
 
   /**
    * Generar feedback automático para un alumno (con IA)
+   * 🔹 CORRECCIÓN: Usar proxy para evitar CORS desde navegador
    */
   async function generateStudentFeedback(studentName, activityName, score, evaluationScale, rubric) {
     try {
-      const scaleType = evaluationScale === 'ASSOLIMENTS' ? 'assoliments' : 'numèrica';
-      
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      const proxyUrl = '/api/anthropic-feedback'; // <-- configurar en tu servidor
+      const payload = { studentName, activityName, score, evaluationScale, rubric };
+
+      const response = await fetch(proxyUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 500,
-          messages: [
-            {
-              role: 'user',
-              content: `Genera un feedback positiu i constructiu en CATALAN per a un alumne.
-
-Alumne: ${studentName}
-Activitat: ${activityName}
-Qualificació: ${score} (escala: ${scaleType})
-${rubric ? `Rúbrica:\n${JSON.stringify(rubric, null, 2)}` : ''}
-
-Requeriments:
-- Massa breu (2-3 frases)
-- Positiu i motivador
-- Direccionado a FAMÍLIES (es per enviar-los per correu)
-- Inclou punts forts i àrees de millora
-- EN CATALAN
-
-Resposta:
-`
-            }
-          ]
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
@@ -200,7 +147,7 @@ Resposta:
       }
 
       const data = await response.json();
-      return data.content[0].text.trim();
+      return data.feedback || null;
     } catch (e) {
       console.error('Error generando feedback:', e);
       return null;
