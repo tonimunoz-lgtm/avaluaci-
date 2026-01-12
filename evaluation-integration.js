@@ -10,7 +10,7 @@
   
   console.log('🔧 Evaluation Integration iniciando...');
   
-  // Esperar a que EvaluationSystem esté listo
+  // Esperar a que EvaluationSystem y EvaluationUI estén listos
   let initAttempts = 0;
   const maxAttempts = 40;
   
@@ -36,9 +36,7 @@
   }, 300);
 
   function initializeEvaluationIntegration() {
-    // Usar MutationObserver para detectar cambios en la tabla
     const tableWrapper = document.getElementById('notesTable-wrapper');
-    
     if (!tableWrapper) {
       console.error('❌ notesTable-wrapper no encontrado');
       return;
@@ -48,6 +46,7 @@
       console.log('🔍 Detectado cambio en tabla');
       setTimeout(() => {
         injectScaleButtons();
+        replaceInputsForAssoliments();
       }, 300);
     });
 
@@ -58,10 +57,11 @@
     });
 
     console.log('✅ MutationObserver configurado');
-    
-    // También inyectar botones ahora por si ya existe la tabla
+
+    // Inicializar botones y inputs al cargar
     setTimeout(() => {
       injectScaleButtons();
+      replaceInputsForAssoliments();
     }, 1000);
   }
 
@@ -69,28 +69,18 @@
    * Inyectar botones de escala en el menú de cada actividad
    */
   function injectScaleButtons() {
-    // Buscar menús dentro de headers de tabla
     const menus = document.querySelectorAll('thead th .menu');
     console.log(`📍 Encontrados ${menus.length} menús de actividades`);
     
-    if (menus.length === 0) {
-      return;
-    }
+    if (menus.length === 0) return;
     
     menus.forEach((menu, idx) => {
-      // No duplicar si ya existe el botón
-      if (menu.querySelector('.scale-btn')) {
-        return;
-      }
-      
+      if (menu.querySelector('.scale-btn')) return;
       const deleteBtn = menu.querySelector('.delete-btn');
-      if (!deleteBtn) {
-        return;
-      }
+      if (!deleteBtn) return;
 
       console.log(`✏️ Inyectando botones en menú ${idx}`);
 
-      // Crear botón de escala
       const scaleBtn = document.createElement('button');
       scaleBtn.className = 'scale-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700 whitespace-nowrap';
       scaleBtn.textContent = '⚖️ Tipus avaluació';
@@ -100,29 +90,20 @@
       scaleBtn.style.paddingTop = '6px';
       scaleBtn.style.cursor = 'pointer';
 
-      // Crear botón de rúbrica
       const rubricBtn = document.createElement('button');
       rubricBtn.className = 'rubric-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700 whitespace-nowrap';
       rubricBtn.textContent = '📋 Rúbrica';
       rubricBtn.type = 'button';
       rubricBtn.style.cursor = 'pointer';
 
-      // Event listeners
       scaleBtn.addEventListener('click', async (e) => {
         e.preventDefault();
         e.stopPropagation();
-        
         const activityId = getActivityIdFromHeader(menu);
         console.log('⚖️ Scale button clicked, activityId:', activityId);
-        
-        if (!activityId) {
-          alert('Error identificando activitat');
-          return;
-        }
-
+        if (!activityId) return alert('Error identificando activitat');
         try {
           const scale = await EvaluationSystem.getActivityScale(activityId);
-          console.log('📊 Escala actual:', scale.name);
           EvaluationUI.createActivityScaleModal(activityId, scale.id);
         } catch (err) {
           console.error('Error:', err);
@@ -133,22 +114,12 @@
       rubricBtn.addEventListener('click', async (e) => {
         e.preventDefault();
         e.stopPropagation();
-        
         const activityId = getActivityIdFromHeader(menu);
         console.log('📋 Rubric button clicked, activityId:', activityId);
-        
-        if (!activityId) {
-          alert('Error identificando activitat');
-          return;
-        }
-
+        if (!activityId) return alert('Error identificando activitat');
         try {
-          // ✅ CORRECCIÓN: reemplazamos db.collection por firebase.firestore().collection
           const activityDoc = await firebase.firestore().collection('activitats').doc(activityId).get();
-          if (!activityDoc.exists) {
-            alert('Activitat no trobada');
-            return;
-          }
+          if (!activityDoc.exists) return alert('Activitat no trobada');
           const activityName = activityDoc.data().nom;
           EvaluationUI.createRubricModal(activityId, activityName);
         } catch (err) {
@@ -157,10 +128,9 @@
         }
       });
 
-      // Insertar botones en el menú (antes del delete)
       menu.insertBefore(rubricBtn, deleteBtn);
       menu.insertBefore(scaleBtn, deleteBtn);
-      
+
       console.log(`✅ Botones inyectados en menú ${idx}`);
     });
   }
@@ -171,47 +141,57 @@
   function getActivityIdFromHeader(menuElement) {
     try {
       let th = menuElement.closest('th');
-      if (!th) {
-        console.error('❌ No se encontró th');
-        return null;
-      }
-
+      if (!th) return null;
       const headerRow = th.parentNode;
       const columnIndex = Array.from(headerRow.children).indexOf(th);
-      
-      console.log(`📍 Columna índice: ${columnIndex}`);
-
       const tbody = document.querySelector('tbody');
-      if (!tbody) {
-        console.error('❌ No se encontró tbody');
-        return null;
-      }
-
+      if (!tbody) return null;
       const firstRow = tbody.querySelector('tr');
-      if (!firstRow) {
-        console.error('❌ No hay filas');
-        return null;
-      }
-
+      if (!firstRow) return null;
       const cellAtIndex = firstRow.children[columnIndex];
-      if (!cellAtIndex) {
-        console.error('❌ No se encontró celda en índice', columnIndex);
-        return null;
-      }
-
-      const input = cellAtIndex.querySelector('input');
-      if (!input || !input.dataset.activityId) {
-        console.error('❌ No se encontró input o activity ID');
-        return null;
-      }
-
-      const activityId = input.dataset.activityId;
-      console.log(`✅ ActivityId encontrado: ${activityId}`);
-      
-      return activityId;
+      if (!cellAtIndex) return null;
+      const input = cellAtIndex.querySelector('input, select');
+      if (!input || !input.dataset.activityId) return null;
+      return input.dataset.activityId;
     } catch (e) {
       console.error('❌ Error obteniendo activityId:', e);
       return null;
+    }
+  }
+
+  /**
+   * Reemplaza inputs numéricos por selects si la actividad es ASSOLIMENTS
+   */
+  async function replaceInputsForAssoliments() {
+    const tbody = document.querySelector('tbody');
+    if (!tbody) return;
+
+    const rows = tbody.querySelectorAll('tr');
+    for (const row of rows) {
+      const cells = row.children;
+      for (const cell of cells) {
+        const input = cell.querySelector('input[type="number"]');
+        if (!input || !input.dataset.activityId) continue;
+
+        const activityId = input.dataset.activityId;
+        const scale = await EvaluationSystem.getActivityScale(activityId);
+        if (scale.id === 'ASSOLIMENTS') {
+          const currentValue = input.value;
+          const select = EvaluationUI.createScaleInput(activityId, currentValue, scale.id);
+          cell.innerHTML = '';
+          cell.appendChild(select);
+
+          // Guardar cambio al seleccionar valor
+          select.addEventListener('change', async () => {
+            const studentId = cell.dataset.studentId;
+            if (!studentId) return;
+            const value = select.value;
+            await firebase.firestore().collection('alumnes').doc(studentId).update({
+              [`notes.${activityId}`]: value
+            });
+          });
+        }
+      }
     }
   }
 
@@ -220,61 +200,45 @@
    */
   function addFeedbackButton() {
     const originalOpenComments = window.openCommentsModal;
-    
-    if (!originalOpenComments) {
-      console.warn('⚠️ openCommentsModal no encontrado');
-      return;
-    }
-    
+    if (!originalOpenComments) return;
+
     window.openCommentsModal = function(studentId, studentName, currentComment) {
       originalOpenComments.call(this, studentId, studentName, currentComment);
-      
+
       setTimeout(() => {
         const modal = document.getElementById('modalComments');
         if (!modal || modal.querySelector('.feedback-btn')) return;
-        
         const buttonsContainer = modal.querySelector('.flex.gap-2');
-        if (!buttonsContainer) {
-          console.warn('⚠️ No se encontró contenedor de botones');
-          return;
-        }
+        if (!buttonsContainer) return;
 
         const feedbackBtn = document.createElement('button');
         feedbackBtn.className = 'feedback-btn px-3 py-2 rounded bg-purple-600 hover:bg-purple-700 text-white font-semibold cursor-pointer border-none flex-1';
         feedbackBtn.textContent = '🤖 Generar feedback';
         feedbackBtn.type = 'button';
-        
+
         feedbackBtn.addEventListener('click', async () => {
           let activityId = null;
-          
           const openMenu = document.querySelector('thead th .menu:not(.hidden)');
-          if (openMenu) {
-            activityId = getActivityIdFromHeader(openMenu);
-          }
-
+          if (openMenu) activityId = getActivityIdFromHeader(openMenu);
           if (!activityId) {
             const inputs = document.querySelectorAll('input[data-activity-id]');
             if (inputs.length > 0) activityId = inputs[0].dataset.activityId;
           }
-          
-          if (!activityId) {
-            alert('Selecciona una activitat primer (haz clic en ⋮ de una activitat o en una cel·la de nota)');
-            return;
-          }
+          if (!activityId) return alert('Selecciona una activitat primer');
 
           try {
             const studentDoc = await firebase.firestore().collection('alumnes').doc(studentId).get();
             if (!studentDoc.exists) return alert('Alumne no trobat');
             const studentData = studentDoc.data();
-            
+
             const activityDoc = await firebase.firestore().collection('activitats').doc(activityId).get();
             if (!activityDoc.exists) return alert('Activitat no trobada');
             const activityName = activityDoc.data().nom;
-            
+
             const score = studentData.notes?.[activityId] || '';
-            
+
             console.log('🎯 Generando feedback para:', { studentName, activityName, score, activityId });
-            
+
             EvaluationUI.createFeedbackModal(
               studentId,
               studentName,
@@ -287,12 +251,12 @@
             alert('Error: ' + err.message);
           }
         });
-        
+
         const lastBtn = buttonsContainer.children[buttonsContainer.children.length - 1];
         buttonsContainer.insertBefore(feedbackBtn, lastBtn);
       }, 100);
     };
-    
+
     console.log('✅ Feedback button hook configurado');
   }
 
