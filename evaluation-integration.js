@@ -7,53 +7,73 @@
   
   console.log('🔧 Evaluation Integration iniciando...');
   
-  // Esperar a que DOM esté listo y app.js esté cargado
+  // Esperar a que DOM esté listo
+  let initAttempts = 0;
+  const maxAttempts = 20;
+  
   const waitForAppInit = setInterval(() => {
-    if (!window.db || !window.currentClassId === undefined) {
-      console.log('⏳ Esperando app.js...');
+    initAttempts++;
+    
+    // Verificar que existan las funciones y el DB
+    const hasDB = window.db !== undefined;
+    const hasRenderGrid = typeof window.renderNotesGrid === 'function';
+    const hasEvalSystem = window.EvaluationSystem !== undefined;
+    const hasEvalUI = window.EvaluationUI !== undefined;
+    
+    console.log(`⏳ Intento ${initAttempts}/${maxAttempts} - DB: ${hasDB}, renderGrid: ${hasRenderGrid}, EvalSystem: ${hasEvalSystem}, EvalUI: ${hasEvalUI}`);
+    
+    if (hasDB && hasRenderGrid && hasEvalSystem && hasEvalUI) {
+      clearInterval(waitForAppInit);
+      console.log('✅ App.js y EvaluationSystem cargados, inicializando...');
+      initializeEvaluationIntegration();
       return;
     }
     
-    clearInterval(waitForAppInit);
-    console.log('✅ App.js cargado, inicializando integración...');
-    initializeEvaluationIntegration();
-  }, 500);
+    if (initAttempts >= maxAttempts) {
+      console.error('❌ Timeout: No se cargaron los módulos necesarios');
+      clearInterval(waitForAppInit);
+    }
+  }, 300);
 
   async function initializeEvaluationIntegration() {
     // Hook en renderNotesGrid para inyectar opciones de escala
     const originalRenderNotesGrid = window.renderNotesGrid;
     
-    if (!originalRenderNotesGrid) {
-      console.error('❌ renderNotesGrid no encontrado');
-      return;
-    }
-    
     window.renderNotesGrid = async function() {
+      console.log('📊 renderNotesGrid ejecutándose...');
+      
       // Ejecutar renderizado original
       const result = await originalRenderNotesGrid.call(this);
       
       // INYECTAR BOTONES DE ESCALA EN MENÚ DE ACTIVIDADES
       setTimeout(() => {
+        console.log('💉 Inyectando botones...');
         injectScaleButtons();
-      }, 200);
+      }, 300);
       
       return result;
     };
     
-    console.log('✅ renderNotesGrid hooked');
+    console.log('✅ renderNotesGrid hooked correctamente');
   }
 
   /**
    * Inyectar botones de escala en el menú de cada actividad
    */
   function injectScaleButtons() {
-    const menus = document.querySelectorAll('th .menu');
-    console.log(`📍 Encontrados ${menus.length} menús de actividades`);
+    // Buscar menús dentro de headers de tabla
+    const menus = document.querySelectorAll('thead th .menu');
+    console.log(`📍 Encontrados ${menus.length} menús de actividades en el header`);
+    
+    if (menus.length === 0) {
+      console.warn('⚠️ No se encontraron menús. Esperando más tiempo...');
+      setTimeout(() => injectScaleButtons(), 500);
+      return;
+    }
     
     menus.forEach((menu, idx) => {
       // No duplicar si ya existe el botón
       if (menu.querySelector('.scale-btn')) {
-        console.log(`⏭️ Menú ${idx} ya tiene botones, saltando...`);
         return;
       }
       
@@ -85,8 +105,8 @@
         e.preventDefault();
         e.stopPropagation();
         
-        const activityId = getActivityIdFromMenu(menu);
-        console.log('🔄 Escala button clicked, activityId:', activityId);
+        const activityId = getActivityIdFromHeader(menu);
+        console.log('⚖️ Scale button clicked, activityId:', activityId);
         
         if (!activityId) {
           alert('Error identificando activitat');
@@ -94,6 +114,7 @@
         }
 
         const scale = await EvaluationSystem.getActivityScale(activityId);
+        console.log('📊 Escala actual:', scale);
         EvaluationUI.createActivityScaleModal(activityId, scale.id);
       });
 
@@ -101,8 +122,8 @@
         e.preventDefault();
         e.stopPropagation();
         
-        const activityId = getActivityIdFromMenu(menu);
-        console.log('📋 Rúbrica button clicked, activityId:', activityId);
+        const activityId = getActivityIdFromHeader(menu);
+        console.log('📋 Rubric button clicked, activityId:', activityId);
         
         if (!activityId) {
           alert('Error identificando activitat');
@@ -124,52 +145,58 @@
   }
 
   /**
-   * Obtener ID de actividad desde el elemento del menú
+   * Obtener ID de actividad desde el header
+   * Busca el data-activity-id en el th más cercano
    */
-  function getActivityIdFromMenu(menu) {
-    // El menú está dentro de un th
-    let th = menu.closest('th');
-    
-    if (!th) {
-      console.error('❌ No se encontró th para este menú');
+  function getActivityIdFromHeader(menuElement) {
+    try {
+      // Buscar el th que contiene este menú
+      let th = menuElement.closest('th');
+      if (!th) {
+        console.error('❌ No se encontró th');
+        return null;
+      }
+
+      // El ID debería estar en un atributo data o en el contenido
+      // Intentar obtenerlo del thead
+      const headerRow = th.parentNode;
+      const columnIndex = Array.from(headerRow.children).indexOf(th);
+      
+      console.log(`📍 Columna índice: ${columnIndex}`);
+
+      // Buscar en el tbody la primera fila y obtener el input
+      const tbody = document.querySelector('tbody');
+      if (!tbody) {
+        console.error('❌ No se encontró tbody');
+        return null;
+      }
+
+      const firstRow = tbody.querySelector('tr');
+      if (!firstRow) {
+        console.error('❌ No hay filas');
+        return null;
+      }
+
+      const cellAtIndex = firstRow.children[columnIndex];
+      if (!cellAtIndex) {
+        console.error('❌ No se encontró celda en índice', columnIndex);
+        return null;
+      }
+
+      const input = cellAtIndex.querySelector('input');
+      if (!input || !input.dataset.activityId) {
+        console.error('❌ No se encontró input o activity ID');
+        return null;
+      }
+
+      const activityId = input.dataset.activityId;
+      console.log(`✅ ActivityId encontrado: ${activityId}`);
+      
+      return activityId;
+    } catch (e) {
+      console.error('❌ Error obteniendo activityId:', e);
       return null;
     }
-
-    // Obtener el índice de esta columna en el header
-    const headerRow = th.parentNode;
-    const columnIndex = Array.from(headerRow.children).indexOf(th);
-    
-    console.log(`📍 Columna índice: ${columnIndex}`);
-
-    // Buscar en el tbody la primera fila, columna correspondiente
-    const tbody = document.querySelector('tbody');
-    if (!tbody) {
-      console.error('❌ No se encontró tbody');
-      return null;
-    }
-
-    const firstRow = tbody.querySelector('tr');
-    if (!firstRow) {
-      console.error('❌ No hay filas en tbody');
-      return null;
-    }
-
-    const cellAtIndex = firstRow.children[columnIndex];
-    if (!cellAtIndex) {
-      console.error('❌ No se encontró celda en índice', columnIndex);
-      return null;
-    }
-
-    const input = cellAtIndex.querySelector('input');
-    if (!input) {
-      console.error('❌ No se encontró input en celda');
-      return null;
-    }
-
-    const activityId = input.dataset.activityId;
-    console.log(`✅ ActivityId encontrado: ${activityId}`);
-    
-    return activityId;
   }
 
   /**
@@ -201,24 +228,37 @@
           feedbackBtn.type = 'button';
           
           feedbackBtn.addEventListener('click', async () => {
-            const currentActivityId = window.currentCalcActivityId;
-            if (!currentActivityId) {
-              alert('Selecciona una activitat primer');
+            // Obtener el activityId del contexto actual
+            // Buscar cuál es la actividad que está siendo editada
+            const activeMenuBtn = document.querySelector('.menu-btn[style*="display"]');
+            
+            // Otra forma: buscar la última actividad clicada en el menú
+            const lastClickedMenu = document.querySelector('.menu:not(.hidden)');
+            let activityId = null;
+            
+            if (lastClickedMenu) {
+              activityId = getActivityIdFromHeader(lastClickedMenu);
+            }
+            
+            if (!activityId) {
+              alert('Selecciona una activitat primer (haz clic en ⋮ de una actividad)');
               return;
             }
 
             const studentDoc = await db.collection('alumnes').doc(studentId).get();
             const studentData = studentDoc.data();
             
-            const activityDoc = await db.collection('activitats').doc(currentActivityId).get();
+            const activityDoc = await db.collection('activitats').doc(activityId).get();
             const activityName = activityDoc.data().nom;
             
-            const score = studentData.notes?.[currentActivityId] || '';
+            const score = studentData.notes?.[activityId] || '';
+            
+            console.log('🎯 Generando feedback para:', { studentName, activityName, score, activityId });
             
             EvaluationUI.createFeedbackModal(
               studentId,
               studentName,
-              currentActivityId,
+              activityId,
               activityName,
               score
             );
@@ -235,6 +275,6 @@
     console.log('🚀 Ejecutando integraciones finales...');
     addFeedbackButton();
     console.log('✅ Integración completada');
-  }, 1500);
+  }, 2000);
 
 })();
