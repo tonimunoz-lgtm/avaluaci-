@@ -143,7 +143,8 @@
         }
 
         try {
-          const activityDoc = await db.collection('activitats').doc(activityId).get();
+          // ✅ CORRECCIÓN: reemplazamos db.collection por firebase.firestore().collection
+          const activityDoc = await firebase.firestore().collection('activitats').doc(activityId).get();
           if (!activityDoc.exists) {
             alert('Activitat no trobada');
             return;
@@ -249,23 +250,16 @@
         feedbackBtn.type = 'button';
         
         feedbackBtn.addEventListener('click', async () => {
-          // Detectar cuál es la actividad actual
           let activityId = null;
           
-          // Opción 1: Buscar si hay un menú abierto
           const openMenu = document.querySelector('thead th .menu:not(.hidden)');
           if (openMenu) {
             activityId = getActivityIdFromHeader(openMenu);
           }
-          
-          // Opción 2: Si no hay menú, buscar en window.currentCalcActivityId (creado por app.js)
+
           if (!activityId) {
-            // Buscar en todos los inputs visibles cuál fue el último clicado
             const inputs = document.querySelectorAll('input[data-activity-id]');
-            if (inputs.length > 0) {
-              // Usar el primer input como fallback
-              activityId = inputs[0].dataset.activityId;
-            }
+            if (inputs.length > 0) activityId = inputs[0].dataset.activityId;
           }
           
           if (!activityId) {
@@ -274,18 +268,12 @@
           }
 
           try {
-            const studentDoc = await db.collection('alumnes').doc(studentId).get();
-            if (!studentDoc.exists) {
-              alert('Alumne no trobat');
-              return;
-            }
+            const studentDoc = await firebase.firestore().collection('alumnes').doc(studentId).get();
+            if (!studentDoc.exists) return alert('Alumne no trobat');
             const studentData = studentDoc.data();
             
-            const activityDoc = await db.collection('activitats').doc(activityId).get();
-            if (!activityDoc.exists) {
-              alert('Activitat no trobada');
-              return;
-            }
+            const activityDoc = await firebase.firestore().collection('activitats').doc(activityId).get();
+            if (!activityDoc.exists) return alert('Activitat no trobada');
             const activityName = activityDoc.data().nom;
             
             const score = studentData.notes?.[activityId] || '';
@@ -305,7 +293,6 @@
           }
         });
         
-        // Insertar antes del botón Guardar
         const lastBtn = buttonsContainer.children[buttonsContainer.children.length - 1];
         buttonsContainer.insertBefore(feedbackBtn, lastBtn);
       }, 100);
