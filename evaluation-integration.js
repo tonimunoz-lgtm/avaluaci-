@@ -46,7 +46,7 @@
       console.log('🔍 Detectado cambio en tabla');
       setTimeout(() => {
         injectScaleButtons();
-        replaceInputsForAssoliments();
+        refreshAllActivityInputs();
       }, 300);
     });
 
@@ -61,143 +61,143 @@
     // Inicializar botones y inputs al cargar
     setTimeout(() => {
       injectScaleButtons();
-      replaceInputsForAssoliments();
+      refreshAllActivityInputs();
     }, 1000);
   }
 
-  /**
-   * Inyectar botones de escala en el menú de cada actividad
-   */
+  /** INYECCIÓN DE BOTONES **/
   function injectScaleButtons() {
     const menus = document.querySelectorAll('thead th .menu');
-    console.log(`📍 Encontrados ${menus.length} menús de actividades`);
-    
-    if (menus.length === 0) return;
-    
-    menus.forEach((menu, idx) => {
+    if (!menus.length) return;
+
+    menus.forEach((menu) => {
       if (menu.querySelector('.scale-btn')) return;
       const deleteBtn = menu.querySelector('.delete-btn');
       if (!deleteBtn) return;
 
-      console.log(`✏️ Inyectando botones en menú ${idx}`);
-
+      // Botón escala
       const scaleBtn = document.createElement('button');
       scaleBtn.className = 'scale-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700 whitespace-nowrap';
       scaleBtn.textContent = '⚖️ Tipus avaluació';
       scaleBtn.type = 'button';
-      scaleBtn.style.borderTop = '1px solid #e5e7eb';
-      scaleBtn.style.marginTop = '4px';
-      scaleBtn.style.paddingTop = '6px';
       scaleBtn.style.cursor = 'pointer';
 
+      scaleBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const activityId = getActivityIdFromHeader(menu);
+        if (!activityId) return alert('Error identificando activitat');
+
+        try {
+          const scale = await EvaluationSystem.getActivityScale(activityId);
+          EvaluationUI.createActivityScaleModal(activityId, scale.id);
+
+          // Después de guardar la escala, actualizar inputs
+          const saveBtn = document.querySelector('#activityScaleModal .saveBtn');
+          if (saveBtn) {
+            saveBtn.addEventListener('click', async () => {
+              setTimeout(() => refreshInputsForActivity(activityId), 200);
+            });
+          }
+        } catch (err) {
+          console.error(err);
+          alert('Error: ' + err.message);
+        }
+      });
+
+      // Botón rúbrica
       const rubricBtn = document.createElement('button');
       rubricBtn.className = 'rubric-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700 whitespace-nowrap';
       rubricBtn.textContent = '📋 Rúbrica';
       rubricBtn.type = 'button';
       rubricBtn.style.cursor = 'pointer';
 
-      scaleBtn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const activityId = getActivityIdFromHeader(menu);
-        console.log('⚖️ Scale button clicked, activityId:', activityId);
-        if (!activityId) return alert('Error identificando activitat');
-        try {
-          const scale = await EvaluationSystem.getActivityScale(activityId);
-          EvaluationUI.createActivityScaleModal(activityId, scale.id);
-        } catch (err) {
-          console.error('Error:', err);
-          alert('Error: ' + err.message);
-        }
-      });
-
       rubricBtn.addEventListener('click', async (e) => {
         e.preventDefault();
         e.stopPropagation();
         const activityId = getActivityIdFromHeader(menu);
-        console.log('📋 Rubric button clicked, activityId:', activityId);
         if (!activityId) return alert('Error identificando activitat');
+
         try {
           const activityDoc = await firebase.firestore().collection('activitats').doc(activityId).get();
           if (!activityDoc.exists) return alert('Activitat no trobada');
           const activityName = activityDoc.data().nom;
           EvaluationUI.createRubricModal(activityId, activityName);
         } catch (err) {
-          console.error('Error:', err);
+          console.error(err);
           alert('Error: ' + err.message);
         }
       });
 
       menu.insertBefore(rubricBtn, deleteBtn);
       menu.insertBefore(scaleBtn, deleteBtn);
-
-      console.log(`✅ Botones inyectados en menú ${idx}`);
     });
   }
 
-  /**
-   * Obtener ID de actividad desde el header
-   */
+  /** OBTENER ID ACTIVIDAD **/
   function getActivityIdFromHeader(menuElement) {
-    try {
-      let th = menuElement.closest('th');
-      if (!th) return null;
-      const headerRow = th.parentNode;
-      const columnIndex = Array.from(headerRow.children).indexOf(th);
-      const tbody = document.querySelector('tbody');
-      if (!tbody) return null;
-      const firstRow = tbody.querySelector('tr');
-      if (!firstRow) return null;
-      const cellAtIndex = firstRow.children[columnIndex];
-      if (!cellAtIndex) return null;
-      const input = cellAtIndex.querySelector('input, select');
-      if (!input || !input.dataset.activityId) return null;
-      return input.dataset.activityId;
-    } catch (e) {
-      console.error('❌ Error obteniendo activityId:', e);
-      return null;
+    const th = menuElement.closest('th');
+    if (!th) return null;
+    const colIndex = Array.from(th.parentNode.children).indexOf(th);
+    const firstRow = document.querySelector('tbody tr');
+    if (!firstRow) return null;
+    const cell = firstRow.children[colIndex];
+    if (!cell) return null;
+    const input = cell.querySelector('input, select');
+    return input?.dataset.activityId || null;
+  }
+
+  /** REFRESCAR TODOS LOS INPUTS **/
+  async function refreshAllActivityInputs() {
+    const tbody = document.querySelector('tbody');
+    if (!tbody) return;
+    const inputs = tbody.querySelectorAll('input[data-activity-id], select[data-activity-id]');
+    const activityIds = [...new Set(Array.from(inputs).map(i => i.dataset.activityId))];
+    for (const activityId of activityIds) {
+      await refreshInputsForActivity(activityId);
     }
   }
 
-  /**
-   * Reemplaza inputs numéricos por selects si la actividad es ASSOLIMENTS
-   */
-  async function replaceInputsForAssoliments() {
+  /** REFRESCAR INPUTS DE UNA ACTIVIDAD **/
+  async function refreshInputsForActivity(activityId) {
+    const scale = await EvaluationSystem.getActivityScale(activityId);
     const tbody = document.querySelector('tbody');
     if (!tbody) return;
 
     const rows = tbody.querySelectorAll('tr');
     for (const row of rows) {
-      const cells = row.children;
-      for (const cell of cells) {
-        const input = cell.querySelector('input[type="number"]');
-        if (!input || !input.dataset.activityId) continue;
+      const cell = Array.from(row.children).find(c => {
+        const inp = c.querySelector('input, select');
+        return inp?.dataset.activityId === activityId;
+      });
+      if (!cell) continue;
 
-        const activityId = input.dataset.activityId;
-        const scale = await EvaluationSystem.getActivityScale(activityId);
-        if (scale.id === 'ASSOLIMENTS') {
-          const currentValue = input.value;
-          const select = EvaluationUI.createScaleInput(activityId, currentValue, scale.id);
-          cell.innerHTML = '';
-          cell.appendChild(select);
+      const oldInput = cell.querySelector('input, select');
+      const studentId = cell.dataset.studentId;
+      const currentValue = oldInput?.value || '';
 
-          // Guardar cambio al seleccionar valor
-          select.addEventListener('change', async () => {
-            const studentId = cell.dataset.studentId;
-            if (!studentId) return;
-            const value = select.value;
-            await firebase.firestore().collection('alumnes').doc(studentId).update({
-              [`notes.${activityId}`]: value
-            });
-          });
-        }
-      }
+      const newInput = EvaluationUI.createScaleInput(activityId, currentValue, scale.id);
+      if (!newInput) continue;
+
+      // Mantener dataset
+      if (studentId) newInput.dataset.studentId = studentId;
+      newInput.dataset.activityId = activityId;
+
+      // Guardar cambios
+      newInput.addEventListener('change', async () => {
+        if (!studentId) return;
+        const value = newInput.value;
+        await firebase.firestore().collection('alumnes').doc(studentId).update({
+          [`notes.${activityId}`]: value
+        });
+      });
+
+      cell.innerHTML = '';
+      cell.appendChild(newInput);
     }
   }
 
-  /**
-   * Inyectar botón de feedback en el modal de comentarios
-   */
+  /** BOTÓN FEEDBACK **/
   function addFeedbackButton() {
     const originalOpenComments = window.openCommentsModal;
     if (!originalOpenComments) return;
@@ -261,7 +261,6 @@
   }
 
   setTimeout(() => {
-    console.log('🚀 Ejecutando integraciones finales...');
     addFeedbackButton();
     console.log('✅ Integración completada');
   }, 2000);
