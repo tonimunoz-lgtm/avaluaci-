@@ -50,7 +50,7 @@ window.openCommentsModal = function(studentId, studentName, currentComment) {
         <textarea 
           id="commentTextarea" 
           class="border rounded p-3 w-full h-32 resize-none focus:ring-2 focus:ring-blue-400 focus:outline-none"
-          placeholder="Escribe aquí los comentarios del alumno..."
+          placeholder="Escriu aquí els comentaris de l'alumne/a..."
           maxlength="500"
           style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;"
         ></textarea>
@@ -95,7 +95,7 @@ window.openCommentsModal = function(studentId, studentName, currentComment) {
   }
   
   // Poblar modal
-  document.getElementById('modalCommentsTitle').textContent = `Comentarios: ${studentName}`;
+  document.getElementById('modalCommentsTitle').textContent = `Comentaris: ${studentName}`;
   const textarea = document.getElementById('commentTextarea');
   textarea.value = currentComment;
   window.updateCommentChars();
@@ -127,7 +127,7 @@ window.updateCommentChars = function() {
 
 window.saveComment = async function() {
   if (!currentCommentStudentId) {
-    alert('Error: No hay estudiante seleccionado');
+    alert('Error: No hi ha estudiant seleccionat');
     return;
   }
   
@@ -142,7 +142,7 @@ window.saveComment = async function() {
       [`comentarios.${currentClassId}`]: comment
     });
     
-    console.log('Comentario guardado para:', currentCommentStudentName);
+    console.log('Comentari guardat per:', currentCommentStudentName);
     
     // Cerrar modal
     window.closeCommentsModal();
@@ -153,8 +153,8 @@ window.saveComment = async function() {
     }, 100);
     
   } catch (e) {
-    console.error('Error guardando comentario:', e);
-    alert('Error guardando comentario: ' + e.message);
+    console.error('Error guardant comentari:', e);
+    alert('Error guardant comentari: ' + e.message);
   }
 };
 
@@ -1279,11 +1279,11 @@ input.addEventListener('keydown', e => {
     
     // Obtener comentario guardado
     const comment = studentData.comentarios?.[currentClassId] || '';
-    const displayComment = comment ? comment.split(' ')[0] + (comment.split(' ').length > 1 ? '...' : '') : '(sin comentario)';
+    const displayComment = comment ? comment.split(' ')[0] + (comment.split(' ').length > 1 ? '...' : '') : '(sense comentari)';
     
     // Crear un contenedor para ocultar el cálculo pero mostrar el comentario
     commentTd.innerHTML = `<span style="display: block;">${displayComment}</span>`;
-    commentTd.title = comment || 'Haz clic para añadir comentario';
+    commentTd.title = comment || 'Fes clic per afegir comentari';
     
     // Click para abrir modal de comentarios
     commentTd.addEventListener('click', () => {
