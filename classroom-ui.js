@@ -156,9 +156,11 @@ function setupClassroomButton() {
 
   const btn = document.createElement('button');
   btn.id = 'btnClassroomImport';
-  btn.className = 'bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-xl shadow transition-transform font-semibold mb-0';
+  btn.className = 'bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-xl shadow transition-transform font-semibold mb-0';
   btn.style.height = 'auto';
-  btn.innerHTML = '🎓 Importar Classroom';
+  btn.style.whiteSpace = 'normal';
+  btn.style.lineHeight = '1.2';
+  btn.innerHTML = '<span style="display: block; font-size: 1.5rem; margin-bottom: 0.25rem;">🎓</span><span style="display: block; font-size: 0.75rem;">Importar<br>Classroom</span>';
   
   btn.addEventListener('click', async () => {
     console.log('🎓 Botón Classroom clickeado');
