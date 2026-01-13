@@ -102,13 +102,13 @@ function setupClassroomButton() {
     setTimeout(setupClassroomButton, 500);
     return;
   }
-
+  
   if (document.getElementById('btnClassroomImport')) return;
 
   const btn = document.createElement('button');
   btn.id = 'btnClassroomImport';
-  btn.className = 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-5 py-2 rounded-xl shadow transition-all duration-200 font-semibold flex items-center gap-2';
-  btn.innerHTML = '🎓 Importar de Classroom';
+  btn.className = 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-5 py-2 rounded-xl shadow transition-transform';
+  btn.innerHTML = '🎓 Importar Classroom';
   btn.addEventListener('click', async () => {
     if (!currentProfessorUID || !currentDB) {
       alert('❌ Necesitas iniciar sesión primero');
