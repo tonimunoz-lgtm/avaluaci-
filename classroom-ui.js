@@ -71,10 +71,12 @@ function setupClassroomButton() {
     return;
   }
 
-  // Crear botón
+  // Crear botón con las MISMAS clases que btnCreateClass y btnDeleteMode
   const btn = document.createElement('button');
   btn.id = 'btnClassroomImport';
-  btn.className = 'bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-xl shadow transition-transform font-semibold';
+  btn.className = 'bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-xl shadow transition-transform font-semibold mb-0';
+  btn.style.height = 'auto';
+  btn.style.padding = '0.5rem 1.25rem';
   btn.innerHTML = '🎓 Importar Classroom';
   
   btn.addEventListener('click', async () => {
@@ -207,8 +209,6 @@ function escapeHtml(text) {
   div.textContent = text;
   return div.innerHTML;
 }
-
-// Botón de importación
 document.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
     const btnImport = document.getElementById('btnImportSelectedCourse');
@@ -225,37 +225,49 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.disabled = true;
         btn.innerHTML = '⏳ Importando...';
 
-        for (const course of selectedCourses) {
+        // Crear y mostrar modal de progreso
+        const progressModal = createProgressModal();
+        document.body.appendChild(progressModal);
+        
+        const totalCourses = selectedCourses.length;
+        
+        for (let i = 0; i < selectedCourses.length; i++) {
+          const course = selectedCourses[i];
+          const progress = ((i + 1) / totalCourses) * 100;
+          
           console.log('📚 Importando curso:', course.name);
+          updateProgressModal(progressModal, course.name, i + 1, totalCourses, progress);
+          
           await importClassroomCourse(course, currentDB, currentProfessorUID);
         }
 
         console.log('✅ Cursos importados correctamente');
-        alert('✅ Cursos importados correctamente');
-        closeModal('modalClassroomImport');
-
-        // Esperar un poquito a que Firestore se actualice
+        
+        // Mostrar mensaje final
+        updateProgressModal(progressModal, '✅ ¡Proceso completado!', totalCourses, totalCourses, 100);
+        
         setTimeout(() => {
-          console.log('🔄 Recargando lista de clases...');
-          if (window.loadClassesScreen && typeof window.loadClassesScreen === 'function') {
-            window.loadClassesScreen();
-          }
+          progressModal.remove();
+          alert('✅ Cursos importados correctamente');
+          closeModal('modalClassroomImport');
+          
+          // Recargar página
+          setTimeout(() => {
+            console.log('🔄 Recargando página...');
+            location.reload();
+          }, 500);
         }, 1000);
 
       } catch (err) {
         console.error('Error importando:', err);
         alert('❌ Error importando los cursos: ' + err.message);
+        // Remover modal de progreso en caso de error
+        const progressModal = document.getElementById('classroomProgressModal');
+        if (progressModal) progressModal.remove();
       } finally {
         const btn = event.target;
         btn.disabled = false;
         btn.innerHTML = 'Importar';
-        
-        // Forzar recarga de la página después de importar
-        // (asegura que se vea la nueva clase)
-        setTimeout(() => {
-          console.log('🔄 Recargando página...');
-          location.reload();
-        }, 1500);
       }
     });
   }, 100); // Reducido a 100ms en lugar de 1000ms
