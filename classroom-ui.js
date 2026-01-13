@@ -1,4 +1,4 @@
-// classroom-ui.js - Manejador de interfaz para importación de Classroom (multiselección)
+// classroom-ui.js - Manejador de interfaz para importación de Classroom (optimizado)
 // Funciona de forma independiente sin necesidad de modificar app.js
 
 import { initClassroomAPI, getClassroomCourses, importClassroomCourse } from './classroom.js';
@@ -10,85 +10,44 @@ let currentDB = null;
 
 console.log('✅ classroom-ui.js cargado');
 
-// Esperar a que app.js haya inicializado todo
-function waitForAppInitialization() {
-  return new Promise((resolve) => {
-    console.log('⏳ Esperando inicialización de app.js...');
-    const interval = setInterval(() => {
-      if (window.firebase && 
-          window.firebase.firestore && 
-          typeof window.loadClassesScreen === 'function') {
-        console.log('✅ app.js está listo');
-        clearInterval(interval);
-        resolve();
-      }
-    }, 100);
-    
-    setTimeout(() => {
-      clearInterval(interval);
-      console.warn('⚠️ Timeout esperando app.js, continuando de todas formas...');
-      resolve();
-    }, 10000);
-  });
-}
-
-// Esperar a que el usuario inicie sesión
-function waitForUserLogin() {
-  return new Promise((resolve) => {
-    console.log('⏳ Esperando login del usuario...');
-    
-    const interval = setInterval(() => {
-      const auth = window.firebase?.auth?.();
-      if (auth && auth.currentUser) {
-        console.log('✅ Usuario autenticado:', auth.currentUser.email);
-        currentProfessorUID = auth.currentUser.uid;
-        currentDB = window.firebase.firestore();
-        clearInterval(interval);
-        resolve();
-      }
-    }, 500);
-    
-    setTimeout(() => {
-      clearInterval(interval);
-      console.warn('⚠️ Timeout esperando login');
-    }, 30000);
-  });
-}
-
 // Inicializar cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('📱 DOM cargado, inicializando classroom-ui.js...');
-  try {
-    await waitForAppInitialization();
-    setupClassroomButton();
-    monitorAuthState();
-  } catch (err) {
-    console.error('❌ Error inicializando classroom-ui:', err);
-  }
+  
+  // Inyectar el botón INMEDIATAMENTE
+  // (no esperar a que app.js cargue completamente)
+  setupClassroomButton();
+  
+  // Monitorear autenticación
+  monitorAuthState();
 });
 
 // Monitorear cambios en el estado de autenticación
 function monitorAuthState() {
   try {
-    const auth = window.firebase?.auth?.();
-    if (auth) {
-      auth.onAuthStateChanged((user) => {
-        if (user) {
-          console.log('✅ Usuario detectado:', user.email);
-          currentProfessorUID = user.uid;
-          currentDB = window.firebase.firestore();
-          setTimeout(() => {
-            if (!document.getElementById('btnClassroomImport')) {
-              setupClassroomButton();
-            }
-          }, 500);
-        } else {
-          console.log('⚠️ Usuario cerró sesión');
-          currentProfessorUID = null;
-          currentDB = null;
-        }
-      });
-    }
+    // Función para chequear auth
+    const checkAuth = () => {
+      const auth = window.firebase?.auth?.();
+      
+      if (auth) {
+        auth.onAuthStateChanged((user) => {
+          if (user) {
+            console.log('✅ Usuario detectado:', user.email);
+            currentProfessorUID = user.uid;
+            currentDB = window.firebase.firestore();
+          } else {
+            console.log('⚠️ Usuario cerró sesión');
+            currentProfessorUID = null;
+            currentDB = null;
+          }
+        });
+      } else {
+        // Reintentar en 500ms si Firebase aún no está listo
+        setTimeout(checkAuth, 500);
+      }
+    };
+    
+    checkAuth();
   } catch (err) {
     console.error('Error monitoreando auth state:', err);
   }
@@ -96,45 +55,67 @@ function monitorAuthState() {
 
 // Configurar y inyectar el botón de Classroom
 function setupClassroomButton() {
-  const screenClasses = document.getElementById('screen-classes');
+  // Buscar elementos necesarios
   const btnDeleteMode = document.getElementById('btnDeleteMode');
-  if (!screenClasses || !btnDeleteMode) {
+  
+  // Si el botón de eliminar no existe aún, reintentar más tarde
+  if (!btnDeleteMode) {
+    console.log('⏳ Esperando DOM para inyectar botón...');
     setTimeout(setupClassroomButton, 300);
     return;
   }
   
-  if (document.getElementById('btnClassroomImport')) return;
+  // Evitar duplicados
+  if (document.getElementById('btnClassroomImport')) {
+    console.log('ℹ️ Botón de Classroom ya existe');
+    return;
+  }
 
+  // Crear botón
   const btn = document.createElement('button');
   btn.id = 'btnClassroomImport';
-  btn.className = 'bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-xl shadow transition-transform';
+  btn.className = 'bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-xl shadow transition-transform font-semibold';
   btn.innerHTML = '🎓 Importar Classroom';
+  
   btn.addEventListener('click', async () => {
+    console.log('🎓 Botón Classroom clickeado');
+    console.log('currentProfessorUID:', currentProfessorUID);
+    console.log('currentDB:', currentDB);
+    
     if (!currentProfessorUID || !currentDB) {
       alert('❌ Necesitas iniciar sesión primero');
       return;
     }
+    
     await openClassroomImportModal();
   });
 
+  // Insertar después del botón de eliminar clase
   btnDeleteMode.parentNode.insertBefore(btn, btnDeleteMode.nextSibling);
-  console.log('✅ Botón de Classroom inyectado');
+  
+  console.log('✅ Botón de Classroom inyectado (tiempo rápido)');
 }
 
 // Abrir modal y cargar cursos
 async function openClassroomImportModal() {
   console.log('🔓 Abriendo modal de Classroom...');
+  
   if (!currentDB || !currentProfessorUID) {
-    alert('❌ Necesitas iniciar sesión primero');
+    alert('❌ Error: Necesitas iniciar sesión primero');
+    console.error('DB:', currentDB, 'UID:', currentProfessorUID);
     return;
   }
   
   openModal('modalClassroomImport');
+  
   try {
     console.log('📚 Inicializando Google Classroom API...');
     await initClassroomAPI();
     console.log('✅ API inicializado');
+    
+    console.log('📚 Cargando cursos de Classroom...');
     await loadClassroomCourses();
+    
   } catch (err) {
     console.error('❌ Error completo:', err);
     showClassroomError('Error inicializando Google Classroom: ' + (err.message || JSON.stringify(err)));
@@ -155,6 +136,8 @@ async function loadClassroomCourses() {
 
   try {
     const courses = await getClassroomCourses();
+    console.log('📚 Cursos obtenidos:', courses.length);
+
     if (courses.length === 0) {
       showClassroomError('No se encontraron cursos en tu Google Classroom.');
       return;
@@ -262,5 +245,5 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.innerHTML = 'Importar';
       }
     });
-  }, 1000);
+  }, 100); // Reducido a 100ms en lugar de 1000ms
 });
