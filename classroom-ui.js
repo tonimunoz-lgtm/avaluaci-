@@ -181,16 +181,17 @@ async function openClassroomImportModal() {
   
   try {
     console.log('📚 Inicializando Google Classroom API...');
-    // Inicializar API si aún no está
+    // Inicializar API - esto abrirá un popup si es necesario
     await initClassroomAPI();
+    console.log('✅ API inicializado');
     
     // Cargar cursos
     console.log('📚 Cargando cursos de Classroom...');
     await loadClassroomCourses();
     
   } catch (err) {
-    console.error('Error:', err);
-    showClassroomError('Error inicializando Google Classroom: ' + err.message);
+    console.error('❌ Error completo:', err);
+    showClassroomError('Error inicializando Google Classroom: ' + (err.message || JSON.stringify(err)));
   }
 }
 
