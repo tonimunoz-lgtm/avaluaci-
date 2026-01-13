@@ -1,82 +1,165 @@
-// classroom.js - Integración con Google Classroom
+// classroom.js - Integración con Google Classroom usando REST API
 
 const CLASSROOM_CLIENT_ID = "324570393360-2ib4925pbobfbggu8t0nnj14q5n414nv.apps.googleusercontent.com"; // Reemplaza con tu ID
-const CLASSROOM_SCOPE = [
-  'https://www.googleapis.com/auth/classroom.courses.readonly',
-  'https://www.googleapis.com/auth/classroom.rosters.readonly',
-  'https://www.googleapis.com/auth/classroom.coursework.me.readonly'
+const CLASSROOM_DISCOVERY_DOCS = [
+  "https://www.googleapis.com/discovery/v1/apis/classroom/v1/rest"
 ];
 
-let classroomGoogleAuth = null;
+let classroomAccessToken = null;
 
-// Inicializar Google API
+// Inicializar autenticación con Google usando Google Sign-In
 export async function initClassroomAPI() {
   return new Promise((resolve, reject) => {
-    gapi.load('client:auth2', async () => {
-      try {
-        await gapi.client.init({
-          clientId: CLASSROOM_CLIENT_ID,
-          scope: CLASSROOM_SCOPE.join(' ')
-        });
-        classroomGoogleAuth = gapi.auth2.getAuthInstance();
-        console.log('✅ Classroom API inicializado');
+    console.log('📚 Inicializando Classroom API...');
+    
+    try {
+      // Comprobar si ya tenemos el token de Google de la sesión anterior
+      if (window._googleAccessToken) {
+        console.log('✅ Token de Google ya disponible');
+        classroomAccessToken = window._googleAccessToken;
         resolve(true);
-      } catch (err) {
-        console.error('❌ Error inicializando Classroom API:', err);
-        reject(err);
+        return;
       }
-    });
+
+      // Si no tenemos token, necesitamos iniciar sesión con Google
+      console.log('🔑 Solicitando acceso a Google Classroom...');
+      
+      // Cargar gapi y gapi.auth2
+      gapi.load('auth2', async () => {
+        try {
+          const auth2 = await gapi.auth2.init({
+            client_id: CLASSROOM_CLIENT_ID,
+            scope: 'https://www.googleapis.com/auth/classroom.courses.readonly https://www.googleapis.com/auth/classroom.rosters.readonly https://www.googleapis.com/auth/classroom.coursework.me.readonly'
+          });
+
+          // Comprobar si ya está autenticado
+          if (auth2.isSignedIn.get()) {
+            console.log('✅ Ya está autenticado con Google');
+            const authResponse = auth2.currentUser.get().getAuthResponse();
+            classroomAccessToken = authResponse.id_token;
+            resolve(true);
+          } else {
+            // Hacer login
+            console.log('🔐 Realizando login...');
+            const user = await auth2.signIn();
+            const authResponse = user.getAuthResponse();
+            classroomAccessToken = authResponse.id_token;
+            console.log('✅ Login exitoso');
+            resolve(true);
+          }
+        } catch (err) {
+          console.error('❌ Error en auth2.init:', err);
+          reject(err);
+        }
+      });
+    } catch (err) {
+      console.error('❌ Error inicializando Classroom API:', err);
+      reject(err);
+    }
   });
 }
 
-// Obtener lista de clases del profesor
+// Obtener lista de clases del profesor usando REST API
 export async function getClassroomCourses() {
+  if (!classroomAccessToken) {
+    throw new Error('No hay token de autenticación. Inicia sesión primero.');
+  }
+
   try {
-    if (!classroomGoogleAuth?.isSignedIn.get()) {
-      await classroomGoogleAuth.signIn();
+    console.log('📚 Obteniendo cursos...');
+    
+    const response = await fetch(
+      'https://classroom.googleapis.com/v1/courses?pageSize=50&courseStates=ACTIVE',
+      {
+        headers: {
+          'Authorization': `Bearer ${classroomAccessToken}`,
+          'Accept': 'application/json'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Error de API:', errorData);
+      throw new Error(errorData.error?.message || 'Error obteniendo cursos');
     }
 
-    const response = await gapi.client.classroom.courses.list({
-      pageSize: 50,
-      courseStates: ['ACTIVE']
-    });
-
-    return response.result.courses || [];
+    const data = await response.json();
+    console.log(`✅ Se encontraron ${data.courses?.length || 0} cursos`);
+    
+    return data.courses || [];
   } catch (err) {
     console.error('Error obteniendo cursos:', err);
-    throw new Error('No se pudieron obtener los cursos de Classroom');
+    throw new Error('No se pudieron obtener los cursos de Classroom: ' + err.message);
   }
 }
 
 // Obtener estudiantes de un curso
 export async function getClassroomStudents(courseId) {
-  try {
-    const response = await gapi.client.classroom.courses.students.list({
-      courseId: courseId,
-      pageSize: 100
-    });
+  if (!classroomAccessToken) {
+    throw new Error('No hay token de autenticación');
+  }
 
-    return (response.result.students || []).map(student => ({
+  try {
+    console.log(`👥 Obteniendo estudiantes del curso ${courseId}...`);
+    
+    const response = await fetch(
+      `https://classroom.googleapis.com/v1/courses/${courseId}/students?pageSize=100`,
+      {
+        headers: {
+          'Authorization': `Bearer ${classroomAccessToken}`,
+          'Accept': 'application/json'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error?.message || 'Error obteniendo estudiantes');
+    }
+
+    const data = await response.json();
+    console.log(`✅ Se encontraron ${data.students?.length || 0} estudiantes`);
+    
+    return (data.students || []).map(student => ({
       id: student.userId,
       email: student.profile.emailAddress,
       nom: student.profile.name.fullName
     }));
   } catch (err) {
     console.error('Error obteniendo estudiantes:', err);
-    throw new Error('No se pudieron obtener los estudiantes');
+    throw new Error('No se pudieron obtener los estudiantes: ' + err.message);
   }
 }
 
 // Obtener actividades (coursework) de un curso
 export async function getClassroomCoursework(courseId) {
-  try {
-    const response = await gapi.client.classroom.courses.courseWork.list({
-      courseId: courseId,
-      pageSize: 100,
-      courseWorkStates: ['PUBLISHED']
-    });
+  if (!classroomAccessToken) {
+    throw new Error('No hay token de autenticación');
+  }
 
-    return (response.result.courseWork || []).map(work => ({
+  try {
+    console.log(`📝 Obteniendo actividades del curso ${courseId}...`);
+    
+    const response = await fetch(
+      `https://classroom.googleapis.com/v1/courses/${courseId}/courseWork?pageSize=100&courseWorkStates=PUBLISHED`,
+      {
+        headers: {
+          'Authorization': `Bearer ${classroomAccessToken}`,
+          'Accept': 'application/json'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error?.message || 'Error obteniendo actividades');
+    }
+
+    const data = await response.json();
+    console.log(`✅ Se encontraron ${data.courseWork?.length || 0} actividades`);
+    
+    return (data.courseWork || []).map(work => ({
       id: work.id,
       title: work.title,
       description: work.description || '',
@@ -85,29 +168,48 @@ export async function getClassroomCoursework(courseId) {
     }));
   } catch (err) {
     console.error('Error obteniendo actividades:', err);
-    throw new Error('No se pudieron obtener las actividades');
+    throw new Error('No se pudieron obtener las actividades: ' + err.message);
   }
 }
 
 // Obtener calificaciones de un alumno en una actividad
 export async function getStudentSubmissions(courseId, courseWorkId) {
-  try {
-    const response = await gapi.client.classroom.courses.courseWork.studentSubmissions.list({
-      courseId: courseId,
-      courseWorkId: courseWorkId,
-      pageSize: 100
-    });
+  if (!classroomAccessToken) {
+    throw new Error('No hay token de autenticación');
+  }
 
+  try {
+    console.log(`📊 Obteniendo calificaciones para actividad ${courseWorkId}...`);
+    
+    const response = await fetch(
+      `https://classroom.googleapis.com/v1/courses/${courseId}/courseWork/${courseWorkId}/studentSubmissions?pageSize=100`,
+      {
+        headers: {
+          'Authorization': `Bearer ${classroomAccessToken}`,
+          'Accept': 'application/json'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.warn('Advertencia obteniendo calificaciones:', errorData.error?.message);
+      return {}; // Devolver objeto vacío en caso de error
+    }
+
+    const data = await response.json();
     const submissions = {};
-    (response.result.studentSubmissions || []).forEach(submission => {
+    
+    (data.studentSubmissions || []).forEach(submission => {
       const grade = submission.assignedGrade || null;
       submissions[submission.userId] = grade ? Number(grade) : null;
     });
 
+    console.log(`✅ Se encontraron calificaciones para ${Object.keys(submissions).length} estudiantes`);
     return submissions;
   } catch (err) {
     console.error('Error obteniendo calificaciones:', err);
-    return {};
+    return {}; // Devolver objeto vacío en caso de error
   }
 }
 
@@ -140,7 +242,8 @@ export async function importClassroomCourse(courseData, db, professorUID) {
         nom: student.nom,
         email: student.email,
         notes: {},
-        googleClassroomId: student.id
+        googleClassroomId: student.id,
+        comentarios: {}
       });
     }
 
@@ -182,7 +285,7 @@ export async function importClassroomCourse(courseData, db, professorUID) {
 
       for (const [actId, submissions] of Object.entries(notesData)) {
         const googleStudentId = students[i].id;
-        if (submissions[googleStudentId] !== undefined) {
+        if (submissions[googleStudentId] !== undefined && submissions[googleStudentId] !== null) {
           studentNotes[actId] = submissions[googleStudentId];
         }
       }
@@ -199,7 +302,7 @@ export async function importClassroomCourse(courseData, db, professorUID) {
       alumnes: studentIds,
       activitats: activityIds,
       terms: {
-        default: {
+        'imported': {
           name: 'Importado de Classroom',
           activities: activityIds
         }
@@ -225,8 +328,16 @@ export async function importClassroomCourse(courseData, db, professorUID) {
 
 // Logout de Classroom
 export async function signOutClassroom() {
-  if (classroomGoogleAuth) {
-    await classroomGoogleAuth.signOut();
-    console.log('Sesión de Classroom cerrada');
+  try {
+    if (gapi && gapi.auth2) {
+      const auth2 = gapi.auth2.getAuthInstance();
+      if (auth2) {
+        await auth2.signOut();
+        classroomAccessToken = null;
+        console.log('✅ Sesión de Classroom cerrada');
+      }
+    }
+  } catch (err) {
+    console.error('Error en logout:', err);
   }
 }
