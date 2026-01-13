@@ -11,47 +11,52 @@ let classroomAccessToken = null;
 export async function initClassroomAPI() {
   return new Promise((resolve, reject) => {
     console.log('📚 Inicializando Classroom API...');
-    
+
     try {
-      // Comprobar si ya tenemos el token de Google de la sesión anterior
+      // Si ya tenemos token de sesión anterior, lo ignoramos para forzar permisos nuevos
       if (window._googleAccessToken) {
-        console.log('✅ Token de Google ya disponible');
-        classroomAccessToken = window._googleAccessToken;
-        resolve(true);
-        return;
+        window._googleAccessToken = null;
+        classroomAccessToken = null;
       }
 
-      // Si no tenemos token, necesitamos iniciar sesión con Google
-      console.log('🔑 Solicitando acceso a Google Classroom...');
-      
-      // Cargar gapi y gapi.auth2
+      // Cargar gapi y auth2
       gapi.load('auth2', async () => {
         try {
           const auth2 = await gapi.auth2.init({
             client_id: CLASSROOM_CLIENT_ID,
-            scope: 'https://www.googleapis.com/auth/classroom.courses.readonly https://www.googleapis.com/auth/classroom.rosters.readonly https://www.googleapis.com/auth/classroom.coursework.me.readonly'
+            scope: [
+              "https://www.googleapis.com/auth/classroom.courses.readonly",
+              "https://www.googleapis.com/auth/classroom.rosters.readonly",
+              "https://www.googleapis.com/auth/classroom.coursework.me.readonly",
+              "https://www.googleapis.com/auth/classroom.coursework.students",
+              "https://www.googleapis.com/auth/classroom.student-submissions.students.readonly"
+            ].join(' ')
           });
 
-          // Comprobar si ya está autenticado
+          // Si ya está autenticado, cerrar sesión para refrescar scopes
           if (auth2.isSignedIn.get()) {
-            console.log('✅ Ya está autenticado con Google');
-            const authResponse = auth2.currentUser.get().getAuthResponse();
-            classroomAccessToken = authResponse.id_token;
-            resolve(true);
-          } else {
-            // Hacer login
-            console.log('🔐 Realizando login...');
-            const user = await auth2.signIn();
-            const authResponse = user.getAuthResponse();
-            classroomAccessToken = authResponse.id_token;
-            console.log('✅ Login exitoso');
-            resolve(true);
+            console.log('🔄 Sesión existente detectada, cerrando sesión para actualizar permisos...');
+            await auth2.signOut();
           }
+
+          // Solicitar login y permisos nuevos
+          console.log('🔐 Solicitando login y permisos de Google Classroom...');
+          const user = await auth2.signIn();
+          const authResponse = user.getAuthResponse();
+
+          // Guardar token
+          classroomAccessToken = authResponse.access_token || authResponse.id_token;
+          window._googleAccessToken = classroomAccessToken;
+
+          console.log('✅ Login y permisos concedidos con éxito');
+          resolve(true);
+
         } catch (err) {
           console.error('❌ Error en auth2.init:', err);
           reject(err);
         }
       });
+
     } catch (err) {
       console.error('❌ Error inicializando Classroom API:', err);
       reject(err);
