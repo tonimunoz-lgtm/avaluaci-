@@ -156,7 +156,7 @@ function setupClassroomButton() {
 
   const btn = document.createElement('button');
   btn.id = 'btnClassroomImport';
-  btn.className = 'bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-xl shadow transition-transform font-semibold mb-0 text-sm md:text-base md:px-5';
+  btn.className = 'bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-xl shadow transition-transform font-semibold mb-0';
   btn.style.height = 'auto';
   btn.innerHTML = '🎓 Importar Classroom';
   
