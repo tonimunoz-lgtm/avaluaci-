@@ -1,6 +1,6 @@
 // classroom.js - Integración con Google Classroom
 
-const CLASSROOM_CLIENT_ID = "TU_CLIENT_ID_AQUI.apps.googleusercontent.com"; // Reemplaza con tu ID
+const CLASSROOM_CLIENT_ID = "324570393360-2ib4925pbobfbggu8t0nnj14q5n414nv.apps.googleusercontent.com"; // Reemplaza con tu ID
 const CLASSROOM_SCOPE = [
   'https://www.googleapis.com/auth/classroom.courses.readonly',
   'https://www.googleapis.com/auth/classroom.rosters.readonly',
