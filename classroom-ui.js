@@ -99,7 +99,7 @@ function setupClassroomButton() {
   const screenClasses = document.getElementById('screen-classes');
   const btnDeleteMode = document.getElementById('btnDeleteMode');
   if (!screenClasses || !btnDeleteMode) {
-    setTimeout(setupClassroomButton, 500);
+    setTimeout(setupClassroomButton, 300);
     return;
   }
   
