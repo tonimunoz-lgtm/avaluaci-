@@ -314,11 +314,4 @@ button:hover { transform: scale(1.03); }
   margin-bottom: 1.5rem;
 }
 
-/* Responsive para botón Classroom en mobile */
-@media (max-width: 640px) {
-  #btnClassroomImport {
-    padding: 0.5rem 0.75rem !important;
-    font-size: 0.875rem;
-    white-space: nowrap;
-  }
-}
+
