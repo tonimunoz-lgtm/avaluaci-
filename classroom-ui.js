@@ -107,7 +107,7 @@ function setupClassroomButton() {
 
   const btn = document.createElement('button');
   btn.id = 'btnClassroomImport';
-  btn.className = 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-5 py-2 rounded-xl shadow transition-transform';
+  btn.className = 'bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-xl shadow transition-transform';
   btn.innerHTML = '🎓 Importar Classroom';
   btn.addEventListener('click', async () => {
     if (!currentProfessorUID || !currentDB) {
