@@ -37,10 +37,10 @@ function createProgressModal() {
         <!-- Texto de estado -->
         <div class="text-center">
           <h3 id="progressTitle" class="text-lg font-bold text-gray-900 mb-2">
-            Importando cursos...
+            Important cursos...
           </h3>
           <p id="progressCourse" class="text-sm text-gray-600 mb-4">
-            Preparando importación...
+            Preparant importació...
           </p>
         </div>
         
@@ -56,7 +56,7 @@ function createProgressModal() {
         
         <!-- Detalles -->
         <p id="progressDetails" class="text-xs text-gray-400 text-center mt-2">
-          Esto puede tomar unos segundos...
+          Això pot trigar uns segons...
         </p>
       </div>
     </div>
@@ -74,12 +74,12 @@ function updateProgressModal(modal, courseName, current, total, percentage) {
   const details = modal.querySelector('#progressDetails');
   
   if (percentage === 100) {
-    title.textContent = '✅ ¡Importación completada!';
-    details.textContent = 'Recargando página...';
+    title.textContent = '✅ ¡Importació completada!';
+    details.textContent = 'Recargan pàgina...';
   } else {
-    title.textContent = 'Importando cursos...';
+    title.textContent = 'Important cursos...';
     course.textContent = courseName;
-    details.textContent = 'Cargando estudiantes, actividades y calificaciones...';
+    details.textContent = 'Cargant estudiants, activitats y qualificacions...';
   }
   
   bar.style.width = percentage + '%';
@@ -165,7 +165,7 @@ function setupClassroomButton() {
     console.log('🎓 Botón Classroom clickeado');
     
     if (!currentProfessorUID || !currentDB) {
-      alert('❌ Necesitas iniciar sesión primero');
+      alert('❌ Necessites iniciar sessió primer');
       return;
     }
     
@@ -185,7 +185,7 @@ async function openClassroomImportModal() {
   console.log('🔓 Abriendo modal de Classroom...');
   
   if (!currentDB || !currentProfessorUID) {
-    alert('❌ Error: Necesitas iniciar sesión primero');
+    alert('❌ Error: Necessites iniciar sessió primer');
     return;
   }
   
@@ -221,11 +221,11 @@ async function loadClassroomCourses() {
     console.log('📚 Cursos obtenidos:', courses.length);
 
     if (courses.length === 0) {
-      showClassroomError('No se encontraron cursos en tu Google Classroom.');
+      showClassroomError('Cursos no trobats al teu Google Classroom.');
       return;
     }
 
-    coursesList.innerHTML = '<label class="text-sm font-semibold text-gray-700 mb-3 block">Selecciona los cursos a importar:</label>';
+    coursesList.innerHTML = '<label class="text-sm font-semibold text-gray-700 mb-3 block">Selecciona els cursos a importar:</label>';
     const container = document.createElement('div');
     container.className = 'space-y-2';
 
@@ -251,7 +251,7 @@ async function loadClassroomCourses() {
       span.className = 'flex-1 cursor-pointer';
       span.innerHTML = `
         <div class="font-medium text-gray-900">${escapeHtml(course.name)}</div>
-        <div class="text-xs text-gray-600">${escapeHtml(course.descriptionHeading || 'Sin descripción')}</div>
+        <div class="text-xs text-gray-600">${escapeHtml(course.descriptionHeading || 'Sense descripció')}</div>
       `;
       span.addEventListener('click', () => {
         checkbox.checked = !checkbox.checked;
@@ -306,17 +306,17 @@ function setupImportListener() {
   
   btnImport.addEventListener('click', async (event) => {
     if (selectedCourses.length === 0) {
-      return alert('Selecciona al menos un curso');
+      return alert('Selecciona almenys un curs');
     }
 
     if (!currentDB || !currentProfessorUID) {
-      return alert('❌ Necesitas iniciar sesión primero');
+      return alert('❌ Necessites iniciar sessió primer');
     }
 
     try {
       const btn = event.target;
       btn.disabled = true;
-      btn.innerHTML = '⏳ Importando...';
+      btn.innerHTML = '⏳ Important...';
 
       // Crear y mostrar modal de progreso
       const progressModal = createProgressModal();
@@ -334,32 +334,32 @@ function setupImportListener() {
         await importClassroomCourse(course, currentDB, currentProfessorUID);
       }
 
-      console.log('✅ Cursos importados correctamente');
+      console.log('✅ Cursos importats correctament');
       
       // Mostrar mensaje final
-      updateProgressModal(progressModal, '✅ ¡Proceso completado!', totalCourses, totalCourses, 100);
+      updateProgressModal(progressModal, '✅ ¡Procés completat!', totalCourses, totalCourses, 100);
       
       setTimeout(() => {
         progressModal.remove();
-        alert('✅ Cursos importados correctamente');
+        alert('✅ Cursos importats correctament');
         closeModal('modalClassroomImport');
         
         // Recargar página
         setTimeout(() => {
-          console.log('🔄 Recargando página...');
+          console.log('🔄 Recargant página...');
           location.reload();
         }, 500);
       }, 1000);
 
     } catch (err) {
-      console.error('Error importando:', err);
-      alert('❌ Error importando los cursos: ' + err.message);
+      console.error('Error important:', err);
+      alert('❌ Error important els cursos: ' + err.message);
       const progressModal = document.getElementById('classroomProgressModal');
       if (progressModal) progressModal.remove();
     } finally {
       const btn = event.target;
       btn.disabled = false;
-      btn.innerHTML = 'Importar seleccionados';
+      btn.innerHTML = 'Importar seleccionats';
     }
   });
 }
