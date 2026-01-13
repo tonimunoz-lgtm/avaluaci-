@@ -1,10 +1,10 @@
-// classroom-ui.js - Manejador de interfaz para importación de Classroom
+// classroom-ui.js - Manejador de interfaz para importación de Classroom (multiselección)
 // Funciona de forma independiente sin necesidad de modificar app.js
 
 import { initClassroomAPI, getClassroomCourses, importClassroomCourse } from './classroom.js';
 import { openModal, closeModal } from './modals.js';
 
-let selectedCourse = null;
+let selectedCourses = [];
 let currentProfessorUID = null;
 let currentDB = null;
 
@@ -48,7 +48,6 @@ function waitForUserLogin() {
       }
     }, 500);
     
-    // Timeout máximo de 30s
     setTimeout(() => {
       clearInterval(interval);
       console.warn('⚠️ Timeout esperando login');
@@ -151,7 +150,7 @@ async function loadClassroomCourses() {
   loadingState.classList.remove('hidden');
   coursesList.classList.add('hidden');
   errorState.classList.add('hidden');
-  selectedCourse = null;
+  selectedCourses = [];
   document.getElementById('btnImportSelectedCourse').disabled = true;
 
   try {
@@ -161,7 +160,7 @@ async function loadClassroomCourses() {
       return;
     }
 
-    coursesList.innerHTML = '<label class="text-sm font-semibold text-gray-700 mb-3 block">Selecciona un curso:</label>';
+    coursesList.innerHTML = '<label class="text-sm font-semibold text-gray-700 mb-3 block">Selecciona los cursos a importar:</label>';
     const container = document.createElement('div');
     container.className = 'space-y-2';
 
@@ -169,15 +168,18 @@ async function loadClassroomCourses() {
       const label = document.createElement('label');
       label.className = 'flex items-center gap-3 p-3 border rounded hover:bg-indigo-50 cursor-pointer transition-colors';
 
-      const radio = document.createElement('input');
-      radio.type = 'radio';
-      radio.name = 'classroomCourse';
-      radio.value = course.id;
-      radio.className = 'w-4 h-4 text-indigo-500 cursor-pointer';
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.value = course.id;
+      checkbox.className = 'w-4 h-4 text-indigo-500 cursor-pointer';
 
-      radio.addEventListener('change', () => {
-        selectedCourse = course;
-        document.getElementById('btnImportSelectedCourse').disabled = false;
+      checkbox.addEventListener('change', () => {
+        if (checkbox.checked) {
+          selectedCourses.push(course);
+        } else {
+          selectedCourses = selectedCourses.filter(c => c.id !== course.id);
+        }
+        document.getElementById('btnImportSelectedCourse').disabled = selectedCourses.length === 0;
       });
 
       const span = document.createElement('span');
@@ -186,10 +188,12 @@ async function loadClassroomCourses() {
         <div class="font-medium text-gray-900">${escapeHtml(course.name)}</div>
         <div class="text-xs text-gray-600">${escapeHtml(course.descriptionHeading || 'Sin descripción')}</div>
       `;
+      span.addEventListener('click', () => {
+        checkbox.checked = !checkbox.checked;
+        checkbox.dispatchEvent(new Event('change'));
+      });
 
-      span.addEventListener('click', () => { radio.checked = true; radio.dispatchEvent(new Event('change')); });
-
-      label.appendChild(radio);
+      label.appendChild(checkbox);
       label.appendChild(span);
       container.appendChild(label);
     });
@@ -229,7 +233,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     btnImport.dataset.listenerAdded = 'true';
     btnImport.addEventListener('click', async (event) => {
-      if (!selectedCourse) return alert('Selecciona un curso primero');
+      if (selectedCourses.length === 0) return alert('Selecciona al menos un curso');
+
       if (!currentDB || !currentProfessorUID) return alert('❌ Necesitas iniciar sesión primero');
 
       try {
@@ -237,18 +242,20 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.disabled = true;
         btn.innerHTML = '⏳ Importando...';
 
-        console.log('📚 Importando curso:', selectedCourse.name);
-        const newClassId = await importClassroomCourse(selectedCourse, currentDB, currentProfessorUID);
-        
-        console.log('✅ Clase importada con ID:', newClassId);
-        alert('✅ Clase importada correctamente');
+        for (const course of selectedCourses) {
+          console.log('📚 Importando curso:', course.name);
+          await importClassroomCourse(course, currentDB, currentProfessorUID);
+        }
+
+        console.log('✅ Cursos importados correctamente');
+        alert('✅ Cursos importados correctamente');
         closeModal('modalClassroomImport');
 
         if (window.loadClassesScreen) window.loadClassesScreen();
 
       } catch (err) {
         console.error('Error importando:', err);
-        alert('❌ Error importando la clase: ' + err.message);
+        alert('❌ Error importando los cursos: ' + err.message);
       } finally {
         const btn = event.target;
         btn.disabled = false;
