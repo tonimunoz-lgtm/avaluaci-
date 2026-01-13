@@ -249,6 +249,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const btn = event.target;
         btn.disabled = false;
         btn.innerHTML = 'Importar';
+        
+        // Forzar recarga de la página después de importar
+        // (asegura que se vea la nueva clase)
+        setTimeout(() => {
+          console.log('🔄 Recargando página...');
+          location.reload();
+        }, 1500);
       }
     });
   }, 100); // Reducido a 100ms en lugar de 1000ms
