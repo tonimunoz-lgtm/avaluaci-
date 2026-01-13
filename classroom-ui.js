@@ -10,22 +10,106 @@ let currentDB = null;
 
 console.log('✅ classroom-ui.js cargado');
 
+// ============================================================
+// FUNCIONES UTILITARIAS
+// ============================================================
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Crear modal de progreso
+function createProgressModal() {
+  const modal = document.createElement('div');
+  modal.id = 'classroomProgressModal';
+  modal.className = 'fixed inset-0 flex items-center justify-center z-[9999] bg-black bg-opacity-40';
+  modal.innerHTML = `
+    <div class="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
+      <div class="flex flex-col items-center gap-4">
+        <!-- Spinner animado -->
+        <div class="relative w-16 h-16">
+          <div class="absolute inset-0 border-4 border-gray-200 rounded-full"></div>
+          <div class="absolute inset-0 border-4 border-transparent border-t-blue-500 border-r-blue-500 rounded-full animate-spin"></div>
+        </div>
+        
+        <!-- Texto de estado -->
+        <div class="text-center">
+          <h3 id="progressTitle" class="text-lg font-bold text-gray-900 mb-2">
+            Importando cursos...
+          </h3>
+          <p id="progressCourse" class="text-sm text-gray-600 mb-4">
+            Preparando importación...
+          </p>
+        </div>
+        
+        <!-- Barra de progreso -->
+        <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+          <div id="progressBar" class="bg-blue-500 h-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+        
+        <!-- Contador -->
+        <p id="progressCounter" class="text-xs text-gray-500 text-center">
+          0 de 0 cursos
+        </p>
+        
+        <!-- Detalles -->
+        <p id="progressDetails" class="text-xs text-gray-400 text-center mt-2">
+          Esto puede tomar unos segundos...
+        </p>
+      </div>
+    </div>
+  `;
+  
+  return modal;
+}
+
+// Actualizar modal de progreso
+function updateProgressModal(modal, courseName, current, total, percentage) {
+  const title = modal.querySelector('#progressTitle');
+  const course = modal.querySelector('#progressCourse');
+  const bar = modal.querySelector('#progressBar');
+  const counter = modal.querySelector('#progressCounter');
+  const details = modal.querySelector('#progressDetails');
+  
+  if (percentage === 100) {
+    title.textContent = '✅ ¡Importación completada!';
+    details.textContent = 'Recargando página...';
+  } else {
+    title.textContent = 'Importando cursos...';
+    course.textContent = courseName;
+    details.textContent = 'Cargando estudiantes, actividades y calificaciones...';
+  }
+  
+  bar.style.width = percentage + '%';
+  counter.textContent = `${current} de ${total} cursos`;
+}
+
+// ============================================================
+// INICIALIZACIÓN
+// ============================================================
+
 // Inicializar cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('📱 DOM cargado, inicializando classroom-ui.js...');
   
   // Inyectar el botón INMEDIATAMENTE
-  // (no esperar a que app.js cargue completamente)
   setupClassroomButton();
   
   // Monitorear autenticación
   monitorAuthState();
+  
+  // Configurar listeners de importación
+  setupImportListener();
 });
 
-// Monitorear cambios en el estado de autenticación
+// ============================================================
+// MONITOREO DE AUTENTICACIÓN
+// ============================================================
+
 function monitorAuthState() {
   try {
-    // Función para chequear auth
     const checkAuth = () => {
       const auth = window.firebase?.auth?.();
       
@@ -42,7 +126,6 @@ function monitorAuthState() {
           }
         });
       } else {
-        // Reintentar en 500ms si Firebase aún no está listo
         setTimeout(checkAuth, 500);
       }
     };
@@ -53,34 +136,33 @@ function monitorAuthState() {
   }
 }
 
-// Configurar y inyectar el botón de Classroom
+// ============================================================
+// INYECCIÓN DEL BOTÓN
+// ============================================================
+
 function setupClassroomButton() {
-  // Buscar elementos necesarios
   const btnDeleteMode = document.getElementById('btnDeleteMode');
   
-  // Si el botón de eliminar no existe aún, reintentar más tarde
   if (!btnDeleteMode) {
     console.log('⏳ Esperando DOM para inyectar botón...');
     setTimeout(setupClassroomButton, 300);
     return;
   }
   
-  // Evitar duplicados
   if (document.getElementById('btnClassroomImport')) {
     console.log('ℹ️ Botón de Classroom ya existe');
     return;
   }
 
-  // Crear botón
   const btn = document.createElement('button');
   btn.id = 'btnClassroomImport';
-  btn.className = 'bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-xl shadow transition-transform font-semibold';
+  btn.className = 'bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-xl shadow transition-transform font-semibold mb-0';
+  btn.style.height = 'auto';
+  btn.style.padding = '0.5rem 1.25rem';
   btn.innerHTML = '🎓 Importar Classroom';
   
   btn.addEventListener('click', async () => {
     console.log('🎓 Botón Classroom clickeado');
-    console.log('currentProfessorUID:', currentProfessorUID);
-    console.log('currentDB:', currentDB);
     
     if (!currentProfessorUID || !currentDB) {
       alert('❌ Necesitas iniciar sesión primero');
@@ -90,19 +172,20 @@ function setupClassroomButton() {
     await openClassroomImportModal();
   });
 
-  // Insertar después del botón de eliminar clase
   btnDeleteMode.parentNode.insertBefore(btn, btnDeleteMode.nextSibling);
   
   console.log('✅ Botón de Classroom inyectado (tiempo rápido)');
 }
 
-// Abrir modal y cargar cursos
+// ============================================================
+// MODAL DE IMPORTACIÓN
+// ============================================================
+
 async function openClassroomImportModal() {
   console.log('🔓 Abriendo modal de Classroom...');
   
   if (!currentDB || !currentProfessorUID) {
     alert('❌ Error: Necesitas iniciar sesión primero');
-    console.error('DB:', currentDB, 'UID:', currentProfessorUID);
     return;
   }
   
@@ -122,7 +205,6 @@ async function openClassroomImportModal() {
   }
 }
 
-// Cargar cursos y mostrarlos en el modal
 async function loadClassroomCourses() {
   const loadingState = document.getElementById('classroomLoadingState');
   const coursesList = document.getElementById('classroomCoursesList');
@@ -202,61 +284,82 @@ function showClassroomError(message) {
   coursesList.classList.add('hidden');
 }
 
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
+// ============================================================
+// LISTENERS DE IMPORTACIÓN
+// ============================================================
 
-// Botón de importación
-document.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => {
-    const btnImport = document.getElementById('btnImportSelectedCourse');
-    if (!btnImport || btnImport.dataset.listenerAdded) return;
+function setupImportListener() {
+  const btnImport = document.getElementById('btnImportSelectedCourse');
+  
+  if (!btnImport) {
+    console.warn('⚠️ Botón de importación no encontrado, reintentando...');
+    setTimeout(setupImportListener, 500);
+    return;
+  }
 
-    btnImport.dataset.listenerAdded = 'true';
-    btnImport.addEventListener('click', async (event) => {
-      if (selectedCourses.length === 0) return alert('Selecciona al menos un curso');
+  if (btnImport.dataset.listenerAdded) {
+    console.log('ℹ️ Listener ya está configurado');
+    return;
+  }
 
-      if (!currentDB || !currentProfessorUID) return alert('❌ Necesitas iniciar sesión primero');
+  btnImport.dataset.listenerAdded = 'true';
+  
+  btnImport.addEventListener('click', async (event) => {
+    if (selectedCourses.length === 0) {
+      return alert('Selecciona al menos un curso');
+    }
 
-      try {
-        const btn = event.target;
-        btn.disabled = true;
-        btn.innerHTML = '⏳ Importando...';
+    if (!currentDB || !currentProfessorUID) {
+      return alert('❌ Necesitas iniciar sesión primero');
+    }
 
-        for (const course of selectedCourses) {
-          console.log('📚 Importando curso:', course.name);
-          await importClassroomCourse(course, currentDB, currentProfessorUID);
-        }
+    try {
+      const btn = event.target;
+      btn.disabled = true;
+      btn.innerHTML = '⏳ Importando...';
 
-        console.log('✅ Cursos importados correctamente');
+      // Crear y mostrar modal de progreso
+      const progressModal = createProgressModal();
+      document.body.appendChild(progressModal);
+      
+      const totalCourses = selectedCourses.length;
+      
+      for (let i = 0; i < selectedCourses.length; i++) {
+        const course = selectedCourses[i];
+        const progress = ((i + 1) / totalCourses) * 100;
+        
+        console.log('📚 Importando curso:', course.name);
+        updateProgressModal(progressModal, course.name, i + 1, totalCourses, progress);
+        
+        await importClassroomCourse(course, currentDB, currentProfessorUID);
+      }
+
+      console.log('✅ Cursos importados correctamente');
+      
+      // Mostrar mensaje final
+      updateProgressModal(progressModal, '✅ ¡Proceso completado!', totalCourses, totalCourses, 100);
+      
+      setTimeout(() => {
+        progressModal.remove();
         alert('✅ Cursos importados correctamente');
         closeModal('modalClassroomImport');
-
-        // Esperar un poquito a que Firestore se actualice
-        setTimeout(() => {
-          console.log('🔄 Recargando lista de clases...');
-          if (window.loadClassesScreen && typeof window.loadClassesScreen === 'function') {
-            window.loadClassesScreen();
-          }
-        }, 1000);
-
-      } catch (err) {
-        console.error('Error importando:', err);
-        alert('❌ Error importando los cursos: ' + err.message);
-      } finally {
-        const btn = event.target;
-        btn.disabled = false;
-        btn.innerHTML = 'Importar';
         
-        // Forzar recarga de la página después de importar
-        // (asegura que se vea la nueva clase)
+        // Recargar página
         setTimeout(() => {
           console.log('🔄 Recargando página...');
           location.reload();
-        }, 1500);
-      }
-    });
-  }, 100); // Reducido a 100ms en lugar de 1000ms
-});
+        }, 500);
+      }, 1000);
+
+    } catch (err) {
+      console.error('Error importando:', err);
+      alert('❌ Error importando los cursos: ' + err.message);
+      const progressModal = document.getElementById('classroomProgressModal');
+      if (progressModal) progressModal.remove();
+    } finally {
+      const btn = event.target;
+      btn.disabled = false;
+      btn.innerHTML = 'Importar seleccionados';
+    }
+  });
+}
