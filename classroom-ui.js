@@ -75,11 +75,11 @@ function updateProgressModal(modal, courseName, current, total, percentage) {
   
   if (percentage === 100) {
     title.textContent = '✅ ¡Importació completada!';
-    details.textContent = 'Recargan pàgina...';
+    details.textContent = 'Recarregant pàgina...';
   } else {
     title.textContent = 'Important cursos...';
     course.textContent = courseName;
-    details.textContent = 'Cargant estudiants, activitats y qualificacions...';
+    details.textContent = 'Carregant estudiants, activitats y qualificacions...';
   }
   
   bar.style.width = percentage + '%';
@@ -201,7 +201,7 @@ async function openClassroomImportModal() {
     
   } catch (err) {
     console.error('❌ Error completo:', err);
-    showClassroomError('Error inicializando Google Classroom: ' + (err.message || JSON.stringify(err)));
+    showClassroomError('Error inicialitzant Google Classroom: ' + (err.message || JSON.stringify(err)));
   }
 }
 
@@ -268,7 +268,7 @@ async function loadClassroomCourses() {
     coursesList.classList.remove('hidden');
 
   } catch (err) {
-    console.error('Error cargando cursos:', err);
+    console.error('Error carregant cursos:', err);
     showClassroomError(err.message);
   }
 }
@@ -346,7 +346,7 @@ function setupImportListener() {
         
         // Recargar página
         setTimeout(() => {
-          console.log('🔄 Recargant página...');
+          console.log('🔄 Recarregant pàgina...');
           location.reload();
         }, 500);
       }, 1000);
