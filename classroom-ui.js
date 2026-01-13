@@ -234,7 +234,13 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('✅ Cursos importados correctamente');
         closeModal('modalClassroomImport');
 
-        if (window.loadClassesScreen) window.loadClassesScreen();
+        // Esperar un poquito a que Firestore se actualice
+        setTimeout(() => {
+          console.log('🔄 Recargando lista de clases...');
+          if (window.loadClassesScreen && typeof window.loadClassesScreen === 'function') {
+            window.loadClassesScreen();
+          }
+        }, 1000);
 
       } catch (err) {
         console.error('Error importando:', err);
