@@ -1,53 +1,45 @@
 // classroom.js - Integración con Google Classroom usando REST API
 
-const CLASSROOM_CLIENT_ID = "324570393360-2ib4925pbobfbggu8t0nnj14q5n414nv.apps.googleusercontent.com"; 
+const CLASSROOM_CLIENT_ID = "324570393360-2ib4925pbobfbggu8t0nnj14q5n414nv.apps.googleusercontent.com"; // Reemplaza con tu ID
 const CLASSROOM_DISCOVERY_DOCS = [
   "https://www.googleapis.com/discovery/v1/apis/classroom/v1/rest"
 ];
 
 let classroomAccessToken = null;
 
-// Inicializar autenticación con Google usando Google Identity Services
-export async function initClassroomAPI() {
+// Inicializar autenticación con Google usando Google Sign-In
+export function initClassroomAPI() {
   return new Promise((resolve, reject) => {
     console.log('📚 Inicializando Classroom API con GIS...');
-    
+
     try {
-      if (window._googleAccessToken) {
-        console.log('✅ Token de Google ya disponible');
-        classroomAccessToken = window._googleAccessToken;
-        resolve(true);
-        return;
-      }
-
-      console.log('🔑 Solicitando acceso a Google Classroom...');
-      gapi.load('auth2', async () => {
-        try {
-          const auth2 = await gapi.auth2.init({
-            client_id: CLASSROOM_CLIENT_ID,
-            scope: 'https://www.googleapis.com/auth/classroom.courses.readonly https://www.googleapis.com/auth/classroom.rosters.readonly https://www.googleapis.com/auth/classroom.coursework.me.readonly'
-          });
-
-          if (auth2.isSignedIn.get()) {
-            console.log('✅ Ya está autenticado con Google');
-            const authResponse = auth2.currentUser.get().getAuthResponse();
-            classroomAccessToken = authResponse.id_token;
+      // Crear el cliente de OAuth2
+      const client = google.accounts.oauth2.initTokenClient({
+        client_id: "324570393360-2ib4925pbobfbggu8t0nnj14q5n414nv.apps.googleusercontent.com",
+        scope: [
+          "https://www.googleapis.com/auth/classroom.courses.readonly",
+          "https://www.googleapis.com/auth/classroom.rosters.readonly",
+          "https://www.googleapis.com/auth/classroom.coursework.me.readonly",
+          "https://www.googleapis.com/auth/classroom.coursework.students",
+          "https://www.googleapis.com/auth/classroom.student-submissions.students.readonly"
+        ].join(' '),
+        callback: (tokenResponse) => {
+          if (tokenResponse && tokenResponse.access_token) {
+            classroomAccessToken = tokenResponse.access_token;
+            window._googleAccessToken = classroomAccessToken;
+            console.log('✅ Token obtenido con éxito');
             resolve(true);
           } else {
-            console.log('🔐 Realizando login...');
-            const user = await auth2.signIn();
-            const authResponse = user.getAuthResponse();
-            classroomAccessToken = authResponse.id_token;
-            console.log('✅ Login exitoso');
-            resolve(true);
+            reject(new Error('No se obtuvo token de Google Classroom'));
           }
-        } catch (err) {
-          console.error('❌ Error en auth2.init:', err);
-          reject(err);
         }
       });
+
+      // Solicitar token al usuario
+      client.requestAccessToken();
+
     } catch (err) {
-      console.error('❌ Error inicializando Classroom API:', err);
+      console.error('❌ Error inicializando Google Classroom:', err);
       reject(err);
     }
   });
@@ -117,8 +109,8 @@ export async function getClassroomStudents(courseId) {
     
     return (data.students || []).map(student => ({
       id: student.userId,
-      email: student.profile.emailAddress || '', // ⚡ Evitar undefined
-      nom: student.profile.name.fullName || 'Alumno sin nombre'
+      email: student.profile.emailAddress,
+      nom: student.profile.name.fullName
     }));
   } catch (err) {
     console.error('Error obteniendo estudiantes:', err);
@@ -155,7 +147,7 @@ export async function getClassroomCoursework(courseId) {
     
     return (data.courseWork || []).map(work => ({
       id: work.id,
-      title: work.title || 'Actividad sin nombre',
+      title: work.title,
       description: work.description || '',
       dueDate: work.dueDate || null,
       maxPoints: work.maxPoints || 10
@@ -188,7 +180,7 @@ export async function getStudentSubmissions(courseId, courseWorkId) {
     if (!response.ok) {
       const errorData = await response.json();
       console.warn('Advertencia obteniendo calificaciones:', errorData.error?.message);
-      return {};
+      return {}; // Devolver objeto vacío en caso de error
     }
 
     const data = await response.json();
@@ -196,14 +188,14 @@ export async function getStudentSubmissions(courseId, courseWorkId) {
     
     (data.studentSubmissions || []).forEach(submission => {
       const grade = submission.assignedGrade || null;
-      submissions[submission.userId] = grade !== undefined ? Number(grade) : null;
+      submissions[submission.userId] = grade ? Number(grade) : null;
     });
 
     console.log(`✅ Se encontraron calificaciones para ${Object.keys(submissions).length} estudiantes`);
     return submissions;
   } catch (err) {
     console.error('Error obteniendo calificaciones:', err);
-    return {};
+    return {}; // Devolver objeto vacío en caso de error
   }
 }
 
@@ -212,18 +204,19 @@ export async function importClassroomCourse(courseData, db, professorUID) {
   try {
     console.log('📚 Iniciando importación de:', courseData.name);
 
+    // 1. Crear la clase en Firestore
     const classRef = db.collection('classes').doc();
     const classId = classRef.id;
 
-    // Obtener estudiantes
+    // 2. Obtener estudiantes
     const students = await getClassroomStudents(courseData.id);
     console.log(`👥 Se encontraron ${students.length} estudiantes`);
 
-    // Obtener actividades
+    // 3. Obtener actividades
     const courseworks = await getClassroomCoursework(courseData.id);
     console.log(`📝 Se encontraron ${courseworks.length} actividades`);
 
-    // Crear documentos de estudiantes
+    // 4. Crear documentos de estudiantes en Firestore
     const studentIds = [];
     const batch = db.batch();
 
@@ -232,10 +225,10 @@ export async function importClassroomCourse(courseData, db, professorUID) {
       studentIds.push(studentRef.id);
 
       batch.set(studentRef, {
-        nom: student.nom || 'Alumno sin nombre',
-        email: student.email || '',       // ⚡ Nunca undefined
+        nom: student.nom,
+        email: student.email,
         notes: {},
-        googleClassroomId: student.id || '',
+        googleClassroomId: student.id,
         comentarios: {}
       });
     }
@@ -243,7 +236,7 @@ export async function importClassroomCourse(courseData, db, professorUID) {
     await batch.commit();
     console.log('✅ Estudiantes creados');
 
-    // Crear actividades y obtener calificaciones
+    // 5. Crear actividades y obtener calificaciones
     const activityIds = [];
     const notesData = {};
 
@@ -252,21 +245,25 @@ export async function importClassroomCourse(courseData, db, professorUID) {
       const actId = actRef.id;
       activityIds.push(actId);
 
+      // Crear actividad
       await actRef.set({
-        nom: coursework.title || 'Actividad sin nombre',
-        description: coursework.description || '',
+        nom: coursework.title,
+        description: coursework.description,
         data: coursework.dueDate || new Date().toISOString().split('T')[0],
         calcType: 'numeric',
         formula: '',
-        googleClassroomId: coursework.id || '',
-        maxPoints: coursework.maxPoints || 10
+        googleClassroomId: coursework.id,
+        maxPoints: coursework.maxPoints
       });
 
+      // Obtener calificaciones
       const submissions = await getStudentSubmissions(courseData.id, coursework.id);
       notesData[actId] = submissions;
     }
 
-    // Guardar calificaciones en estudiantes
+    console.log('✅ Actividades creadas');
+
+    // 6. Guardar calificaciones en los documentos de estudiantes
     const updateBatch = db.batch();
     for (let i = 0; i < studentIds.length; i++) {
       const studentRef = db.collection('alumnes').doc(studentIds[i]);
@@ -285,9 +282,9 @@ export async function importClassroomCourse(courseData, db, professorUID) {
     await updateBatch.commit();
     console.log('✅ Calificaciones importadas');
 
-    // Guardar la clase
+    // 7. Crear la clase con todos los datos
     await classRef.set({
-      nom: courseData.name || 'Clase sin nombre',
+      nom: courseData.name,
       alumnes: studentIds,
       activitats: activityIds,
       terms: {
@@ -297,11 +294,11 @@ export async function importClassroomCourse(courseData, db, professorUID) {
         }
       },
       calculatedActivities: {},
-      googleClassroomId: courseData.id || '',
+      googleClassroomId: courseData.id,
       importedAt: new Date().toISOString()
     });
 
-    // Añadir clase al profesor
+    // 8. Añadir la clase al profesor
     await db.collection('professors').doc(professorUID).update({
       classes: firebase.firestore.FieldValue.arrayUnion(classId)
     });
