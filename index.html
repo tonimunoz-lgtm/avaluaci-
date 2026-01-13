@@ -7,8 +7,9 @@
 
   <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
+  
   <!-- Google API para Classroom -->
-<script src="https://apis.google.com/js/api.js"></script>
+  <script src="https://apis.google.com/js/api.js"></script>
 
   <!-- CSS propi -->
   <link rel="stylesheet" href="style.css">
@@ -132,7 +133,7 @@
 </div>
 
 
-  <!-- 🔍 Cercador d’alumnes -->
+  <!-- 🔍 Cercador d'alumnes -->
 <input id="studentSearch"
        type="text"
        placeholder="Cerca per nom…"
@@ -210,8 +211,6 @@
   </div>
 </div>
 
-  
-
 <!-- Modal Importar Alumnes -->
 <div id="modalImportAL" class="fixed inset-0 hidden items-center justify-center z-50">
   <div class="modal-backdrop absolute inset-0"></div>
@@ -224,8 +223,8 @@
       <ul class="list-disc list-inside mt-1">
         <li>Prepara un fitxer <code>.xlsx</code> o <code>.csv</code>.</li>
         <li>Escriu els <strong>noms i cognoms dels alumnes</strong> a <strong>la primera columna</strong>, sense cap fila de capçalera.</li>
-        <li>Cada alumne ha d’estar en una fila diferent.</li>
-        <li>Desa el fitxer i selecciona’l aquí per importar-lo.</li>
+        <li>Cada alumne ha d'estar en una fila diferent.</li>
+        <li>Desa el fitxer i selecciona'l aquí per importar-lo.</li>
       </ul>
       <p class="mt-1 text-xs text-gray-500">Exemple: una columna amb Maria Pérez, Joan García, Laura Rodríguez, etc. Un a sota de l'altre</p>
     </div>
@@ -238,60 +237,59 @@
   </div>
 </div>
 
-  
-  <!-- Create Class Modal -->
-  <div id="modalCreateClass" class="fixed inset-0 hidden items-center justify-center z-50">
-    <div class="modal-backdrop absolute inset-0"></div>
-    <div class="bg-white rounded shadow-lg z-10 w-full max-w-md p-4">
-      <h3 class="text-lg font-semibold mb-2">Crear nova classe</h3>
-      <input id="modalClassName" class="border rounded px-3 py-2 w-full mb-3" placeholder="Nom de la classe">
-      <div class="flex justify-end gap-2">
-        <button data-modal-close="modalCreateClass" class="modal-close px-3 py-1 rounded bg-gray-200">Cancel·lar</button>
-        <button id="modalCreateClassBtn" class="px-3 py-1 rounded bg-indigo-500 text-white">Crear</button>
-      </div>
+<!-- Create Class Modal -->
+<div id="modalCreateClass" class="fixed inset-0 hidden items-center justify-center z-50">
+  <div class="modal-backdrop absolute inset-0"></div>
+  <div class="bg-white rounded shadow-lg z-10 w-full max-w-md p-4">
+    <h3 class="text-lg font-semibold mb-2">Crear nova classe</h3>
+    <input id="modalClassName" class="border rounded px-3 py-2 w-full mb-3" placeholder="Nom de la classe">
+    <div class="flex justify-end gap-2">
+      <button data-modal-close="modalCreateClass" class="modal-close px-3 py-1 rounded bg-gray-200">Cancel·lar</button>
+      <button id="modalCreateClassBtn" class="px-3 py-1 rounded bg-indigo-500 text-white">Crear</button>
     </div>
   </div>
+</div>
 
-  <!-- Add Student Modal -->
-  <div id="modalAddStudent" class="fixed inset-0 hidden items-center justify-center z-50">
-    <div class="modal-backdrop absolute inset-0"></div>
-    <div class="bg-white rounded shadow-lg z-10 w-full max-w-md p-4">
-      <h3 class="text-lg font-semibold mb-2">Afegir alumne</h3>
-      <input id="modalStudentName" class="border rounded px-3 py-2 w-full mb-3" placeholder="Nom de l'alumne">
-      <div class="flex justify-end gap-2">
-        <button data-modal-close="modalAddStudent" class="modal-close px-3 py-1 rounded bg-gray-200">Cancel·lar</button>
-        <button id="modalAddStudentBtn" class="px-3 py-1 rounded bg-purple-600 text-white">Afegir</button>
-      </div>
+<!-- Add Student Modal -->
+<div id="modalAddStudent" class="fixed inset-0 hidden items-center justify-center z-50">
+  <div class="modal-backdrop absolute inset-0"></div>
+  <div class="bg-white rounded shadow-lg z-10 w-full max-w-md p-4">
+    <h3 class="text-lg font-semibold mb-2">Afegir alumne</h3>
+    <input id="modalStudentName" class="border rounded px-3 py-2 w-full mb-3" placeholder="Nom de l'alumne">
+    <div class="flex justify-end gap-2">
+      <button data-modal-close="modalAddStudent" class="modal-close px-3 py-1 rounded bg-gray-200">Cancel·lar</button>
+      <button id="modalAddStudentBtn" class="px-3 py-1 rounded bg-purple-600 text-white">Afegir</button>
     </div>
   </div>
+</div>
 
-  <!-- Add Activity Modal -->
-  <div id="modalAddActivity" class="fixed inset-0 hidden items-center justify-center z-50">
-    <div class="modal-backdrop absolute inset-0"></div>
-    <div class="bg-white rounded shadow-lg z-10 w-full max-w-md p-4">
-      <h3 class="text-lg font-semibold mb-2">Afegir activitat</h3>
-      <input id="modalActivityName" class="border rounded px-3 py-2 w-full mb-3" placeholder="Nom de l'activitat">
-      <div class="flex justify-end gap-2">
-        <button data-modal-close="modalAddActivity" class="modal-close px-3 py-1 rounded bg-gray-200">Cancel·lar</button>
-        <button id="modalAddActivityBtn" class="px-3 py-1 rounded bg-teal-600 text-white">Afegir</button>
-      </div>
+<!-- Add Activity Modal -->
+<div id="modalAddActivity" class="fixed inset-0 hidden items-center justify-center z-50">
+  <div class="modal-backdrop absolute inset-0"></div>
+  <div class="bg-white rounded shadow-lg z-10 w-full max-w-md p-4">
+    <h3 class="text-lg font-semibold mb-2">Afegir activitat</h3>
+    <input id="modalActivityName" class="border rounded px-3 py-2 w-full mb-3" placeholder="Nom de l'activitat">
+    <div class="flex justify-end gap-2">
+      <button data-modal-close="modalAddActivity" class="modal-close px-3 py-1 rounded bg-gray-200">Cancel·lar</button>
+      <button id="modalAddActivityBtn" class="px-3 py-1 rounded bg-teal-600 text-white">Afegir</button>
     </div>
   </div>
+</div>
 
-  <!-- Confirm Modal -->
-  <div id="modalConfirm" class="fixed inset-0 hidden items-center justify-center z-50">
-    <div class="modal-backdrop absolute inset-0"></div>
-    <div class="bg-white rounded shadow-lg z-10 w-full max-w-sm p-4">
-      <h3 id="confirmTitle" class="text-lg font-semibold mb-2">Confirmació</h3>
-      <p id="confirmMsg" class="text-sm text-gray-600 mb-4"></p>
-      <div class="flex justify-end gap-2">
-        <button data-modal-close="modalConfirm" class="modal-close px-3 py-1 rounded bg-gray-200">Cancel·lar</button>
-        <button id="confirmYes" class="px-3 py-1 rounded bg-red-500 text-white">Sí, eliminar</button>
-      </div>
+<!-- Confirm Modal -->
+<div id="modalConfirm" class="fixed inset-0 hidden items-center justify-center z-50">
+  <div class="modal-backdrop absolute inset-0"></div>
+  <div class="bg-white rounded shadow-lg z-10 w-full max-w-sm p-4">
+    <h3 id="confirmTitle" class="text-lg font-semibold mb-2">Confirmació</h3>
+    <p id="confirmMsg" class="text-sm text-gray-600 mb-4"></p>
+    <div class="flex justify-end gap-2">
+      <button data-modal-close="modalConfirm" class="modal-close px-3 py-1 rounded bg-gray-200">Cancel·lar</button>
+      <button id="confirmYes" class="px-3 py-1 rounded bg-red-500 text-white">Sí, eliminar</button>
     </div>
   </div>
+</div>
 
-  <!-- Modal Calcul -->
+<!-- Modal Calcul -->
 <div id="modalCalc" class="modal hidden fixed inset-0 items-center justify-center z-50">
   <div class="bg-white p-6 rounded shadow-lg w-96 max-w-full flex flex-col gap-4">
     <button class="modal-close self-end" data-modal-close="modalCalc">✖</button>
@@ -320,18 +318,17 @@
   </div>
 </div>
 
-  <div id="emptyGroupMessage"
+<div id="emptyGroupMessage"
      style="display:none; padding:1.5rem; text-align:center; font-size:1.1rem; color:#555;">
-  🔰 <strong>Crea el teu primer grup d’avaluació</strong><br>
-  Prem el botó <strong>+</strong> per afegir un grup (per exemple, “1r trimestre”)
+  🔰 <strong>Crea el teu primer grup d'avaluació</strong><br>
+  Prem el botó <strong>+</strong> per afegir un grup (per exemple, "1r trimestre")
 </div>
 
-
-  <!-- SCRIPT PRINCIPAL -->
-  <script type="module" src="./app.js"></script>
-  <!-- Script de Classroom DESPUÉS de app.js -->
+<!-- SCRIPTS PRINCIPALES -->
+<!-- Primero cargar app.js -->
+<script type="module" src="./app.js"></script>
+<!-- Después cargar classroom-ui.js que depende de app.js -->
 <script type="module" src="./classroom-ui.js"></script>
-
 
 </body>
 </html>
