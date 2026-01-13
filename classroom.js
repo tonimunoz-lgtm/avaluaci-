@@ -8,57 +8,38 @@ const CLASSROOM_DISCOVERY_DOCS = [
 let classroomAccessToken = null;
 
 // Inicializar autenticación con Google usando Google Sign-In
-export async function initClassroomAPI() {
+export function initClassroomAPI() {
   return new Promise((resolve, reject) => {
-    console.log('📚 Inicializando Classroom API...');
+    console.log('📚 Inicializando Classroom API con GIS...');
 
     try {
-      // Si ya tenemos token de sesión anterior, lo ignoramos para forzar permisos nuevos
-      if (window._googleAccessToken) {
-        window._googleAccessToken = null;
-        classroomAccessToken = null;
-      }
-
-      // Cargar gapi y auth2
-      gapi.load('auth2', async () => {
-        try {
-          const auth2 = await gapi.auth2.init({
-            client_id: CLASSROOM_CLIENT_ID,
-            scope: [
-              "https://www.googleapis.com/auth/classroom.courses.readonly",
-              "https://www.googleapis.com/auth/classroom.rosters.readonly",
-              "https://www.googleapis.com/auth/classroom.coursework.me.readonly",
-              "https://www.googleapis.com/auth/classroom.coursework.students",
-              "https://www.googleapis.com/auth/classroom.student-submissions.students.readonly"
-            ].join(' ')
-          });
-
-          // Si ya está autenticado, cerrar sesión para refrescar scopes
-          if (auth2.isSignedIn.get()) {
-            console.log('🔄 Sesión existente detectada, cerrando sesión para actualizar permisos...');
-            await auth2.signOut();
+      // Crear el cliente de OAuth2
+      const client = google.accounts.oauth2.initTokenClient({
+        client_id: "324570393360-2ib4925pbobfbggu8t0nnj14q5n414nv.apps.googleusercontent.com",
+        scope: [
+          "https://www.googleapis.com/auth/classroom.courses.readonly",
+          "https://www.googleapis.com/auth/classroom.rosters.readonly",
+          "https://www.googleapis.com/auth/classroom.coursework.me.readonly",
+          "https://www.googleapis.com/auth/classroom.coursework.students",
+          "https://www.googleapis.com/auth/classroom.student-submissions.students.readonly"
+        ].join(' '),
+        callback: (tokenResponse) => {
+          if (tokenResponse && tokenResponse.access_token) {
+            classroomAccessToken = tokenResponse.access_token;
+            window._googleAccessToken = classroomAccessToken;
+            console.log('✅ Token obtenido con éxito');
+            resolve(true);
+          } else {
+            reject(new Error('No se obtuvo token de Google Classroom'));
           }
-
-          // Solicitar login y permisos nuevos
-          console.log('🔐 Solicitando login y permisos de Google Classroom...');
-          const user = await auth2.signIn();
-          const authResponse = user.getAuthResponse();
-
-          // Guardar token
-          classroomAccessToken = authResponse.access_token || authResponse.id_token;
-          window._googleAccessToken = classroomAccessToken;
-
-          console.log('✅ Login y permisos concedidos con éxito');
-          resolve(true);
-
-        } catch (err) {
-          console.error('❌ Error en auth2.init:', err);
-          reject(err);
         }
       });
 
+      // Solicitar token al usuario
+      client.requestAccessToken();
+
     } catch (err) {
-      console.error('❌ Error inicializando Classroom API:', err);
+      console.error('❌ Error inicializando Google Classroom:', err);
       reject(err);
     }
   });
