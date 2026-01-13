@@ -307,3 +307,9 @@ button:hover { transform: scale(1.03); }
   transform: scale(1.03);
 }
 
+/* Mínim marge entre botons i targetes de classes */
+#btnCreateClass,
+#btnDeleteMode,
+#btnClassroomImport {
+  margin-bottom: 1.5rem;
+}
