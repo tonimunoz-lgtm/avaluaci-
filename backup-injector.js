@@ -1,20 +1,19 @@
 // backup-injector.js - Sistema de Backup Automático (Inyector)
-// Se ejecuta automáticamente sin modificar archivos existentes
+// Funciona en index.html Y en administrador.html
 
-console.log('✅ backup-injector.js cargado - Sistema de Backup Automático');
+console.log('✅ backup-injector.js cargado');
 
 // ============================================================
 // CONFIGURACIÓN
 // ============================================================
 
 const BACKUP_CONFIG = {
-  BACKUP_INTERVAL: 24 * 60 * 60 * 1000, // 24 horas
-  MAX_BACKUPS: 30,
-  STORAGE_BUCKET: 'gestornotes-cc6d0.firebasestorage.app'
+  BACKUP_INTERVAL: 24 * 60 * 60 * 1000,
+  MAX_BACKUPS: 30
 };
 
 // ============================================================
-// 1. SISTEMA DE LOGS
+// SISTEMA DE LOGS
 // ============================================================
 
 async function logChange(action, data) {
@@ -32,8 +31,7 @@ async function logChange(action, data) {
       resourceType: data.resourceType,
       resourceId: data.resourceId,
       resourceName: data.resourceName,
-      details: data.details || {},
-      userAgent: navigator.userAgent
+      details: data.details || {}
     });
 
     console.log('📝 Log registrado:', action);
@@ -43,15 +41,13 @@ async function logChange(action, data) {
 }
 
 // ============================================================
-// 2. EXPORTAR DATOS
+// EXPORTAR DATOS
 // ============================================================
 
 async function exportAllClassData(classId) {
   try {
     const db = window.firebase?.firestore?.();
     if (!db) throw new Error('Firebase no disponible');
-
-    console.log('📦 Exportando clase:', classId);
 
     const classDoc = await db.collection('classes').doc(classId).get();
     if (!classDoc.exists) throw new Error('Clase no encontrada');
@@ -71,10 +67,7 @@ async function exportAllClassData(classId) {
       for (const actId of classData.activitats) {
         const actDoc = await db.collection('activitats').doc(actId).get();
         if (actDoc.exists) {
-          backup.activities[actId] = {
-            id: actId,
-            ...actDoc.data()
-          };
+          backup.activities[actId] = { id: actId, ...actDoc.data() };
         }
       }
     }
@@ -83,10 +76,7 @@ async function exportAllClassData(classId) {
       for (const stuId of classData.alumnes) {
         const stuDoc = await db.collection('alumnes').doc(stuId).get();
         if (stuDoc.exists) {
-          backup.students[stuId] = {
-            id: stuId,
-            ...stuDoc.data()
-          };
+          backup.students[stuId] = { id: stuId, ...stuDoc.data() };
         }
       }
     }
@@ -103,7 +93,7 @@ async function exportAllClassData(classId) {
 }
 
 // ============================================================
-// 3. GUARDAR BACKUP A STORAGE
+// GUARDAR BACKUP A STORAGE
 // ============================================================
 
 async function saveBackupToStorage(classId, backupData) {
@@ -119,8 +109,6 @@ async function saveBackupToStorage(classId, backupData) {
 
     await backupRef.put(blob);
 
-    console.log('✅ Backup guardado en Storage:', fileName);
-
     const db = window.firebase?.firestore?.();
     const backupRecord = {
       classId: classId,
@@ -135,7 +123,6 @@ async function saveBackupToStorage(classId, backupData) {
     };
 
     await db.collection('backups').add(backupRecord);
-
     await cleanOldBackups(classId);
 
     return fileName;
@@ -146,7 +133,7 @@ async function saveBackupToStorage(classId, backupData) {
 }
 
 // ============================================================
-// 4. LIMPIAR BACKUPS ANTIGUOS
+// LIMPIAR BACKUPS ANTIGUOS
 // ============================================================
 
 async function cleanOldBackups(classId) {
@@ -172,21 +159,19 @@ async function cleanOldBackups(classId) {
           const fileRef = storage.ref(backupData.fileName);
           await fileRef.delete();
         } catch (err) {
-          console.warn('No se pudo eliminar archivo de Storage:', err);
+          console.warn('No se pudo eliminar archivo:', err);
         }
 
         await db.collection('backups').doc(doc.id).delete();
       }
-
-      console.log(`🗑️ Eliminados ${toDelete.length} backups antiguos`);
     }
   } catch (err) {
-    console.error('Error limpiando backups antiguos:', err);
+    console.error('Error limpiando backups:', err);
   }
 }
 
 // ============================================================
-// 5. BACKUP AUTOMÁTICO
+// BACKUP AUTOMÁTICO
 // ============================================================
 
 function setupAutoBackup() {
@@ -194,8 +179,6 @@ function setupAutoBackup() {
     setTimeout(setupAutoBackup, 1000);
     return;
   }
-
-  console.log('⏰ Configurando backups automáticos (cada 24 horas)');
 
   setInterval(async () => {
     await performDailyBackup();
@@ -208,8 +191,6 @@ async function performDailyBackup() {
   try {
     const db = window.firebase?.firestore?.();
     if (!db || !window.professorUID) return;
-
-    console.log('🔄 Iniciando backup diario automático...');
 
     const classesDoc = await db.collection('professors').doc(window.professorUID).get();
     if (!classesDoc.exists) return;
@@ -231,18 +212,16 @@ async function performDailyBackup() {
           }
         });
       } catch (err) {
-        console.error(`Error haciendo backup de clase ${classId}:`, err);
+        console.error(`Error backup ${classId}:`, err);
       }
     }
-
-    console.log('✅ Backup diario completado');
   } catch (err) {
-    console.error('Error en backup diario:', err);
+    console.error('Error backup diario:', err);
   }
 }
 
 // ============================================================
-// 6. LISTAR BACKUPS
+// LISTAR BACKUPS
 // ============================================================
 
 async function listBackupsForClass(classId) {
@@ -268,7 +247,7 @@ async function listBackupsForClass(classId) {
 }
 
 // ============================================================
-// 7. RESTAURAR DESDE BACKUP
+// RESTAURAR DESDE BACKUP
 // ============================================================
 
 async function restoreFromBackup(backupId, classId) {
@@ -277,24 +256,18 @@ async function restoreFromBackup(backupId, classId) {
     const storage = window.firebase?.storage?.();
     if (!db || !storage) throw new Error('Firebase no disponible');
 
-    console.log('📥 Iniciando restauración desde backup:', backupId);
-
     const backupDoc = await db.collection('backups').doc(backupId).get();
     if (!backupDoc.exists) throw new Error('Backup no encontrado');
 
     const backupInfo = backupDoc.data();
-    const fileName = backupInfo.fileName;
-
-    const fileRef = storage.ref(fileName);
+    const fileRef = storage.ref(backupInfo.fileName);
     const url = await fileRef.getDownloadURL();
     const response = await fetch(url);
     const backupData = await response.json();
 
-    if (!confirm(`¿Estás seguro de que quieres restaurar ${backupInfo.className} desde ${new Date(backupInfo.timestamp.toDate()).toLocaleString()}?\n\nEsto SOBRESCRIBIRÁ todos los datos actuales.`)) {
+    if (!confirm(`¿Restaurar ${backupInfo.className} desde ${new Date(backupInfo.timestamp.toDate()).toLocaleString()}?`)) {
       return false;
     }
-
-    console.log('⏳ Restaurando datos...');
 
     await db.collection('classes').doc(classId).update(backupData.class);
 
@@ -318,21 +291,19 @@ async function restoreFromBackup(backupId, classId) {
       }
     });
 
-    console.log('✅ Restauración completada');
-    alert('✅ Datos restaurados correctamente. La página se recargará.');
-    
+    alert('✅ Datos restaurados. La página se recargará.');
     setTimeout(() => location.reload(), 1000);
     return true;
 
   } catch (err) {
-    console.error('Error restaurando backup:', err);
-    alert('❌ Error restaurando backup: ' + err.message);
+    console.error('Error restaurando:', err);
+    alert('❌ Error: ' + err.message);
     return false;
   }
 }
 
 // ============================================================
-// 8. HISTORIAL DE CAMBIOS
+// HISTORIAL DE CAMBIOS
 // ============================================================
 
 async function getChangeHistory(resourceId, limit = 50) {
@@ -352,52 +323,54 @@ async function getChangeHistory(resourceId, limit = 50) {
       timestamp: doc.data().timestamp.toDate()
     }));
   } catch (err) {
-    console.error('Error obteniendo historial:', err);
+    console.error('Error historial:', err);
     return [];
   }
 }
 
 // ============================================================
-// 9. INYECTAR BOTÓN EN MENÚ DE USUARIO
+// DETECTAR SI ESTAMOS EN ADMIN O USUARIO
 // ============================================================
 
-function injectBackupButton() {
+function isAdminPage() {
+  return window.location.pathname.includes('administrador') || document.body.classList.contains('admin-page');
+}
+
+// ============================================================
+// INYECTAR EN PÁGINA DE USUARIO (index.html)
+// ============================================================
+
+function injectBackupButtonUserPage() {
   const userMenu = document.getElementById('userMenu');
   if (!userMenu) {
-    setTimeout(injectBackupButton, 500);
+    setTimeout(injectBackupButtonUserPage, 500);
     return;
   }
 
-  // Verificar si el usuario es admin
   checkIfAdmin().then(isAdmin => {
     if (!isAdmin) {
-      console.log('👤 Usuario no es admin - Botón de backup no visible');
+      console.log('👤 No es admin');
       return;
     }
 
-    // Verificar si el botón ya existe
-    if (userMenu.querySelector('.backup-btn')) {
-      return;
-    }
+    if (userMenu.querySelector('.backup-btn')) return;
 
-    console.log('✅ Usuario es admin - Inyectando botón de backup');
-
-    // Crear botón
     const backupBtn = document.createElement('button');
-    backupBtn.className = 'backup-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2';
+    backupBtn.className = 'backup-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700';
     backupBtn.innerHTML = '📦 Backups';
     backupBtn.addEventListener('click', () => {
       openBackupModal();
       userMenu.classList.add('hidden');
     });
 
-    // Insertar antes del último elemento (que suele ser logout)
     const children = Array.from(userMenu.children);
     if (children.length > 0) {
       userMenu.insertBefore(backupBtn, children[children.length - 1]);
     } else {
       userMenu.appendChild(backupBtn);
     }
+
+    console.log('✅ Botón de backup inyectado en usuario');
   });
 }
 
@@ -409,19 +382,16 @@ async function checkIfAdmin() {
     const userDoc = await db.collection('professors').doc(window.professorUID).get();
     return userDoc.exists && userDoc.data().isAdmin === true;
   } catch (err) {
-    console.error('Error verificando admin:', err);
     return false;
   }
 }
 
 // ============================================================
-// 10. CREAR MODAL DE BACKUP
+// CREAR MODAL
 // ============================================================
 
 function createBackupModal() {
-  if (document.getElementById('modalBackupInjected')) {
-    return;
-  }
+  if (document.getElementById('modalBackupInjected')) return;
 
   const modal = document.createElement('div');
   modal.id = 'modalBackupInjected';
@@ -431,22 +401,19 @@ function createBackupModal() {
       
       <div class="flex justify-between items-center mb-4">
         <h2 class="text-2xl font-bold text-gray-900 dark:text-white">📦 Backup y Restauración</h2>
-        <button onclick="closeBackupModal()" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-2xl">×</button>
+        <button onclick="closeBackupModal()" class="text-gray-500 hover:text-gray-700 text-2xl">×</button>
       </div>
 
       <div id="backupTab" class="space-y-4">
-        <div class="bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 rounded p-4">
-          <p class="text-sm text-blue-900 dark:text-blue-100">
-            <strong>💡 Información:</strong> Los backups se crean automáticamente cada 24 horas. 
-            Puedes restaurar cualquiera para recuperar datos anteriores.
-          </p>
+        <div class="bg-blue-50 border border-blue-200 rounded p-4">
+          <p class="text-sm text-blue-900"><strong>💡</strong> Los backups se crean cada 24 horas automáticamente.</p>
         </div>
 
         <div class="space-y-2">
-          <h3 class="font-semibold text-gray-900 dark:text-white">Backups disponibles para esta clase:</h3>
+          <h3 class="font-semibold text-gray-900 dark:text-white">Backups disponibles:</h3>
           
           <div id="backupsList" class="space-y-2 max-h-64 overflow-y-auto">
-            <div class="text-gray-500 text-center py-4">⏳ Cargando backups...</div>
+            <div class="text-gray-500 text-center py-4">⏳ Cargando...</div>
           </div>
         </div>
 
@@ -461,10 +428,10 @@ function createBackupModal() {
       </div>
 
       <div id="historyTab" class="space-y-4 hidden">
-        <h3 class="font-semibold text-gray-900 dark:text-white">Últimos cambios en esta clase:</h3>
+        <h3 class="font-semibold text-gray-900 dark:text-white">Últimos cambios:</h3>
         
         <div id="changeList" class="space-y-2 max-h-64 overflow-y-auto">
-          <div class="text-gray-500 text-center py-4">⏳ Cargando historial...</div>
+          <div class="text-gray-500 text-center py-4">⏳ Cargando...</div>
         </div>
 
         <button onclick="closeBackupModal()" class="w-full bg-gray-300 hover:bg-gray-400 text-black px-4 py-2 rounded font-semibold">
@@ -476,7 +443,7 @@ function createBackupModal() {
         <button onclick="switchBackupTab('backups')" id="tabBackupsBtn" class="flex-1 bg-blue-600 text-white px-3 py-2 rounded font-semibold">
           📦 Backups
         </button>
-        <button onclick="switchBackupTab('history')" id="tabHistoryBtn" class="flex-1 bg-gray-300 hover:bg-gray-400 text-black px-3 py-2 rounded font-semibold">
+        <button onclick="switchBackupTab('history')" id="tabHistoryBtn" class="flex-1 bg-gray-300 text-black px-3 py-2 rounded font-semibold">
           📋 Historial
         </button>
       </div>
@@ -484,11 +451,10 @@ function createBackupModal() {
   `;
 
   document.body.appendChild(modal);
-  console.log('✅ Modal de backup inyectado');
 }
 
 // ============================================================
-// 11. FUNCIONES UI
+// FUNCIONES UI
 // ============================================================
 
 function openBackupModal() {
@@ -496,7 +462,6 @@ function openBackupModal() {
   const modal = document.getElementById('modalBackupInjected');
   modal.classList.remove('hidden');
   modal.style.display = 'flex';
-
   loadBackupsUI();
 }
 
@@ -504,7 +469,6 @@ function closeBackupModal() {
   const modal = document.getElementById('modalBackupInjected');
   if (modal) {
     modal.classList.add('hidden');
-    modal.style.display = 'none';
   }
 }
 
@@ -543,7 +507,7 @@ async function loadBackupsUI() {
     const backups = await listBackupsForClass(window.currentClassId);
 
     if (backups.length === 0) {
-      backupsList.innerHTML = '<div class="text-gray-500 text-center py-4">No hay backups disponibles aún</div>';
+      backupsList.innerHTML = '<div class="text-gray-500 text-center py-4">No hay backups</div>';
       return;
     }
 
@@ -553,15 +517,15 @@ async function loadBackupsUI() {
       const sizeKB = (backup.fileSize / 1024).toFixed(2);
 
       const item = document.createElement('div');
-      item.className = 'bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded p-3 flex justify-between items-center';
+      item.className = 'bg-gray-50 border rounded p-3 flex justify-between items-center';
       item.innerHTML = `
         <div>
-          <p class="font-semibold text-gray-900 dark:text-white">${date}</p>
-          <p class="text-xs text-gray-600 dark:text-gray-400">
-            ${backup.itemCount.activities} actividades · ${backup.itemCount.students} alumnos · ${sizeKB} KB
+          <p class="font-semibold">${date}</p>
+          <p class="text-xs text-gray-600">
+            ${backup.itemCount.activities} acts · ${backup.itemCount.students} alumnos · ${sizeKB} KB
           </p>
         </div>
-        <button onclick="restoreBackupUI('${backup.id}')" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm font-semibold">
+        <button onclick="restoreBackupUI('${backup.id}')" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm">
           Restaurar
         </button>
       `;
@@ -583,25 +547,20 @@ async function loadHistoryUI() {
     const changes = await getChangeHistory(window.currentClassId, 20);
 
     if (changes.length === 0) {
-      changeList.innerHTML = '<div class="text-gray-500 text-center py-4">No hay cambios registrados</div>';
+      changeList.innerHTML = '<div class="text-gray-500 text-center py-4">Sin cambios</div>';
       return;
     }
 
     changeList.innerHTML = '';
     changes.forEach(change => {
       const date = new Date(change.timestamp).toLocaleString();
-      const actionEmoji = getActionEmoji(change.action);
 
       const item = document.createElement('div');
-      item.className = 'bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded p-3';
+      item.className = 'bg-gray-50 border rounded p-3';
       item.innerHTML = `
-        <p class="font-semibold text-gray-900 dark:text-white">
-          ${actionEmoji} ${change.action.replace(/_/g, ' ').toUpperCase()}
-        </p>
-        <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">${date}</p>
-        <p class="text-sm text-gray-700 dark:text-gray-300 mt-1">
-          ${change.resourceName || change.resourceId}
-        </p>
+        <p class="font-semibold text-gray-900">${change.action.replace(/_/g, ' ').toUpperCase()}</p>
+        <p class="text-xs text-gray-600 mt-1">${date}</p>
+        <p class="text-sm text-gray-700 mt-1">${change.resourceName || change.resourceId}</p>
       `;
       changeList.appendChild(item);
     });
@@ -616,16 +575,15 @@ async function createManualBackupBtn() {
 
   const btn = event.target;
   btn.disabled = true;
-  btn.textContent = '⏳ Creando backup...';
+  btn.textContent = '⏳ Creando...';
 
   try {
     const backupData = await exportAllClassData(window.currentClassId);
     await saveBackupToStorage(window.currentClassId, backupData);
-
-    alert('✅ Backup creado correctamente');
+    alert('✅ Backup creado');
     await loadBackupsUI();
   } catch (err) {
-    alert('❌ Error creando backup: ' + err.message);
+    alert('❌ Error: ' + err.message);
   } finally {
     btn.disabled = false;
     btn.textContent = '💾 Crear Backup Ahora';
@@ -634,49 +592,28 @@ async function createManualBackupBtn() {
 
 async function restoreBackupUI(backupId) {
   if (!window.currentClassId) return;
-
-  const result = await restoreFromBackup(backupId, window.currentClassId);
-  
-  if (result) {
-    closeBackupModal();
-  }
-}
-
-function getActionEmoji(action) {
-  const emojis = {
-    'auto_backup_created': '💾',
-    'backup_restored': '📥',
-    'create_class': '📚',
-    'delete_note': '🗑️',
-    'edit_activity': '✏️',
-    'add_student': '👤',
-    'delete_student': '❌'
-  };
-  return emojis[action] || '📋';
+  await restoreFromBackup(backupId, window.currentClassId);
 }
 
 // ============================================================
-// 12. INICIALIZACIÓN
+// INICIALIZACIÓN
 // ============================================================
 
 document.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
-    injectBackupButton();
+    if (!isAdminPage()) {
+      // Página de usuario
+      injectBackupButtonUserPage();
+    }
     setupAutoBackup();
   }, 2000);
 });
 
-// Exportar funciones globales
+// Exportar globales
 window.BackupSystemInjector = {
   openBackupModal,
   closeBackupModal,
-  switchBackupTab,
-  loadBackupsUI,
-  loadHistoryUI,
-  createManualBackupBtn,
-  restoreBackupUI,
-  getActionEmoji,
-  checkIfAdmin
+  switchBackupTab
 };
 
-console.log('🎓 Sistema de Backup Injector - Listo');
+console.log('🎓 Backup Injector - Listo');
