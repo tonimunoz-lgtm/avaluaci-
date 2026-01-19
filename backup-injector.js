@@ -376,11 +376,8 @@ function injectBackupButtonUserPage() {
 
 async function checkIfAdmin() {
   try {
-    const db = window.firebase?.firestore?.();
-    if (!db || !window.professorUID) return false;
-
-    const userDoc = await db.collection('professors').doc(window.professorUID).get();
-    return userDoc.exists && userDoc.data().isAdmin === true;
+     const userDoc = await db.collection('professors').doc(user.uid).get();
+  if (userDoc.exists && userDoc.data().isAdmin) return true;
   } catch (err) {
     return false;
   }
