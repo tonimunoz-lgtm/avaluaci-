@@ -330,14 +330,15 @@ async function saveCompetencyNote(studentId, activityId, value) {
 
     console.log(`💾 Guardando nota competencial - Alumno: ${studentId}, Actividad: ${activityId}, Valor: ${value}`);
 
+    // 🔥 CORRECCIÓN: Cambiar 'notes' por 'competencyNotes' para evitar conflicto
     const updateObj = {};
     if (value === '') {
-      updateObj[`notes.${activityId}`] = window.firebase.firestore.FieldValue.delete();
+      updateObj[`competencyNotes.${activityId}`] = window.firebase.firestore.FieldValue.delete();
     } else {
-      updateObj[`notes.${activityId}`] = value;
+      updateObj[`competencyNotes.${activityId}`] = value;
     }
 
-    const result = await db.collection('alumnes').doc(studentId).update(updateObj);
+    await db.collection('alumnes').doc(studentId).update(updateObj);
     console.log('✅ Nota competencial guardada correctamente:', value);
     
   } catch (err) {
@@ -347,10 +348,11 @@ async function saveCompetencyNote(studentId, activityId, value) {
 }
 
 // ============================================================
-// EXCLUIR COMPETENCIALES DE CALCULADORA
+// PROBLEMA 2: Actividades competenciales aparecen en calculadora
+// SOLUCIÓN: Cargar el tipo de evaluación antes de mostrar botones
 // ============================================================
 
-// Hook original de buildFormulaButtons
+// Hook original de buildFormulaButtons - ANTES DE FILTRAR
 const originalBuildFormulaButtons = window.buildFormulaButtons;
 
 window.buildFormulaButtons = async function() {
@@ -368,15 +370,8 @@ async function filterCompetencyFromFormula() {
     const db = window.firebase?.firestore?.();
     if (!db) return;
 
-    // Seleccionar botones sin filtrar Y selectores competenciales
+    // Seleccionar botones de actividades
     const buttons = document.querySelectorAll('.activity-buttons-container button[type="button"]');
-    const competencySelects = document.querySelectorAll('select[data-isCompetency="true"]');
-
-    // Obtener IDs de actividades competenciales
-    const competencyIds = new Set();
-    for (const select of competencySelects) {
-      competencyIds.add(select.dataset.activityId);
-    }
 
     for (const btn of buttons) {
       if (btn.dataset.filtered === 'true') continue;
@@ -389,6 +384,7 @@ async function filterCompetencyFromFormula() {
       }
 
       try {
+        // 🔥 MEJORA: Buscar por nombre exacto
         const snapshot = await db.collection('activitats')
           .where('nom', '==', actName)
           .limit(1)
@@ -396,9 +392,9 @@ async function filterCompetencyFromFormula() {
 
         if (!snapshot.empty) {
           const activity = snapshot.docs[0].data();
-          const actId = snapshot.docs[0].id;
           
-          if (activity.isCompetency || activity.evaluationType === 'competency' || competencyIds.has(actId)) {
+          // 🔥 CORRECCIÓN: Verificar evaluationType correctamente
+          if (activity.evaluationType === 'competency' || activity.isCompetency) {
             // Deshabilitar botón
             btn.style.opacity = '0.4';
             btn.style.cursor = 'not-allowed';
@@ -433,4 +429,97 @@ window.buildRoundingButtons = async function() {
   await filterCompetencyFromFormula();
 };
 
-console.log('🎓 Sistema de Evaluación Competencial - Listo');
+// ============================================================
+// MEJORA ADICIONAL: Verificar competencias al cargar notas
+// ============================================================
+
+// Actualizar parchCompetencyInputs para cargar competencyNotes
+async function patchCompetencyInputs() {
+  const inputs = document.querySelectorAll('input[type="number"][data-activity-id]:not([data-patched="true"])');
+  
+  if (inputs.length === 0) return;
+
+  console.log(`🔧 Parchando ${inputs.length} inputs...`);
+
+  for (const input of inputs) {
+    // Marcar ANTES de procesar
+    input.dataset.patched = 'true';
+
+    const activityId = input.dataset.activityId;
+    const studentId = input.closest('tr')?.dataset.studentId;
+
+    if (!activityId || !studentId) continue;
+
+    try {
+      const db = window.firebase?.firestore?.();
+      if (!db) continue;
+
+      // Obtener actividad
+      const actDoc = await db.collection('activitats').doc(activityId).get();
+      if (!actDoc.exists) continue;
+
+      const activity = actDoc.data();
+
+      // Si es competencial, reemplazar
+      if (activity.isCompetency || activity.evaluationType === 'competency') {
+        // Verificar que el input aún existe en el DOM
+        if (input.parentNode) {
+          // 🔥 Cargar competencyNotes en lugar de notes
+          const studentDoc = await db.collection('alumnes').doc(studentId).get();
+          const competencyValue = studentDoc.exists ? 
+            (studentDoc.data().competencyNotes?.[activityId] || '') : '';
+          
+          replaceWithCompetencySelect(input, studentId, activityId, competencyValue);
+        }
+      }
+    } catch (err) {
+      console.error('Error verificando actividad:', err);
+    }
+  }
+}
+
+// 🔥 ACTUALIZAR replaceWithCompetencySelect para aceptar valor inicial
+function replaceWithCompetencySelect(inputElement, studentId, activityId, initialValue = '') {
+  // Verificar que el elemento sigue en el DOM
+  if (!inputElement.parentNode) {
+    console.warn('⚠️ Elemento ya no existe en el DOM');
+    return;
+  }
+
+  const select = document.createElement('select');
+  select.className = 'competency-select border rounded px-2 py-1 w-full text-center font-semibold';
+  select.style.minHeight = '38px';
+  select.dataset.activityId = activityId;
+  select.dataset.studentId = studentId;
+  select.dataset.isCompetency = 'true';
+
+  select.innerHTML = `
+    <option value="" style="background-color: white; color: black;">-</option>
+    <option value="NA" style="background-color: ${COMPETENCY_COLORS['NA']}; color: white;">NA</option>
+    <option value="AS" style="background-color: ${COMPETENCY_COLORS['AS']}; color: white;">AS</option>
+    <option value="AN" style="background-color: ${COMPETENCY_COLORS['AN']}; color: black;">AN</option>
+    <option value="AE" style="background-color: ${COMPETENCY_COLORS['AE']}; color: white;">AE</option>
+  `;
+
+  // 🔥 Usar initialValue si se proporciona, si no usar inputElement.value
+  const currentValue = initialValue || inputElement.value;
+  if (COMPETENCIES.includes(currentValue)) {
+    select.value = currentValue;
+  }
+
+  applyCompetencyColor(select);
+
+  select.addEventListener('change', async () => {
+    applyCompetencyColor(select);
+    await saveCompetencyNote(studentId, activityId, select.value);
+  });
+
+  try {
+    inputElement.parentNode.replaceChild(select, inputElement);
+    console.log('✅ Input reemplazado por selector competencial');
+  } catch (err) {
+    console.error('Error al reemplazar elemento:', err);
+  }
+}
+
+console.log('🎓 Sistema de Evaluación Competencial - Corregido');
