@@ -1,5 +1,5 @@
 // backup-injector.js - Sistema de Backup Automático (INYECTOR)
-// PARTE 1 / 6
+// Versión robusta y funcional
 console.log('✅ backup-injector.js cargado');
 
 const BACKUP_CONFIG = {
@@ -7,6 +7,9 @@ const BACKUP_CONFIG = {
   MAX_BACKUPS: 30
 };
 
+// ============================================================
+// HELPERS FIREBASE
+// ============================================================
 function getDB(){ return window.firebase?.firestore?.(); }
 function getUser(){ return window.firebase?.auth?.().currentUser; }
 function getStorage() {
@@ -17,7 +20,8 @@ function getStorage() {
   return window.firebase.storage();
 }
 
-// Hook openClass sin tocar app.js
+// ============================================================
+// HOOK OPENCLASS (para no tocar app.js)
 (function hookOpenClass(){
   const tryHook = () => {
     if (window.openClass && !window._openClassHooked) {
@@ -33,9 +37,7 @@ function getStorage() {
   tryHook();
 })();
 
-function getCurrentClassId(){
-  return window.currentClassId || null;
-}
+function getCurrentClassId(){ return window.currentClassId || null; }
 
 async function checkIfAdmin(){
   try{
@@ -46,81 +48,96 @@ async function checkIfAdmin(){
     return doc.exists && doc.data().isAdmin === true;
   }catch{ return false; }
 }
-// backup-injector.js - PARTE 2 / 6
+
+// ============================================================
+// LOGS
+// ============================================================
+async function logChange(action, data){
+  try{
+    const db = getDB();
+    const user = getUser();
+    if(!db || !user) return;
+
+    await db.collection('logs').add({
+      timestamp: firebase.firestore.Timestamp.now(),
+      professorId: user.uid,
+      action,
+      resourceType: data.resourceType,
+      resourceId: data.resourceId,
+      resourceName: data.resourceName,
+      details: data.details || {}
+    });
+    console.log('📝 Log registrado:', action);
+  } catch(err){
+    console.error('Error registrando log:', err);
+  }
+}
+
 // ============================================================
 // EXPORTAR DATOS
 // ============================================================
-
-async function exportAllClassData(classId) {
-  try {
+async function exportAllClassData(classId){
+  try{
     const db = getDB();
-    if (!db) throw new Error('Firestore no disponible');
+    if(!db) throw new Error('Firestore no disponible');
 
     const classDoc = await db.collection('classes').doc(classId).get();
-    if (!classDoc.exists) throw new Error('Clase no encontrada');
+    if(!classDoc.exists) throw new Error('Clase no encontrada');
 
     const classData = classDoc.data();
     const backup = {
       version: '1.0',
       exportDate: new Date().toISOString(),
-      classId: classId,
+      classId,
       class: classData,
       activities: {},
       students: {},
-      terms: {}
+      terms: classData.terms || {}
     };
 
-    if (classData.activitats && classData.activitats.length > 0) {
-      for (const actId of classData.activitats) {
+    // Actividades
+    if(classData.activitats?.length){
+      for(const actId of classData.activitats){
         const actDoc = await db.collection('activitats').doc(actId).get();
-        if (actDoc.exists) {
-          backup.activities[actId] = { id: actId, ...actDoc.data() };
-        }
+        if(actDoc.exists) backup.activities[actId] = { id: actId, ...actDoc.data() };
       }
     }
 
-    if (classData.alumnes && classData.alumnes.length > 0) {
-      for (const stuId of classData.alumnes) {
+    // Alumnos
+    if(classData.alumnes?.length){
+      for(const stuId of classData.alumnes){
         const stuDoc = await db.collection('alumnes').doc(stuId).get();
-        if (stuDoc.exists) {
-          backup.students[stuId] = { id: stuId, ...stuDoc.data() };
-        }
+        if(stuDoc.exists) backup.students[stuId] = { id: stuId, ...stuDoc.data() };
       }
-    }
-
-    if (classData.terms) {
-      backup.terms = classData.terms;
     }
 
     return backup;
-  } catch (err) {
+  }catch(err){
     console.error('Error exportando datos:', err);
     throw err;
   }
 }
 
 // ============================================================
-// GUARDAR BACKUP A STORAGE
+// GUARDAR BACKUP
 // ============================================================
-
-async function saveBackupToStorage(classId, backupData) {
-  try {
-    const storage = window.firebase?.storage?.();
-    if (!storage) throw new Error('Storage no disponible');
+async function saveBackupToStorage(classId, backupData){
+  try{
+    const storage = getStorage();
+    const db = getDB();
+    if(!storage) throw new Error('Storage no disponible');
+    if(!db) throw new Error('Firestore no disponible');
 
     const fileName = `backups/${classId}/backup_${new Date().toISOString().split('T')[0]}_${Date.now()}.json`;
     const backupRef = storage.ref(fileName);
 
-    const jsonString = JSON.stringify(backupData);
-    const blob = new Blob([jsonString], { type: 'application/json' });
-
+    const blob = new Blob([JSON.stringify(backupData)], {type:'application/json'});
     await backupRef.put(blob);
 
-    const db = getDB();
     const backupRecord = {
-      classId: classId,
+      classId,
       className: backupData.class.nom,
-      fileName: fileName,
+      fileName,
       fileSize: blob.size,
       timestamp: firebase.firestore.Timestamp.now(),
       itemCount: {
@@ -133,7 +150,7 @@ async function saveBackupToStorage(classId, backupData) {
     await cleanOldBackups(classId);
 
     return fileName;
-  } catch (err) {
+  } catch(err){
     console.error('Error guardando backup:', err);
     throw err;
   }
@@ -142,88 +159,63 @@ async function saveBackupToStorage(classId, backupData) {
 // ============================================================
 // LIMPIAR BACKUPS ANTIGUOS
 // ============================================================
-
-async function cleanOldBackups(classId) {
-  try {
+async function cleanOldBackups(classId){
+  try{
     const db = getDB();
-    if (!db) return;
+    if(!db) return;
 
     const snapshot = await db.collection('backups')
-      .where('classId', '==', classId)
-      .orderBy('timestamp', 'desc')
+      .where('classId','==',classId)
+      .orderBy('timestamp','desc')
       .get();
 
     const backups = snapshot.docs;
-
-    if (backups.length > BACKUP_CONFIG.MAX_BACKUPS) {
+    if(backups.length > BACKUP_CONFIG.MAX_BACKUPS){
       const toDelete = backups.slice(BACKUP_CONFIG.MAX_BACKUPS);
+      const storage = getStorage();
 
-      for (const doc of toDelete) {
-        const backupData = doc.data();
-
-        try {
-          const storage = window.firebase?.storage?.();
-          const fileRef = storage.ref(backupData.fileName);
-          await fileRef.delete();
-        } catch (err) {
-          console.warn('No se pudo eliminar archivo:', err);
-        }
-
+      for(const doc of toDelete){
+        const data = doc.data();
+        try{ await storage.ref(data.fileName).delete(); }catch(e){console.warn('No se pudo eliminar archivo:', e);}
         await db.collection('backups').doc(doc.id).delete();
       }
     }
-  } catch (err) {
-    console.error('Error limpiando backups:', err);
-  }
+  }catch(err){ console.error('Error limpiando backups:', err);}
 }
 
 // ============================================================
 // BACKUP AUTOMÁTICO
 // ============================================================
-
-function setupAutoBackup() {
-  if (!getUser()) {
+function setupAutoBackup(){
+  if(!getUser()){
     setTimeout(setupAutoBackup, 1000);
     return;
   }
 
-  setInterval(async () => {
-    await performDailyBackup();
-  }, BACKUP_CONFIG.BACKUP_INTERVAL);
-
+  setInterval(async()=>{ await performDailyBackup(); }, BACKUP_CONFIG.BACKUP_INTERVAL);
   setTimeout(performDailyBackup, 5000);
 }
 
-async function performDailyBackup() {
-  try {
-    const db = getDB();
-    const user = getUser();
-    if (!db || !user) return;
+async function performDailyBackup(){
+  const db = getDB();
+  const user = getUser();
+  if(!db || !user) return;
 
-    const classesDoc = await db.collection('professors').doc(user.uid).get();
-    if (!classesDoc.exists) return;
+  try{
+    const profDoc = await db.collection('professors').doc(user.uid).get();
+    if(!profDoc.exists) return;
 
-    const classIds = classesDoc.data().classes || [];
-
-    for (const classId of classIds) {
-      try {
+    const classIds = profDoc.data().classes || [];
+    for(const classId of classIds){
+      try{
         const backupData = await exportAllClassData(classId);
         await saveBackupToStorage(classId, backupData);
-
-        await logChange('auto_backup_created', {
-          resourceType: 'class',
-          resourceId: classId,
-          resourceName: backupData.class.nom,
-          details: {
-            activities: Object.keys(backupData.activities).length,
-            students: Object.keys(backupData.students).length
-          }
-        });
-      } catch (err) {
+        await logChange('auto_backup_created', {resourceType:'class', resourceId:classId, resourceName:backupData.class.nom, details:{activities:Object.keys(backupData.activities).length, students:Object.keys(backupData.students).length}});
+      }catch(err){
         console.error(`Error backup ${classId}:`, err);
       }
     }
-  } catch (err) {
+  }catch(err){
     console.error('Error backup diario:', err);
   }
 }
