@@ -11,7 +11,12 @@ const COMPETENCY_COLORS = {
   'AE': '#22c55e'  // verde
 };
 
-let modalActivityNameElement = null;
+const COMPETENCY_NAMES = {
+  'NA': 'No Alcanzado',
+  'AS': 'En Adquisición',
+  'AN': 'Afianzado',
+  'AE': 'Ampliado Excelente'
+};
 
 // ============================================================
 // INTERCEPTAR CREACIÓN DE ACTIVIDADES
@@ -20,7 +25,6 @@ let modalActivityNameElement = null;
 document.addEventListener('DOMContentLoaded', () => {
   console.log('📚 Inicializando sistema competencial...');
   
-  // Esperar a que el botón esté disponible
   setTimeout(() => {
     patchActivityButton();
   }, 500);
@@ -202,27 +206,31 @@ async function createActivityWithType(name, evaluationType) {
 // MONITOREAR Y PARCHEAR INPUTS COMPETENCIALES
 // ============================================================
 
+const observerConfig = {
+  childList: true,
+  subtree: true,
+  attributes: false
+};
+
 const observer = new MutationObserver(() => {
-  patchCompetencyInputs();
+  setTimeout(patchCompetencyInputs, 100);
 });
 
 document.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
-    observer.observe(document.body, { 
-      childList: true, 
-      subtree: true,
-      attributes: false 
-    });
+    observer.observe(document.body, observerConfig);
+    console.log('👁️ Observer iniciado');
   }, 1000);
 });
 
 async function patchCompetencyInputs() {
-  const inputs = document.querySelectorAll('input[type="number"][data-activity-id]');
+  const inputs = document.querySelectorAll('input[type="number"][data-activity-id]:not([data-patched])');
   
-  for (const input of inputs) {
-    // Saltar si ya fue parchado
-    if (input.dataset.patched === 'true') continue;
+  if (inputs.length === 0) return;
 
+  console.log(`🔧 Parchando ${inputs.length} inputs...`);
+
+  for (const input of inputs) {
     const activityId = input.dataset.activityId;
     const studentId = input.closest('tr')?.dataset.studentId;
 
@@ -241,8 +249,9 @@ async function patchCompetencyInputs() {
       // Si es competencial, reemplazar
       if (activity.isCompetency || activity.evaluationType === 'competency') {
         replaceWithCompetencySelect(input, studentId, activityId);
-        input.dataset.patched = 'true';
       }
+
+      input.dataset.patched = 'true';
     } catch (err) {
       console.error('Error verificando actividad:', err);
     }
@@ -252,17 +261,18 @@ async function patchCompetencyInputs() {
 function replaceWithCompetencySelect(inputElement, studentId, activityId) {
   const select = document.createElement('select');
   select.className = 'competency-select border rounded px-2 py-1 w-full text-center font-semibold';
+  select.style.minHeight = '38px';
   select.dataset.activityId = activityId;
   select.dataset.studentId = studentId;
 
   const currentValue = inputElement.value;
 
   select.innerHTML = `
-    <option value="">-</option>
-    <option value="NA">NA</option>
-    <option value="AS">AS</option>
-    <option value="AN">AN</option>
-    <option value="AE">AE</option>
+    <option value="" style="background-color: white; color: black;">-</option>
+    <option value="NA" style="background-color: ${COMPETENCY_COLORS['NA']}; color: white;">NA - No Alcanzado</option>
+    <option value="AS" style="background-color: ${COMPETENCY_COLORS['AS']}; color: white;">AS - En Adquisición</option>
+    <option value="AN" style="background-color: ${COMPETENCY_COLORS['AN']}; color: black;">AN - Afianzado</option>
+    <option value="AE" style="background-color: ${COMPETENCY_COLORS['AE']}; color: white;">AE - Ampliado</option>
   `;
 
   if (COMPETENCIES.includes(currentValue)) {
@@ -276,15 +286,24 @@ function replaceWithCompetencySelect(inputElement, studentId, activityId) {
     await saveCompetencyNote(studentId, activityId, select.value);
   });
 
+  // Reemplazar
   inputElement.parentNode.replaceChild(select, inputElement);
   console.log('✅ Input reemplazado por selector competencial');
 }
 
 function applyCompetencyColor(select) {
   const value = select.value;
-  select.style.backgroundColor = COMPETENCY_COLORS[value] || '#ffffff';
-  select.style.color = (value === 'AN') ? '#000000' : '#ffffff';
+  
+  if (value === '') {
+    select.style.backgroundColor = '#ffffff';
+    select.style.color = '#000000';
+  } else {
+    select.style.backgroundColor = COMPETENCY_COLORS[value] || '#ffffff';
+    select.style.color = (value === 'AN') ? '#000000' : '#ffffff';
+  }
+  
   select.style.fontWeight = 'bold';
+  select.style.padding = '0.5rem';
 }
 
 async function saveCompetencyNote(studentId, activityId, value) {
@@ -296,13 +315,90 @@ async function saveCompetencyNote(studentId, activityId, value) {
     if (value === '') {
       updateObj[`notes.${activityId}`] = window.firebase.firestore.FieldValue.delete();
     } else {
+      // Guardar el valor competencial directamente (NA, AS, AN, AE)
       updateObj[`notes.${activityId}`] = value;
     }
 
     await db.collection('alumnes').doc(studentId).update(updateObj);
+    console.log('✅ Nota competencial guardada:', value);
   } catch (err) {
     console.error('Error guardando nota:', err);
   }
 }
+
+// ============================================================
+// EXCLUIR COMPETENCIALES DE CALCULADORA
+// ============================================================
+
+// Hook original de buildFormulaButtons
+const originalBuildFormulaButtons = window.buildFormulaButtons;
+
+window.buildFormulaButtons = async function() {
+  // Ejecutar original primero
+  if (originalBuildFormulaButtons) {
+    originalBuildFormulaButtons.call(this);
+  }
+
+  // Luego filtrar competenciales
+  await filterCompetencyFromFormula();
+};
+
+async function filterCompetencyFromFormula() {
+  try {
+    const db = window.firebase?.firestore?.();
+    if (!db) return;
+
+    const buttons = document.querySelectorAll('.activity-buttons-container button[type="button"]:not([data-filtered])');
+
+    for (const btn of buttons) {
+      // Extraer nombre de la actividad del botón
+      let actName = btn.textContent.trim();
+      
+      // Limpiar prefijos de términos si existen
+      if (actName.includes(']')) {
+        actName = actName.split(']')[1].trim();
+      }
+
+      try {
+        const snapshot = await db.collection('activitats')
+          .where('nom', '==', actName)
+          .limit(1)
+          .get();
+
+        if (!snapshot.empty) {
+          const activity = snapshot.docs[0].data();
+          
+          if (activity.isCompetency || activity.evaluationType === 'competency') {
+            // Deshabilitar botón
+            btn.style.opacity = '0.4';
+            btn.style.cursor = 'not-allowed';
+            btn.style.pointerEvents = 'none';
+            btn.title = '❌ No se puede usar en fórmulas (actividad competencial)';
+            btn.disabled = true;
+          }
+        }
+      } catch (err) {
+        console.error('Error filtrando:', err);
+      }
+
+      btn.dataset.filtered = 'true';
+    }
+
+    console.log('✅ Actividades competenciales excluidas de fórmulas');
+  } catch (err) {
+    console.error('Error en filterCompetencyFromFormula:', err);
+  }
+}
+
+// Hook para rounding buttons también
+const originalBuildRoundingButtons = window.buildRoundingButtons;
+
+window.buildRoundingButtons = async function() {
+  if (originalBuildRoundingButtons) {
+    originalBuildRoundingButtons.call(this);
+  }
+
+  await filterCompetencyFromFormula();
+};
 
 console.log('🎓 Sistema de Evaluación Competencial - Listo');
