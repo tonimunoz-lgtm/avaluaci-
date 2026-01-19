@@ -411,18 +411,20 @@ async function getCompetencyActivityIds() {
   }
 }
 
-// Hook original de buildFormulaButtons
-const originalBuildFormulaButtons = window.buildFormulaButtons;
+// 🔥 INTERCEPTAR buildActivityButtons ANTES de crear los botones
+const originalBuildActivityButtons = window.buildActivityButtons;
 
-window.buildFormulaButtons = async function() {
-  if (originalBuildFormulaButtons) {
-    originalBuildFormulaButtons.call(this);
+window.buildActivityButtons = async function() {
+  // Llamar al original
+  if (originalBuildActivityButtons) {
+    await originalBuildActivityButtons.call(this);
   }
 
-  await filterCompetencyFromFormula();
+  // LUEGO desabilitar los competenciales
+  await disableCompetencyButtons();
 };
 
-async function filterCompetencyFromFormula() {
+async function disableCompetencyButtons() {
   try {
     const db = window.firebase?.firestore?.();
     if (!db) return;
@@ -431,7 +433,7 @@ async function filterCompetencyFromFormula() {
     const buttons = document.querySelectorAll('.activity-buttons-container button[type="button"]');
 
     for (const btn of buttons) {
-      if (btn.dataset.filtered === 'true') continue;
+      if (btn.dataset.competencyFiltered === 'true') continue;
 
       let actName = btn.textContent.trim();
       
@@ -448,7 +450,6 @@ async function filterCompetencyFromFormula() {
         if (!snapshot.empty) {
           const actId = snapshot.docs[0].id;
           
-          // 🔥 MEJORADO: Usar cache
           if (competencyIds.has(actId)) {
             btn.style.opacity = '0.4';
             btn.style.cursor = 'not-allowed';
@@ -462,13 +463,25 @@ async function filterCompetencyFromFormula() {
         console.error('Error filtrando:', err);
       }
 
-      btn.dataset.filtered = 'true';
+      btn.dataset.competencyFiltered = 'true';
     }
 
   } catch (err) {
-    console.error('Error en filterCompetencyFromFormula:', err);
+    console.error('Error en disableCompetencyButtons:', err);
   }
 }
+
+// Hook original de buildFormulaButtons
+const originalBuildFormulaButtons = window.buildFormulaButtons;
+
+window.buildFormulaButtons = async function() {
+  if (originalBuildFormulaButtons) {
+    originalBuildFormulaButtons.call(this);
+  }
+
+  // Después de crear los botones de fórmula, deshabilitar competenciales
+  await disableCompetencyButtons();
+};
 
 // Hook para rounding buttons
 const originalBuildRoundingButtons = window.buildRoundingButtons;
@@ -478,7 +491,8 @@ window.buildRoundingButtons = async function() {
     originalBuildRoundingButtons.call(this);
   }
 
-  await filterCompetencyFromFormula();
+  // También deshabilitar competenciales en rounding
+  await disableCompetencyButtons();
 };
 
 console.log('🎓 Sistema de Evaluación Competencial - Optimizado');
