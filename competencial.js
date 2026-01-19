@@ -224,13 +224,16 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function patchCompetencyInputs() {
-  const inputs = document.querySelectorAll('input[type="number"][data-activity-id]:not([data-patched])');
+  const inputs = document.querySelectorAll('input[type="number"][data-activity-id]:not([data-patched="true"])');
   
   if (inputs.length === 0) return;
 
   console.log(`🔧 Parchando ${inputs.length} inputs...`);
 
   for (const input of inputs) {
+    // Marcar ANTES de procesar
+    input.dataset.patched = 'true';
+
     const activityId = input.dataset.activityId;
     const studentId = input.closest('tr')?.dataset.studentId;
 
@@ -248,10 +251,11 @@ async function patchCompetencyInputs() {
 
       // Si es competencial, reemplazar
       if (activity.isCompetency || activity.evaluationType === 'competency') {
-        replaceWithCompetencySelect(input, studentId, activityId);
+        // Verificar que el input aún existe en el DOM
+        if (input.parentNode) {
+          replaceWithCompetencySelect(input, studentId, activityId);
+        }
       }
-
-      input.dataset.patched = 'true';
     } catch (err) {
       console.error('Error verificando actividad:', err);
     }
@@ -259,11 +263,18 @@ async function patchCompetencyInputs() {
 }
 
 function replaceWithCompetencySelect(inputElement, studentId, activityId) {
+  // Verificar que el elemento sigue en el DOM
+  if (!inputElement.parentNode) {
+    console.warn('⚠️ Elemento ya no existe en el DOM');
+    return;
+  }
+
   const select = document.createElement('select');
   select.className = 'competency-select border rounded px-2 py-1 w-full text-center font-semibold';
   select.style.minHeight = '38px';
   select.dataset.activityId = activityId;
   select.dataset.studentId = studentId;
+  select.dataset.isCompetency = 'true';
 
   const currentValue = inputElement.value;
 
@@ -286,9 +297,12 @@ function replaceWithCompetencySelect(inputElement, studentId, activityId) {
     await saveCompetencyNote(studentId, activityId, select.value);
   });
 
-  // Reemplazar
-  inputElement.parentNode.replaceChild(select, inputElement);
-  console.log('✅ Input reemplazado por selector competencial');
+  try {
+    inputElement.parentNode.replaceChild(select, inputElement);
+    console.log('✅ Input reemplazado por selector competencial');
+  } catch (err) {
+    console.error('Error al reemplazar elemento:', err);
+  }
 }
 
 function applyCompetencyColor(select) {
@@ -309,20 +323,26 @@ function applyCompetencyColor(select) {
 async function saveCompetencyNote(studentId, activityId, value) {
   try {
     const db = window.firebase?.firestore?.();
-    if (!db) return;
+    if (!db) {
+      console.error('❌ Firebase no disponible');
+      return;
+    }
+
+    console.log(`💾 Guardando nota competencial - Alumno: ${studentId}, Actividad: ${activityId}, Valor: ${value}`);
 
     const updateObj = {};
     if (value === '') {
       updateObj[`notes.${activityId}`] = window.firebase.firestore.FieldValue.delete();
     } else {
-      // Guardar el valor competencial directamente (NA, AS, AN, AE)
       updateObj[`notes.${activityId}`] = value;
     }
 
-    await db.collection('alumnes').doc(studentId).update(updateObj);
-    console.log('✅ Nota competencial guardada:', value);
+    const result = await db.collection('alumnes').doc(studentId).update(updateObj);
+    console.log('✅ Nota competencial guardada correctamente:', value);
+    
   } catch (err) {
-    console.error('Error guardando nota:', err);
+    console.error('❌ Error guardando nota competencial:', err);
+    alert('Error guardando nota: ' + err.message);
   }
 }
 
@@ -348,10 +368,19 @@ async function filterCompetencyFromFormula() {
     const db = window.firebase?.firestore?.();
     if (!db) return;
 
-    const buttons = document.querySelectorAll('.activity-buttons-container button[type="button"]:not([data-filtered])');
+    // Seleccionar botones sin filtrar Y selectores competenciales
+    const buttons = document.querySelectorAll('.activity-buttons-container button[type="button"]');
+    const competencySelects = document.querySelectorAll('select[data-isCompetency="true"]');
+
+    // Obtener IDs de actividades competenciales
+    const competencyIds = new Set();
+    for (const select of competencySelects) {
+      competencyIds.add(select.dataset.activityId);
+    }
 
     for (const btn of buttons) {
-      // Extraer nombre de la actividad del botón
+      if (btn.dataset.filtered === 'true') continue;
+
       let actName = btn.textContent.trim();
       
       // Limpiar prefijos de términos si existen
@@ -367,14 +396,17 @@ async function filterCompetencyFromFormula() {
 
         if (!snapshot.empty) {
           const activity = snapshot.docs[0].data();
+          const actId = snapshot.docs[0].id;
           
-          if (activity.isCompetency || activity.evaluationType === 'competency') {
+          if (activity.isCompetency || activity.evaluationType === 'competency' || competencyIds.has(actId)) {
             // Deshabilitar botón
             btn.style.opacity = '0.4';
             btn.style.cursor = 'not-allowed';
             btn.style.pointerEvents = 'none';
             btn.title = '❌ No se puede usar en fórmulas (actividad competencial)';
             btn.disabled = true;
+            btn.dataset.filtered = 'true';
+            console.log('🚫 Actividad competencial excluida:', actName);
           }
         }
       } catch (err) {
@@ -384,7 +416,7 @@ async function filterCompetencyFromFormula() {
       btn.dataset.filtered = 'true';
     }
 
-    console.log('✅ Actividades competenciales excluidas de fórmulas');
+    console.log('✅ Filtrado completado - Actividades competenciales excluidas');
   } catch (err) {
     console.error('Error en filterCompetencyFromFormula:', err);
   }
