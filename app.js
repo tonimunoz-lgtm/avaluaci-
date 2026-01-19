@@ -2619,7 +2619,7 @@ document.getElementById('cancelDeleteStudentsBtn').addEventListener('click', () 
 // Llista d'usuaris que vols marcar com a administrador
 const adminEmails = [
   "toni.munoz@institutmatadepera.cat",
-  "tonaco92@gamil.com",
+  "tonaco92@gmail.com",
   "el_teu_email@exemple.com" // posa el teu email
 ];
 
