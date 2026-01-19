@@ -12,10 +12,10 @@ const COMPETENCY_COLORS = {
 };
 
 const COMPETENCY_NAMES = {
-  'NA': '',
-  'AS': 'En Adquisición',
-  'AN': 'Afianzado',
-  'AE': 'Ampliado Excelente'
+  'NA': 'No Assolit',
+  'AS': 'Assoliment Satisfactori',
+  'AN': 'Assoliment Notable',
+  'AE': 'Assoliment Excelent'
 };
 
 // ============================================================
@@ -280,10 +280,10 @@ function replaceWithCompetencySelect(inputElement, studentId, activityId) {
 
   select.innerHTML = `
     <option value="" style="background-color: white; color: black;">-</option>
-    <option value="NA" style="background-color: ${COMPETENCY_COLORS['NA']}; color: white;">NA - No Alcanzado</option>
-    <option value="AS" style="background-color: ${COMPETENCY_COLORS['AS']}; color: white;">AS - En Adquisición</option>
-    <option value="AN" style="background-color: ${COMPETENCY_COLORS['AN']}; color: black;">AN - Afianzado</option>
-    <option value="AE" style="background-color: ${COMPETENCY_COLORS['AE']}; color: white;">AE - Ampliado</option>
+    <option value="NA" style="background-color: ${COMPETENCY_COLORS['NA']}; color: white;">NA</option>
+    <option value="AS" style="background-color: ${COMPETENCY_COLORS['AS']}; color: white;">AS</option>
+    <option value="AN" style="background-color: ${COMPETENCY_COLORS['AN']}; color: black;">AN</option>
+    <option value="AE" style="background-color: ${COMPETENCY_COLORS['AE']}; color: white;">AE</option>
   `;
 
   if (COMPETENCIES.includes(currentValue)) {
