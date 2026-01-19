@@ -720,14 +720,3 @@ waitForFirebaseInit(() => {
 });
 
 
-// ============================================================
-// INICIAR SISTEMA AUTOMATICAMENTE
-// ============================================================
-
-setTimeout(() => {
-  if(professorUID) {
-    BackupSystemInjector.currentUserUid = professorUID;
-    BackupSystemInjector.currentClassId = currentClassId || null;
-    initBackupInjector();
-  }
-}, 1000);
