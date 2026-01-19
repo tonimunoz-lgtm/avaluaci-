@@ -3,28 +3,26 @@ console.log('✅ competencial.js cargado - Sistema de Evaluación Competencial')
 
 const COMPETENCIES = ['NA','AS','AN','AE'];
 const COMPETENCY_COLORS = {
-  NA:'#ef4444',
-  AS:'#f97316',
-  AN:'#eab308',
-  AE:'#22c55e'
+  NA:'#ef4444', // rojo
+  AS:'#f97316', // naranja
+  AN:'#eab308', // amarillo
+  AE:'#22c55e'  // verde
 };
 
 // ============================================================
 // INTERCEPTAR CREACIÓN DE ACTIVIDADES
 // ============================================================
 
-document.addEventListener('DOMContentLoaded', () => {
-  waitForActivityModal();
-});
+document.addEventListener('DOMContentLoaded', () => waitForActivityModal());
 
+// Espera y parchea el botón de añadir actividad
 function waitForActivityModal() {
   const modalBtn = document.getElementById('modalAddActivityBtn');
   if (!modalBtn) return setTimeout(waitForActivityModal, 500);
 
-  // 🔑 Clave: eliminar onclick inline de app.js
+  // Eliminar onclick inline de app.js para evitar duplicados
   modalBtn.removeAttribute('onclick');
 
-  // Evitar doble listener
   if (modalBtn.dataset.competencialModified) return;
   modalBtn.dataset.competencialModified = 'true';
 
@@ -45,7 +43,7 @@ function waitForActivityModal() {
 }
 
 // ============================================================
-// MODAL ORIGINAL
+// MODAL DE SELECCIÓN DE TIPO (tu modal original)
 // ============================================================
 
 function showEvaluationTypeDialog() {
@@ -101,7 +99,6 @@ async function createActivityWithType(name, evaluationType) {
 
     const ref = db.collection('activitats').doc();
 
-    // 🔑 Clave: calcType dinámico
     await ref.set({
       nom: name,
       data: new Date().toISOString().split('T')[0],
@@ -125,6 +122,74 @@ async function createActivityWithType(name, evaluationType) {
 }
 
 // ============================================================
-// Aquí puedes añadir patchTableInputs() y el resto como en tu versión original
-// Para que los inputs competenciales aparezcan y se guarden
+// PATCH AUTOMÁTICO DE INPUTS COMPETENCIALES
 // ============================================================
+
+const tableObserver = new MutationObserver(()=>patchTableInputs());
+tableObserver.observe(document.body,{childList:true,subtree:true});
+
+async function patchTableInputs() {
+  const db = window.firebase?.firestore?.();
+  if (!db) return;
+
+  const ths = [...document.querySelectorAll('#notesThead th')];
+  for(let colIdx=1; colIdx<ths.length-1; colIdx++){
+    const actName = ths[colIdx].querySelector('span')?.textContent?.trim() || ths[colIdx].textContent.trim();
+    if (!actName) continue;
+
+    const snapshot = await db.collection('activitats').where('nom','==',actName).limit(1).get();
+    if (snapshot.empty) continue;
+
+    const actData = snapshot.docs[0].data();
+    if (actData.evaluationType !== 'competency') continue;
+
+    const rows = document.querySelectorAll('#notesTbody tr[data-student-id]');
+    for(const row of rows){
+      const td = row.querySelector(`td:nth-child(${colIdx+1})`);
+      if(!td) continue;
+      if(td.querySelector('.competency-select')) continue;
+
+      const oldInput = td.querySelector('input');
+      if(!oldInput) continue;
+
+      const studentId = row.dataset.studentId;
+      const select = document.createElement('select');
+      select.className = 'competency-select border rounded px-2 py-1 w-full text-center font-semibold';
+      select.dataset.activityId = snapshot.docs[0].id;
+      select.dataset.studentId = studentId;
+
+      select.innerHTML = `<option value=""></option>` + COMPETENCIES.map(c=>`<option value="${c}">${c}</option>`).join('');
+      if(COMPETENCIES.includes(oldInput.value)) select.value = oldInput.value;
+
+      applyCompetencyColor(select);
+      select.addEventListener('change', async ()=>{
+        applyCompetencyColor(select);
+        await saveCompetencyNote(studentId, snapshot.docs[0].id, select.value);
+      });
+
+      oldInput.replaceWith(select);
+    }
+  }
+}
+
+function applyCompetencyColor(select){
+  const value = select.value;
+  select.style.backgroundColor = COMPETENCY_COLORS[value] || '#ffffff';
+  select.style.color = (value==='AN') ? '#000000' : '#ffffff';
+}
+
+async function saveCompetencyNote(studentId, activityId, value){
+  try{
+    const db = window.firebase?.firestore?.();
+    if(!db) return;
+    const updateObj = {};
+    if(value==='') updateObj[`notes.${activityId}`] = window.firebase.firestore.FieldValue.delete();
+    else updateObj[`notes.${activityId}`] = value;
+    await db.collection('alumnes').doc(studentId).update(updateObj);
+    console.log(`✅ Nota competencial guardada: ${studentId} ${activityId}=${value}`);
+  } catch(e){
+    console.error('Error guardando nota competencial:', e);
+  }
+}
+
+console.log('🎓 Sistema de Evaluación Competencial cargado correctamente');
