@@ -18,6 +18,9 @@ const COMPETENCY_NAMES = {
   'AE': 'Assoliment Excelent'
 };
 
+// 🔥 NUEVA: Flag para evitar bucle infinito
+let isPatching = false;
+
 // ============================================================
 // INTERCEPTAR CREACIÓN DE ACTIVIDADES
 // ============================================================
@@ -212,8 +215,15 @@ const observerConfig = {
   attributes: false
 };
 
+// 🔥 MEJORADO: Observer con mejor gestión
 const observer = new MutationObserver(() => {
-  setTimeout(patchCompetencyInputs, 100);
+  if (!isPatching) {
+    isPatching = true;
+    setTimeout(async () => {
+      await patchCompetencyInputs();
+      isPatching = false;
+    }, 150);
+  }
 });
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -223,38 +233,65 @@ document.addEventListener('DOMContentLoaded', () => {
   }, 1000);
 });
 
-// 🔥 ÚNICA versión de patchCompetencyInputs (UNIFICADA)
+// 🔥 MEJORADO: Procesar TODOS los inputs de una vez
 async function patchCompetencyInputs() {
   const inputs = document.querySelectorAll('input[type="number"][data-activity-id]:not([data-patched="true"])');
   
   if (inputs.length === 0) return;
 
-  console.log(`🔧 Parchando ${inputs.length} inputs...`);
+  console.log(`🔧 Parchando ${inputs.length} inputs de una sola vez...`);
 
+  // 🔥 NUEVA: Precarga de actividades competenciales
+  const db = window.firebase?.firestore?.();
+  if (!db) {
+    console.error('❌ Firebase no disponible');
+    return;
+  }
+
+  // Obtener todos los IDs únicos de actividades
+  const activityIds = new Set();
+  inputs.forEach(input => {
+    const actId = input.dataset.activityId;
+    if (actId) activityIds.add(actId);
+  });
+
+  // Precarga: obtener todas las actividades de una vez
+  const competencyActivityIds = new Set();
+  for (const actId of activityIds) {
+    try {
+      const actDoc = await db.collection('activitats').doc(actId).get();
+      if (actDoc.exists) {
+        const activity = actDoc.data();
+        if (activity.evaluationType === 'competency' || activity.isCompetency) {
+          competencyActivityIds.add(actId);
+        }
+      }
+    } catch (err) {
+      console.error('Error cargando actividad:', err);
+    }
+  }
+
+  console.log(`📊 Actividades competenciales detectadas: ${competencyActivityIds.size}`);
+
+  // Ahora procesar inputs
   for (const input of inputs) {
-    // Marcar ANTES de procesar
-    input.dataset.patched = 'true';
+    if (input.dataset.patched === 'true') continue;
 
     const activityId = input.dataset.activityId;
     const studentId = input.closest('tr')?.dataset.studentId;
 
-    if (!activityId || !studentId) continue;
+    if (!activityId || !studentId) {
+      input.dataset.patched = 'true';
+      continue;
+    }
+
+    input.dataset.patched = 'true';
 
     try {
-      const db = window.firebase?.firestore?.();
-      if (!db) continue;
-
-      // Obtener actividad
-      const actDoc = await db.collection('activitats').doc(activityId).get();
-      if (!actDoc.exists) continue;
-
-      const activity = actDoc.data();
-
-      // Si es competencial, reemplazar
-      if (activity.isCompetency || activity.evaluationType === 'competency') {
-        // Verificar que el input aún existe en el DOM
+      // Solo si es competencial
+      if (competencyActivityIds.has(activityId)) {
         if (input.parentNode) {
-          // 🔥 Cargar competencyNotes en lugar de notes
+          // Cargar valor guardado
           const studentDoc = await db.collection('alumnes').doc(studentId).get();
           const competencyValue = studentDoc.exists ? 
             (studentDoc.data().competencyNotes?.[activityId] || '') : '';
@@ -263,16 +300,15 @@ async function patchCompetencyInputs() {
         }
       }
     } catch (err) {
-      console.error('Error verificando actividad:', err);
+      console.error('Error procesando input:', err);
     }
   }
+
+  console.log('✅ Parcheo completado');
 }
 
-// 🔥 ACTUALIZAR replaceWithCompetencySelect para aceptar valor inicial
 function replaceWithCompetencySelect(inputElement, studentId, activityId, initialValue = '') {
-  // Verificar que el elemento sigue en el DOM
   if (!inputElement.parentNode) {
-    console.warn('⚠️ Elemento ya no existe en el DOM');
     return;
   }
 
@@ -291,7 +327,6 @@ function replaceWithCompetencySelect(inputElement, studentId, activityId, initia
     <option value="AE" style="background-color: ${COMPETENCY_COLORS['AE']}; color: white;">AE</option>
   `;
 
-  // 🔥 Usar initialValue si se proporciona, si no usar inputElement.value
   const currentValue = initialValue || inputElement.value;
   if (COMPETENCIES.includes(currentValue)) {
     select.value = currentValue;
@@ -306,7 +341,6 @@ function replaceWithCompetencySelect(inputElement, studentId, activityId, initia
 
   try {
     inputElement.parentNode.replaceChild(select, inputElement);
-    console.log('✅ Input reemplazado por selector competencial');
   } catch (err) {
     console.error('Error al reemplazar elemento:', err);
   }
@@ -335,7 +369,7 @@ async function saveCompetencyNote(studentId, activityId, value) {
       return;
     }
 
-    console.log(`💾 Guardando nota competencial - Alumno: ${studentId}, Actividad: ${activityId}, Valor: ${value}`);
+    console.log(`💾 Guardando: ${value}`);
 
     const updateObj = {};
     if (value === '') {
@@ -345,11 +379,9 @@ async function saveCompetencyNote(studentId, activityId, value) {
     }
 
     await db.collection('alumnes').doc(studentId).update(updateObj);
-    console.log('✅ Nota competencial guardada correctamente:', value);
     
   } catch (err) {
     console.error('❌ Error guardando nota competencial:', err);
-    alert('Error guardando nota: ' + err.message);
   }
 }
 
@@ -357,16 +389,36 @@ async function saveCompetencyNote(studentId, activityId, value) {
 // EXCLUIR COMPETENCIALES DE CALCULADORA Y ROUNDING
 // ============================================================
 
+// 🔥 MEJORADO: Cache de actividades competenciales
+let competencyActivityCache = null;
+
+async function getCompetencyActivityIds() {
+  if (competencyActivityCache !== null) return competencyActivityCache;
+
+  try {
+    const db = window.firebase?.firestore?.();
+    if (!db) return new Set();
+
+    const snapshot = await db.collection('activitats')
+      .where('evaluationType', '==', 'competency')
+      .get();
+
+    competencyActivityCache = new Set(snapshot.docs.map(doc => doc.id));
+    return competencyActivityCache;
+  } catch (err) {
+    console.error('Error obteniendo actividades competenciales:', err);
+    return new Set();
+  }
+}
+
 // Hook original de buildFormulaButtons
 const originalBuildFormulaButtons = window.buildFormulaButtons;
 
 window.buildFormulaButtons = async function() {
-  // Ejecutar original primero
   if (originalBuildFormulaButtons) {
     originalBuildFormulaButtons.call(this);
   }
 
-  // Luego filtrar competenciales
   await filterCompetencyFromFormula();
 };
 
@@ -375,7 +427,7 @@ async function filterCompetencyFromFormula() {
     const db = window.firebase?.firestore?.();
     if (!db) return;
 
-    // Seleccionar botones de actividades
+    const competencyIds = await getCompetencyActivityIds();
     const buttons = document.querySelectorAll('.activity-buttons-container button[type="button"]');
 
     for (const btn of buttons) {
@@ -383,31 +435,27 @@ async function filterCompetencyFromFormula() {
 
       let actName = btn.textContent.trim();
       
-      // Limpiar prefijos de términos si existen
       if (actName.includes(']')) {
         actName = actName.split(']')[1].trim();
       }
 
       try {
-        // Buscar por nombre exacto
         const snapshot = await db.collection('activitats')
           .where('nom', '==', actName)
           .limit(1)
           .get();
 
         if (!snapshot.empty) {
-          const activity = snapshot.docs[0].data();
+          const actId = snapshot.docs[0].id;
           
-          // Verificar evaluationType correctamente
-          if (activity.evaluationType === 'competency' || activity.isCompetency) {
-            // Deshabilitar botón
+          // 🔥 MEJORADO: Usar cache
+          if (competencyIds.has(actId)) {
             btn.style.opacity = '0.4';
             btn.style.cursor = 'not-allowed';
             btn.style.pointerEvents = 'none';
-            btn.title = '❌ No se puede usar en fórmulas (actividad competencial)';
+            btn.title = '❌ Activitat competencial - no es pot usar en fórmules';
             btn.disabled = true;
-            btn.dataset.filtered = 'true';
-            console.log('🚫 Actividad competencial excluida:', actName);
+            console.log('🚫 Excluida competencial:', actName);
           }
         }
       } catch (err) {
@@ -417,13 +465,12 @@ async function filterCompetencyFromFormula() {
       btn.dataset.filtered = 'true';
     }
 
-    console.log('✅ Filtrado completado - Actividades competenciales excluidas');
   } catch (err) {
     console.error('Error en filterCompetencyFromFormula:', err);
   }
 }
 
-// Hook para rounding buttons también
+// Hook para rounding buttons
 const originalBuildRoundingButtons = window.buildRoundingButtons;
 
 window.buildRoundingButtons = async function() {
@@ -434,4 +481,4 @@ window.buildRoundingButtons = async function() {
   await filterCompetencyFromFormula();
 };
 
-console.log('🎓 Sistema de Evaluación Competencial - Corregido y Finalizado');
+console.log('🎓 Sistema de Evaluación Competencial - Optimizado');
