@@ -9,6 +9,13 @@ const BACKUP_CONFIG = {
 
 function getDB(){ return window.firebase?.firestore?.(); }
 function getUser(){ return window.firebase?.auth?.().currentUser; }
+function getStorage() {
+  if (!window.firebase?.storage) {
+    console.error('❌ Firebase Storage no disponible. Asegúrate de incluir firebase-storage.js en tu HTML.');
+    return null;
+  }
+  return window.firebase.storage();
+}
 
 // Hook openClass sin tocar app.js
 (function hookOpenClass(){
