@@ -495,4 +495,88 @@ window.buildRoundingButtons = async function() {
   await disableCompetencyButtons();
 };
 
-console.log('🎓 Sistema de Evaluación Competencial - Optimizado');
+// ============================================================
+// MONITOREAR BLOQUEOS DE ACTIVIDADES
+// ============================================================
+
+// 🔥 NUEVA: Interceptar cambios en calculatedActivities
+const originalRenderNotesGrid = window.renderNotesGrid;
+
+window.renderNotesGrid = async function() {
+  if (originalRenderNotesGrid) {
+    await originalRenderNotesGrid.call(this);
+  }
+
+  // Después de renderizar, aplicar bloqueos a selects competenciales
+  await applyLockStatesToSelects();
+};
+
+async function applyLockStatesToSelects() {
+  try {
+    const db = window.firebase?.firestore?.();
+    if (!db || !window.currentClassId) return;
+
+    const classDoc = await db.collection('classes').doc(window.currentClassId).get();
+    if (!classDoc.exists) return;
+
+    const calculatedActs = classDoc.data().calculatedActivities || {};
+
+    // Por cada actividad con lock
+    Object.entries(calculatedActs).forEach(([actId, config]) => {
+      const isLocked = config.locked || config.calculated;
+
+      if (!isLocked) return;
+
+      // Encontrar todos los selects de esta actividad
+      const selects = document.querySelectorAll(`select[data-activity-id="${actId}"][data-isCompetency="true"]`);
+
+      selects.forEach(select => {
+        select.disabled = true;
+        select.style.opacity = '0.6';
+        select.style.cursor = 'not-allowed';
+        select.classList.add('blocked-cell');
+        select.title = '🔒 Activitat bloquejada';
+      });
+    });
+
+  } catch (err) {
+    console.error('Error aplicando locks:', err);
+  }
+}
+
+// 🔥 NUEVA: Observer para detectar cambios en el candado
+const lockObserver = new MutationObserver(async () => {
+  // Cuando cambia el DOM (se hace clic en candado), aplicar locks
+  setTimeout(async () => {
+    await applyLockStatesToSelects();
+  }, 100);
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    // Observar cambios en la tabla de notas
+    const notesThead = document.getElementById('notesThead');
+    if (notesThead) {
+      lockObserver.observe(notesThead, {
+        attributes: true,
+        subtree: true,
+        attributeFilter: ['style', 'class']
+      });
+    }
+  }, 2000);
+});
+
+// 🔥 NUEVA: Interceptar clicks en lock icons
+document.addEventListener('click', async (e) => {
+  // Detectar si es un lock icon
+  if (e.target.classList.contains('lock-icon')) {
+    console.log('🔒 Click en candado detectado');
+    
+    // Esperar a que se actualice Firestore
+    setTimeout(async () => {
+      await applyLockStatesToSelects();
+    }, 500);
+  }
+}, true);
+
+console.log('🎓 Sistema de Evaluación Competencial - Optimizado + Bloqueos');
