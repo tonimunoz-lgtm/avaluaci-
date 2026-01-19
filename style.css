@@ -279,14 +279,9 @@ button:hover { transform: scale(1.03); }
     display: block;
   }
 
-  /* Ocultar título "Les meves classes" en móvil */
-  #screen-classes .space-y-6 > div:first-child h2 {
+  /* Ocultar título "Les meves classes" en móvil - SELECTOR FUERTE */
+  #screen-classes h2 {
     display: none !important;
-  }
-  
-  /* Centrar el contenedor de botones */
-  #screen-classes .space-y-6 > div:first-child {
-    justify-content: center;
   }
 }
 
