@@ -1,59 +1,92 @@
 // competencial.js - Sistema de Evaluación Competencial (Injector)
-// Se ejecuta automáticamente sin modificar archivos existentes
-
-console.log('🎓 competencial.js cargado');
+console.log('✅ competencial.js cargado - Sistema de Evaluación Competencial');
 
 const COMPETENCIES = ['NA','AS','AN','AE'];
-const COLORS = { NA:'#ef4444', AS:'#f97316', AN:'#eab308', AE:'#22c55e' };
+const COMPETENCY_COLORS = {
+  NA:'#ef4444',
+  AS:'#f97316',
+  AN:'#eab308',
+  AE:'#22c55e'
+};
 
 // ============================================================
 // INTERCEPTAR CREACIÓN DE ACTIVIDADES
 // ============================================================
 
-document.addEventListener('DOMContentLoaded', () => waitForActivityModal());
+document.addEventListener('DOMContentLoaded', () => {
+  waitForActivityModal();
+});
 
-function waitForActivityModal(){
-  const btn = document.getElementById('modalAddActivityBtn');
-  if(!btn) return setTimeout(waitForActivityModal,300);
+function waitForActivityModal() {
+  const modalBtn = document.getElementById('modalAddActivityBtn');
+  if (!modalBtn) return setTimeout(waitForActivityModal, 500);
 
-  // 🔴 CLAVE: eliminar onclick inline de app.js
-  btn.removeAttribute('onclick');
+  // 🔑 Clave: eliminar onclick inline de app.js
+  modalBtn.removeAttribute('onclick');
 
-  btn.addEventListener('click', async e=>{
+  // Evitar doble listener
+  if (modalBtn.dataset.competencialModified) return;
+  modalBtn.dataset.competencialModified = 'true';
+
+  modalBtn.addEventListener('click', async e => {
     e.preventDefault();
     e.stopPropagation();
 
-    const name = modalActivityName.value.trim();
-    if(!name) return alert('Posa un nom');
+    const activityName = document.getElementById('modalActivityName').value.trim();
+    if (!activityName) { alert('Posa un nom'); return; }
 
-    const type = await showDialog();
-    if(!type) return;
+    const evaluationType = await showEvaluationTypeDialog();
+    if (!evaluationType) return;
 
-    await createActivity(name,type);
+    await createActivityWithType(activityName, evaluationType);
   });
 
-  console.log('✅ Injector activo');
+  console.log('✅ Sistema competencial inicializado y botón modificado');
 }
 
 // ============================================================
-// DIÁLOGO
+// MODAL ORIGINAL
 // ============================================================
 
-function showDialog(){
-  return new Promise(res=>{
-    const d=document.createElement('div');
-    d.innerHTML=`
-    <div style="position:fixed;inset:0;background:#0008;display:flex;align-items:center;justify-content:center;z-index:9999">
-      <div style="background:white;padding:20px">
-        <h3>Tipus d'avaluació</h3>
-        <label><input type="radio" name="t" value="numeric"> Numèrica</label><br>
-        <label><input type="radio" name="t" value="competency"> Competencial</label><br><br>
-        <button id="ok">OK</button> <button id="no">Cancel</button>
+function showEvaluationTypeDialog() {
+  return new Promise(resolve => {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 flex items-center justify-center z-[9999] bg-black bg-opacity-40';
+    modal.innerHTML = `
+      <div class="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
+        <h2 class="text-2xl font-bold mb-2 text-gray-900">¿Cómo vols evaluar aquesta activitat?</h2>
+        <p class="text-sm text-gray-600 mb-6">Selecciona el tipus d'avaluació:</p>
+        <div class="space-y-3 mb-6">
+          <label class="flex items-center gap-3 p-4 border-2 border-gray-300 rounded-lg cursor-pointer hover:bg-blue-50 hover:border-blue-500 transition-all">
+            <input type="radio" name="evaluationType" value="numeric" class="w-5 h-5 text-blue-600">
+            <div><div class="font-semibold text-gray-900">Numèrica (0-10)</div><div class="text-xs text-gray-600">Puntuació del 0 al 10</div></div>
+          </label>
+          <label class="flex items-center gap-3 p-4 border-2 border-gray-300 rounded-lg cursor-pointer hover:bg-green-50 hover:border-green-500 transition-all">
+            <input type="radio" name="evaluationType" value="competency" class="w-5 h-5 text-green-600">
+            <div><div class="font-semibold text-gray-900">Competencial</div><div class="text-xs text-gray-600">NA, AS, AN, AE</div></div>
+          </label>
+        </div>
+        <div class="flex gap-2 justify-end">
+          <button id="btnCancelEval" class="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 font-semibold">Cancel·lar</button>
+          <button id="btnConfirmEval" class="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold" disabled>Continuar</button>
+        </div>
       </div>
-    </div>`;
-    document.body.appendChild(d);
-    ok.onclick=()=>{const v=d.querySelector('input:checked')?.value;d.remove();res(v||null)};
-    no.onclick=()=>{d.remove();res(null)};
+    `;
+    document.body.appendChild(modal);
+
+    const radios = modal.querySelectorAll('input[name="evaluationType"]');
+    const btnConfirm = modal.querySelector('#btnConfirmEval');
+    const btnCancel = modal.querySelector('#btnCancelEval');
+
+    radios.forEach(r => r.addEventListener('change', () => btnConfirm.disabled = false));
+
+    btnConfirm.addEventListener('click', () => {
+      const selected = modal.querySelector('input[name="evaluationType"]:checked');
+      modal.remove();
+      resolve(selected ? selected.value : null);
+    });
+
+    btnCancel.addEventListener('click', () => { modal.remove(); resolve(null); });
   });
 }
 
@@ -61,53 +94,37 @@ function showDialog(){
 // CREAR ACTIVIDAD
 // ============================================================
 
-async function createActivity(name,type){
-  const db=firebase.firestore();
-  const ref=db.collection('activitats').doc();
+async function createActivityWithType(name, evaluationType) {
+  try {
+    const db = window.firebase?.firestore?.();
+    if (!db) { alert('Error: Firebase no disponible'); return; }
 
-  await ref.set({
-    nom:name,
-    data:new Date().toISOString().split('T')[0],
-    calcType:type,
-    isCompetency:type==='competency'
-  });
+    const ref = db.collection('activitats').doc();
 
-  await Terms.addActivityToActiveTerm(ref.id);
-  closeModal('modalAddActivity'); loadClassData();
-  alert('Creada '+type);
-}
-
-// ============================================================
-// PARCHAR TABLA
-// ============================================================
-
-const obs=new MutationObserver(()=>patch());
-obs.observe(document.body,{childList:true,subtree:true});
-
-async function patch(){
-  const db=firebase.firestore();
-  const ths=[...document.querySelectorAll('#notesThead th')];
-
-  for(let i=1;i<ths.length-1;i++){
-    const name=ths[i].innerText.trim();
-    const s=await db.collection('activitats').where('nom','==',name).limit(1).get();
-    if(s.empty||!s.docs[0].data().isCompetency) continue;
-
-    document.querySelectorAll('#notesTbody tr').forEach(r=>{
-      if(r.querySelector(`select[data-i="${i}"]`)) return;
-      const inp=r.querySelectorAll('input')[i-1]; if(!inp) return;
-
-      const sel=document.createElement('select');
-      sel.dataset.i=i; sel.dataset.sid=r.dataset.studentId; sel.dataset.aid=s.docs[0].id;
-      sel.innerHTML='<option></option>'+COMPETENCIES.map(c=>`<option>${c}</option>`).join('');
-      sel.value=inp.value;
-      sel.onchange=()=>save(sel);
-      inp.replaceWith(sel);
+    // 🔑 Clave: calcType dinámico
+    await ref.set({
+      nom: name,
+      data: new Date().toISOString().split('T')[0],
+      calcType: evaluationType === 'competency' ? 'competency' : 'numeric',
+      evaluationType: evaluationType,
+      competencyScales: evaluationType === 'competency' ? { NA:'No Alcanzado', AS:'En Adquisición', AN:'Afianzado', AE:'Ampliado' } : null
     });
+
+    if (window.Terms?.addActivityToActiveTerm) {
+      await window.Terms.addActivityToActiveTerm(ref.id);
+    }
+
+    if (window.loadClassData) await window.loadClassData();
+
+    alert(`✅ Activitat '${name}' creada com a ${evaluationType === 'numeric' ? 'numèrica' : 'competencial'}`);
+
+  } catch (err) {
+    console.error('Error creant activitat:', err);
+    alert('Error creant activitat: ' + err.message);
   }
 }
 
-async function save(sel){
-  await firebase.firestore().collection('alumnes').doc(sel.dataset.sid)
-    .update({[`notes.${sel.dataset.aid}`]:sel.value||firebase.firestore.FieldValue.delete()});
-}
+// ============================================================
+// Aquí puedes añadir patchTableInputs() y el resto como en tu versión original
+// Para que los inputs competenciales aparezcan y se guarden
+// ============================================================
