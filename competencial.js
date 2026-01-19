@@ -24,36 +24,45 @@ document.addEventListener('DOMContentLoaded', () => {
   // ***** CAMBIO CLAVE 1: Interceptar window.renderNotesGrid *****  
   // Guarda una referencia a la función original de app.js  
   // Asegúrate de que app.js se haya cargado antes de intentar esto.  
-  if (window.renderNotesGrid) {  
+  if (window.renderNotesGrid && !window.renderNotesGrid.isCompetencialPatched) { // Añadimos un flag para evitar doble parcheo  
     const originalRenderNotesGrid = window.renderNotesGrid;  
     window.renderNotesGrid = async function() {  
       // 1. Llama a la función original de app.js para que dibuje la tabla con los inputs numéricos  
       console.log('competencial.js: Interceptando renderNotesGrid y llamando al original...');  
-      await originalRenderNotesGrid.apply(this, arguments); // Usa .apply para pasar el contexto y argumentos  
+      // Usamos .apply para asegurar que el contexto (this) y los argumentos se pasen correctamente  
+      await originalRenderNotesGrid.apply(this, arguments);   
   
       // 2. Ahora, modifica los inputs para actividades competenciales  
       console.log('competencial.js: Original renderizado, aplicando parches competenciales...');  
       await patchTableInputs(); // Espera a que las actividades competenciales se identifiquen y parchen  
       console.log('competencial.js: Parches competenciales aplicados.');  
     };  
+    window.renderNotesGrid.isCompetencialPatched = true; // Marca la función como parcheada  
     console.log('✅ window.renderNotesGrid interceptado por competencial.js');  
-  } else {  
-    console.warn('competencial.js: window.renderNotesGrid no encontrado. El parche de inputs podría no funcionar.');  
+  } else if (!window.renderNotesGrid) {  
+    console.warn('competencial.js: window.renderNotesGrid no encontrado. El parche de inputs podría no funcionar correctamente si la tabla se re-renderiza.');  
     // Si no se encuentra renderNotesGrid, aún podemos intentar usar el MutationObserver  
     // aunque la intercepción directa es más fiable.  
-     const observer = new MutationObserver((mutationsList, observer) => {  
+    // Este observer es un fallback si la intercepción principal falla.  
+    const observer = new MutationObserver((mutationsList, observer) => {  
         for(const mutation of mutationsList) {  
-            if (mutation.type === 'childList' && document.getElementById('notesTbody')) {  
+            // Buscamos si se añadió o modificó el tbody de la tabla  
+            if (mutation.type === 'childList' && mutation.target.id === 'notesTbody' && mutation.addedNodes.length > 0) {  
+                 console.log('competencial.js: MutationObserver detectó cambios en notesTbody, aplicando parches...');  
                 // Desconectar temporalmente para evitar bucles infinitos si patchTableInputs modifica el DOM  
                 observer.disconnect();  
                 patchTableInputs().then(() => {  
                     // Volver a conectar el observer después de que se apliquen los parches  
-                    observer.observe(document.body, { childList: true, subtree: true });  
-                });  
+                    observer.observe(document.body, { childList: true, subtree: true }); // O el elemento que se observe inicialmente  
+                }).catch(e => console.error("Error en patchTableInputs desde MutationObserver:", e));  
                 break; // Una vez que encontramos la tabla y actuamos, salimos  
+            } else if (mutation.type === 'childList' && document.getElementById('notesTbody')) {  
+                // Si el notesTbody ya existe y se modificó algo más, también podemos intentar  
+                // Aunque la lógica de arriba debería ser suficiente si el tbody es nuevo o reconstruido.  
             }  
         }  
     });  
+    // Observar el body para cambios en el subtree (incluyendo notesTbody cuando se crea o modifica)  
     observer.observe(document.body, { childList: true, subtree: true });  
   }  
   
@@ -80,17 +89,23 @@ function waitForActivityModal() {
   // Es crucial que createActivityModal esté disponible en el ámbito global (window)  
   // o que se defina en app.js de manera que sea accesible.  
   if (typeof window.createActivityModal === 'function') {  
+    // Si conocemos la función específica, podemos removerla.  
     modalBtn.removeEventListener('click', window.createActivityModal);  
     console.log('competencial.js: Manejador original de createActivityModal desvinculado.');  
   } else {  
-    console.warn('competencial.js: window.createActivityModal no encontrado para desvincular. Puede haber duplicación de actividad.');  
-    // Si no se puede desvincular, al menos aseguramos que nuestro handler use preventDefault  
+    // Si no podemos removerla por nombre (ej. si está definida localmente en un módulo),  
+    // o si app.js adjunta su handler de otra manera, `stopImmediatePropagation` es el último recurso.  
+    // El warning es importante para saber si la desvinculación fue exitosa.  
+    console.warn('competencial.js: window.createActivityModal no encontrado para desvincular. Puede haber duplicación de actividad. Dependiendo de e.stopImmediatePropagation().');  
   }  
-  // ***** FIN CAMBIO CLAVE 2 *****  
     
   modalBtn.addEventListener('click', async (e) => {  
-    //e.stopImmediatePropagation(); // No es estrictamente necesario si removeEventListener funciona  
-    e.preventDefault(); // Impedir cualquier comportamiento por defecto del botón  
+    // Solo si no pudimos desvincular el listener original, usamos stopImmediatePropagation.  
+    // Si el removeEventListener funcionó, no es estrictamente necesario, pero no hace daño.  
+    // Importante: si el handler de app.js se adjuntó después que el nuestro,  
+    // stopImmediatePropagation() NO lo detendrá. La desvinculación explícita es mejor.  
+    e.stopImmediatePropagation();   
+    e.preventDefault(); // Impedir cualquier comportamiento por defecto (ej. envío de formulario)  
       
     const activityName = document.getElementById('modalActivityName').value.trim();  
     if (!activityName) {  
@@ -108,11 +123,8 @@ function waitForActivityModal() {
     // Crear la actividad con el tipo seleccionado  
     await createActivityWithType(activityName, evaluationType);  
   
-    // Después de crear la actividad, si el modalAddActivity de app.js tiene un handler  
-    // para cerrar el modal o recargar la vista, es posible que queramos invocarlo.  
-    // Sin embargo, createActivityWithType ya se encarga de closeModal y loadClassData.  
-    // Si el comportamiento aún no es el esperado, podríamos considerar invocar el handler original  
-    // aquí si lo hubiéramos guardado (aunque removeEventListener es más seguro).  
+    // No necesitamos llamar a closeModal o loadClassData aquí si ya lo hace createActivityWithType  
+    // y si la intercepción de renderNotesGrid funciona, la UI se actualizará.  
   
   });  
   
@@ -259,31 +271,25 @@ async function createActivityWithType(name, evaluationType) {
 // INTERCEPTAR RENDERIZADO DE TAULA PARA INPUTS COMPETENCIALES  
 // ============================================================  
   
-// El MutationObserver ya no es la principal forma de interceptar  
-// renderizado si hemos sobrescrito window.renderNotesGrid.  
-// Lo mantenemos como fallback si window.renderNotesGrid no es accesible.  
+// La variable originalFetch y isRenderingTable no se usan en esta versión.  
+// const originalFetch = window.fetch;  
+// let isRenderingTable = false;  
   
-// Hook en el renderNotesGrid original  
-// const originalFetch = window.fetch; // Esta variable no se usa, se puede eliminar si no es necesaria.  
-// let isRenderingTable = false; // Esta variable tampoco se usa, se puede eliminar si no es necesaria.  
-  
-// La lógica principal de carga del sistema competencial (incluyendo la interceptación de renderNotesGrid)  
-// ya se maneja en el listener DOMContentLoaded.  
+// El MutationObserver de la versión original se ha movido al DOMContentLoaded  
+// como fallback si window.renderNotesGrid no es interceptado directamente.  
   
 async function patchTableInputs() {  
   console.log('competencial.js: Aplicando parches a la tabla de notas...');  
-  // Buscar todas las actividades competenciales  
   const headers = document.querySelectorAll('#notesThead th');  
     
-  // Usaremos un bucle for...of para poder usar await dentro.  
-  for (const [idx, header] of headers.entries()) {  
-    const headText = header.textContent.trim();  
-    if (headText === 'Alumne' || headText === 'Comentaris') continue;  
+  for (const [idx, header] of headers.entries()) { // Usamos for...of para poder usar await  
+    // Skipping 'Alumne' (first column) and 'Comentaris' (last column, check dynamically)  
+    // El índice del "Alumne" es 0. El índice de "Comentaris" será `headers.length - 1`.  
+    if (idx === 0 || idx === headers.length - 1) continue;  
   
-    // Obtener el nombre de la actividad  
-    // Considerar que el nombre real está en un span dentro del th en app.js  
+    // Obtener el nombre de la actividad de forma más robusta  
     const actNameSpan = header.querySelector('span');  
-    const actName = actNameSpan ? actNameSpan.textContent.trim() : headText.trim();  
+    const actName = actNameSpan ? actNameSpan.textContent.trim() : header.textContent.trim();  
       
     if (actName) {  
       await checkAndPatchActivityInputs(actName, idx);  
@@ -297,11 +303,8 @@ async function checkAndPatchActivityInputs(actName, colIdx) {
     const db = window.firebase?.firestore?.();  
     if (!db) return;  
   
-    // Buscar actividad por nombre  
-    // Mejor buscar por ID si se tiene, pero por nombre es el camino aquí.  
-    // Esto asume que los nombres de actividad son únicos, lo cual es buena práctica.  
     const snapshot = await db.collection('activitats')  
-      .where('nom', '==', actName)  
+      .where('nom', '==', actName) // Ya eliminamos trim() de actName en el loop principal  
       .limit(1)  
       .get();  
   
@@ -310,9 +313,8 @@ async function checkAndPatchActivityInputs(actName, colIdx) {
     const activity = snapshot.docs[0];  
     const actData = activity.data();  
   
-    // Si es competencial, modificar los inputs  
     if (actData.evaluationType === 'competency') {  
-      await patchCompetencyInputs(colIdx, activity.id); // Asegurarse de que el ID de actividad se pase  
+      await patchCompetencyInputs(colIdx, activity.id); // Pasa el ID de la actividad  
     }  
   } catch (err) {  
     console.error('competencial.js: Error verificando tipo de actividad:', err);  
@@ -322,33 +324,29 @@ async function checkAndPatchActivityInputs(actName, colIdx) {
 async function patchCompetencyInputs(colIdx, activityId) {  
   const rows = document.querySelectorAll('#notesTbody tr[data-student-id]');  
     
-  for (const row of rows) {  
-    // colIdx es el índice del TH. Los TD comienzan en 0 con el nombre del alumno,  
-    // así que la columna de actividad es colIdx.  
-    // Los inputs en app.js se crean dentro de los TD, a partir del segundo TD (índice 1).  
-    // Por lo tanto, el input correspondiente estará en el TD de índice `colIdx`.  
+  for (const row of rows) { // Usamos for...of para poder usar await  
+    // colIdx es el índice del TH. Los TD comienzan en 0 con el nombre del alumno.  
+    // El TD correspondiente a la actividad estará en el índice `colIdx`.  
+    // (Ej. TH[0] (Alumne) -> TD[0]; TH[1] (Actividad1) -> TD[1])  
     const tdToPatch = row.querySelector(`td:nth-child(${colIdx + 1})`);   
     if (!tdToPatch) continue;  
   
-    // El input original es el que tiene data-activity-id  
+    // Buscamos el input original dentro de ese TD  
     const oldInput = tdToPatch.querySelector(`input[data-activity-id="${activityId}"]`);  
       
-    // Si ya existe un select competencial, no hacemos nada para evitar duplicados.  
+    // Si ya existe un select competencial, o si el elemento ya fue parcheado, no hacemos nada  
     if (tdToPatch.querySelector('.competency-select')) {  
-      // console.log(`competencial.js: Selector ya existe para actId ${activityId} en alumno ${row.dataset.studentId}.`);  
       continue;  
     }  
   
     if (oldInput) {  
       const studentId = row.dataset.studentId;  
         
-      // Crear selector de competencias  
       const select = document.createElement('select');  
       select.className = 'competency-select border rounded px-2 py-1 w-full text-center font-semibold';  
       select.dataset.activityId = activityId;  
       select.dataset.studentId = studentId;  
         
-      // Opciones  
       select.innerHTML = `  
         <option value="">-</option>  
         <option value="NA" style="background-color: ${COMPETENCY_COLORS['NA']}; color: white;">NA</option>  
@@ -357,31 +355,30 @@ async function patchCompetencyInputs(colIdx, activityId) {
         <option value="AE" style="background-color: ${COMPETENCY_COLORS['AE']}; color: white;">AE</option>  
       `;  
   
-      // Cargar valor actual desde Firestore.  
-      // fetch actual note for student and activity  
-      const studentDoc = await window.firebase.firestore().collection('alumnes').doc(studentId).get();  
-      const currentVal = studentDoc.exists ? studentDoc.data().notes?.[activityId] || '' : '';  
-  
-      if (COMPETENCIES.includes(currentVal)) {  
-        select.value = currentVal;  
+      // Cargar el valor actual de la nota competencial del alumno para esta actividad  
+      const db = window.firebase?.firestore?.();  
+      if (db) {  
+        const studentDoc = await db.collection('alumnes').doc(studentId).get();  
+        const currentNote = studentDoc.exists ? studentDoc.data().notes?.[activityId] : '';  
+        if (COMPETENCIES.includes(currentNote)) {  
+          select.value = currentNote;  
+        }  
       }  
   
-      // Aplicar color inicial  
       applyCompetencyColor(select);  
   
-      // Event listeners  
       select.addEventListener('change', async () => {  
         applyCompetencyColor(select);  
         await saveCompetencyNote(studentId, activityId, select.value);  
-        // Opcional: Después de guardar, si hay lógica de app.js para recalcular promedios, llamarla.  
+        // Si hay una función global para re-renderizar los promedios en app.js, llámala  
         if (window.renderAverages) {  
           window.renderAverages();  
         }  
       });  
   
-      // Reemplazar input. Asegurarse de que el antiguo input se elimine.  
+      // Reemplazar el input original por el nuevo select  
       oldInput.parentNode.replaceChild(select, oldInput);  
-      console.log(`competencial.js: Input para actividad competencial ${activityId} en alumno ${studentId} reemplazado por select.`);  
+      console.log(`competencial.js: Input para actividad ${activityId} en alumno ${studentId} reemplazado por selector competencial.`);  
     }  
   }  
 }  
@@ -389,7 +386,7 @@ async function patchCompetencyInputs(colIdx, activityId) {
 function applyCompetencyColor(select) {  
   const value = select.value;  
   select.style.backgroundColor = COMPETENCY_COLORS[value] || '#ffffff';  
-  select.style.color = (value === 'AN') ? '#000000' : '#ffffff'; // Texto negro para 'AN'  
+  select.style.color = (value === 'AN') ? '#000000' : '#ffffff';  
 }  
   
 async function saveCompetencyNote(studentId, activityId, value) {  
@@ -405,7 +402,7 @@ async function saveCompetencyNote(studentId, activityId, value) {
     }  
   
     await db.collection('alumnes').doc(studentId).update(updateObj);  
-    console.log(`✅ Nota competencial para ${studentId}, ${activityId} guardada: ${value}`);  
+    console.log(`✅ Nota competencial para ${studentId}, actividad ${activityId} guardada: ${value}`);  
   } catch (err) {  
     console.error('competencial.js: Error guardando nota competencial:', err);  
   }  
@@ -416,18 +413,20 @@ async function saveCompetencyNote(studentId, activityId, value) {
 // ============================================================  
   
 // ***** CAMBIO CLAVE 3: Interceptar window.buildActivityButtons *****  
-// Esta es la función que app.js llama para generar los botones de actividades en el modal de cálculo.  
-if (window.buildActivityButtons) {  
+// Esto asegura que los botones para actividades competenciales estén deshabilitados  
+// en el modal de cálculo de fórmulas.  
+if (window.buildActivityButtons && !window.buildActivityButtons.isCompetencialPatched) {  
   const originalBuildActivityButtons = window.buildActivityButtons;  
   window.buildActivityButtons = async function() {  
-    // Llama a la función original para que app.js cree los botones  
+    // Primero, deja que la función original construya los botones.  
     await originalBuildActivityButtons.apply(this, arguments);  
   
-    // Luego, aplica tu filtro  
+    // Luego, aplica tu filtro para deshabilitar los botones de actividades competenciales.  
     await filterCompetencyActivitiesFromFormula();  
   };  
+  window.buildActivityButtons.isCompetencialPatched = true; // Marca la función como parcheada  
   console.log('✅ window.buildActivityButtons interceptado por competencial.js');  
-} else {  
+} else if (!window.buildActivityButtons) {  
   console.warn('competencial.js: window.buildActivityButtons no encontrado. El filtro de fórmulas podría no funcionar.');  
 }  
 // ***** FIN CAMBIO CLAVE 3 *****  
@@ -438,30 +437,24 @@ async function filterCompetencyActivitiesFromFormula() {
     const db = window.firebase?.firestore?.();  
     if (!db) return;  
   
-    // Necesitamos un pequeño delay para asegurarnos de que los botones hayan sido renderizados  
-    await new Promise(r => setTimeout(r, 100));   
+    // Damos un pequeño respiro para que el DOM se actualice con los botones  
+    await new Promise(r => setTimeout(r, 50));   
   
-    // Aquí, la función `buildActivityButtons` de `app.js` crea los botones  
-    // con el texto del nombre de la actividad.  
-    // También crea un selector de términos para las fórmulas.  
-    // Los botones de actividad están dentro de un `.activity-buttons-container`  
-    // y pueden estar dentro de un `div.activity-buttons-container`.  
-      
-    // Buscar los botones de actividad en el modal de cálculo  
+    // Los botones de actividad están dentro de contenedores específicos en el modal de cálculo.  
     const activityButtonContainers = document.querySelectorAll('.activity-buttons-container');  
   
     for (const container of activityButtonContainers) {  
-      const buttons = container.querySelectorAll('button[type="button"]'); // Botones de actividad generados  
-  
+      const buttons = container.querySelectorAll('button[type="button"]');  
+        
       for (const btn of buttons) {  
-        // El texto del botón puede incluir el prefijo del término "[TERM_NAME] ACTIVITY_NAME"  
-        // Necesitamos extraer solo el nombre de la actividad  
         let actName = btn.textContent.trim();  
+        // Las actividades en el modal de cálculo pueden tener un prefijo de término, ej. "[TermName] ActivityName"  
         const termPrefixMatch = actName.match(/^.∗?\s*(.*)$/);
-if (termPrefixMatch) {
-actName = termPrefixMatch[1]; // Extraer solo el nombre de la actividad
+if (termPrefixMatch && termPrefixMatch[1]) {
+actName = termPrefixMatch[1]; // Usar solo el nombre de la actividad
 }
- plaintextconst snapshot = await db.collection('activitats')  
+ plaintext// Buscar la actividad en Firestore para obtener su tipo de evaluación  
+    const snapshot = await db.collection('activitats')  
       .where('nom', '==', actName)  
       .limit(1)  
       .get();  
@@ -478,7 +471,7 @@ actName = termPrefixMatch[1]; // Extraer solo el nombre de la actividad
   }  
 }
 } catch (err) {
-console.error('competencial.js: Error filtrando actividades competenciales:', err);
+console.error('competencial.js: Error filtrando actividades competenciales de fórmulas:', err);
 }
 }
 console.log('🎓 Sistema de Evaluación Competencial - Cargado correctamente');
