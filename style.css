@@ -166,6 +166,27 @@ button:hover { transform: scale(1.03); }
   .class-card { padding: 0.5rem; font-size: 0.75rem; }
 }
 
+/* Responsive para botón Classroom en mobile */
+@media (max-width: 768px) {
+  /* Ocultar título "Les meves classes" en móvil */
+  #screen-classes .space-y-6 > div:first-child h2 {
+    display: none !important;
+  }
+  
+  /* Centrar el contenedor de botones */
+  #screen-classes .space-y-6 > div:first-child {
+    justify-content: center;
+  }
+}
+
+/* Similar al comportamiento de la columna de estudiantes */
+@media (max-width: 640px) {
+  /* Asegurar que se oculte también en pantallas muy pequeñas */
+  #screen-classes .space-y-6 > div:first-child h2 {
+    display: none !important;
+  }
+}
+
 /* ---------------- Menús ---------------- */
 .menu {
   display: block !important;
