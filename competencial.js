@@ -453,7 +453,7 @@ async function filterCompetencyActivitiesFromFormula() {
 if (termPrefixMatch && termPrefixMatch[1]) {
 actName = termPrefixMatch[1]; // Usar solo el nombre de la actividad
 }
- // Buscar la actividad en Firestore para obtener su tipo de evaluación  
+        // Buscar la actividad en Firestore para obtener su tipo de evaluación  
     const snapshot = await db.collection('activitats')  
       .where('nom', '==', actName)  
       .limit(1)  
@@ -475,4 +475,3 @@ console.error('competencial.js: Error filtrando actividades competenciales de f�
 }
 }
 console.log('🎓 Sistema de Evaluación Competencial - Cargado correctamente');
- 
