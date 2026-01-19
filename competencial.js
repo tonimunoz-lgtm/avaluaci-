@@ -496,47 +496,72 @@ window.buildRoundingButtons = async function() {
 };
 
 // ============================================================
-// MONITOREAR BLOQUEOS DE ACTIVIDADES
+// MONITOREAR Y APLICAR BLOQUEOS A SELECTS COMPETENCIALES
 // ============================================================
 
-// 🔥 NUEVA: Interceptar cambios en calculatedActivities
-const originalRenderNotesGrid = window.renderNotesGrid;
+// 🔥 NUEVA: MutationObserver para detectar nuevos selects y aplicar bloqueos
+const selectLockObserver = new MutationObserver(async () => {
+  if (isPatching) return; // Evitar conflicto con el otro observer
+  
+  setTimeout(async () => {
+    await applyLockToNewSelects();
+  }, 50);
+});
 
-window.renderNotesGrid = async function() {
-  if (originalRenderNotesGrid) {
-    await originalRenderNotesGrid.call(this);
-  }
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    const notesTbody = document.getElementById('notesTbody');
+    if (notesTbody) {
+      selectLockObserver.observe(notesTbody, {
+        childList: true,
+        subtree: true,
+        attributes: true
+      });
+      console.log('👁️ Observer de bloqueos iniciado');
+    }
+  }, 2000);
+});
 
-  // Después de renderizar, aplicar bloqueos a selects competenciales
-  await applyLockStatesToSelects();
-};
-
-async function applyLockStatesToSelects() {
+async function applyLockToNewSelects() {
   try {
     const db = window.firebase?.firestore?.();
     if (!db || !window.currentClassId) return;
 
+    // Obtener estado actual de bloqueos
     const classDoc = await db.collection('classes').doc(window.currentClassId).get();
     if (!classDoc.exists) return;
 
     const calculatedActs = classDoc.data().calculatedActivities || {};
 
-    // Por cada actividad con lock
-    Object.entries(calculatedActs).forEach(([actId, config]) => {
-      const isLocked = config.locked || config.calculated;
+    // Encontrar todos los selects competenciales
+    const selects = document.querySelectorAll('select[data-isCompetency="true"]');
 
-      if (!isLocked) return;
+    selects.forEach(select => {
+      const actId = select.dataset.activityId;
+      if (!actId) return;
 
-      // Encontrar todos los selects de esta actividad
-      const selects = document.querySelectorAll(`select[data-activity-id="${actId}"][data-isCompetency="true"]`);
+      const isLocked = calculatedActs[actId]?.locked || calculatedActs[actId]?.calculated;
 
-      selects.forEach(select => {
+      if (isLocked && !select.dataset.locked) {
+        // Bloquear
         select.disabled = true;
         select.style.opacity = '0.6';
         select.style.cursor = 'not-allowed';
-        select.classList.add('blocked-cell');
+        select.classList.add('blocked-competency');
         select.title = '🔒 Activitat bloquejada';
-      });
+        select.dataset.locked = 'true';
+        console.log('🔒 Select bloqueado:', actId);
+      } 
+      else if (!isLocked && select.dataset.locked === 'true') {
+        // Desbloquear
+        select.disabled = false;
+        select.style.opacity = '1';
+        select.style.cursor = 'pointer';
+        select.classList.remove('blocked-competency');
+        select.title = '';
+        select.dataset.locked = 'false';
+        console.log('🔓 Select desbloqueado:', actId);
+      }
     });
 
   } catch (err) {
@@ -544,39 +569,20 @@ async function applyLockStatesToSelects() {
   }
 }
 
-// 🔥 NUEVA: Observer para detectar cambios en el candado
-const lockObserver = new MutationObserver(async () => {
-  // Cuando cambia el DOM (se hace clic en candado), aplicar locks
-  setTimeout(async () => {
-    await applyLockStatesToSelects();
-  }, 100);
-});
-
-document.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => {
-    // Observar cambios en la tabla de notas
-    const notesThead = document.getElementById('notesThead');
-    if (notesThead) {
-      lockObserver.observe(notesThead, {
-        attributes: true,
-        subtree: true,
-        attributeFilter: ['style', 'class']
+// 🔥 NUEVA: Interceptar clicks en lock icon directamente
+setInterval(async () => {
+  const lockIcons = document.querySelectorAll('.lock-icon');
+  lockIcons.forEach(icon => {
+    if (!icon.dataset.lockListenerAdded) {
+      icon.addEventListener('click', async () => {
+        console.log('🔒 Click en candado - actualizando selects...');
+        // Esperar a que se guarde en Firestore
+        await new Promise(r => setTimeout(r, 600));
+        await applyLockToNewSelects();
       });
+      icon.dataset.lockListenerAdded = 'true';
     }
-  }, 2000);
-});
+  });
+}, 500);
 
-// 🔥 NUEVA: Interceptar clicks en lock icons
-document.addEventListener('click', async (e) => {
-  // Detectar si es un lock icon
-  if (e.target.classList.contains('lock-icon')) {
-    console.log('🔒 Click en candado detectado');
-    
-    // Esperar a que se actualice Firestore
-    setTimeout(async () => {
-      await applyLockStatesToSelects();
-    }, 500);
-  }
-}, true);
-
-console.log('🎓 Sistema de Evaluación Competencial - Optimizado + Bloqueos');
+console.log('🎓 Sistema de Evaluación Competencial - Con Bloqueos Mejorados');
