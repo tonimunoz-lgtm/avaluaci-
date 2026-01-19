@@ -702,6 +702,24 @@ async function renderBackupsList() {
   }
 }
 
+function waitForFirebaseInit(callback) {
+  if (firebase.apps.length > 0) {
+    callback();
+  } else {
+    console.log('⏳ Esperando Firebase inicializado...');
+    setTimeout(() => waitForFirebaseInit(callback), 100);
+  }
+}
+
+// Iniciar injector solo cuando Firebase esté listo
+waitForFirebaseInit(() => {
+  console.log('✅ Firebase listo, inicializando backup injector...');
+  BackupSystemInjector.currentUserUid = professorUID;
+  BackupSystemInjector.currentClassId = currentClassId || null;
+  initBackupInjector();
+});
+
+
 // ============================================================
 // INICIAR SISTEMA AUTOMATICAMENTE
 // ============================================================
