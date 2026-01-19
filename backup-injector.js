@@ -376,12 +376,19 @@ function injectBackupButtonUserPage() {
 
 async function checkIfAdmin() {
   try {
-     const userDoc = await db.collection('professors').doc(user.uid).get();
-  if (userDoc.exists && userDoc.data().isAdmin) return true;
+    const db = window.firebase?.firestore?.();
+    const user = window.firebase?.auth?.().currentUser;
+
+    if (!db || !user) return false;
+
+    const userDoc = await db.collection('professors').doc(user.uid).get();
+    return userDoc.exists && userDoc.data().isAdmin === true;
   } catch (err) {
+    console.error('Error comprobando admin:', err);
     return false;
   }
 }
+
 
 // ============================================================
 // CREAR MODAL
