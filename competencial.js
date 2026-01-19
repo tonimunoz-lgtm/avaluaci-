@@ -12,7 +12,7 @@ const COMPETENCY_COLORS = {
 };
 
 const COMPETENCY_NAMES = {
-  'NA': 'No Alcanzado',
+  'NA',
   'AS': 'En Adquisición',
   'AN': 'Afianzado',
   'AE': 'Ampliado Excelente'
