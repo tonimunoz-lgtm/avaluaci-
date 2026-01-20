@@ -360,13 +360,25 @@ function injectBackupButtonUserPage() {
     return;
   }
 
+  // Esperar a que professorUID esté disponible
+  if (!window.professorUID) {
+    console.log('⏳ Esperando professorUID...');
+    setTimeout(injectBackupButtonUserPage, 1000);
+    return;
+  }
+
   checkIfAdmin().then(isAdmin => {
+    console.log('🔐 checkIfAdmin result:', isAdmin);
+    
     if (!isAdmin) {
       console.log('👤 No es admin');
       return;
     }
 
-    if (userMenu.querySelector('.backup-btn')) return;
+    if (userMenu.querySelector('.backup-btn')) {
+      console.log('✅ Botón ya existe');
+      return;
+    }
 
     const backupBtn = document.createElement('button');
     backupBtn.className = 'backup-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700';
@@ -383,7 +395,7 @@ function injectBackupButtonUserPage() {
       userMenu.appendChild(backupBtn);
     }
 
-    console.log('✅ Botón de backup inyectado');
+    console.log('✅ Botón de backup inyectado correctamente');
   });
 }
 
@@ -632,12 +644,14 @@ async function restoreBackupUI(backupId) {
 // ============================================================
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Esperar más tiempo para que professorUID esté disponible
   setTimeout(() => {
     if (!isAdminPage()) {
+      console.log('📱 Página de usuario - Inyectando botón...');
       injectBackupButtonUserPage();
     }
     setupAutoBackup();
-  }, 2000);
+  }, 3000); // Aumentado de 2000 a 3000ms
 });
 
 window.BackupSystemInjector = {
