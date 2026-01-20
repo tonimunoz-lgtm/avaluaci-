@@ -390,11 +390,30 @@ function injectBackupButtonUserPage() {
 async function checkIfAdmin() {
   try {
     const db = window.firebase?.firestore?.();
-    if (!db || !window.professorUID) return false;
+    const auth = window.firebase?.auth?.();
+    
+    if (!db || !auth) return false;
 
-    const userDoc = await db.collection('professors').doc(window.professorUID).get();
-    return userDoc.exists && userDoc.data().isAdmin === true;
+    // Intentar con professorUID primero
+    let uid = window.professorUID;
+    
+    // Si no está disponible, usar el usuario autenticado de Firebase
+    if (!uid) {
+      const currentUser = auth.currentUser;
+      if (!currentUser) return false;
+      uid = currentUser.uid;
+    }
+
+    console.log('🔍 Verificando admin para UID:', uid);
+
+    const userDoc = await db.collection('professors').doc(uid).get();
+    const isAdmin = userDoc.exists && userDoc.data().isAdmin === true;
+    
+    console.log('✅ isAdmin:', isAdmin);
+    
+    return isAdmin;
   } catch (err) {
+    console.error('❌ Error verificando admin:', err);
     return false;
   }
 }
