@@ -449,7 +449,7 @@ function createBackupModal() {
       
       <div class="flex justify-between items-center mb-4">
         <h2 class="text-2xl font-bold text-gray-900 dark:text-white">📦 Backup y Restauración</h2>
-        <button onclick="closeBackupModal()" class="text-gray-500 hover:text-gray-700 text-2xl">×</button>
+        <button class="closeBackupBtn text-gray-500 hover:text-gray-700 text-2xl">×</button>
       </div>
 
       <div id="backupTab" class="space-y-4">
@@ -466,10 +466,10 @@ function createBackupModal() {
         </div>
 
         <div class="flex gap-2 mt-4">
-          <button onclick="createManualBackupBtn()" class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-semibold">
+          <button class="createBackupBtn flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-semibold">
             💾 Crear Backup Ahora
           </button>
-          <button onclick="closeBackupModal()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-black px-4 py-2 rounded font-semibold">
+          <button class="closeBackupBtn2 flex-1 bg-gray-300 hover:bg-gray-400 text-black px-4 py-2 rounded font-semibold">
             Cerrar
           </button>
         </div>
@@ -482,16 +482,16 @@ function createBackupModal() {
           <div class="text-gray-500 text-center py-4">⏳ Cargando...</div>
         </div>
 
-        <button onclick="closeBackupModal()" class="w-full bg-gray-300 hover:bg-gray-400 text-black px-4 py-2 rounded font-semibold">
+        <button class="closeBackupBtn3 w-full bg-gray-300 hover:bg-gray-400 text-black px-4 py-2 rounded font-semibold">
           Cerrar
         </button>
       </div>
 
       <div class="flex gap-2 mt-6 border-t pt-4">
-        <button onclick="switchBackupTab('backups')" id="tabBackupsBtn" class="flex-1 bg-blue-600 text-white px-3 py-2 rounded font-semibold">
+        <button class="tabBackupsBtn flex-1 bg-blue-600 text-white px-3 py-2 rounded font-semibold">
           📦 Backups
         </button>
-        <button onclick="switchBackupTab('history')" id="tabHistoryBtn" class="flex-1 bg-gray-300 text-black px-3 py-2 rounded font-semibold">
+        <button class="tabHistoryBtn flex-1 bg-gray-300 text-black px-3 py-2 rounded font-semibold">
           📋 Historial
         </button>
       </div>
@@ -499,6 +499,16 @@ function createBackupModal() {
   `;
 
   document.body.appendChild(modal);
+
+  // Asignar event listeners al modal
+  const closeButtons = modal.querySelectorAll('.closeBackupBtn, .closeBackupBtn2, .closeBackupBtn3');
+  closeButtons.forEach(btn => {
+    btn.addEventListener('click', closeBackupModal);
+  });
+
+  modal.querySelector('.createBackupBtn').addEventListener('click', createManualBackupBtn);
+  modal.querySelector('.tabBackupsBtn').addEventListener('click', () => switchBackupTab('backups'));
+  modal.querySelector('.tabHistoryBtn').addEventListener('click', () => switchBackupTab('history'));
 }
 
 // ============================================================
