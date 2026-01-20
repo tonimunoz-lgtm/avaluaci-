@@ -360,14 +360,21 @@ function injectBackupButtonUserPage() {
     return;
   }
 
-  // Esperar a que professorUID esté disponible
-  if (!window.professorUID) {
-    console.log('⏳ Esperando professorUID...');
+  // Obtener UID directamente de Firebase Auth
+  const auth = window.firebase?.auth?.();
+  if (!auth) {
     setTimeout(injectBackupButtonUserPage, 1000);
     return;
   }
 
-  checkIfAdmin().then(isAdmin => {
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    console.log('⏳ Esperando autenticación...');
+    setTimeout(injectBackupButtonUserPage, 1000);
+    return;
+  }
+
+  checkIfAdmin(currentUser.uid).then(isAdmin => {
     console.log('🔐 checkIfAdmin result:', isAdmin);
     
     if (!isAdmin) {
@@ -399,29 +406,26 @@ function injectBackupButtonUserPage() {
   });
 }
 
-async function checkIfAdmin() {
+async function checkIfAdmin(uid) {
   try {
     const db = window.firebase?.firestore?.();
-    const auth = window.firebase?.auth?.();
     
-    if (!db || !auth) return false;
-
-    // Intentar con professorUID primero
-    let uid = window.professorUID;
-    
-    // Si no está disponible, usar el usuario autenticado de Firebase
-    if (!uid) {
-      const currentUser = auth.currentUser;
-      if (!currentUser) return false;
-      uid = currentUser.uid;
+    if (!db || !uid) {
+      console.error('❌ DB o UID no disponible');
+      return false;
     }
 
     console.log('🔍 Verificando admin para UID:', uid);
 
     const userDoc = await db.collection('professors').doc(uid).get();
-    const isAdmin = userDoc.exists && userDoc.data().isAdmin === true;
     
-    console.log('✅ isAdmin:', isAdmin);
+    if (!userDoc.exists) {
+      console.warn('⚠️ Documento de profesor no existe');
+      return false;
+    }
+
+    const isAdmin = userDoc.data().isAdmin === true;
+    console.log('✅ isAdmin:', isAdmin, 'Datos:', userDoc.data());
     
     return isAdmin;
   } catch (err) {
@@ -644,14 +648,23 @@ async function restoreBackupUI(backupId) {
 // ============================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Esperar más tiempo para que professorUID esté disponible
+  // Usar Firebase Auth directamente
+  const auth = window.firebase?.auth?.();
+  
+  if (auth) {
+    auth.onAuthStateChanged((user) => {
+      if (user && !isAdminPage()) {
+        console.log('👤 Usuario autenticado:', user.email);
+        console.log('📱 Página de usuario - Inyectando botón...');
+        injectBackupButtonUserPage();
+      }
+    });
+  }
+
+  // Iniciar backups de todas formas
   setTimeout(() => {
-    if (!isAdminPage()) {
-      console.log('📱 Página de usuario - Inyectando botón...');
-      injectBackupButtonUserPage();
-    }
     setupAutoBackup();
-  }, 3000); // Aumentado de 2000 a 3000ms
+  }, 2000);
 });
 
 window.BackupSystemInjector = {
