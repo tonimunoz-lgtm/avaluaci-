@@ -533,8 +533,8 @@ function closeBackupModal() {
 function switchBackupTab(tab) {
   const backupTab = document.getElementById('backupTab');
   const historyTab = document.getElementById('historyTab');
-  const tabBackupsBtn = document.getElementById('tabBackupsBtn');
-  const tabHistoryBtn = document.getElementById('tabHistoryBtn');
+  const tabBackupsBtn = document.querySelector('.tabBackupsBtn');
+  const tabHistoryBtn = document.querySelector('.tabHistoryBtn');
 
   if (tab === 'backups') {
     backupTab.classList.remove('hidden');
@@ -556,9 +556,14 @@ function switchBackupTab(tab) {
 }
 
 async function loadBackupsUI() {
-  if (!window.currentClassId) return;
+  if (!window.currentClassId) {
+    console.warn('⚠️ No currentClassId disponible');
+    return;
+  }
 
   const backupsList = document.getElementById('backupsList');
+  if (!backupsList) return;
+
   backupsList.innerHTML = '<div class="text-gray-500 text-center py-4">⏳ Cargando...</div>';
 
   try {
@@ -576,17 +581,22 @@ async function loadBackupsUI() {
 
       const item = document.createElement('div');
       item.className = 'bg-gray-50 border rounded p-3 flex justify-between items-center';
-      item.innerHTML = `
-        <div>
-          <p class="font-semibold">${date}</p>
-          <p class="text-xs text-gray-600">
-            ${backup.itemCount.activities} acts · ${backup.itemCount.students} alumnos · ${sizeKB} KB
-          </p>
-        </div>
-        <button onclick="restoreBackupUI('${backup.id}')" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm">
-          Restaurar
-        </button>
+      
+      const infoDiv = document.createElement('div');
+      infoDiv.innerHTML = `
+        <p class="font-semibold">${date}</p>
+        <p class="text-xs text-gray-600">
+          ${backup.itemCount.activities} acts · ${backup.itemCount.students} alumnos · ${sizeKB} KB
+        </p>
       `;
+      
+      const restoreBtn = document.createElement('button');
+      restoreBtn.className = 'bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm';
+      restoreBtn.textContent = 'Restaurar';
+      restoreBtn.addEventListener('click', () => restoreBackupUI(backup.id));
+
+      item.appendChild(infoDiv);
+      item.appendChild(restoreBtn);
       backupsList.appendChild(item);
     });
 
@@ -596,9 +606,14 @@ async function loadBackupsUI() {
 }
 
 async function loadHistoryUI() {
-  if (!window.currentClassId) return;
+  if (!window.currentClassId) {
+    console.warn('⚠️ No currentClassId disponible');
+    return;
+  }
 
   const changeList = document.getElementById('changeList');
+  if (!changeList) return;
+
   changeList.innerHTML = '<div class="text-gray-500 text-center py-4">⏳ Cargando...</div>';
 
   try {
@@ -629,9 +644,14 @@ async function loadHistoryUI() {
 }
 
 async function createManualBackupBtn() {
-  if (!window.currentClassId) return;
+  if (!window.currentClassId) {
+    alert('❌ No hay clase seleccionada');
+    return;
+  }
 
-  const btn = event.target;
+  const btn = document.querySelector('.createBackupBtn');
+  if (!btn) return;
+
   btn.disabled = true;
   btn.textContent = '⏳ Creando...';
 
@@ -641,6 +661,7 @@ async function createManualBackupBtn() {
     alert('✅ Backup creado correctamente');
     await loadBackupsUI();
   } catch (err) {
+    console.error('Error creando backup:', err);
     alert('❌ Error: ' + err.message);
   } finally {
     btn.disabled = false;
