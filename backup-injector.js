@@ -189,7 +189,8 @@ function setupAutoBackup() {
     await performDailyBackup();
   }, BACKUP_CONFIG.BACKUP_INTERVAL);
 
-  setTimeout(performDailyBackup, 5000);
+  // No ejecutar inmediatamente para que la app esté lista
+  setTimeout(performDailyBackup, 10000);
 }
 
 async function performDailyBackup() {
@@ -556,8 +557,15 @@ function switchBackupTab(tab) {
 }
 
 async function loadBackupsUI() {
-  if (!window.currentClassId) {
-    console.warn('⚠️ No currentClassId disponible');
+  // Obtener currentClassId de app.js
+  const classId = window.currentClassId || (typeof currentClassId !== 'undefined' ? currentClassId : null);
+  
+  if (!classId) {
+    console.warn('⚠️ No classId disponible. currentClassId:', window.currentClassId);
+    console.warn('Elementos con class-related data:', {
+      classTitle: document.getElementById('classTitle')?.textContent,
+      screenClassVisible: !document.getElementById('screen-class')?.classList.contains('hidden')
+    });
     return;
   }
 
@@ -567,7 +575,7 @@ async function loadBackupsUI() {
   backupsList.innerHTML = '<div class="text-gray-500 text-center py-4">⏳ Cargando...</div>';
 
   try {
-    const backups = await listBackupsForClass(window.currentClassId);
+    const backups = await listBackupsForClass(classId);
 
     if (backups.length === 0) {
       backupsList.innerHTML = '<div class="text-gray-500 text-center py-4">No hay backups aún</div>';
@@ -593,7 +601,7 @@ async function loadBackupsUI() {
       const restoreBtn = document.createElement('button');
       restoreBtn.className = 'bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm';
       restoreBtn.textContent = 'Restaurar';
-      restoreBtn.addEventListener('click', () => restoreBackupUI(backup.id));
+      restoreBtn.addEventListener('click', () => restoreBackupUI(backup.id, classId));
 
       item.appendChild(infoDiv);
       item.appendChild(restoreBtn);
@@ -606,8 +614,10 @@ async function loadBackupsUI() {
 }
 
 async function loadHistoryUI() {
-  if (!window.currentClassId) {
-    console.warn('⚠️ No currentClassId disponible');
+  const classId = window.currentClassId || (typeof currentClassId !== 'undefined' ? currentClassId : null);
+  
+  if (!classId) {
+    console.warn('⚠️ No classId disponible');
     return;
   }
 
@@ -617,7 +627,7 @@ async function loadHistoryUI() {
   changeList.innerHTML = '<div class="text-gray-500 text-center py-4">⏳ Cargando...</div>';
 
   try {
-    const changes = await getChangeHistory(window.currentClassId, 20);
+    const changes = await getChangeHistory(classId, 20);
 
     if (changes.length === 0) {
       changeList.innerHTML = '<div class="text-gray-500 text-center py-4">Sin cambios registrados</div>';
