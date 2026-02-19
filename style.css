@@ -331,26 +331,30 @@ th, td {
     margin-bottom: 0 !important;
   }
 
-  /* ── Fila de botons d'acció: scroll horitzontal ── */
-  /* Evita que els botons es debordin o es tallin */
+  /* ── Fila de botons d'acció: dues files en mòbil ── */
+  /* SenseNO overflow per no matar el menú desplegable del ⋮ */
   #screen-class .flex.flex-wrap.gap-2 {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    padding-bottom: 0.25rem;
-    /* Petit indicador visual que hi ha més contingut */
-    -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
-    mask-image: linear-gradient(to right, black 85%, transparent 100%);
+    flex-wrap: wrap;
+    gap: 0.4rem;
   }
 
-  #screen-class .flex.flex-wrap.gap-2::-webkit-scrollbar {
-    display: none;
-  }
-
-  /* Tots els fills no es comprimeixen */
-  #screen-class .flex.flex-wrap.gap-2 > * {
+  /* Primera fila: selector terme + botons de terme */
+  #termsDropdown,
+  #btnAddTerm,
+  #termMenuBtn {
     flex-shrink: 0;
+  }
+
+  /* Segona fila: botons d'acció — creixen per omplir l'espai */
+  #btnSortAlpha,
+  #btnImportAL,
+  #btnToggleStudentsMobile,
+  #btnAddStudent,
+  #btnAddActivity {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    justify-content: center;
   }
 
   /* ── Sidebar alumnes ── */
@@ -429,23 +433,4 @@ th, td {
 @media (max-width: 380px) {
   .class-card { padding: 0.5rem; font-size: 0.75rem; }
   .class-card h3 { font-size: 1rem; }
-}
-
-/* ---------------- Fix menú ⋮ terme en mòbil ---------------- */
-@media (max-width: 768px) {
-
-  /* El contenidor .relative del botó ⋮ ha de ser el punt d'ancoratge */
-  #screen-class .flex.flex-wrap.gap-2 .relative {
-    position: static;
-  }
-
-  /* El menú surt fixat a la pantalla, just sota la barra d'acció */
-  #termMenu {
-    position: fixed;
-    top: auto;
-    left: 1rem;
-    right: 1rem;
-    width: auto;
-    z-index: 9999;
-  }
 }
