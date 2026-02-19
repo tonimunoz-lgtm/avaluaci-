@@ -430,3 +430,22 @@ th, td {
   .class-card { padding: 0.5rem; font-size: 0.75rem; }
   .class-card h3 { font-size: 1rem; }
 }
+
+/* ---------------- Fix menú ⋮ terme en mòbil ---------------- */
+@media (max-width: 768px) {
+
+  /* El contenidor .relative del botó ⋮ ha de ser el punt d'ancoratge */
+  #screen-class .flex.flex-wrap.gap-2 .relative {
+    position: static;
+  }
+
+  /* El menú surt fixat a la pantalla, just sota la barra d'acció */
+  #termMenu {
+    position: fixed;
+    top: auto;
+    left: 1rem;
+    right: 1rem;
+    width: auto;
+    z-index: 9999;
+  }
+}
