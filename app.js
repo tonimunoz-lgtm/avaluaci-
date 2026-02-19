@@ -349,35 +349,15 @@ document.getElementById("googleLoginBtn").addEventListener("click", signInWithGo
 
 btnRegister.addEventListener('click', async () => {
   const email = document.getElementById('loginEmail').value.trim();
-  const pw = document.getElementById('loginPassword').value;
+  const pw    = document.getElementById('loginPassword').value;
   if (!email || !pw) return alert('Introdueix email i contrasenya');
 
   try {
-    // 🔹 Comprovar si ja hi ha un usuari amb aquest email
-    const existingUsers = await db.collection('professors')
-      .where('email', '==', email).get();
-
-    if (!existingUsers.empty) {
-      const userDoc = existingUsers.docs[0];
-      if (userDoc.data().deleted) {
-        // Reactivar usuari eliminat
-        await db.collection('professors').doc(userDoc.id).update({
-          deleted: false,
-          suspended: false
-        });
-
-        const u = await auth.signInWithEmailAndPassword(email, pw);
-        professorUID = u.user.uid;
-        setupAfterAuth(u.user);
-        return alert("Compte reactivat correctament!");
-      } else {
-        return alert("Error registre: L’email ja està en ús.");
-      }
-    }
-
-    // 🔹 Crear usuari nou
+    // Crear usuari a Firebase Auth — sense tocar Firestore abans d'autenticar-se
     const u = await auth.createUserWithEmailAndPassword(email, pw);
     professorUID = u.user.uid;
+
+    // Ara ja estem autenticats, les rules permeten escriure el propi document
     await db.collection('professors').doc(professorUID).set({
       email,
       nom: email.split('@')[0],
@@ -392,7 +372,15 @@ btnRegister.addEventListener('click', async () => {
     alert("Compte creat correctament!");
 
   } catch (e) {
-    alert('Error registre: ' + e.message);
+    if (e.code === 'auth/email-already-in-use') {
+      alert("Aquest email ja està registrat. Utilitza el botó d'inici de sessió.");
+    } else if (e.code === 'auth/weak-password') {
+      alert("La contrasenya ha de tenir mínim 6 caràcters.");
+    } else if (e.code === 'auth/invalid-email') {
+      alert("L'email no és vàlid.");
+    } else {
+      alert('Error registre: ' + e.message);
+    }
   }
 });
 
