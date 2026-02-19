@@ -1,8 +1,3 @@
-/* ================================================================
-   GESTOR D'AVALUACIÓ — style.css
-   Base original conservada. Millores quirúrgiques per a mòbil.
-================================================================ */
-
 /* ---------------- Body general ---------------- */
 body {
   background: #f3f4f6;
@@ -10,10 +5,6 @@ body {
   margin: 0;
   padding: 0;
   color: #1f2937;
-  /* Evita el rebot de scroll a iOS */
-  overscroll-behavior: none;
-  /* Elimina el flash blau al tocar en iOS */
-  -webkit-tap-highlight-color: transparent;
 }
 
 /* ---------------- Contenidor principal ---------------- */
@@ -36,7 +27,7 @@ body {
   margin: 0 auto;
 }
 
-/* ---------------- Títols ---------------- */
+/* ---------------- Titols ---------------- */
 h1, h2, h3 {
   color: #1f2937;
   font-weight: 700;
@@ -58,9 +49,6 @@ p, span, td {
   color: white;
   background: linear-gradient(135deg, #6366f1 0%, #a78bfa 100%);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  /* Evita selecció accidental al tocar */
-  -webkit-user-select: none;
-  user-select: none;
 }
 
 .class-card:hover {
@@ -68,25 +56,9 @@ p, span, td {
   box-shadow: 0 8px 16px rgba(0,0,0,0.25);
 }
 
-/* Feedback tàctil en mòbil */
-.class-card:active {
-  transform: scale(0.97);
-}
-
 .class-card h3 { font-size: 1.25rem; font-weight: 700; margin: 0; }
 .class-card p { font-size: 0.875rem; margin: 0.4rem 0 0; }
 .class-card .click-hint { font-size: 0.75rem; margin-top: 0.8rem; opacity: 0.9; }
-
-/* ---------------- Header sticky ---------------- */
-/* El header es queda visible mentre es fa scroll */
-header {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  background: white !important;
-  border-bottom: 1px solid #e5e7eb;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
-}
 
 /* ---------------- Pantalla classe oberta ---------------- */
 #btnBack, #btnBack svg {
@@ -100,9 +72,6 @@ header {
   align-items: center;
   gap: 0.4rem;
   transition: color 0.2s ease;
-  /* Touch target adequat */
-  min-height: 44px;
-  padding: 0 0.5rem 0 0;
 }
 
 #btnBack:hover { color: #6366f1 !important; }
@@ -115,8 +84,6 @@ header {
   flex-grow: 1;
   overflow-x: auto;
   width: auto;
-  /* Scroll suau a iOS */
-  -webkit-overflow-scrolling: touch;
 }
 
 #notesTable {
@@ -128,28 +95,6 @@ header {
 #notesTable th, #notesTable td {
   border: 1px solid #d1d5db;
   padding: 0.5rem;
-}
-
-/* Primera columna (noms) fixa en scroll horitzontal */
-#notesTable th:first-child,
-#notesTable td:first-child {
-  position: sticky;
-  left: 0;
-  background: #f9fafb;
-  z-index: 2;
-}
-
-#notesTable th:first-child {
-  background: #eef2ff;
-  z-index: 3;
-}
-
-/* Capçaleres fixes en scroll vertical */
-#notesTable th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: #eef2ff;
 }
 
 .table-input {
@@ -169,12 +114,9 @@ button {
   font-weight: 600;
   border-radius: 0.5rem;
   transition: transform 0.2s ease, background 0.2s ease;
-  /* Touch target mínim recomanat per Apple/Google */
-  min-height: 44px;
 }
 
 button:hover { transform: scale(1.03); }
-button:active { transform: scale(0.97); }
 
 .bg-indigo-500 {
   background: linear-gradient(90deg, #6366f1, #a78bfa);
@@ -182,7 +124,7 @@ button:active { transform: scale(0.97); }
 }
 
 /* ---------------- Modals ---------------- */
-.modal-backdrop { background: rgba(0,0,0,0.35); }
+.modal-backdrop { background: rgba(0,0,0,0.1); }
 .modal-close, #modalCreateClassBtn, #modalAddStudentBtn, #modalAddActivityBtn {
   border-radius: 0.5rem;
   font-weight: 600;
@@ -213,6 +155,20 @@ button:active { transform: scale(0.97); }
 
 #formulaButtons button:hover {
   transform: scale(1.05);
+}
+
+/* ---------------- Responsive General ---------------- */
+@media (max-width: 1024px) {
+  #appRoot, #screen-classes, #screen-class {
+    padding: 0.5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  #loginScreen { padding: 1rem; }
+  .table-input { width: 2rem; font-size: 0.7rem; }
+  #notesTable th, #notesTable td { font-size: 0.7rem; padding: 0.25rem; }
+  .class-card { padding: 0.5rem; font-size: 0.75rem; }
 }
 
 /* ---------------- Menús ---------------- */
@@ -259,7 +215,7 @@ button:active { transform: scale(0.97); }
   background-color: #f3f4f6; 
 }
 
-/* ---------------- Layout classe oberta ---------------- */
+/* ---------------- Layout classe oberta amb columna d'alumnes més estreta ---------------- */
 #classScreenWrapper {
   display: flex;
   gap: 0.5rem;
@@ -275,6 +231,84 @@ button:active { transform: scale(0.97); }
   background: #f9fafb;
   border-radius: 0.5rem;
   box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+/* ---------- MOBILE ONLY ---------- */
+@media (max-width: 768px) {
+  /* Amaga completament la barra lateral */
+  #studentsListContainer {
+    display: none;
+  }
+
+  /* Quan s'obre en mòbil */
+  #studentsListContainer.mobile-open {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+  }
+  
+  /* Panell interior */
+  #studentsListContent {
+    background: white;
+    width: 90%;
+    max-width: 350px;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    max-height: 90%;
+    overflow-y: auto;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  }
+
+  /* Oculta la barra lateral tradicional */
+  #studentsListContainer {
+    width: 0;
+    max-width: none;
+  }
+
+  /* La graella ocupa tota la pantalla */
+  #notesTable-wrapper {
+    width: 100% !important;
+  }
+
+  /* Botó tancar llista alumnes visible en mòbil */
+  #closeStudentsMobile {
+    display: block;
+  }
+
+  /* Ocultar título "Les meves classes" en móvil - SELECTOR FUERTE */
+  #screen-classes h2 {
+    display: none !important;
+  }
+
+  /* ---- Barra de botons de la graella: deslizant en mòbil ---- */
+  /* overflow-x visible al pare per no tallar el menú desplegable */
+  #screen-class .flex.flex-wrap.gap-2 {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    /* overflow visible en vertical perquè el menú ⋮ pugui sortir */
+    overflow-y: visible;
+  }
+
+  #screen-class .flex.flex-wrap.gap-2::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Cap fill es comprimeix */
+  #screen-class .flex.flex-wrap.gap-2 > * {
+    flex-shrink: 0;
+  }
+
+  /* El menú ⋮ surt fixat a la pantalla, just sota el botó */
+  #termMenu {
+    position: fixed !important;
+    z-index: 9999 !important;
+  }
 }
 
 /* Blocked cell input */
@@ -311,126 +345,12 @@ th, td {
   display: none;
 }
 
-#gradesModeToggle:hover {
-  transform: scale(1.03);
-}
-
-/* ================================================================
-   MÒBIL — millores sense canviar mides ni treure funcionalitat
-================================================================ */
 @media (max-width: 768px) {
-
-  /* ── Capçalera de classe: apila back+títol i botons en dues files ── */
-  #screen-class > div.flex.flex-col {
-    gap: 0.5rem;
-  }
-
-  /* Títol més compacte en mòbil */
-  #classTitle {
-    font-size: 1.1rem !important;
-    margin-bottom: 0 !important;
-  }
-
-  /* ── Fila de botons d'acció: dues files en mòbil ── */
-  /* SenseNO overflow per no matar el menú desplegable del ⋮ */
-  #screen-class .flex.flex-wrap.gap-2 {
-    flex-wrap: wrap;
-    gap: 0.4rem;
-  }
-
-  /* Primera fila: selector terme + botons de terme */
-  #termsDropdown,
-  #btnAddTerm,
-  #termMenuBtn {
-    flex-shrink: 0;
-  }
-
-  /* Segona fila: botons d'acció — creixen per omplir l'espai */
-  #btnSortAlpha,
-  #btnImportAL,
-  #btnToggleStudentsMobile,
-  #btnAddStudent,
-  #btnAddActivity {
-    flex: 1;
-    min-width: 0;
-    text-align: center;
-    justify-content: center;
-  }
-
-  /* ── Sidebar alumnes ── */
-  #studentsListContainer {
-    display: none;
-  }
-
-  #studentsListContainer.mobile-open {
-    display: flex;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.45);
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-  }
-
-  #studentsListContent {
-    background: white;
-    width: 90%;
-    max-width: 350px;
-    padding: 1rem;
-    border-radius: 0.75rem;
-    max-height: 90%;
-    overflow-y: auto;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
-  }
-
-  #studentsListContainer {
-    width: 0;
-    max-width: none;
-  }
-
-  /* La graella ocupa tota la pantalla */
-  #notesTable-wrapper {
-    width: 100% !important;
-  }
-
-  /* Botó tancar visible */
   #closeStudentsMobile {
     display: block;
   }
-
-  /* Ocultar títol "Les meves classes" */
-  #screen-classes h2 {
-    display: none !important;
-  }
-
-  /* ── Botons crear/eliminar: amplada completa, un sota l'altre ── */
-  #btnCreateClass,
-  #btnDeleteMode {
-    width: 100%;
-    margin-bottom: 0.5rem !important;
-    text-align: center;
-    justify-content: center;
-    display: flex;
-    align-items: center;
-  }
-
-  /* ── Taula de notes: lletra lleugerament més petita ── */
-  .table-input { width: 2rem; font-size: 0.75rem; }
-  #notesTable th, #notesTable td { font-size: 0.75rem; padding: 0.3rem; }
-
-  /* ── Login ── */
-  #loginScreen { padding: 1rem; }
 }
 
-/* ── Responsiu general (tablets) ── */
-@media (max-width: 1024px) {
-  #appRoot, #screen-classes, #screen-class {
-    padding: 0.5rem;
-  }
-}
-
-/* ── Pantalles molt petites (iPhone SE, etc.) ── */
-@media (max-width: 380px) {
-  .class-card { padding: 0.5rem; font-size: 0.75rem; }
-  .class-card h3 { font-size: 1rem; }
+#gradesModeToggle:hover {
+  transform: scale(1.03);
 }
