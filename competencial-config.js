@@ -7,6 +7,10 @@
 
 console.log('✅ competencial-config.js carregat');
 
+// Declarem que aquest mòdul gestiona les activitats competencials
+// competencial.js llegirà aquest flag i no substituirà per selects
+window._competencialConfigActive = true;
+
 // ============================================================
 // CONFIG PER DEFECTE DELS TRAMS
 // ============================================================
@@ -251,36 +255,35 @@ function showToastComp(msg) {
 // PARCHEAR INPUTS COMPETENCIALS: NUMÈRICS 1-4 en lloc de selects
 // ============================================================
 
-// Interceptem el patchCompetencyInputs original de competencial.js
-// Esperem que estigui carregat i el sobreescrivim
-const waitForOriginalPatch = () => {
-  // Observem quan es creen nous inputs competencials
-  // El nostre observer substitueix els selects per inputs numèrics 1-4
-  const numericObserver = new MutationObserver(() => {
-    setTimeout(upgradeCompetencySelects, 100);
-  });
+// Observem inputs marcats com a competencials per competencial.js
+// i els convertim en el nostre wrapper numèric 1-4
+const numericObserver = new MutationObserver(() => {
+  setTimeout(upgradeCompetencyInputs, 150);
+});
 
-  document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => {
-      numericObserver.observe(document.body, { childList: true, subtree: true });
-    }, 2000);
-  });
-};
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    numericObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-is-competency'] });
+  }, 2000);
+});
 
-waitForOriginalPatch();
+// Converteix inputs amb data-is-competency="true" al nostre format numèric 1-4
+async function upgradeCompetencyInputs() {
+  // Gestionar tant inputs marcats per competencial.js com selects antics (fallback)
+  const targets = [
+    ...document.querySelectorAll('input[type="number"][data-is-competency="true"]:not([data-upgraded="true"]):not([data-is-competency-numeric="true"])'),
+    ...document.querySelectorAll('select.competency-select:not([data-upgraded="true"])')
+  ];
 
-// Substitueix els selects competencials (NA/AS/AN/AE) per inputs numèrics 1-4
-async function upgradeCompetencySelects() {
-  const selects = document.querySelectorAll('select.competency-select:not([data-upgraded="true"])');
-  if (selects.length === 0) return;
+  if (targets.length === 0) return;
 
-  for (const sel of selects) {
-    sel.dataset.upgraded = 'true';
-    const activityId = sel.dataset.activityId;
-    const studentId = sel.dataset.studentId;
+  for (const el of targets) {
+    el.dataset.upgraded = 'true';
+    const activityId = el.dataset.activityId;
+    const studentId = el.dataset.studentId || el.closest('tr')?.dataset.studentId;
     if (!activityId || !studentId) continue;
 
-    // Llegir valor numèric actual guardat
+    // Llegir valor numèric actual
     let numericVal = null;
     try {
       const studentDoc = await _db.collection('alumnes').doc(studentId).get();
@@ -288,7 +291,7 @@ async function upgradeCompetencySelects() {
       numericVal = rawVal !== undefined && rawVal !== null ? parseFloat(rawVal) : null;
     } catch (e) { /* no crític */ }
 
-    // Crear input numèric 1-4
+    // Crear wrapper
     const wrapper = document.createElement('div');
     wrapper.className = 'comp-cell-wrapper flex flex-col items-center gap-0.5';
     wrapper.style.minWidth = '70px';
@@ -303,12 +306,14 @@ async function upgradeCompetencySelects() {
     input.dataset.activityId = activityId;
     input.dataset.studentId = studentId;
     input.dataset.isCompetencyNumeric = 'true';
+    input.dataset.patched = 'true'; // Evitar que competencial.js el torni a processar
+    input.dataset.upgraded = 'true';
     input.placeholder = '1-4';
     if (numericVal !== null && !isNaN(numericVal)) {
       input.value = numericVal;
     }
 
-    // Badge de qualificació competencial (mostra NA/AS/AN/AE)
+    // Badge NA/AS/AN/AE
     const badge = document.createElement('span');
     badge.className = 'comp-badge text-xs font-bold px-2 py-0.5 rounded w-full text-center';
     badge.style.minWidth = '44px';
@@ -316,22 +321,21 @@ async function upgradeCompetencySelects() {
     badge.dataset.numericVal = numericVal ?? '';
 
     if (numericVal !== null && !isNaN(numericVal)) {
-      const label = numericToCompetency(numericVal);
-      applyBadgeStyle(badge, label);
+      applyBadgeStyle(badge, numericToCompetency(numericVal));
     } else {
-      applyBadgeStyle(badge, null);
       badge.textContent = '-';
+      badge.style.backgroundColor = '#f3f4f6';
+      badge.style.color = '#555';
     }
 
-    // Guardar nota numèrica i actualitzar badge
     input.addEventListener('change', async () => {
       const val = parseFloat(input.value);
       if (isNaN(val) || val < 1 || val > 4) {
         input.value = '';
-        applyBadgeStyle(badge, null);
         badge.textContent = '-';
+        badge.style.backgroundColor = '#f3f4f6';
+        badge.style.color = '#555';
         badge.dataset.numericVal = '';
-        // Esborrar nota
         try {
           await _db.collection('alumnes').doc(studentId).update({
             [`notes.${activityId}`]: firebase.firestore.FieldValue.delete()
@@ -344,20 +348,19 @@ async function upgradeCompetencySelects() {
       const label = numericToCompetency(rounded);
       applyBadgeStyle(badge, label);
       badge.dataset.numericVal = rounded;
-      // Guardar a Firestore com a numèric (en notes, com la resta)
       try {
         await _db.collection('alumnes').doc(studentId).update({
           [`notes.${activityId}`]: rounded
         });
-      } catch (e) { console.error('Error guardant nota competencial numèrica:', e); }
+      } catch (e) { console.error('Error guardant nota competencial:', e); }
     });
 
     wrapper.appendChild(input);
     wrapper.appendChild(badge);
 
     try {
-      sel.parentNode.replaceChild(wrapper, sel);
-    } catch (e) { console.error('Error substituint select:', e); }
+      el.parentNode.replaceChild(wrapper, el);
+    } catch (e) { console.error('Error substituint element:', e); }
   }
 }
 
