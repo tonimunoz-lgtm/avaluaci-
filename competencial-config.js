@@ -515,9 +515,9 @@ async function upgradeCompetencyInputs() {
     wrapper.appendChild(input);
     wrapper.appendChild(badge);
 
-  try {
-  el.parentNode.replaceChild(wrapper, el);
-} catch (e) { console.error('Error substituint element:', e); }
+    try {
+      el.parentNode.replaceChild(wrapper, el);
+    } catch (e) { console.error('Error substituint element:', e); }
   }
 }
 
