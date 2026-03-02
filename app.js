@@ -1602,7 +1602,10 @@ function simulateFormulaWithExamples(formula) {
   try {
     let evalStr = formula;
     
-    // Reemplazar nombres de actividades con ejemplo (6)
+    // 🔥 FIX: Substituir __ACT__id per 6 (exemple)
+    evalStr = evalStr.replace(/__ACT__[a-zA-Z0-9_]+/g, '6');
+    
+    // Fallback: substituir noms d'activitats antics per 6
     const allTerms = _classData?.terms || {};
     Object.values(allTerms).forEach(term => {
       const activities = term.activities || [];
@@ -1687,7 +1690,21 @@ modalApplyCalcBtn.addEventListener('click', async () => {
       case 'formula':
         await applyFormula(formulaField.value);
         formulaText = formulaField.value;
+        // 🔥 FIX: Traduir __ACT__id a noms per al displayFormula
         displayFormulaText = formulaField.value;
+        {
+          const allTerms2 = _classData?.terms || {};
+          const allActivityIds2 = new Set();
+          Object.values(allTerms2).forEach(t => (t.activities || []).forEach(id => allActivityIds2.add(id)));
+          classActivities.forEach(id => allActivityIds2.add(id));
+          for (const aid of allActivityIds2) {
+            const actDoc = await db.collection('activitats').doc(aid).get();
+            if (actDoc.exists) {
+              const actName = actDoc.data().nom;
+              displayFormulaText = displayFormulaText.replace(new RegExp(`__ACT__${aid}`, 'g'), actName);
+            }
+          }
+        }
         break;
 
       case 'rounding':
@@ -1910,8 +1927,10 @@ function buildActivityButtons(){
           buttonText = `[${termName}] ${name}`;
         }
         btn.textContent = buttonText;
+        btn.title = `ID: ${aid}`; // tooltip per depurar si cal
         
-        btn.addEventListener('click', () => insertAtCursor(name));
+        // 🔥 FIX: Usem __ACT__id en lloc del nom per evitar confusió entre trimestres
+        btn.addEventListener('click', () => insertAtCursor(`__ACT__${aid}`));
         activitiesContainer.appendChild(btn);
       });
     });
@@ -2603,33 +2622,8 @@ document.getElementById('cancelDeleteStudentsBtn').addEventListener('click', () 
 });
 
 // ----------- SCRIPT PER MARCAR USUARIS COM A ADMIN -----------
-
-// Llista d'usuaris que vols marcar com a administrador
-const adminEmails = [
-  "toni.munoz@institutmatadepera.cat",
-  "tonaco92@gmail.com",
-  "el_teu_email@exemple.com" // posa el teu email
-];
-
-// Funció per actualitzar Firestore
-async function setAdmins() {
-  try {
-    const snapshot = await db.collection('professors').get();
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      if (adminEmails.includes(data.email)) {
-        db.collection('professors').doc(doc.id).update({ isAdmin: true })
-          .then(() => console.log(`Usuari ${data.email} marcat com admin.`))
-          .catch(err => console.error('Error actualitzant:', err));
-      }
-    });
-  } catch (err) {
-    console.error('Error llegint professors:', err);
-  }
-}
-
-// Executar només una vegada
-setAdmins();
+// ELIMINAT: setAdmins() s'ha mogut al panell d'administrador (administrador.js)
+// ja que requeria permisos de 'list' sobre /professors que no tenen usuaris normals.
 
 //----------------nou
 function filterStudentsList() {
