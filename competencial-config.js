@@ -15,9 +15,9 @@ window._competencialConfigActive = true;
 // CONFIG PER DEFECTE DELS TRAMS
 // ============================================================
 const DEFAULT_TRAMS = {
-  NA:  { min: 1,   max: 1.99 },
-  AS:  { min: 2,   max: 2.49 },
-  AN:  { min: 2.5, max: 2.99 },
+  NA:  { min: 1,   max: 2 },
+  AS:  { min: 2,   max: 2.5 },
+  AN:  { min: 2.5, max: 3 },
   AE:  { min: 3,   max: 4    }
 };
 
