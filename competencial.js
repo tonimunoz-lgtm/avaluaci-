@@ -235,11 +235,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 🔥 MEJORADO: Procesar TODOS los inputs de una vez
 async function patchCompetencyInputs() {
-  const inputs = document.querySelectorAll('input[type="number"][data-activity-id]:not([data-patched="true"])');
+  // Ignorar inputs ja gestionats per competencial-config.js (data-is-competency-numeric)
+  // i els que estan dins d'un wrapper .comp-cell-wrapper (ja processats)
+  const inputs = document.querySelectorAll(
+    'input[type="number"][data-activity-id]:not([data-patched="true"]):not([data-is-competency-numeric="true"])'
+  );
   
-  if (inputs.length === 0) return;
+  // Filtrar inputs que estan dins d'un wrapper ja processat
+  const filteredInputs = Array.from(inputs).filter(inp => 
+    !inp.closest('.comp-cell-wrapper')
+  );
 
-  console.log(`🔧 Parchando ${inputs.length} inputs de una sola vez...`);
+  if (filteredInputs.length === 0) return;
+
+  console.log(`🔧 Parchando ${filteredInputs.length} inputs de una sola vez...`);
 
   // 🔥 NUEVA: Precarga de actividades competenciales
   const db = window.firebase?.firestore?.();
@@ -250,7 +259,7 @@ async function patchCompetencyInputs() {
 
   // Obtener todos los IDs únicos de actividades
   const activityIds = new Set();
-  inputs.forEach(input => {
+  filteredInputs.forEach(input => {
     const actId = input.dataset.activityId;
     if (actId) activityIds.add(actId);
   });
@@ -274,7 +283,7 @@ async function patchCompetencyInputs() {
   console.log(`📊 Actividades competenciales detectadas: ${competencyActivityIds.size}`);
 
   // Ahora procesar inputs
-  for (const input of inputs) {
+  for (const input of filteredInputs) {
     if (input.dataset.patched === 'true') continue;
 
     const activityId = input.dataset.activityId;
@@ -288,14 +297,18 @@ async function patchCompetencyInputs() {
     input.dataset.patched = 'true';
 
     try {
-      // Solo si es competencial
+      // Solo si es competencial: si competencial-config.js está activo,
+      // NO reemplazamos con select - lo gestiona competencial-config.js
       if (competencyActivityIds.has(activityId)) {
-        if (input.parentNode) {
-          // Cargar valor guardado
+        // Comprovar si competencial-config.js ja gestiona aquest input
+        if (window._competencialConfigActive) {
+          // Marcar com a competencial però no substituir - config.js ho farà
+          input.dataset.isCompetency = 'true';
+        } else if (input.parentNode) {
+          // Comportament original: substituir per select
           const studentDoc = await db.collection('alumnes').doc(studentId).get();
           const competencyValue = studentDoc.exists ? 
             (studentDoc.data().competencyNotes?.[activityId] || '') : '';
-          
           replaceWithCompetencySelect(input, studentId, activityId, competencyValue);
         }
       }
