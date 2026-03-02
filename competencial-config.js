@@ -144,7 +144,6 @@ function injectConfigButton() {
 // MODAL DE CONFIGURACIÓ DELS TRAMS
 // ============================================================
 function openConfigModal() {
-  // Eliminar modal anterior si existeix
   document.getElementById('compConfigModal')?.remove();
 
   const trams = _trams || DEFAULT_TRAMS;
@@ -153,46 +152,62 @@ function openConfigModal() {
   modal.className = 'fixed inset-0 flex items-center justify-center z-[9999] bg-black bg-opacity-50';
 
   modal.innerHTML = `
-    <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg">
+    <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center mb-4">
         <h2 class="text-xl font-bold text-gray-900">⚙️ Configuració Competencial</h2>
         <button id="btnCloseCompConfig" class="text-gray-400 hover:text-gray-700 text-2xl leading-none">✕</button>
       </div>
 
       <p class="text-sm text-gray-600 mb-4">
-        Les activitats competencials utilitzen notes <strong>numèriques de l'1 al 4</strong>.
-        Configura aquí els trams per convertir-les a NA / AS / AN / AE.
+        Notes <strong>numèriques de l'1 al 4</strong>. Defineix el rang de cada qualificació.
+        Els trams <strong>no poden solapar-se</strong> ni deixar forats.
       </p>
 
-      <div class="space-y-3 mb-6" id="tramsContainer">
+      <div class="space-y-2 mb-4" id="tramsContainer">
         ${['NA','AS','AN','AE'].map(label => `
-          <div class="flex items-center gap-3 p-3 rounded-lg border-2" style="border-color: ${COMP_COLORS[label].bg}; background: ${COMP_COLORS[label].bg}18">
-            <span class="inline-block w-10 text-center font-bold text-white text-sm px-2 py-1 rounded" style="background:${COMP_COLORS[label].bg}; color:${COMP_COLORS[label].text}">
+          <div id="row_${label}" class="flex items-center gap-2 p-3 rounded-lg border-2 transition-all"
+               style="border-color:${COMP_COLORS[label].bg}; background:${COMP_COLORS[label].bg}18">
+            <span class="inline-block w-10 shrink-0 text-center font-bold text-xs px-2 py-1 rounded"
+                  style="background:${COMP_COLORS[label].bg}; color:${COMP_COLORS[label].text}">
               ${label}
             </span>
-            <span class="text-sm text-gray-600 w-20">Des de:</span>
+            <span class="text-sm text-gray-500 shrink-0">De</span>
             <input type="number" id="tram_${label}_min" step="0.01" min="1" max="4"
               value="${trams[label].min}"
-              class="border rounded px-2 py-1 w-24 text-center focus:ring-2 focus:ring-purple-400">
-            <span class="text-sm text-gray-600">Fins a:</span>
+              class="tram-input border rounded px-2 py-1 w-20 text-center text-sm focus:ring-2 focus:ring-purple-400"
+              data-label="${label}" data-type="min">
+            <span class="text-sm text-gray-500 shrink-0">fins a</span>
             <input type="number" id="tram_${label}_max" step="0.01" min="1" max="4"
               value="${trams[label].max}"
-              class="border rounded px-2 py-1 w-24 text-center focus:ring-2 focus:ring-purple-400">
+              class="tram-input border rounded px-2 py-1 w-20 text-center text-sm focus:ring-2 focus:ring-purple-400"
+              data-label="${label}" data-type="max">
+            <span id="icon_${label}" class="text-lg shrink-0 w-6 text-center">✅</span>
           </div>
         `).join('')}
       </div>
 
-      <div id="tramError" class="hidden text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2 mb-3"></div>
+      <!-- Visualitzador de l'escala -->
+      <div class="mb-4">
+        <p class="text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Previsualització de l'escala 1–4</p>
+        <div id="scalePreview" class="h-8 rounded-lg overflow-hidden flex text-xs font-bold"></div>
+        <div class="flex justify-between text-xs text-gray-400 mt-1 px-0.5">
+          <span>1</span><span>1.5</span><span>2</span><span>2.5</span><span>3</span><span>3.5</span><span>4</span>
+        </div>
+      </div>
 
+      <!-- Errors -->
+      <div id="tramError" class="hidden text-sm bg-red-50 border border-red-200 rounded p-3 mb-3 space-y-1"></div>
+
+      <!-- Botons -->
       <div class="flex gap-2 justify-between items-center">
         <button id="btnResetTrams" class="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded font-medium">
-          Restaurar per defecte
+          ↺ Restaurar defecte
         </button>
         <div class="flex gap-2">
           <button id="btnCancelCompConfig" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded font-semibold">
             Cancel·lar
           </button>
-          <button id="btnSaveTrams" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded font-semibold">
+          <button id="btnSaveTrams" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded font-semibold disabled:opacity-40 disabled:cursor-not-allowed">
             💾 Guardar
           </button>
         </div>
@@ -202,42 +217,184 @@ function openConfigModal() {
 
   document.body.appendChild(modal);
 
-  document.getElementById('btnCloseCompConfig').addEventListener('click', () => modal.remove());
-  document.getElementById('btnCancelCompConfig').addEventListener('click', () => modal.remove());
+  // ── Validació i preview en temps real ──────────────────────
+  function readTrams() {
+    const result = {};
+    for (const label of ['NA','AS','AN','AE']) {
+      result[label] = {
+        min: parseFloat(document.getElementById(`tram_${label}_min`).value),
+        max: parseFloat(document.getElementById(`tram_${label}_max`).value)
+      };
+    }
+    return result;
+  }
+
+  function validateTrams(t) {
+    const errors = [];
+    const labels = ['NA','AS','AN','AE'];
+
+    // 1) Valors bàsics
+    for (const label of labels) {
+      const { min, max } = t[label];
+      if (isNaN(min) || isNaN(max)) {
+        errors.push({ labels: [label], msg: `${label}: cal introduir valors numèrics.` });
+        continue;
+      }
+      if (min < 1 || max > 4) {
+        errors.push({ labels: [label], msg: `${label}: els valors han d'estar entre 1 i 4.` });
+      }
+      if (min > max) {
+        errors.push({ labels: [label], msg: `${label}: el valor mínim no pot ser major que el màxim.` });
+      }
+    }
+
+    if (errors.length) return errors;
+
+    // 2) Solapaments
+    for (let i = 0; i < labels.length; i++) {
+      for (let j = i + 1; j < labels.length; j++) {
+        const a = labels[i], b = labels[j];
+        const ta = t[a], tb = t[b];
+        // Solapament si els intervals s'encavalquen (no només toquen)
+        if (ta.min < tb.max && tb.min < ta.max) {
+          const overlapMin = Math.max(ta.min, tb.min).toFixed(2);
+          const overlapMax = Math.min(ta.max, tb.max).toFixed(2);
+          errors.push({
+            labels: [a, b],
+            msg: `⚠️ Solapament entre ${a} i ${b}: el rang ${overlapMin}–${overlapMax} pertany als dos trams alhora.`
+          });
+        }
+      }
+    }
+
+    // 3) Forats (valors sense cobertura)
+    const allPoints = [...new Set(
+      labels.flatMap(l => [t[l].min, t[l].max])
+    )].sort((a, b) => a - b);
+
+    for (let k = 0; k < allPoints.length - 1; k++) {
+      const mid = (allPoints[k] + allPoints[k + 1]) / 2;
+      const covered = labels.some(l => t[l].min <= mid && mid <= t[l].max);
+      if (!covered) {
+        errors.push({
+          labels: [],
+          msg: `⚠️ Forat: el valor ${allPoints[k].toFixed(2)}–${allPoints[k+1].toFixed(2)} no queda cobert per cap tram.`
+        });
+      }
+    }
+
+    return errors;
+  }
+
+  function updateUI() {
+    const t = readTrams();
+    const errors = validateTrams(t);
+    const errorDiv = document.getElementById('tramError');
+    const saveBtn = document.getElementById('btnSaveTrams');
+
+    // Netejar estats visuals
+    ['NA','AS','AN','AE'].forEach(label => {
+      const row = document.getElementById(`row_${label}`);
+      const icon = document.getElementById(`icon_${label}`);
+      row.style.borderWidth = '2px';
+      row.style.borderStyle = 'solid';
+      row.style.borderColor = COMP_COLORS[label].bg;
+      icon.textContent = '✅';
+    });
+
+    if (errors.length > 0) {
+      // Marcar files amb error
+      const affectedLabels = new Set(errors.flatMap(e => e.labels));
+      affectedLabels.forEach(label => {
+        const row = document.getElementById(`row_${label}`);
+        const icon = document.getElementById(`icon_${label}`);
+        if (row) { row.style.borderColor = '#ef4444'; row.style.borderWidth = '2px'; }
+        if (icon) icon.textContent = '❌';
+      });
+
+      // Mostrar missatges d'error
+      errorDiv.innerHTML = errors.map(e =>
+        `<div class="text-red-700">⛔ ${e.msg}</div>`
+      ).join('');
+      errorDiv.classList.remove('hidden');
+      saveBtn.disabled = true;
+    } else {
+      errorDiv.classList.add('hidden');
+      saveBtn.disabled = false;
+    }
+
+    // Actualitzar barra de previsualització
+    updateScalePreview(t, errors.length === 0);
+  }
+
+  function updateScalePreview(t, valid) {
+    const preview = document.getElementById('scalePreview');
+    if (!preview) return;
+    preview.innerHTML = '';
+
+    const SCALE_MIN = 1, SCALE_MAX = 4, SCALE_RANGE = SCALE_MAX - SCALE_MIN;
+
+    if (!valid) {
+      preview.style.background = '#fee2e2';
+      preview.innerHTML = '<span class="w-full text-center text-red-400 text-xs self-center">⛔ Corregeix els errors per veure la previsualització</span>';
+      return;
+    }
+
+    // Crear segments ordenats per min
+    const segments = ['NA','AS','AN','AE']
+      .map(label => ({ label, ...t[label] }))
+      .sort((a, b) => a.min - b.min);
+
+    segments.forEach(seg => {
+      const widthPct = ((seg.max - seg.min) / SCALE_RANGE) * 100;
+      const c = COMP_COLORS[seg.label];
+      const div = document.createElement('div');
+      div.style.width = `${widthPct}%`;
+      div.style.background = c.bg;
+      div.style.color = c.text;
+      div.style.display = 'flex';
+      div.style.alignItems = 'center';
+      div.style.justifyContent = 'center';
+      div.style.fontSize = '11px';
+      div.style.fontWeight = 'bold';
+      div.style.overflow = 'hidden';
+      div.style.whiteSpace = 'nowrap';
+      div.textContent = widthPct > 8 ? `${seg.label} (${seg.min}–${seg.max})` : seg.label;
+      preview.appendChild(div);
+    });
+  }
+
+  // Lligar events als inputs
+  modal.querySelectorAll('.tram-input').forEach(inp => {
+    inp.addEventListener('input', updateUI);
+    inp.addEventListener('change', updateUI);
+  });
+
+  // Botó reset
   document.getElementById('btnResetTrams').addEventListener('click', () => {
     ['NA','AS','AN','AE'].forEach(label => {
       document.getElementById(`tram_${label}_min`).value = DEFAULT_TRAMS[label].min;
       document.getElementById(`tram_${label}_max`).value = DEFAULT_TRAMS[label].max;
     });
+    updateUI();
   });
 
+  // Botó guardar
   document.getElementById('btnSaveTrams').addEventListener('click', async () => {
-    const errorDiv = document.getElementById('tramError');
-    const newTrams = {};
-
-    let valid = true;
-    for (const label of ['NA','AS','AN','AE']) {
-      const min = parseFloat(document.getElementById(`tram_${label}_min`).value);
-      const max = parseFloat(document.getElementById(`tram_${label}_max`).value);
-      if (isNaN(min) || isNaN(max) || min > max || min < 1 || max > 4) {
-        errorDiv.textContent = `Error al tram ${label}: valors incorrectes (han d'estar entre 1 i 4, i min ≤ max)`;
-        errorDiv.classList.remove('hidden');
-        valid = false;
-        break;
-      }
-      newTrams[label] = { min, max };
-    }
-
-    if (!valid) return;
-    errorDiv.classList.add('hidden');
-
-    await saveTrams(newTrams);
+    const t = readTrams();
+    const errors = validateTrams(t);
+    if (errors.length > 0) return; // No hauria de passar (botó desactivat)
+    await saveTrams(t);
     modal.remove();
     showToastComp('✅ Configuració guardada correctament');
   });
 
-  // Tancar clicant fora
+  document.getElementById('btnCloseCompConfig').addEventListener('click', () => modal.remove());
+  document.getElementById('btnCancelCompConfig').addEventListener('click', () => modal.remove());
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+
+  // Pintar estat inicial
+  updateUI();
 }
 
 // ============================================================
