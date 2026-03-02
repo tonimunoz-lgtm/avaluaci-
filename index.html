@@ -312,7 +312,10 @@
 
     <!-- Fórmula -->
     <div id="formulaInputs" class="hidden flex flex-col gap-2">
-      <input type="text" id="formulaField" readonly class="border rounded p-1 w-full" placeholder="Construeix la fórmula">
+      <!-- Camp visible amb noms llegibles -->
+      <input type="text" id="formulaField" readonly class="border rounded p-1 w-full bg-gray-50 font-mono text-sm" placeholder="Construeix la fórmula">
+      <!-- Camp ocult amb IDs reals per al càlcul -->
+      <input type="hidden" id="formulaFieldHidden">
       <div id="formulaButtons" class="flex flex-wrap gap-1"></div>
     </div>
     
