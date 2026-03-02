@@ -581,6 +581,215 @@ async function reEnableCompetencyButtons() {
   }
 }
 
+// ============================================================
+// AFEGIR OPCIÓ "APLICA TRAMS COMPETENCIALS" A LA CALCULADORA
+// La calculadora numèrica permet calcular la mitjana (1-4) i
+// convertir-la automàticament a NA/AS/AN/AE com a display.
+// ============================================================
+
+// Interceptar openCalcModal per afegir l'opció de conversió
+const patchCalcModal = () => {
+  const tryPatch = () => {
+    const calcTypeSelect = document.getElementById('calcType');
+    if (!calcTypeSelect) { setTimeout(tryPatch, 500); return; }
+
+    // Afegir opció "competencial" al select de tipus
+    if (!calcTypeSelect.querySelector('option[value="competency_convert"]')) {
+      const opt = document.createElement('option');
+      opt.value = 'competency_convert';
+      opt.textContent = 'Fórmula Competencial (→ NA/AS/AN/AE)';
+      calcTypeSelect.appendChild(opt);
+    }
+
+    // Interceptar el botó Aplica per gestionar el nou tipus
+    const applyBtn = document.getElementById('modalApplyCalcBtn');
+    if (applyBtn && !applyBtn.dataset.compPatched) {
+      applyBtn.dataset.compPatched = 'true';
+      applyBtn.addEventListener('click', handleCompetencyCalc, true); // capture: true per anar primer
+    }
+
+    console.log('✅ Modal calculadora patchejat per competencial');
+  };
+  setTimeout(tryPatch, 1000);
+};
+
+patchCalcModal();
+
+// També re-patchejar cada cop que s'obre el modal (per si es recrea)
+document.addEventListener('click', e => {
+  if (e.target?.closest('[data-modal-close="modalCalc"]') || e.target?.id === 'modalApplyCalcBtn') return;
+  setTimeout(() => {
+    const calcTypeSelect = document.getElementById('calcType');
+    if (calcTypeSelect && !calcTypeSelect.querySelector('option[value="competency_convert"]')) {
+      const opt = document.createElement('option');
+      opt.value = 'competency_convert';
+      opt.textContent = 'Fórmula Competencial (→ NA/AS/AN/AE)';
+      calcTypeSelect.appendChild(opt);
+    }
+  }, 300);
+});
+
+async function handleCompetencyCalc(e) {
+  const calcTypeSelect = document.getElementById('calcType');
+  if (!calcTypeSelect || calcTypeSelect.value !== 'competency_convert') return;
+
+  // Aturem l'event per evitar que el handler original de app.js el processi
+  e.stopImmediatePropagation();
+  e.preventDefault();
+
+  const formulaFieldHidden = document.getElementById('formulaFieldHidden');
+  const formulaField = document.getElementById('formulaField');
+  const currentCalcActivityId = window._currentCalcActivityId || 
+    document.querySelector('[data-calc-activity-id]')?.dataset.calcActivityId;
+
+  const formula = formulaFieldHidden?.value || formulaField?.value || '';
+  if (!formula.trim()) {
+    alert('Construeix primer una fórmula amb les activitats competencials');
+    return;
+  }
+
+  // Obtenir l'ID de l'activitat actual
+  // app.js exposa currentCalcActivityId com a variable local, no global
+  // L'obtenim del modal que s'ha obert
+  const actId = getCalcActivityId();
+  if (!actId) {
+    alert('Error: no es pot determinar l\'activitat de destí');
+    return;
+  }
+
+  try {
+    const classStudents = window.classStudents || [];
+    if (!_db || classStudents.length === 0) {
+      alert('Error: no hi ha alumnes o Firebase no disponible');
+      return;
+    }
+
+    let processed = 0;
+    for (const studentId of classStudents) {
+      try {
+        const result = await evalFormulaCompetency(formula, studentId);
+        if (result === null) continue;
+
+        const label = numericToCompetency(result);
+        // Guardem el numèric a notes (per poder refer càlculs)
+        // i el label competencial a competencyNotes (per display)
+        await _db.collection('alumnes').doc(studentId).update({
+          [`notes.${actId}`]: result,
+          [`competencyNotes.${actId}`]: label
+        });
+        processed++;
+      } catch (e2) {
+        console.error('Error processant alumne:', studentId, e2);
+      }
+    }
+
+    // Actualitzar display de la fórmula a Firestore
+    const displayFormula = formulaField?.value || formula;
+    if (window.currentClassId) {
+      await _db.collection('classes').doc(window.currentClassId).update({
+        [`calculatedActivities.${actId}`]: {
+          calculated: true,
+          formula: formula,
+          displayFormula: displayFormula + ' → ' + numericToCompetency(2.5) + '…'
+        }
+      });
+    }
+
+    // Tancar modal i recarregar
+    if (window.closeModal) window.closeModal('modalCalc');
+    if (window.loadClassData) setTimeout(() => window.loadClassData(), 300);
+
+    showToastComp(`✅ Càlcul competencial aplicat a ${processed} alumnes`);
+
+  } catch (err) {
+    console.error('Error en càlcul competencial:', err);
+    alert('Error: ' + err.message);
+  }
+}
+
+// Obté l'ID de l'activitat que s'està calculant
+// app.js guarda currentCalcActivityId com a variable local del mòdul,
+// però renderNotesGrid crea el botó amb data-activity-id
+function getCalcActivityId() {
+  // Intent 1: variable global exposada per app.js (si s'ha exposat)
+  if (window.currentCalcActivityId) return window.currentCalcActivityId;
+
+  // Intent 2: cercar a la UI quin botó té la classe activa/modal obert
+  const modalCalc = document.getElementById('modalCalc');
+  if (!modalCalc || modalCalc.classList.contains('hidden')) return null;
+
+  // Intent 3: últim botó de calculadora que s'ha clicat (ho guardem nosaltres)
+  return window._lastCalcActivityId || null;
+}
+
+// Interceptar els botons de calculadora per capturar l'activityId
+document.addEventListener('click', e => {
+  const calcBtn = e.target?.closest('[data-calc-btn]') || 
+                  e.target?.closest('button[onclick*="openCalcModal"]');
+  if (calcBtn) {
+    const actId = calcBtn.dataset.activityId || calcBtn.dataset.calcBtn;
+    if (actId) window._lastCalcActivityId = actId;
+  }
+}, true);
+
+// Interceptar openCalcModal per capturar l'activityId
+const origOpenCalcModal = window.openCalcModal;
+if (origOpenCalcModal) {
+  window.openCalcModal = function(activityId, ...args) {
+    window._lastCalcActivityId = activityId;
+    window.currentCalcActivityId = activityId;
+    return origOpenCalcModal.call(this, activityId, ...args);
+  };
+}
+
+// Re-interceptar openCalcModal quan estigui disponible
+setTimeout(() => {
+  if (window.openCalcModal && !window.openCalcModal._compPatched) {
+    const orig = window.openCalcModal;
+    window.openCalcModal = function(activityId, ...args) {
+      window._lastCalcActivityId = activityId;
+      window.currentCalcActivityId = activityId;
+      return orig.call(this, activityId, ...args);
+    };
+    window.openCalcModal._compPatched = true;
+
+    // Re-aplicar l'opció al modal
+    const calcTypeSelect = document.getElementById('calcType');
+    if (calcTypeSelect && !calcTypeSelect.querySelector('option[value="competency_convert"]')) {
+      const opt = document.createElement('option');
+      opt.value = 'competency_convert';
+      opt.textContent = 'Fórmula Competencial (→ NA/AS/AN/AE)';
+      calcTypeSelect.appendChild(opt);
+    }
+  }
+}, 2500);
+
+// ============================================================
+// AVALUACIÓ DE FÓRMULES COMPETENCIALS (1-4)
+// ============================================================
+async function evalFormulaCompetency(formula, studentId) {
+  try {
+    const studentDoc = await _db.collection('alumnes').doc(studentId).get();
+    const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
+
+    let evalStr = formula;
+
+    // Substituir __ACT__id pel valor numèric de l'alumne
+    const actMatches = formula.matchAll(/__ACT__([a-zA-Z0-9_]+)/g);
+    for (const match of actMatches) {
+      const actId = match[1];
+      const val = parseFloat(notes[actId]);
+      const safeVal = isNaN(val) ? 0 : val;
+      evalStr = evalStr.replace(new RegExp(match[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), safeVal);
+    }
+
+    const result = Function('"use strict"; return (' + evalStr + ')')();
+    return typeof result === 'number' ? Math.round(result * 100) / 100 : null;
+  } catch (e) {
+    console.error('Error avaluant fórmula competencial:', e);
+    return null;
+  }
+}
 
 // ============================================================
 // MOSTRAR BADGE NA/AS/AN/AE A LES CEL·LES CALCULADES
