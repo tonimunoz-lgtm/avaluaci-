@@ -435,11 +435,6 @@ async function upgradeCompetencyInputs() {
   if (targets.length === 0) return;
 
   for (const el of targets) {
-
-  if (!el.parentNode) {
-      console.warn('Saltando elemento ya que no tiene parentNode:', el);
-      continue; // Salta al siguiente elemento en el bucle
-    }
     
     el.dataset.upgraded = 'true';
     const activityId = el.dataset.activityId;
