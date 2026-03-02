@@ -1436,6 +1436,7 @@ function renderAverages(){
 
 let _classData = null;
 let _selectedTermForFormula = null;
+let _activityNameMap = {}; // 🔥 mapa id -> nom per al camp visual de fórmules
 
 function openCalcModal(activityId){
   currentCalcActivityId = activityId; 
@@ -1445,6 +1446,7 @@ function openCalcModal(activityId){
   document.getElementById('numericInput').classList.remove('hidden');
   document.getElementById('numericField').value = '';
   document.getElementById('formulaField').value = '';
+  if (document.getElementById('formulaFieldHidden')) document.getElementById('formulaFieldHidden').value = '';
   _selectedTermForFormula = null;
   
   // 🔥 NUEVO: Limpiar validación
@@ -1456,6 +1458,7 @@ const numericDiv = document.getElementById('numericInput');
 const numericField = document.getElementById('numericField');
 const formulaDiv = document.getElementById('formulaInputs');
 const formulaField = document.getElementById('formulaField');
+const formulaFieldHidden = document.getElementById('formulaFieldHidden'); // 🔥 camp ocult amb IDs reals
 const formulaButtonsDiv = document.getElementById('formulaButtons');
 const modalApplyCalcBtn = document.getElementById('modalApplyCalcBtn');
 
@@ -1521,16 +1524,18 @@ function validateFormula() {
     return;
   }
 
+  // Validació visual (noms) - la regex de chars vàlids
   const validation = checkFormulaValidity(formula);
   
   // Mostrar validación
   if (formulaValidationDiv) {
     if (validation.valid) {
-      formulaValidationDiv.innerHTML = `<span style="color: green; font-weight: bold;">✅ Fórmula válida</span>`;
+      formulaValidationDiv.innerHTML = `<span style="color: green; font-weight: bold;">✅ Fórmula vàlida</span>`;
       formulaValidationDiv.className = 'mt-2 p-3 rounded text-sm bg-green-50 border border-green-200';
       
-      // Mostrar previsualización
-      showFormulaPreview(formula);
+      // Preview usa el camp ocult (amb IDs) que sí es pot avaluar
+      const hidFormula = formulaFieldHidden ? formulaFieldHidden.value : formula;
+      showFormulaPreview(hidFormula);
     } else {
       formulaValidationDiv.innerHTML = `<span style="color: red; font-weight: bold;">❌ Error: ${validation.error}</span>`;
       formulaValidationDiv.className = 'mt-2 p-3 rounded text-sm bg-red-50 border border-red-200';
@@ -1688,23 +1693,12 @@ modalApplyCalcBtn.addEventListener('click', async () => {
         break;
 
       case 'formula':
-        await applyFormula(formulaField.value);
-        formulaText = formulaField.value;
+        // 🔥 FIX: Usem el camp ocult (amb IDs) per al càlcul real
+        const realFormula = formulaFieldHidden ? formulaFieldHidden.value : formulaField.value;
+        await applyFormula(realFormula);
+        formulaText = realFormula;
         // 🔥 FIX: Traduir __ACT__id a noms per al displayFormula
-        displayFormulaText = formulaField.value;
-        {
-          const allTerms2 = _classData?.terms || {};
-          const allActivityIds2 = new Set();
-          Object.values(allTerms2).forEach(t => (t.activities || []).forEach(id => allActivityIds2.add(id)));
-          classActivities.forEach(id => allActivityIds2.add(id));
-          for (const aid of allActivityIds2) {
-            const actDoc = await db.collection('activitats').doc(aid).get();
-            if (actDoc.exists) {
-              const actName = actDoc.data().nom;
-              displayFormulaText = displayFormulaText.replace(new RegExp(`__ACT__${aid}`, 'g'), actName);
-            }
-          }
-        }
+        displayFormulaText = formulaField.value; // el camp visual ja té els noms
         break;
 
       case 'rounding':
@@ -1860,33 +1854,108 @@ function buildFormulaButtons(){
   buildActivityButtons();
 }
 
-// 🔥 NUEVO: Insertar en la posición del cursor
-function insertAtCursor(str) {
-  const start = formulaField.selectionStart;
-  const end = formulaField.selectionEnd;
-  const text = formulaField.value;
+// 🔥 Insertar en la posición del cursor
+// str = text a inserir al camp OCULT (IDs)
+// displayStr = text a mostrar al camp VISIBLE (noms). Si és null, usa str.
+function insertAtCursor(str, displayStr) {
+  const display = displayStr !== undefined ? displayStr : str;
   
-  formulaField.value = text.substring(0, start) + str + text.substring(end);
+  // -- Camp visual (noms) --
+  const startVis = formulaField.selectionStart;
+  const endVis = formulaField.selectionEnd;
+  const textVis = formulaField.value;
+  formulaField.value = textVis.substring(0, startVis) + display + textVis.substring(endVis);
+  
+  // -- Camp ocult (IDs) --
+  // Com que readonly no permet selectionStart fiable per al hidden,
+  // mantentem una posició en paral·lel basada en la mateixa lògica
+  const textHid = formulaFieldHidden ? formulaFieldHidden.value : '';
+  // Calculem quants caràcters hi havia al camp visual abans del cursor
+  // i busquem la posició equivalent al camp ocult
+  const visBeforeCursor = textVis.substring(0, startVis);
+  const hidPos = getHiddenPosition(visBeforeCursor, textHid);
+  
+  if (formulaFieldHidden) {
+    formulaFieldHidden.value = textHid.substring(0, hidPos) + str + textHid.substring(hidPos + (endVis - startVis > 0 ? getSelectionLengthInHidden(textVis, startVis, endVis, textHid) : 0));
+  }
   
   // Mover el cursor después del texto insertado
   setTimeout(() => {
     formulaField.focus();
-    formulaField.setSelectionRange(start + String(str).length, start + String(str).length);
+    formulaField.setSelectionRange(startVis + display.length, startVis + display.length);
   }, 0);
   
   validateFormula();
 }
 
-// 🔥 NUEVO: Borrar en la posición del cursor
+// Calcula la posició al camp ocult corresponent a un prefix del camp visual
+function getHiddenPosition(visPrefix, hidValue) {
+  // Anem reconstruint el visual a partir del hidden per trobar on estem
+  let hidIdx = 0;
+  let visBuilt = '';
+  
+  // Substituïm __ACT__id pel nom corresponent al mapa
+  // Recorrem el hidden i anem construint el visual
+  while (hidIdx < hidValue.length && visBuilt.length < visPrefix.length) {
+    const remaining = hidValue.substring(hidIdx);
+    const actMatch = remaining.match(/^__ACT__([a-zA-Z0-9_]+)/);
+    if (actMatch) {
+      const actId = actMatch[1];
+      const actName = _activityNameMap[actId] || actMatch[0];
+      if (visBuilt.length + actName.length <= visPrefix.length) {
+        visBuilt += actName;
+        hidIdx += actMatch[0].length;
+      } else {
+        break;
+      }
+    } else {
+      visBuilt += hidValue[hidIdx];
+      hidIdx++;
+    }
+  }
+  return hidIdx;
+}
+
+function getSelectionLengthInHidden(visText, visStart, visEnd, hidValue) {
+  const visBefore = visText.substring(0, visStart);
+  const visSelected = visText.substring(visStart, visEnd);
+  const hidStart = getHiddenPosition(visBefore, hidValue);
+  const hidEnd = getHiddenPosition(visBefore + visSelected, hidValue);
+  return hidEnd - hidStart;
+}
+
+// 🔥 Borrar el último token al cursor (si és __ACT__id esborra tot el token)
 function deleteAtCursor() {
   const start = formulaField.selectionStart;
   if (start > 0) {
-    const text = formulaField.value;
-    formulaField.value = text.substring(0, start - 1) + text.substring(start);
+    const visText = formulaField.value;
+    const hidText = formulaFieldHidden ? formulaFieldHidden.value : '';
+    
+    // Trobar el token al final del visual (pot ser un nom d'activitat o un caràcter)
+    // Busquem si el text visual que acaba al cursor correspon a un nom d'activitat
+    let tokenToDeleteVis = 1; // per defecte 1 caràcter
+    let tokenToDeleteHid = 1;
+    
+    // Comprovar si el cursor acaba just després d'un nom d'activitat
+    const visBefore = visText.substring(0, start);
+    for (const [actId, actName] of Object.entries(_activityNameMap)) {
+      if (actName && visBefore.endsWith(actName)) {
+        tokenToDeleteVis = actName.length;
+        tokenToDeleteHid = `__ACT__${actId}`.length;
+        break;
+      }
+    }
+    
+    formulaField.value = visText.substring(0, start - tokenToDeleteVis) + visText.substring(start);
+    
+    if (formulaFieldHidden) {
+      const hidPos = getHiddenPosition(visBefore, hidText);
+      formulaFieldHidden.value = hidText.substring(0, hidPos - tokenToDeleteHid) + hidText.substring(hidPos);
+    }
     
     setTimeout(() => {
       formulaField.focus();
-      formulaField.setSelectionRange(start - 1, start - 1);
+      formulaField.setSelectionRange(start - tokenToDeleteVis, start - tokenToDeleteVis);
     }, 0);
     
     validateFormula();
@@ -1929,8 +1998,11 @@ function buildActivityButtons(){
         btn.textContent = buttonText;
         btn.title = `ID: ${aid}`; // tooltip per depurar si cal
         
-        // 🔥 FIX: Usem __ACT__id en lloc del nom per evitar confusió entre trimestres
-        btn.addEventListener('click', () => insertAtCursor(`__ACT__${aid}`));
+        // 🔥 FIX: Guardem el nom al mapa per poder fer backspace intel·ligent
+        _activityNameMap[aid] = name;
+        
+        // 🔥 FIX: Visible = nom, Ocult = __ACT__id
+        btn.addEventListener('click', () => insertAtCursor(`__ACT__${aid}`, name));
         activitiesContainer.appendChild(btn);
       });
     });
