@@ -449,7 +449,7 @@ async function generarComentari(modal) {
   comentariText.innerHTML = '<span class="text-gray-400 italic">La IA està escrivint el comentari...</span>';
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('/api/tutoria', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
