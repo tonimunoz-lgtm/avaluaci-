@@ -710,7 +710,7 @@ function sortStudentsAlpha(){
 }
 /* ---------------- Activities ---------------- */
 btnAddActivity.addEventListener('click', ()=> openModal('modalAddActivity'));
-modalAddActivityBtn.addEventListener('click', createActivityModal);
+modalAddActivityBtn.addEventListener('click', (e) => { e.stopPropagation(); createActivityModal(); });
 
 async function createActivityModal() {
     const name = document.getElementById("modalActivityName").value.trim();
