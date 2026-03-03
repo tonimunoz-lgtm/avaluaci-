@@ -716,33 +716,30 @@ async function createActivityModal() {
     const name = document.getElementById("modalActivityName").value.trim();
     if (!name) return;
 
-    // Tancar modal i netejar camp IMMEDIATAMENT (no esperar Firestore)
+    const ref = db.collection("activitats").doc();
+
+    await ref.set({
+        nom: name,
+        data: new Date().toISOString().split("T")[0],
+        calcType: "numeric",
+        formula: ""
+    });
+
+    // 🔥 Aquí afegim l'activitat al terme actiu
+    if (window.Terms && Terms.addActivityToActiveTerm) {
+        await Terms.addActivityToActiveTerm(ref.id);
+    } else {
+        console.error("❌ Terms no està carregat. Revisa l'import a app.js");
+    }
+
     closeModal("modalAddActivity");
     document.getElementById("modalActivityName").value = "";
 
-    try {
-        const ref = db.collection("activitats").doc();
-
-        await ref.set({
-            nom: name,
-            data: new Date().toISOString().split("T")[0],
-            calcType: "numeric",
-            formula: ""
-        });
-
-        if (window.Terms && Terms.addActivityToActiveTerm) {
-            await Terms.addActivityToActiveTerm(ref.id);
-        } else {
-            console.error("❌ Terms no està carregat. Revisa l'import a app.js");
-        }
-
-        // Recarregar graella perquè aparegui la nova activitat
-        if (typeof loadClassData === "function") loadClassData();
-
-    } catch(e) {
-        console.error("Error creant activitat:", e);
-        alert("Error creant activitat: " + e.message);
-    }
+    // 🔥 NO posar loadClassData() si tens dubtes!
+    // Si vols recarregar:
+    //if (typeof loadClassData === "function") {
+     //   loadClassData();
+   // }
 }
 
 function removeActivity(actId){
@@ -909,6 +906,7 @@ async function renderNotesGrid() {
   headRow.appendChild(th('Alumne'));
 
   // ⚡ OPTIMITZACIÓ: Llançar totes les lectures en paral·lel (classDoc + actDocs + studentDocs)
+  // Abans: 3 rondes sequencials → ara: 1 sola ronda concurrent
   const [classDoc, actDocs, studentDocs] = await Promise.all([
     db.collection('classes').doc(currentClassId).get(),
     Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get())),
@@ -2373,7 +2371,8 @@ document.getElementById('btnImportALConfirm').addEventListener('click', () => {
 
 // Funció per afegir alumnes a Firestore i a la classe
 // ⚡ OPTIMITZACIÓ: Batch write en lloc de bucle seqüencial
-// Abans: 2 crides Firestore per alumne en sèrie → ara: 1 batch + 1 update totals
+// Abans: 2 crides Firestore per alumne (set + update) en sèrie → N*2 rondes
+// Ara: 1 batch.commit() per tots els alumnes + 1 update de la classe = 2 crides totals
 async function addImportedStudents(names) {
   if (!currentClassId) return alert('No hi ha cap classe seleccionada.');
 
@@ -2393,12 +2392,14 @@ async function addImportedStudents(names) {
       const batch = db.batch();
       const chunkIds = [];
 
+      // Crear tots els documents d'alumnes en un sol batch
       chunk.forEach(name => {
         const studentRef = db.collection('alumnes').doc();
         batch.set(studentRef, { nom: name, notes: {} });
         chunkIds.push(studentRef.id);
       });
 
+      // Un sol commit per tot el chunk
       await batch.commit();
       allStudentIds.push(...chunkIds);
     }
@@ -2408,6 +2409,7 @@ async function addImportedStudents(names) {
       alumnes: firebase.firestore.FieldValue.arrayUnion(...allStudentIds)
     });
 
+    // Recarregar la graella perquè apareguin amb menú i drag & drop
     loadClassData();
 
     alert(`${names.length} alumne(s) importat(s) correctament!`);
