@@ -506,6 +506,9 @@ function buildCompWrapper(activityId, studentId, numericVal) {
   input.placeholder = '1-4';
   if (numericVal !== null && !isNaN(numericVal)) input.value = numericVal;
 
+  // ── Aplicar estat de bloqueig des del moment de creació ──
+  applyLockToCompCell(wrapper, input, activityId);
+
   const badge = document.createElement('span');
   badge.className = 'comp-badge text-xs font-bold px-2 py-0.5 rounded w-full text-center';
   badge.style.minWidth = '44px';
@@ -519,6 +522,7 @@ function buildCompWrapper(activityId, studentId, numericVal) {
   }
 
   input.addEventListener('change', async () => {
+    if (input.disabled) return; // ignorar si bloquejat
     const val = parseFloat(input.value);
     if (isNaN(val) || val < 1 || val > 4) {
       input.value = '';
@@ -545,6 +549,157 @@ function buildCompWrapper(activityId, studentId, numericVal) {
   wrapper.appendChild(input);
   wrapper.appendChild(badge);
   return wrapper;
+}
+
+// ── Aplica l'estat de bloqueig a un wrapper competencial ──────
+function applyLockToCompCell(wrapper, input, activityId) {
+  // Llegir l'estat de bloqueig del DOM (app.js ja ha construït la capçalera)
+  // La capçalera porta data-activity-id a l'<th> o podem llegir calculatedActs
+  // via el candau de la capçalera
+  const isLocked = isActivityLocked(activityId);
+  setCompCellLocked(wrapper, input, isLocked);
+}
+
+function isActivityLocked(activityId) {
+  // Intent 1: mirar si el th de la capçalera té la columna bloquejada
+  // app.js afegeix classe 'blocked-cell' als inputs. Com que l'input original
+  // ja no existeix quan cridem això, mirem la capçalera.
+  // La capçalera té el lockIcon amb '🔒' si està bloquejat.
+  const ths = document.querySelectorAll('#notesThead th');
+  for (const th of ths) {
+    // Cercar el lockIcon dins del th
+    const lockIcon = th.querySelector('.lock-icon');
+    if (!lockIcon) continue;
+    // Comprovar si aquest th correspon a l'activitat
+    // Ho fem mirant si el refreshIcon o calcBtn del menu té l'activityId
+    const calcBtn = th.querySelector('.calc-btn');
+    // El calc-btn no té data-activity-id directe, però podem fer servir
+    // la posició de la columna vs classActivities
+    // Alternativa: el th té un span amb el nom, pero no l'id.
+    // Usem un data-attribute que afegirem a continuació via patcheig de capçaleres
+    if (th.dataset.activityId === activityId) {
+      return lockIcon.textContent.includes('🔒');
+    }
+  }
+
+  // Intent 2: mirar si hi ha algun input (no competencial) a la mateixa columna
+  // que ja tingui blocked-cell
+  const existingInput = document.querySelector(
+    `input[data-activity-id="${activityId}"].blocked-cell`
+  );
+  if (existingInput) return true;
+
+  // Intent 3: mirar si l'activitat és calculada (fórmula aplicada)
+  // Ho deduïm de si existeix una fórmula al tfoot
+  const formulasRow = document.querySelector('.formulas-row');
+  if (formulasRow) {
+    // Trobar la posició de la columna
+    const thead = document.getElementById('notesThead');
+    const allThs = thead ? [...thead.querySelectorAll('tr:first-child th')] : [];
+    const colIdx = allThs.findIndex(th => th.dataset.activityId === activityId);
+    if (colIdx > 0 && formulasRow.children[colIdx]) {
+      const formula = formulasRow.children[colIdx].textContent.trim();
+      if (formula) return true; // té fórmula → bloquejat
+    }
+  }
+
+  return false;
+}
+
+function setCompCellLocked(wrapper, input, locked) {
+  if (locked) {
+    input.disabled = true;
+    input.classList.add('blocked-cell');
+    wrapper.style.opacity = '0.75';
+    wrapper.style.cursor = 'not-allowed';
+    wrapper.title = 'Columna bloquejada';
+  } else {
+    input.disabled = false;
+    input.classList.remove('blocked-cell');
+    wrapper.style.opacity = '';
+    wrapper.style.cursor = '';
+    wrapper.title = '';
+  }
+}
+
+// ── Patchejar les capçaleres per afegir data-activity-id als <th> ──
+// i interceptar el candau per que també afecti als wrappers competencials
+function patchActivityHeaders() {
+  const tryPatch = () => {
+    const thead = document.getElementById('notesThead');
+    if (!thead) { setTimeout(tryPatch, 500); return; }
+
+    // Observer que detecta quan es recrea la capçalera (renderNotesGrid)
+    const headerObserver = new MutationObserver(() => {
+      setTimeout(tagHeadersAndPatchLocks, 300);
+    });
+    headerObserver.observe(thead, { childList: true, subtree: true });
+    tagHeadersAndPatchLocks();
+  };
+  setTimeout(tryPatch, 1500);
+}
+
+patchActivityHeaders();
+
+async function tagHeadersAndPatchLocks() {
+  if (!_db || !window.currentClassId) return;
+
+  try {
+    const classDoc = await _db.collection('classes').doc(window.currentClassId).get();
+    if (!classDoc.exists) return;
+    const calculatedActs = classDoc.data().calculatedActivities || {};
+
+    // Obtenir activitats competencials
+    const compSnap = await _db.collection('activitats')
+      .where('evaluationType', '==', 'competency').get();
+    const compIds = new Set(compSnap.docs.map(d => d.id));
+
+    const thead = document.getElementById('notesThead');
+    if (!thead) return;
+    const allThs = [...thead.querySelectorAll('tr:first-child th')];
+
+    // classActivities és global a app.js i accessible via window
+    const acts = window.classActivities || [];
+
+    acts.forEach((actId, idx) => {
+      const th = allThs[idx + 1]; // +1 per la columna "Alumne"
+      if (!th) return;
+
+      // Afegir data-activity-id al th per poder-lo identificar
+      th.dataset.activityId = actId;
+
+      if (!compIds.has(actId)) return; // només competencials
+
+      const isLocked = !!(calculatedActs[actId]?.locked) || !!(calculatedActs[actId]?.calculated);
+
+      // Aplicar bloqueig a totes les cel·les competencials d'aquesta columna
+      document.querySelectorAll(`tr[data-student-id]`).forEach(tr => {
+        const wrapper = tr.querySelector(`.comp-cell-wrapper:has(input[data-activity-id="${actId}"])`);
+        const input = tr.querySelector(`input[data-activity-id="${actId}"][data-is-competency-numeric="true"]`);
+        if (input) {
+          setCompCellLocked(wrapper || input.parentElement, input, isLocked);
+        }
+      });
+
+      // Patchejar el candau d'aquesta columna per que afecti als wrappers
+      const lockIcon = th.querySelector('.lock-icon');
+      if (lockIcon && !lockIcon.dataset.compPatched) {
+        lockIcon.dataset.compPatched = 'true';
+        lockIcon.addEventListener('click', () => {
+          // Esperar un tick per que app.js actualitzi l'estat primer
+          setTimeout(() => {
+            const nowLocked = lockIcon.textContent.includes('🔒');
+            document.querySelectorAll(`tr[data-student-id]`).forEach(tr => {
+              const input = tr.querySelector(`input[data-activity-id="${actId}"][data-is-competency-numeric="true"]`);
+              if (input) setCompCellLocked(input.parentElement, input, nowLocked);
+            });
+          }, 100);
+        });
+      }
+    });
+  } catch (e) {
+    console.error('Error patchejant capçaleres competencials:', e);
+  }
 }
 
 // ============================================================
