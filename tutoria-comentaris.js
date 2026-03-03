@@ -372,6 +372,43 @@ function tcBuildHTML() {
           class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none text-sm h-16 resize-none"></textarea>
       </div>
 
+      <!-- TO DEL MISSATGE -->
+      <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+        <label class="block text-sm font-bold text-amber-700 mb-3">🎭 To del comentari</label>
+        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <label class="flex flex-col items-center gap-1 cursor-pointer border-2 rounded-lg px-2 py-2 text-center text-xs font-semibold transition-all border-yellow-300 hover:bg-yellow-50 has-[:checked]:bg-yellow-400 has-[:checked]:text-white has-[:checked]:border-yellow-400">
+            <input type="radio" name="tc_to" value="felicitacio" class="sr-only">
+            🏆 Felicitació
+            <span class="font-normal opacity-80 text-xs">Notes excel·lents</span>
+          </label>
+          <label class="flex flex-col items-center gap-1 cursor-pointer border-2 rounded-lg px-2 py-2 text-center text-xs font-semibold transition-all border-green-300 hover:bg-green-50 has-[:checked]:bg-green-500 has-[:checked]:text-white has-[:checked]:border-green-500">
+            <input type="radio" name="tc_to" value="positiu" class="sr-only">
+            ✅ Positiu
+            <span class="font-normal opacity-80 text-xs">Bon rendiment</span>
+          </label>
+          <label class="flex flex-col items-center gap-1 cursor-pointer border-2 rounded-lg px-2 py-2 text-center text-xs font-semibold transition-all border-gray-300 hover:bg-gray-100 has-[:checked]:bg-gray-500 has-[:checked]:text-white has-[:checked]:border-gray-500">
+            <input type="radio" name="tc_to" value="neutre" checked class="sr-only">
+            ➖ Neutre
+            <span class="font-normal opacity-80 text-xs">Estàndard</span>
+          </label>
+          <label class="flex flex-col items-center gap-1 cursor-pointer border-2 rounded-lg px-2 py-2 text-center text-xs font-semibold transition-all border-blue-300 hover:bg-blue-50 has-[:checked]:bg-blue-500 has-[:checked]:text-white has-[:checked]:border-blue-500">
+            <input type="radio" name="tc_to" value="anims" class="sr-only">
+            💪 Ànim
+            <span class="font-normal opacity-80 text-xs">Cal millorar</span>
+          </label>
+          <label class="flex flex-col items-center gap-1 cursor-pointer border-2 rounded-lg px-2 py-2 text-center text-xs font-semibold transition-all border-orange-300 hover:bg-orange-50 has-[:checked]:bg-orange-500 has-[:checked]:text-white has-[:checked]:border-orange-500">
+            <input type="radio" name="tc_to" value="avertencia" class="sr-only">
+            ⚠️ Advertència
+            <span class="font-normal opacity-80 text-xs">Situació greu</span>
+          </label>
+          <label class="flex flex-col items-center gap-1 cursor-pointer border-2 rounded-lg px-2 py-2 text-center text-xs font-semibold transition-all border-purple-300 hover:bg-purple-50 has-[:checked]:bg-purple-500 has-[:checked]:text-white has-[:checked]:border-purple-500">
+            <input type="radio" name="tc_to" value="segueix" class="sr-only">
+            🚀 Segueix així!
+            <span class="font-normal opacity-80 text-xs">Manten el ritme</span>
+          </label>
+        </div>
+      </div>
+
       <div class="bg-gray-50 rounded-xl p-4">
         <label class="block text-sm font-bold text-gray-700 mb-3">📏 Llargada del comentari</label>
         <div class="grid grid-cols-3 gap-2">
@@ -481,6 +518,7 @@ function tcDades(modal) {
     curs:      modal.querySelector('#tcCurs').value.trim(),
     idioma:    modal.querySelector('#tcIdioma').value,
     llargada:  modal.querySelector('input[name="tc_llarg"]:checked')?.value || 'mitja',
+    to:        modal.querySelector('input[name="tc_to"]:checked')?.value || 'neutre',
     trimestre: g('tc_trim'),
     suspeses:  [...modal.querySelectorAll('.tc-check:checked')].map(c => c.value),
     comportament: g('tc_comp'),
@@ -492,6 +530,22 @@ function tcDades(modal) {
     recomanacions: modal.querySelector('#tcRecomanacions').value.trim(),
     apartats: _tcApartatsExtra.map(ap => ({ nom: ap.nom, valor: g(`tc_ap_${ap.id}`) })).filter(a => a.valor),
   };
+}
+
+
+// ============================================================
+// INSTRUCCIONS DE TO PER AL PROMPT
+// ============================================================
+function tcToInstruccio(to, situacioGreu) {
+  const tos = {
+    felicitacio: `TO: FELICITACIÓ. Comença amb una felicitació explícita i entusiasta (ex: "Felicitem al/la [nom] per..."). El comentari ha de ser com un premi, celebrant els èxits concrets. Ressalta els punts forts amb entusiasme. Si no hi ha suspesos, que es noti l'orgull. Acaba animant a mantenir aquest nivell excel·lent.`,
+    positiu: `TO: POSITIU I OPTIMISTA. Destaca els aspectes bons per sobre dels negatius. Si hi ha suspesos, presenta'ls breument com a reptes superables sense que dominin el missatge. Acaba amb confiança en les capacitats de l'alumne/a.`,
+    neutre: `TO: EQUILIBRAT I OBJECTIU. Presenta els punts forts i els aspectes a millorar de forma proporcionada. ${situacioGreu ? 'Menciona clarament les mancances però de forma constructiva.' : 'Menciona els reptes com a oportunitats de creixement.'} Acaba amb un missatge d'encoratjament realista.`,
+    anims: `TO: ÀNIM I MOTIVACIÓ. L'alumne/a necessita motivació. Reconeix l'esforç fet fins ara, per petit que sigui. Si hi ha suspesos, emfatitza que és possible superar-los amb dedicació. El final ha de ser un missatge d'ànim fort i sincer: "Estem segurs que pots millorar", "Confia en les teves capacitats", etc. Que se sentin recolzats.`,
+    avertencia: `TO: SERIÓS I DIRECTE (però respectuós). La situació és preocupant i cal dir-ho clarament. Menciona explícitament que la manca de treball, assistència o comportament han perjudicat el rendiment. El missatge ha de transmetre preocupació real i la necessitat d'un canvi d'actitud. Acaba demanant un esforç concret i mostrant disponibilitat per ajudar.`,
+    segueix: `TO: FELICITA I ANIMA A MANTENIR EL RITME. L'alumne/a ho fa bé i cal reconèixer-ho. Usa expressions com "Segueix així!", "Manté aquest excel·lent treball", "Estem molt contents amb la teva evolució". Que se sentin valorats i motivats a continuar pel mateix camí.`,
+  };
+  return tos[to] || tos['neutre'];
 }
 
 // ============================================================
@@ -507,6 +561,7 @@ function tcPrompt(d) {
     d.actitud === 'passiva i desinteressada' || d.actitud === 'negativa i desmotivada',
   ].filter(Boolean).length;
   const greu = neg >= 3 || (d.suspeses.length > 0 && neg >= 2);
+  const toInstr = tcToInstruccio(d.to, greu);
 
   const ctx = [
     `Nom: ${d.nom} (usar "${d.nomAmbArticle}")`, `Gènere: ${d.genere}`,
