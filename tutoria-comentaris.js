@@ -289,12 +289,8 @@ function tcBuildHTML() {
       </div>
 
       <div class="bg-gray-50 rounded-xl p-4">
-        <label class="block text-sm font-bold text-gray-700 mb-2">📚 Nivell</label>
-        <div class="flex gap-4 mb-3">
-          <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="tc_nivell" value="eso" checked class="accent-rose-500"><span class="font-semibold">ESO</span></label>
-          <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="tc_nivell" value="batxillerat" class="accent-rose-500"><span class="font-semibold">Batxillerat</span></label>
-        </div>
-        <input id="tcCurs" type="text" placeholder="Ex: 3r ESO A"
+        <label class="block text-sm font-bold text-gray-700 mb-2">📚 Curs</label>
+        <input id="tcCurs" type="text" placeholder="Ex: 3r ESO A / 1r Batxillerat"
           class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-rose-400 focus:outline-none text-sm">
       </div>
 
