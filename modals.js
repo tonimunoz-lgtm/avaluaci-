@@ -14,6 +14,8 @@ export function closeModal(id) {
   if (!el) return;
   el.classList.add('hidden');
   el.style.display = 'none';
+  el.style.visibility = 'hidden';
+  el.style.pointerEvents = 'none';
 }
 
 export function confirmAction(title, msg, yesCallback) {
