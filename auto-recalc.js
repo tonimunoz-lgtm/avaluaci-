@@ -139,7 +139,11 @@ async function ensureCache() {
     }
 
     _cache = newCache;
-    console.log(`🗂️ auto-recalc: cache OK — ${Object.keys(_cache).length} fórmules`, _cache);
+    console.log(`🗂️ auto-recalc: cache OK — ${Object.keys(_cache).length} fórmules`);
+    console.log('🗂️ cache detall:', JSON.stringify(
+      Object.fromEntries(Object.entries(_cache).map(([k, v]) => [k, { formula: v.formula, dependsOn: [...v.dependsOn] }]))
+    ));
+    console.log('🗂️ calculatedActs raw:', JSON.stringify(calculatedActs));
   } catch (e) {
     console.error('auto-recalc: error cache:', e);
   }
