@@ -1,73 +1,76 @@
 // tutoria.js - Injector: Generador de comentaris de tutoria amb IA
-// v3: matèries personalitzades + apartats personalitzats guardats a Firestore
+// Afegeix un botó "📋 Tutoria" a la barra d'eines de la classe
 
-console.log('✅ tutoria.js v3 carregat');
-
-// ============================================================
-// ESTAT GLOBAL
-// ============================================================
-let _tutoriaUID = null;
-let _tutoriaDB = null;
-let _materiesExtra = { eso: [], batxillerat: [] }; // carregades de Firestore
-let _apartatsExtra = []; // [{id, nom, opcions:[{valor,label,color}]}]
+console.log('✅ tutoria.js carregat - Generador de comentaris de butlletí');
 
 // ============================================================
-// ASSIGNATURES BASE (CURRICULUM CATALUNYA)
+// ASSIGNATURES ESO I BATXILLERAT (CURRICULUM CATALUNYA)
 // ============================================================
 const ASSIGNATURES = {
-  eso: [
-    'Llengua catalana i literatura','Llengua castellana i literatura',
-    'Matemàtiques','Anglès','Ciències naturals','Ciències socials',
-    'Educació física','Educació visual i plàstica','Música',
-    'Tecnologia i digitalització','Religió / Valors cívics i ètics',
-    'Tutoria','Optativa / Segona llengua estrangera',
-    'Educació en valors cívics i ètics',
-  ],
-  batxillerat: [
-    'Llengua catalana i literatura','Llengua castellana i literatura',
-    'Anglès','Filosofia','Educació física',
-    'Història / Història del món contemporani','Matemàtiques',
-    'Matemàtiques aplicades a les CCSS','Física','Química','Biologia',
-    "Economia i empresa","Història de l'art",
-    'Dibuix artístic / Dibuix tècnic','Literatura catalana i castellana',
-    'Llatí','Psicologia','Tecnologia industrial',
-    'Ciències de la terra','Optativa pròpia de centre',
-  ]
+  eso: {
+    label: 'ESO',
+    materies: [
+      'Llengua catalana i literatura',
+      'Llengua castellana i literatura',
+      'Matemàtiques',
+      'Anglès',
+      'Ciències naturals',
+      'Ciències socials',
+      'Educació física',
+      'Educació visual i plàstica',
+      'Música',
+      'Tecnologia i digitalització',
+      'Religió / Valors cívics i ètics',
+      'Tutoria',
+      'Optativa / Segona llengua estrangera',
+      'Educació en valors cívics i ètics',
+    ]
+  },
+  batxillerat: {
+    label: 'Batxillerat',
+    materies: [
+      'Llengua catalana i literatura',
+      'Llengua castellana i literatura',
+      'Anglès',
+      'Filosofia',
+      'Educació física',
+      'Història / Història del món contemporani',
+      'Matemàtiques',
+      'Matemàtiques aplicades a les CCSS',
+      'Física',
+      'Química',
+      'Biologia',
+      'Economia i empresa',
+      'Història de l\'art',
+      'Dibuix artístic / Dibuix tècnic',
+      'Literatura catalana i castellana',
+      'Llatí',
+      'Psicologia',
+      'Tecnologia industrial',
+      'Ciències de la terra',
+      'Optativa pròpia de centre',
+    ]
+  }
 };
-
-// Colors per als apartats personalitzats
-const COLORS_OPCIO = ['green','yellow','orange','red','blue'];
 
 // ============================================================
 // INICIALITZACIÓ
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
-  setTimeout(initTutoria, 800);
+  setTimeout(injectTutoriaButton, 800);
 });
-
-async function initTutoria() {
-  // Esperar Firebase auth
-  const tryInit = () => {
-    const auth = window.firebase?.auth?.();
-    if (!auth) { setTimeout(tryInit, 500); return; }
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        _tutoriaUID = user.uid;
-        _tutoriaDB = window.firebase.firestore();
-      }
-    });
-  };
-  tryInit();
-  injectTutoriaButton();
-}
 
 // ============================================================
 // INJECCIÓ DEL BOTÓ
 // ============================================================
 function injectTutoriaButton() {
   if (document.getElementById('btnTutoria')) return;
+
   const btnAddActivity = document.getElementById('btnAddActivity');
-  if (!btnAddActivity) { setTimeout(injectTutoriaButton, 500); return; }
+  if (!btnAddActivity) {
+    setTimeout(injectTutoriaButton, 500);
+    return;
+  }
 
   const btn = document.createElement('button');
   btn.id = 'btnTutoria';
@@ -75,61 +78,47 @@ function injectTutoriaButton() {
   btn.innerHTML = '📋 Tutoria';
   btn.title = 'Generar comentaris de butlletí per a les famílies';
   btn.addEventListener('click', openTutoriaModal);
+
   btnAddActivity.parentNode.insertBefore(btn, btnAddActivity.nextSibling);
   console.log('✅ Botó Tutoria injectat');
 }
 
 // ============================================================
-// CARREGAR DADES DE FIRESTORE
+// MODAL PRINCIPAL
 // ============================================================
-async function carregarDadesUsuari() {
-  if (!_tutoriaDB || !_tutoriaUID) return;
-  try {
-    const doc = await _tutoriaDB.collection('tutoria_config').doc(_tutoriaUID).get();
-    if (doc.exists) {
-      const data = doc.data();
-      _materiesExtra = data.materiesExtra || { eso: [], batxillerat: [] };
-      _apartatsExtra = data.apartatsExtra || [];
-    }
-  } catch (e) {
-    console.warn('tutoria: no s\'han pogut carregar dades', e);
-  }
-}
-
-async function guardarDadesUsuari() {
-  if (!_tutoriaDB || !_tutoriaUID) return;
-  try {
-    await _tutoriaDB.collection('tutoria_config').doc(_tutoriaUID).set({
-      materiesExtra: _materiesExtra,
-      apartatsExtra: _apartatsExtra,
-    });
-  } catch (e) {
-    console.warn('tutoria: no s\'han pogut guardar dades', e);
-  }
-}
-
-// ============================================================
-// OBRIR MODAL
-// ============================================================
-async function openTutoriaModal() {
+function openTutoriaModal() {
   document.getElementById('tutoriaModal')?.remove();
-  await carregarDadesUsuari();
 
   const modal = document.createElement('div');
   modal.id = 'tutoriaModal';
   modal.className = 'fixed inset-0 flex items-center justify-center z-[9999] bg-black bg-opacity-60 p-4';
   modal.innerHTML = buildModalHTML();
   document.body.appendChild(modal);
+
   initModalInteractions(modal);
 }
 
 // ============================================================
-// CONSTRUIR HTML DEL MODAL
+// HTML DEL MODAL
 // ============================================================
 function buildModalHTML() {
+  const esoOptions = ASSIGNATURES.eso.materies.map(m =>
+    `<label class="flex items-center gap-2 text-sm cursor-pointer hover:bg-rose-50 px-2 py-1 rounded">
+      <input type="checkbox" class="assignatura-check w-4 h-4 accent-rose-500" value="${m}">
+      <span>${m}</span>
+    </label>`
+  ).join('');
+
+  const batxOptions = ASSIGNATURES.batxillerat.materies.map(m =>
+    `<label class="flex items-center gap-2 text-sm cursor-pointer hover:bg-rose-50 px-2 py-1 rounded">
+      <input type="checkbox" class="assignatura-check w-4 h-4 accent-rose-500" value="${m}">
+      <span>${m}</span>
+    </label>`
+  ).join('');
+
   return `
   <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[95vh] overflow-y-auto">
-
+    
     <!-- HEADER -->
     <div class="sticky top-0 bg-rose-500 text-white px-6 py-4 rounded-t-2xl flex justify-between items-center z-10">
       <div>
@@ -146,24 +135,26 @@ function buildModalHTML() {
         <label class="block text-sm font-bold text-gray-700 mb-3">👤 Alumne/a</label>
         <div class="flex gap-3 mb-3">
           <label class="flex items-center gap-2 cursor-pointer border-2 rounded-lg px-3 py-2 flex-1 justify-center font-semibold text-sm transition-all border-blue-300 hover:bg-blue-50 has-[:checked]:bg-blue-500 has-[:checked]:text-white has-[:checked]:border-blue-500">
-            <input type="radio" name="genere" value="noi" checked class="sr-only">👦 Noi (El...)
+            <input type="radio" name="genere" value="noi" checked class="sr-only">
+            👦 Noi (El...)
           </label>
           <label class="flex items-center gap-2 cursor-pointer border-2 rounded-lg px-3 py-2 flex-1 justify-center font-semibold text-sm transition-all border-pink-300 hover:bg-pink-50 has-[:checked]:bg-pink-500 has-[:checked]:text-white has-[:checked]:border-pink-500">
-            <input type="radio" name="genere" value="noia" class="sr-only">👧 Noia (La...)
+            <input type="radio" name="genere" value="noia" class="sr-only">
+            👧 Noia (La...)
           </label>
         </div>
-        <input id="tutoriaNom" type="text" placeholder="Nom de l'alumne/a (ex: Toni, Júlia...)"
+        <input id="tutoriaNom" type="text" placeholder="Nom de l'alumne/a (ex: Toni, Júlia...)" 
           class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-rose-400 focus:outline-none text-sm">
       </div>
 
-      <!-- TRIMESTRE -->
+      <!-- TRIMESTRE / MOMENT AVALUACIÓ -->
       <div class="bg-gray-50 rounded-xl p-4">
         <label class="block text-sm font-bold text-gray-700 mb-3">📅 Moment d'avaluació</label>
         <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          ${buildOption('trimestre','1r trimestre','1r Trimestre','blue')}
-          ${buildOption('trimestre','2n trimestre','2n Trimestre','blue')}
-          ${buildOption('trimestre','3r trimestre','3r Trimestre','blue')}
-          ${buildOption('trimestre','final de curs','Final de curs','blue')}
+          ${buildOption('trimestre', '1r trimestre', '1r Trimestre', 'blue')}
+          ${buildOption('trimestre', '2n trimestre', '2n Trimestre', 'blue')}
+          ${buildOption('trimestre', '3r trimestre', '3r Trimestre', 'blue')}
+          ${buildOption('trimestre', 'final de curs', 'Final de curs', 'blue')}
         </div>
       </div>
 
@@ -172,11 +163,11 @@ function buildModalHTML() {
         <label class="block text-sm font-bold text-gray-700 mb-2">📚 Nivell educatiu</label>
         <div class="flex gap-3 mb-3">
           <label class="flex items-center gap-2 cursor-pointer">
-            <input type="radio" name="nivell" value="eso" checked class="accent-rose-500">
+            <input type="radio" name="nivell" value="eso" id="radioESO" checked class="accent-rose-500">
             <span class="font-semibold text-gray-700">ESO</span>
           </label>
           <label class="flex items-center gap-2 cursor-pointer">
-            <input type="radio" name="nivell" value="batxillerat" class="accent-rose-500">
+            <input type="radio" name="nivell" value="batxillerat" id="radioBatx" class="accent-rose-500">
             <span class="font-semibold text-gray-700">Batxillerat</span>
           </label>
         </div>
@@ -194,53 +185,44 @@ function buildModalHTML() {
           <button type="button" id="tabSuspESO" class="tab-susp-btn px-3 py-1 rounded-lg text-xs font-semibold bg-red-500 text-white">ESO</button>
           <button type="button" id="tabSuspBatx" class="tab-susp-btn px-3 py-1 rounded-lg text-xs font-semibold bg-gray-200 text-gray-600">Batxillerat</button>
         </div>
-        <div id="suspesesESO" class="grid grid-cols-2 gap-1">
-          ${renderMateriesCheckboxes('eso')}
-        </div>
-        <div id="suspesesBatx" class="grid grid-cols-2 gap-1 hidden">
-          ${renderMateriesCheckboxes('batxillerat')}
-        </div>
-        <!-- Botó afegir matèria -->
-        <button type="button" id="btnAfegirMateria"
-          class="mt-3 flex items-center gap-1 text-xs font-semibold text-red-600 border border-red-300 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors">
-          ＋ Afegir matèria optativa
-        </button>
+        <div id="suspesesESO" class="grid grid-cols-2 gap-1">${esoOptions}</div>
+        <div id="suspesesBatx" class="grid grid-cols-2 gap-1 hidden">${batxOptions}</div>
       </div>
 
       <!-- COMPORTAMENT -->
       <div class="bg-orange-50 border border-orange-200 rounded-xl p-4">
         <label class="block text-sm font-bold text-orange-700 mb-3">🧠 Comportament a l'aula</label>
         <div class="grid grid-cols-3 gap-2">
-          ${buildOption('comportament','excel·lent','⭐ Excel·lent','green')}
-          ${buildOption('comportament','bo','✅ Bo','green')}
-          ${buildOption('comportament','neutre','➖ Neutre','yellow')}
-          ${buildOption('comportament','irregular','⚠️ Irregular','orange')}
-          ${buildOption('comportament','dolent','❌ Dolent','red')}
-          ${buildOption('comportament','disruptiu','🚨 Disruptiu','red')}
+          ${buildOption('comportament', 'excel·lent', '⭐ Excel·lent', 'green')}
+          ${buildOption('comportament', 'bo', '✅ Bo', 'green')}
+          ${buildOption('comportament', 'neutre', '➖ Neutre', 'yellow')}
+          ${buildOption('comportament', 'irregular', '⚠️ Irregular', 'orange')}
+          ${buildOption('comportament', 'dolent', '❌ Dolent', 'red')}
+          ${buildOption('comportament', 'disruptiu', '🚨 Disruptiu', 'red')}
         </div>
       </div>
 
-      <!-- ESFORÇ -->
+      <!-- ESFORÇ I TREBALL -->
       <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
         <label class="block text-sm font-bold text-blue-700 mb-3">💪 Esforç i treball</label>
         <div class="grid grid-cols-3 gap-2">
-          ${buildOption('esforc','molt alt','🌟 Molt alt','green')}
-          ${buildOption('esforc','alt','✅ Alt','green')}
-          ${buildOption('esforc','adequat','➖ Adequat','yellow')}
-          ${buildOption('esforc','baix','⚠️ Baix','orange')}
-          ${buildOption('esforc','molt baix','❌ Molt baix','red')}
+          ${buildOption('esforc', 'molt alt', '🌟 Molt alt', 'green')}
+          ${buildOption('esforc', 'alt', '✅ Alt', 'green')}
+          ${buildOption('esforc', 'adequat', '➖ Adequat', 'yellow')}
+          ${buildOption('esforc', 'baix', '⚠️ Baix', 'orange')}
+          ${buildOption('esforc', 'molt baix', '❌ Molt baix', 'red')}
         </div>
       </div>
 
-      <!-- TASQUES -->
+      <!-- TASQUES I DEURES -->
       <div class="bg-purple-50 border border-purple-200 rounded-xl p-4">
         <label class="block text-sm font-bold text-purple-700 mb-3">📝 Lliurament de tasques</label>
         <div class="grid grid-cols-3 gap-2">
-          ${buildOption('tasques','sempre','✅ Sempre lliura','green')}
-          ${buildOption('tasques','gairebé sempre','🟡 Quasi sempre','yellow')}
-          ${buildOption('tasques','a vegades','⚠️ A vegades','orange')}
-          ${buildOption('tasques','rarament','❌ Rarament','red')}
-          ${buildOption('tasques','mai','🚫 Mai lliura','red')}
+          ${buildOption('tasques', 'sempre', '✅ Sempre lliura', 'green')}
+          ${buildOption('tasques', 'gairebé sempre', '🟡 Quasi sempre', 'yellow')}
+          ${buildOption('tasques', 'a vegades', '⚠️ A vegades', 'orange')}
+          ${buildOption('tasques', 'rarament', '❌ Rarament', 'red')}
+          ${buildOption('tasques', 'mai', '🚫 Mai lliura', 'red')}
         </div>
       </div>
 
@@ -248,10 +230,10 @@ function buildModalHTML() {
       <div class="bg-teal-50 border border-teal-200 rounded-xl p-4">
         <label class="block text-sm font-bold text-teal-700 mb-3">📅 Assistència</label>
         <div class="grid grid-cols-2 gap-2">
-          ${buildOption('assistencia','perfecta','✅ Perfecta','green')}
-          ${buildOption('assistencia','bona','🟡 Bona','yellow')}
-          ${buildOption('assistencia','irregular amb justificació','⚠️ Irregular (justificada)','orange')}
-          ${buildOption('assistencia','moltes faltes sense justificar','❌ Moltes faltes injustificades','red')}
+          ${buildOption('assistencia', 'perfecta', '✅ Perfecta', 'green')}
+          ${buildOption('assistencia', 'bona', '🟡 Bona', 'yellow')}
+          ${buildOption('assistencia', 'irregular amb justificació', '⚠️ Irregular (justificada)', 'orange')}
+          ${buildOption('assistencia', 'moltes faltes sense justificar', '❌ Moltes faltes injustificades', 'red')}
         </div>
       </div>
 
@@ -259,38 +241,43 @@ function buildModalHTML() {
       <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
         <label class="block text-sm font-bold text-indigo-700 mb-3">🤝 Actitud i participació</label>
         <div class="grid grid-cols-2 gap-2">
-          ${buildOption('actitud','participa molt activament','🙋 Molt activa','green')}
-          ${buildOption('actitud','participa adequadament','✅ Adequada','green')}
-          ${buildOption('actitud','poc participativa','➖ Poc activa','yellow')}
-          ${buildOption('actitud','passiva i desinteressada','⚠️ Passiva','orange')}
-          ${buildOption('actitud','negativa i desmotivada','❌ Negativa','red')}
+          ${buildOption('actitud', 'participa molt activament', '🙋 Molt activa', 'green')}
+          ${buildOption('actitud', 'participa adequadament', '✅ Adequada', 'green')}
+          ${buildOption('actitud', 'poc participativa', '➖ Poc activa', 'yellow')}
+          ${buildOption('actitud', 'passiva i desinteressada', '⚠️ Passiva', 'orange')}
+          ${buildOption('actitud', 'negativa i desmotivada', '❌ Negativa', 'red')}
         </div>
       </div>
-
-      <!-- APARTATS PERSONALITZATS (carregats de Firestore) -->
-      <div id="apartatsPersonalitzatsContainer">
-        ${renderApartatsExtra()}
-      </div>
-
-      <!-- BOTÓ AFEGIR APARTAT PERSONALITZAT -->
-      <button type="button" id="btnAfegirApartat"
-        class="w-full flex items-center justify-center gap-2 text-sm font-semibold text-violet-600 border-2 border-dashed border-violet-300 hover:bg-violet-50 px-4 py-3 rounded-xl transition-colors">
-        ＋ Afegir apartat personalitzat (Treball cooperatiu, Projectes...)
-      </button>
 
       <!-- PUNTS FORTS -->
       <div class="bg-green-50 border border-green-200 rounded-xl p-4">
         <label class="block text-sm font-bold text-green-700 mb-2">🌟 Punts forts destacables (opcional)</label>
-        <textarea id="tutoriaPuntsForts" placeholder="Ex: Molt creatiu/va, bon sentit de l'humor, ajuda als companys..."
+        <textarea id="tutoriaPuntsForts" placeholder="Ex: Molt creatiu/va, bon sentit de l'humor, ajuda als companys, destaca en ..." 
           class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-400 focus:outline-none text-sm h-20 resize-none"></textarea>
       </div>
 
       <!-- RECOMANACIONS -->
       <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
         <label class="block text-sm font-bold text-blue-700 mb-2">💡 Recomanacions per millorar (opcional)</label>
-        <p class="text-xs text-blue-500 mb-2">Ex: Classes particulars de matemàtiques, hàbit de lectura, reforç d'anglès...</p>
-        <textarea id="tutoriaRecomanacions" placeholder="Escriu les recomanacions específiques..."
+        <p class="text-xs text-blue-500 mb-2">Ex: Classes particulars de matemàtiques, millorar la comprensió lectora, hàbit de lectura diària, reforç d'anglès...</p>
+        <textarea id="tutoriaRecomanacions" placeholder="Escriu les recomanacions específiques..." 
           class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none text-sm h-20 resize-none"></textarea>
+      </div>
+
+      <!-- LLARGADA -->
+      <div class="bg-gray-50 rounded-xl p-4">
+        <label class="block text-sm font-bold text-gray-700 mb-3">📏 Llargada del comentari</label>
+        <div class="grid grid-cols-3 gap-2">
+          <label class="flex items-center gap-1 cursor-pointer border-2 rounded-lg px-2 py-2 justify-center text-xs font-semibold transition-all border-gray-300 hover:bg-gray-100 has-[:checked]:bg-gray-700 has-[:checked]:text-white has-[:checked]:border-gray-700">
+            <input type="radio" name="llargada" value="curt" class="sr-only">📝 Curt<br><span class="font-normal opacity-75">(50-80 p.)</span>
+          </label>
+          <label class="flex items-center gap-1 cursor-pointer border-2 rounded-lg px-2 py-2 justify-center text-xs font-semibold transition-all border-indigo-300 hover:bg-indigo-50 has-[:checked]:bg-indigo-500 has-[:checked]:text-white has-[:checked]:border-indigo-500">
+            <input type="radio" name="llargada" value="mitja" checked class="sr-only">📄 Mitjà<br><span class="font-normal opacity-75">(80-150 p.)</span>
+          </label>
+          <label class="flex items-center gap-1 cursor-pointer border-2 rounded-lg px-2 py-2 justify-center text-xs font-semibold transition-all border-violet-300 hover:bg-violet-50 has-[:checked]:bg-violet-500 has-[:checked]:text-white has-[:checked]:border-violet-500">
+            <input type="radio" name="llargada" value="llarg" class="sr-only">📃 Llarg<br><span class="font-normal opacity-75">(150-250 p.)</span>
+          </label>
+        </div>
       </div>
 
       <!-- IDIOMA -->
@@ -303,7 +290,7 @@ function buildModalHTML() {
       </div>
 
       <!-- BOTÓ GENERAR -->
-      <button id="btnGenerarComentari"
+      <button id="btnGenerarComentari" 
         class="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 rounded-xl text-base transition-colors flex items-center justify-center gap-2">
         ✨ Generar comentari amb IA
       </button>
@@ -317,7 +304,7 @@ function buildModalHTML() {
           </div>
           <div id="tutoriaComentariText" class="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap bg-white rounded-lg p-4 border border-rose-100 min-h-[100px]"></div>
         </div>
-        <button id="btnRegenerarComentari"
+        <button id="btnRegenerarComentari" 
           class="w-full mt-3 border-2 border-rose-300 text-rose-600 hover:bg-rose-50 font-semibold py-2 rounded-xl text-sm transition-colors">
           🔄 Generar altra versió
         </button>
@@ -327,41 +314,7 @@ function buildModalHTML() {
   </div>`;
 }
 
-// ============================================================
-// RENDER CHECKBOXES MATÈRIES (base + extra)
-// ============================================================
-function renderMateriesCheckboxes(nivell) {
-  const base = ASSIGNATURES[nivell] || [];
-  const extra = _materiesExtra[nivell] || [];
-  const totes = [...base, ...extra];
-  return totes.map(m => `
-    <label class="flex items-center gap-2 text-sm cursor-pointer hover:bg-rose-50 px-2 py-1 rounded group">
-      <input type="checkbox" class="assignatura-check w-4 h-4 accent-rose-500" value="${m}">
-      <span class="flex-1">${m}</span>
-      ${extra.includes(m) ? `<button type="button" class="btn-delete-materia hidden group-hover:inline text-red-400 hover:text-red-600 text-xs" data-nivell="${nivell}" data-materia="${m}">✕</button>` : ''}
-    </label>`).join('');
-}
-
-// ============================================================
-// RENDER APARTATS EXTRA
-// ============================================================
-function renderApartatsExtra() {
-  if (_apartatsExtra.length === 0) return '';
-  return _apartatsExtra.map(ap => `
-    <div class="bg-violet-50 border border-violet-200 rounded-xl p-4" id="apartat-${ap.id}">
-      <div class="flex items-center justify-between mb-3">
-        <label class="text-sm font-bold text-violet-700">🔧 ${ap.nom}</label>
-        <button type="button" class="btn-delete-apartat text-xs text-gray-400 hover:text-red-500 underline" data-id="${ap.id}">Eliminar apartat</button>
-      </div>
-      <div class="grid grid-cols-3 gap-2">
-        ${ap.opcions.map(op => buildOption(`apartat_${ap.id}`, op.valor, op.label, op.color)).join('')}
-      </div>
-    </div>`).join('');
-}
-
-// ============================================================
-// HELPERS HTML
-// ============================================================
+// Helper: construir opció estil botó seleccionable
 function buildOption(grup, valor, label, color) {
   const colors = {
     blue:   'border-blue-300 hover:bg-blue-100 has-[:checked]:bg-blue-500 has-[:checked]:text-white has-[:checked]:border-blue-500',
@@ -369,11 +322,11 @@ function buildOption(grup, valor, label, color) {
     yellow: 'border-yellow-300 hover:bg-yellow-100 has-[:checked]:bg-yellow-400 has-[:checked]:text-white has-[:checked]:border-yellow-400',
     orange: 'border-orange-300 hover:bg-orange-100 has-[:checked]:bg-orange-500 has-[:checked]:text-white has-[:checked]:border-orange-500',
     red:    'border-red-300 hover:bg-red-100 has-[:checked]:bg-red-500 has-[:checked]:text-white has-[:checked]:border-red-500',
-    violet: 'border-violet-300 hover:bg-violet-100 has-[:checked]:bg-violet-500 has-[:checked]:text-white has-[:checked]:border-violet-500',
   };
   return `
     <label class="flex items-center gap-1 cursor-pointer border-2 rounded-lg px-2 py-1.5 text-xs font-medium transition-all ${colors[color] || colors.green}">
-      <input type="radio" name="${grup}" value="${valor}" class="sr-only">${label}
+      <input type="radio" name="${grup}" value="${valor}" class="sr-only">
+      ${label}
     </label>`;
 }
 
@@ -382,68 +335,34 @@ function buildOption(grup, valor, label, color) {
 // ============================================================
 function initModalInteractions(modal) {
   modal.querySelector('#btnCloseTutoria').addEventListener('click', () => modal.remove());
-  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
 
-  // Pestanyes suspeses
-  const tabESO  = modal.querySelector('#tabSuspESO');
+  const tabESO = modal.querySelector('#tabSuspESO');
   const tabBatx = modal.querySelector('#tabSuspBatx');
-  const contESO  = modal.querySelector('#suspesesESO');
+  const contESO = modal.querySelector('#suspesesESO');
   const contBatx = modal.querySelector('#suspesesBatx');
 
   tabESO.addEventListener('click', () => {
-    tabESO.className  = 'tab-susp-btn px-3 py-1 rounded-lg text-xs font-semibold bg-red-500 text-white';
+    tabESO.className = 'tab-susp-btn px-3 py-1 rounded-lg text-xs font-semibold bg-red-500 text-white';
     tabBatx.className = 'tab-susp-btn px-3 py-1 rounded-lg text-xs font-semibold bg-gray-200 text-gray-600';
-    contESO.classList.remove('hidden'); contBatx.classList.add('hidden');
-  });
-  tabBatx.addEventListener('click', () => {
-    tabBatx.className = 'tab-susp-btn px-3 py-1 rounded-lg text-xs font-semibold bg-red-500 text-white';
-    tabESO.className  = 'tab-susp-btn px-3 py-1 rounded-lg text-xs font-semibold bg-gray-200 text-gray-600';
-    contBatx.classList.remove('hidden'); contESO.classList.add('hidden');
+    contESO.classList.remove('hidden');
+    contBatx.classList.add('hidden');
   });
 
-  // Desmarcar
+  tabBatx.addEventListener('click', () => {
+    tabBatx.className = 'tab-susp-btn px-3 py-1 rounded-lg text-xs font-semibold bg-red-500 text-white';
+    tabESO.className = 'tab-susp-btn px-3 py-1 rounded-lg text-xs font-semibold bg-gray-200 text-gray-600';
+    contBatx.classList.remove('hidden');
+    contESO.classList.add('hidden');
+  });
+
   modal.querySelector('#btnDesmarcarSuspeses').addEventListener('click', () => {
     modal.querySelectorAll('.assignatura-check').forEach(c => c.checked = false);
   });
 
-  // Afegir matèria optativa
-  modal.querySelector('#btnAfegirMateria').addEventListener('click', () => {
-    openAfegirMateriaModal(modal);
-  });
-
-  // Eliminar matèria extra (delegació d'events)
-  modal.addEventListener('click', async e => {
-    const btn = e.target.closest('.btn-delete-materia');
-    if (btn) {
-      const nivell  = btn.dataset.nivell;
-      const materia = btn.dataset.materia;
-      if (!confirm(`Eliminar "${materia}" de la llista?`)) return;
-      _materiesExtra[nivell] = (_materiesExtra[nivell] || []).filter(m => m !== materia);
-      await guardarDadesUsuari();
-      refreshMateriesCheckboxes(modal, nivell);
-    }
-  });
-
-  // Afegir apartat personalitzat
-  modal.querySelector('#btnAfegirApartat').addEventListener('click', () => {
-    openAfegirApartatModal(modal);
-  });
-
-  // Eliminar apartat personalitzat
-  modal.addEventListener('click', async e => {
-    const btn = e.target.closest('.btn-delete-apartat');
-    if (btn) {
-      const id = btn.dataset.id;
-      if (!confirm('Eliminar aquest apartat?')) return;
-      _apartatsExtra = _apartatsExtra.filter(a => a.id !== id);
-      await guardarDadesUsuari();
-      modal.querySelector('#apartatsPersonalitzatsContainer').innerHTML = renderApartatsExtra();
-    }
-  });
-
-  // Generar / Regenerar / Copiar
   modal.querySelector('#btnGenerarComentari').addEventListener('click', () => generarComentari(modal));
-  modal.addEventListener('click', e => {
+
+  modal.addEventListener('click', (e) => {
     if (e.target.id === 'btnRegenerarComentari') generarComentari(modal);
     if (e.target.id === 'btnCopiarComentari') {
       const text = modal.querySelector('#tutoriaComentariText').textContent;
@@ -456,222 +375,65 @@ function initModalInteractions(modal) {
 }
 
 // ============================================================
-// REFRESC CHECKBOXES MATÈRIES
-// ============================================================
-function refreshMateriesCheckboxes(modal, nivell) {
-  const cont = modal.querySelector(nivell === 'eso' ? '#suspesesESO' : '#suspesesBatx');
-  if (cont) cont.innerHTML = renderMateriesCheckboxes(nivell);
-}
-
-// ============================================================
-// MODAL: AFEGIR MATÈRIA OPTATIVA
-// ============================================================
-function openAfegirMateriaModal(parentModal) {
-  // Detectar quin nivell és visible
-  const nivellVisible = parentModal.querySelector('#suspesesBatx:not(.hidden)') ? 'batxillerat' : 'eso';
-
-  const m = document.createElement('div');
-  m.className = 'fixed inset-0 flex items-center justify-center z-[10000] bg-black bg-opacity-50 p-4';
-  m.innerHTML = `
-    <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
-      <h3 class="font-bold text-lg mb-4">➕ Nova matèria optativa</h3>
-      <div class="mb-3">
-        <label class="text-sm font-semibold text-gray-700 mb-1 block">Nivell</label>
-        <div class="flex gap-2">
-          <label class="flex items-center gap-2 cursor-pointer border-2 rounded-lg px-3 py-2 flex-1 justify-center text-sm font-semibold has-[:checked]:bg-rose-500 has-[:checked]:text-white border-rose-300">
-            <input type="radio" name="nivell_nova" value="eso" ${nivellVisible === 'eso' ? 'checked' : ''} class="sr-only">ESO
-          </label>
-          <label class="flex items-center gap-2 cursor-pointer border-2 rounded-lg px-3 py-2 flex-1 justify-center text-sm font-semibold has-[:checked]:bg-rose-500 has-[:checked]:text-white border-rose-300">
-            <input type="radio" name="nivell_nova" value="batxillerat" ${nivellVisible === 'batxillerat' ? 'checked' : ''} class="sr-only">Batxillerat
-          </label>
-        </div>
-      </div>
-      <label class="text-sm font-semibold text-gray-700 mb-1 block">Nom de la matèria</label>
-      <input id="inputNovaMateria" type="text" placeholder="Ex: Robòtica, Emprenedoria, Teatre..."
-        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400 focus:outline-none mb-4">
-      <div class="flex gap-2">
-        <button id="btnCancelMateria" class="flex-1 border border-gray-300 rounded-lg py-2 text-sm font-semibold hover:bg-gray-50">Cancel·lar</button>
-        <button id="btnConfirmMateria" class="flex-1 bg-rose-500 hover:bg-rose-600 text-white rounded-lg py-2 text-sm font-semibold">Guardar</button>
-      </div>
-    </div>`;
-  document.body.appendChild(m);
-
-  m.querySelector('#btnCancelMateria').addEventListener('click', () => m.remove());
-  m.querySelector('#btnConfirmMateria').addEventListener('click', async () => {
-    const nom = m.querySelector('#inputNovaMateria').value.trim();
-    const nivell = m.querySelector('input[name="nivell_nova"]:checked').value;
-    if (!nom) { alert('Escriu el nom de la matèria'); return; }
-    if (!_materiesExtra[nivell]) _materiesExtra[nivell] = [];
-    if (_materiesExtra[nivell].includes(nom) || ASSIGNATURES[nivell].includes(nom)) {
-      alert('Aquesta matèria ja existeix'); return;
-    }
-    _materiesExtra[nivell].push(nom);
-    await guardarDadesUsuari();
-    refreshMateriesCheckboxes(parentModal, nivell);
-    m.remove();
-  });
-}
-
-// ============================================================
-// MODAL: AFEGIR APARTAT PERSONALITZAT
-// ============================================================
-function openAfegirApartatModal(parentModal) {
-  let opcions = [
-    { valor: 'excel·lent', label: '⭐ Excel·lent', color: 'green' },
-    { valor: 'adequat',    label: '✅ Adequat',    color: 'yellow' },
-    { valor: 'a millorar', label: '⚠️ A millorar', color: 'orange' },
-    { valor: 'insuficient','label': '❌ Insuficient','color': 'red' },
-  ];
-
-  const m = document.createElement('div');
-  m.className = 'fixed inset-0 flex items-center justify-center z-[10000] bg-black bg-opacity-50 p-4';
-  m.innerHTML = `
-    <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-      <h3 class="font-bold text-lg mb-1">➕ Nou apartat personalitzat</h3>
-      <p class="text-xs text-gray-500 mb-4">Ex: Treball cooperatiu, Projectes, Autonomia...</p>
-
-      <label class="text-sm font-semibold text-gray-700 mb-1 block">Nom de l'apartat</label>
-      <input id="inputNomApartat" type="text" placeholder="Ex: Treball cooperatiu"
-        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-400 focus:outline-none mb-4">
-
-      <div class="flex items-center justify-between mb-2">
-        <label class="text-sm font-semibold text-gray-700">Opcions de valoració</label>
-        <button type="button" id="btnAfegirOpcio" class="text-xs text-violet-600 border border-violet-300 hover:bg-violet-50 px-2 py-1 rounded-lg">＋ Afegir opció</button>
-      </div>
-
-      <div id="opcionsContainer" class="space-y-2 mb-4">
-        <!-- es renderitza dinàmicament -->
-      </div>
-
-      <div class="flex gap-2 mt-4">
-        <button id="btnCancelApartat" class="flex-1 border border-gray-300 rounded-lg py-2 text-sm font-semibold hover:bg-gray-50">Cancel·lar</button>
-        <button id="btnConfirmApartat" class="flex-1 bg-violet-500 hover:bg-violet-600 text-white rounded-lg py-2 text-sm font-semibold">Guardar apartat</button>
-      </div>
-    </div>`;
-  document.body.appendChild(m);
-
-  const renderOpcions = () => {
-    const cont = m.querySelector('#opcionsContainer');
-    cont.innerHTML = opcions.map((op, i) => `
-      <div class="flex items-center gap-2 bg-gray-50 rounded-lg p-2">
-        <input type="text" value="${op.label}" placeholder="Etiqueta (ex: ⭐ Molt bé)"
-          class="flex-1 border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-violet-400 opcio-label" data-i="${i}">
-        <input type="text" value="${op.valor}" placeholder="Valor intern"
-          class="w-28 border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-violet-400 opcio-valor" data-i="${i}">
-        <select class="border border-gray-200 rounded px-1 py-1 text-xs opcio-color" data-i="${i}">
-          ${COLORS_OPCIO.map(c => `<option value="${c}" ${op.color === c ? 'selected' : ''}>${c}</option>`).join('')}
-        </select>
-        <button type="button" class="text-red-400 hover:text-red-600 text-lg leading-none opcio-delete" data-i="${i}">✕</button>
-      </div>`).join('');
-
-    cont.querySelectorAll('.opcio-label').forEach(el => {
-      el.addEventListener('input', e => { opcions[+e.target.dataset.i].label = e.target.value; });
-    });
-    cont.querySelectorAll('.opcio-valor').forEach(el => {
-      el.addEventListener('input', e => { opcions[+e.target.dataset.i].valor = e.target.value; });
-    });
-    cont.querySelectorAll('.opcio-color').forEach(el => {
-      el.addEventListener('change', e => { opcions[+e.target.dataset.i].color = e.target.value; });
-    });
-    cont.querySelectorAll('.opcio-delete').forEach(el => {
-      el.addEventListener('click', e => {
-        opcions.splice(+e.target.dataset.i, 1);
-        renderOpcions();
-      });
-    });
-  };
-  renderOpcions();
-
-  m.querySelector('#btnAfegirOpcio').addEventListener('click', () => {
-    opcions.push({ valor: 'nova opció', label: '🔹 Nova opció', color: 'blue' });
-    renderOpcions();
-  });
-
-  m.querySelector('#btnCancelApartat').addEventListener('click', () => m.remove());
-
-  m.querySelector('#btnConfirmApartat').addEventListener('click', async () => {
-    const nom = m.querySelector('#inputNomApartat').value.trim();
-    if (!nom) { alert('Escriu el nom de l\'apartat'); return; }
-    if (opcions.length === 0) { alert('Afegeix almenys una opció'); return; }
-
-    const nouApartat = {
-      id: 'ap_' + Date.now(),
-      nom,
-      opcions: opcions.map(op => ({
-        valor: op.valor || op.label.replace(/[^\w\s]/g, '').trim().toLowerCase(),
-        label: op.label,
-        color: op.color,
-      })),
-    };
-    _apartatsExtra.push(nouApartat);
-    await guardarDadesUsuari();
-    parentModal.querySelector('#apartatsPersonalitzatsContainer').innerHTML = renderApartatsExtra();
-
-    // Reinicialitzar events dels nous apartats
-    parentModal.querySelectorAll('.btn-delete-apartat').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const id = btn.dataset.id;
-        if (!confirm('Eliminar aquest apartat?')) return;
-        _apartatsExtra = _apartatsExtra.filter(a => a.id !== id);
-        await guardarDadesUsuari();
-        parentModal.querySelector('#apartatsPersonalitzatsContainer').innerHTML = renderApartatsExtra();
-      });
-    });
-    m.remove();
-  });
-}
-
-// ============================================================
 // RECOLLIR DADES DEL FORMULARI
 // ============================================================
 function recollidaDades(modal) {
-  const nom   = modal.querySelector('#tutoriaNom').value.trim() || 'l\'alumne/a';
-  const curs  = modal.querySelector('#tutoriaCurs').value.trim();
+  const nom = modal.querySelector('#tutoriaNom').value.trim() || 'l\'alumne/a';
+  const curs = modal.querySelector('#tutoriaCurs').value.trim();
   const idioma = modal.querySelector('#tutoriaIdioma').value;
-  const puntsForts    = modal.querySelector('#tutoriaPuntsForts').value.trim();
+  const puntsForts = modal.querySelector('#tutoriaPuntsForts').value.trim();
   const recomanacions = modal.querySelector('#tutoriaRecomanacions').value.trim();
+  const llargada = modal.querySelector('input[name="llargada"]:checked')?.value || 'mitja';
+
   const suspeses = [...modal.querySelectorAll('.assignatura-check:checked')].map(c => c.value);
 
-  const getValue = name => {
+  const getValue = (name) => {
     const el = modal.querySelector(`input[name="${name}"]:checked`);
     return el ? el.value : null;
   };
 
-  const genere  = getValue('genere') || 'noi';
+  const genere = getValue('genere') || 'noi';
   const article = genere === 'noia' ? 'La' : 'El';
 
-  // Recollir apartats personalitzats
-  const apartatsValors = _apartatsExtra.map(ap => ({
-    nom: ap.nom,
-    valor: getValue(`apartat_${ap.id}`),
-  })).filter(a => a.valor);
-
   return {
-    nom, nomAmbArticle: `${article} ${nom}`,
-    genere, article, curs, idioma,
+    nom,
+    nomAmbArticle: `${article} ${nom}`,
+    genere,
+    article,
+    curs,
+    idioma,
     trimestre: getValue('trimestre'),
     suspeses,
     comportament: getValue('comportament'),
-    esforc:       getValue('esforc'),
-    tasques:      getValue('tasques'),
-    assistencia:  getValue('assistencia'),
-    actitud:      getValue('actitud'),
-    puntsForts, recomanacions,
-    apartatsValors,
+    esforc: getValue('esforc'),
+    tasques: getValue('tasques'),
+    assistencia: getValue('assistencia'),
+    actitud: getValue('actitud'),
+    puntsForts,
+    recomanacions,
   };
 }
 
 // ============================================================
-// CONSTRUIR PROMPT
+// CONSTRUIR PROMPT PER A LA IA
 // ============================================================
 function buildPrompt(dades) {
   const { nom, nomAmbArticle, genere, article } = dades;
+  const ell_ella = genere === 'noia' ? 'ella' : 'ell';
+  const el_la = genere === 'noia' ? 'la' : 'el';
+  const del_de_la = genere === 'noia' ? 'de la' : 'del';
+
   const suspesesTxt = dades.suspeses.length > 0
     ? `Assignatures suspeses: ${dades.suspeses.join(', ')}.`
     : 'No té cap assignatura suspesa.';
-  const trimestreTxt = dades.trimestre ? `Moment d'avaluació: ${dades.trimestre}.` : '';
+
+  const trimestreTxt = dades.trimestre
+    ? `Moment d'avaluació: ${dades.trimestre}.`
+    : '';
+
   const campOpcional = (label, val) => val ? `- ${label}: ${val}` : '';
 
+  // Avaluació de la gravetat per ajustar el to
   const aspectesNegatius = [
     dades.comportament === 'dolent' || dades.comportament === 'disruptiu',
     dades.esforc === 'baix' || dades.esforc === 'molt baix',
@@ -680,73 +442,78 @@ function buildPrompt(dades) {
     dades.actitud === 'passiva i desinteressada' || dades.actitud === 'negativa i desmotivada',
   ].filter(Boolean).length;
 
-  const situacioGreu = aspectesNegatius >= 3 || (dades.suspeses.length > 0 && aspectesNegatius >= 2);
-
-  const apartatsExtraTxt = dades.apartatsValors.length > 0
-    ? dades.apartatsValors.map(a => campOpcional(a.nom, a.valor)).join('\n')
-    : '';
+  const teSuspeses = dades.suspeses.length > 0;
+  const situacioGreu = aspectesNegatius >= 3 || (teSuspeses && aspectesNegatius >= 2);
 
   const context = [
-    `Nom: ${nom} (usar "${nomAmbArticle}")`,
+    `Nom de l'alumne/a: ${nom} (article: "${article} ${nom}")`,
     `Gènere: ${genere}`,
     trimestreTxt,
     dades.curs ? `Curs: ${dades.curs}` : '',
     suspesesTxt,
-    campOpcional('Comportament', dades.comportament),
+    campOpcional('Comportament a l\'aula', dades.comportament),
     campOpcional('Esforç i treball', dades.esforc),
     campOpcional('Lliurament de tasques', dades.tasques),
     campOpcional('Assistència', dades.assistencia),
     campOpcional('Actitud i participació', dades.actitud),
-    apartatsExtraTxt,
     campOpcional('Punts forts', dades.puntsForts),
-    campOpcional('Recomanacions', dades.recomanacions),
+    campOpcional('Recomanacions específiques per millorar', dades.recomanacions),
   ].filter(Boolean).join('\n');
 
   const idiomaInstruccio = dades.idioma === 'castella'
-    ? `Escriu en castellano. Usa "${article === 'El' ? 'El' : 'La'} ${nom}" i pronoms él/ella.`
-    : `Escriu en català. Usa "${nomAmbArticle}" i pronoms ell/ella.`;
+    ? `Escriu el comentari completament en castellano. Usa "El ${nom}" o "La ${nom}" segons el gènere. Usa els pronoms "él/ella" correctament.`
+    : `Escriu el comentari completament en català correcte. Usa "${article} ${nom}" per referir-te a l'alumne/a. Usa "ell/ella" correctament.`;
 
-  const trimestreCtx = dades.trimestre
-    ? `És el ${dades.trimestre}: ${dades.trimestre === 'final de curs' ? 'reflexiona sobre tot el curs' : 'anima a millorar de cara als propers trimestres'}.`
+  const trimestreContext = dades.trimestre
+    ? `El comentari és per al ${dades.trimestre}, per tant adapta el missatge final: si és un trimestre intermedi, anima'l/la a continuar o millorar de cara als propers trimestres; si és final de curs, reflexiona sobre l'any.`
     : '';
 
   const toGreu = situacioGreu
-    ? `Situació preocupant: sigues honest/a i directe/a, menciona clarament les mancances, però sempre de forma constructiva.`
-    : `Menciona els aspectes a millorar com a reptes, no com a fracassos.`;
+    ? `L'alumne/a té múltiples aspectes preocupants. El comentari ha de ser honest i directe: menciona clarament que la manca de treball, les faltes o el comportament han contribuït als resultats, però sempre des d'un punt de vista constructiu i animant a millorar. NO amaguis els problemes amb eufemismes excessius.`
+    : `El comentari pot ser més positiu, però si hi ha suspesos o aspectes a millorar, esmenta'ls clarament com a reptes a superar.`;
 
-  return `Ets un tutor/a escolar que escriu comentaris per al butlletí de notes.
+  return `Ets un tutor/a escolar experimentat que escriu comentaris per al butlletí de notes.
 
 DADES:
 ${context}
 
-INSTRUCCIONS:
+INSTRUCCIONS OBLIGATÒRIES:
 - ${idiomaInstruccio}
-- Comença SEMPRE amb "${nomAmbArticle}" (mai amb "Estimada família").
-- El comentari és sobre l'alumne/a, no adreçat a la família.
-- Entre 80 i 150 paraules. Paràgrafs fluids, sense llistes.
+- Comença SEMPRE amb "${nomAmbArticle}" (mai amb "Estimada família" ni cap altre salut).
+- El comentari és sobre l'alumne/a, NO adreçat a la família.
+- Longitud: ${dades.llargada === 'curt' ? 'entre 50 i 80 paraules (molt concís)' : dades.llargada === 'llarg' ? 'entre 150 i 250 paraules (desenvolupat)' : 'entre 80 i 150 paraules'}. Màxim 2-3 frases per paràgraf.
+- No facis llistes. Escriu en paràgrafs fluids i naturals.
 - No mencions notes numèriques.
-- ${trimestreCtx}
+- ${trimestreContext}
 - ${toGreu}
-- Si hi ha assignatures suspeses, menciona-les i explica les carències.
-- Si hi ha apartats personalitzats (treball cooperatiu, projectes...), integra'ls naturalment.
-- Si hi ha recomanacions, inclou-les de forma natural.
-- Acaba amb encoratjament genuí.
-- Concordança de gènere correcta.
+- Si hi ha assignatures suspeses, menciona-les específicament i explica breument quines carències o mancances han portat a aquest resultat (falta de treball, poca assistència, no lliura tasques...).
+- Si hi ha recomanacions específiques, inclou-les de forma natural al text (ex: "Et recomanem reforçar la comprensió lectora amb lectures diàries" o "Seria beneficiós comptar amb suport de classes particulars de matemàtiques").
+- Acaba sempre amb una frase d'encoratjament genuïna i realista, no buida.
+- Usa concordança de gènere correcta en tots els adjectius i pronoms.
 
-Escriu NOMÉS el comentari final, sense títol ni explicació.`;
+EXEMPLES DE COM COMENÇA:
+- "El Marc ha mostrat..." / "La Sara presenta..."
+- "El Toni, tot i tenir capacitat, ha demostrat poc esforç aquest trimestre..."
+- "La Júlia ha tingut un trimestre irregular..."
+
+Escriu NOMÉS el comentari final, sense cap títol, introducció ni explicació.`;
 }
 
 // ============================================================
-// GENERAR COMENTARI
+// GENERAR COMENTARI AMB IA
 // ============================================================
 async function generarComentari(modal) {
   const dades = recollidaDades(modal);
+
   if (!dades.nom || dades.nom === 'l\'alumne/a') {
-    alert('⚠️ Si us plau, escriu el nom de l\'alumne/a'); return;
+    alert('⚠️ Si us plau, escriu el nom de l\'alumne/a');
+    return;
   }
 
-  const btnGenerar    = modal.querySelector('#btnGenerarComentari');
-  const resultatDiv   = modal.querySelector('#tutoriaResultat');
+  const prompt = buildPrompt(dades);
+
+  const btnGenerar = modal.querySelector('#btnGenerarComentari');
+  const resultatDiv = modal.querySelector('#tutoriaResultat');
   const comentariText = modal.querySelector('#tutoriaComentariText');
 
   btnGenerar.disabled = true;
@@ -758,14 +525,21 @@ async function generarComentari(modal) {
     const response = await fetch('/api/tutoria', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: buildPrompt(dades) }),
+      body: JSON.stringify({ prompt }),
     });
-    if (!response.ok) throw new Error(`Error API: ${response.status}`);
+
+    if (!response.ok) {
+      throw new Error(`Error API: ${response.status}`);
+    }
+
     const data = await response.json();
-    comentariText.textContent = data.text || 'No s\'ha pogut generar el comentari.';
+    const text = data.text || 'No s\'ha pogut generar el comentari.';
+
+    comentariText.textContent = text;
     resultatDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
   } catch (err) {
-    console.error('Error:', err);
+    console.error('Error generant comentari:', err);
     comentariText.innerHTML = `<span class="text-red-500">❌ Error: ${err.message}</span>`;
   } finally {
     btnGenerar.disabled = false;
