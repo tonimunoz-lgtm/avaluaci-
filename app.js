@@ -733,14 +733,12 @@ async function createActivityModal() {
         }
     } catch (e) {
         console.error("Error creant activitat:", e);
-        alert("Error creant l'activitat: " + e.message);
     } finally {
         // S'executa SEMPRE, tant si hi ha error com si no
         closeModal("modalAddActivity");
         document.getElementById("modalActivityName").value = "";
     }
 }
-
 function removeActivity(actId){
   confirmAction('Eliminar activitat', 'Esborrar activitat i totes les notes relacionades?', async ()=> {
     try {
