@@ -4,7 +4,8 @@ export function openModal(id) {
   if (!el) return;
   el.classList.remove('hidden');
   el.style.display = 'flex';
-  // focus primer input si existeix
+  el.style.visibility = 'visible';
+  el.style.pointerEvents = 'auto';
   const input = el.querySelector('input, textarea, select');
   if (input) input.focus();
 }
