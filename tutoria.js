@@ -256,6 +256,14 @@ function buildModalHTML() {
           class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-400 focus:outline-none text-sm h-20 resize-none"></textarea>
       </div>
 
+      <!-- RECOMANACIONS -->
+      <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+        <label class="block text-sm font-bold text-blue-700 mb-2">💡 Recomanacions per millorar (opcional)</label>
+        <p class="text-xs text-blue-500 mb-2">Ex: Classes particulars de matemàtiques, millorar la comprensió lectora, hàbit de lectura diària, reforç d'anglès...</p>
+        <textarea id="tutoriaRecomanacions" placeholder="Escriu les recomanacions específiques..." 
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none text-sm h-20 resize-none"></textarea>
+      </div>
+
       <!-- IDIOMA -->
       <div class="bg-gray-50 rounded-xl p-4">
         <label class="block text-sm font-bold text-gray-700 mb-2">🌐 Idioma del comentari</label>
@@ -358,6 +366,7 @@ function recollidaDades(modal) {
   const curs = modal.querySelector('#tutoriaCurs').value.trim();
   const idioma = modal.querySelector('#tutoriaIdioma').value;
   const puntsForts = modal.querySelector('#tutoriaPuntsForts').value.trim();
+  const recomanacions = modal.querySelector('#tutoriaRecomanacions').value.trim();
 
   const suspeses = [...modal.querySelectorAll('.assignatura-check:checked')].map(c => c.value);
 
@@ -384,6 +393,7 @@ function recollidaDades(modal) {
     assistencia: getValue('assistencia'),
     actitud: getValue('actitud'),
     puntsForts,
+    recomanacions,
   };
 }
 
@@ -430,6 +440,7 @@ function buildPrompt(dades) {
     campOpcional('Assistència', dades.assistencia),
     campOpcional('Actitud i participació', dades.actitud),
     campOpcional('Punts forts', dades.puntsForts),
+    campOpcional('Recomanacions específiques per millorar', dades.recomanacions),
   ].filter(Boolean).join('\n');
 
   const idiomaInstruccio = dades.idioma === 'castella'
@@ -459,6 +470,7 @@ INSTRUCCIONS OBLIGATÒRIES:
 - ${trimestreContext}
 - ${toGreu}
 - Si hi ha assignatures suspeses, menciona-les específicament i explica breument quines carències o mancances han portat a aquest resultat (falta de treball, poca assistència, no lliura tasques...).
+- Si hi ha recomanacions específiques, inclou-les de forma natural al text (ex: "Et recomanem reforçar la comprensió lectora amb lectures diàries" o "Seria beneficiós comptar amb suport de classes particulars de matemàtiques").
 - Acaba sempre amb una frase d'encoratjament genuïna i realista, no buida.
 - Usa concordança de gènere correcta en tots els adjectius i pronoms.
 
