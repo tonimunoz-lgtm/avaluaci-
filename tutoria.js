@@ -1,3 +1,4 @@
+
 // tutoria.js - Injector: Generador de comentaris de tutoria amb IA
 // Afegeix un botó "📋 Tutoria" a la barra d'eines de la classe
 
@@ -264,6 +265,43 @@ function buildModalHTML() {
           class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none text-sm h-20 resize-none"></textarea>
       </div>
 
+      <!-- TO DEL MISSATGE -->
+      <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+        <label class="block text-sm font-bold text-amber-700 mb-3">🎭 To del comentari</label>
+        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <label class="flex flex-col items-center gap-1 cursor-pointer border-2 rounded-lg px-2 py-2 text-center text-xs font-semibold transition-all border-yellow-300 hover:bg-yellow-50 has-[:checked]:bg-yellow-400 has-[:checked]:text-white has-[:checked]:border-yellow-400">
+            <input type="radio" name="to_missatge" value="felicitacio" class="sr-only">
+            🏆 Felicitació
+            <span class="font-normal opacity-80 text-xs">Notes excel·lents</span>
+          </label>
+          <label class="flex flex-col items-center gap-1 cursor-pointer border-2 rounded-lg px-2 py-2 text-center text-xs font-semibold transition-all border-green-300 hover:bg-green-50 has-[:checked]:bg-green-500 has-[:checked]:text-white has-[:checked]:border-green-500">
+            <input type="radio" name="to_missatge" value="positiu" class="sr-only">
+            ✅ Positiu
+            <span class="font-normal opacity-80 text-xs">Bon rendiment</span>
+          </label>
+          <label class="flex flex-col items-center gap-1 cursor-pointer border-2 rounded-lg px-2 py-2 text-center text-xs font-semibold transition-all border-gray-300 hover:bg-gray-100 has-[:checked]:bg-gray-500 has-[:checked]:text-white has-[:checked]:border-gray-500">
+            <input type="radio" name="to_missatge" value="neutre" checked class="sr-only">
+            ➖ Neutre
+            <span class="font-normal opacity-80 text-xs">Estàndard</span>
+          </label>
+          <label class="flex flex-col items-center gap-1 cursor-pointer border-2 rounded-lg px-2 py-2 text-center text-xs font-semibold transition-all border-blue-300 hover:bg-blue-50 has-[:checked]:bg-blue-500 has-[:checked]:text-white has-[:checked]:border-blue-500">
+            <input type="radio" name="to_missatge" value="anims" class="sr-only">
+            💪 Ànim
+            <span class="font-normal opacity-80 text-xs">Cal millorar</span>
+          </label>
+          <label class="flex flex-col items-center gap-1 cursor-pointer border-2 rounded-lg px-2 py-2 text-center text-xs font-semibold transition-all border-orange-300 hover:bg-orange-50 has-[:checked]:bg-orange-500 has-[:checked]:text-white has-[:checked]:border-orange-500">
+            <input type="radio" name="to_missatge" value="avertencia" class="sr-only">
+            ⚠️ Advertència
+            <span class="font-normal opacity-80 text-xs">Situació greu</span>
+          </label>
+          <label class="flex flex-col items-center gap-1 cursor-pointer border-2 rounded-lg px-2 py-2 text-center text-xs font-semibold transition-all border-purple-300 hover:bg-purple-50 has-[:checked]:bg-purple-500 has-[:checked]:text-white has-[:checked]:border-purple-500">
+            <input type="radio" name="to_missatge" value="segueix" class="sr-only">
+            🚀 Segueix així!
+            <span class="font-normal opacity-80 text-xs">Manten el ritme</span>
+          </label>
+        </div>
+      </div>
+
       <!-- LLARGADA -->
       <div class="bg-gray-50 rounded-xl p-4">
         <label class="block text-sm font-bold text-gray-700 mb-3">📏 Llargada del comentari</label>
@@ -384,6 +422,7 @@ function recollidaDades(modal) {
   const puntsForts = modal.querySelector('#tutoriaPuntsForts').value.trim();
   const recomanacions = modal.querySelector('#tutoriaRecomanacions').value.trim();
   const llargada = modal.querySelector('input[name="llargada"]:checked')?.value || 'mitja';
+  const to = modal.querySelector('input[name="to_missatge"]:checked')?.value || 'neutre';
 
   const suspeses = [...modal.querySelectorAll('.assignatura-check:checked')].map(c => c.value);
 
@@ -412,6 +451,22 @@ function recollidaDades(modal) {
     puntsForts,
     recomanacions,
   };
+}
+
+
+// ============================================================
+// INSTRUCCIONS DE TO PER AL PROMPT
+// ============================================================
+function tcToInstruccio(to, situacioGreu) {
+  const tos = {
+    felicitacio: `TO: FELICITACIÓ. Comença amb una felicitació explícita i entusiasta (ex: "Felicitem al/la [nom] per..."). El comentari ha de ser com un premi, celebrant els èxits concrets. Ressalta els punts forts amb entusiasme. Si no hi ha suspesos, que es noti l'orgull. Acaba animant a mantenir aquest nivell excel·lent.`,
+    positiu: `TO: POSITIU I OPTIMISTA. Destaca els aspectes bons per sobre dels negatius. Si hi ha suspesos, presenta'ls breument com a reptes superables sense que dominin el missatge. Acaba amb confiança en les capacitats de l'alumne/a.`,
+    neutre: `TO: EQUILIBRAT I OBJECTIU. Presenta els punts forts i els aspectes a millorar de forma proporcionada. ${situacioGreu ? 'Menciona clarament les mancances però de forma constructiva.' : 'Menciona els reptes com a oportunitats de creixement.'} Acaba amb un missatge d'encoratjament realista.`,
+    anims: `TO: ÀNIM I MOTIVACIÓ. L'alumne/a necessita motivació. Reconeix l'esforç fet fins ara, per petit que sigui. Si hi ha suspesos, emfatitza que és possible superar-los amb dedicació. El final ha de ser un missatge d'ànim fort i sincer: "Estem segurs que pots millorar", "Confia en les teves capacitats", etc. Que se sentin recolzats.`,
+    avertencia: `TO: SERIÓS I DIRECTE (però respectuós). La situació és preocupant i cal dir-ho clarament. Menciona explícitament que la manca de treball, assistència o comportament han perjudicat el rendiment. El missatge ha de transmetre preocupació real i la necessitat d'un canvi d'actitud. Acaba demanant un esforç concret i mostrant disponibilitat per ajudar.`,
+    segueix: `TO: FELICITA I ANIMA A MANTENIR EL RITME. L'alumne/a ho fa bé i cal reconèixer-ho. Usa expressions com "Segueix així!", "Manté aquest excel·lent treball", "Estem molt contents amb la teva evolució". Que se sentin valorats i motivats a continuar pel mateix camí.`,
+  };
+  return tos[to] || tos['neutre'];
 }
 
 // ============================================================
@@ -468,9 +523,7 @@ function buildPrompt(dades) {
     ? `El comentari és per al ${dades.trimestre}, per tant adapta el missatge final: si és un trimestre intermedi, anima'l/la a continuar o millorar de cara als propers trimestres; si és final de curs, reflexiona sobre l'any.`
     : '';
 
-  const toGreu = situacioGreu
-    ? `L'alumne/a té múltiples aspectes preocupants. El comentari ha de ser honest i directe: menciona clarament que la manca de treball, les faltes o el comportament han contribuït als resultats, però sempre des d'un punt de vista constructiu i animant a millorar. NO amaguis els problemes amb eufemismes excessius.`
-    : `El comentari pot ser més positiu, però si hi ha suspesos o aspectes a millorar, esmenta'ls clarament com a reptes a superar.`;
+  const toGreu = tcToInstruccio(dades.to, situacioGreu);
 
   return `Ets un tutor/a escolar experimentat que escriu comentaris per al butlletí de notes.
 
