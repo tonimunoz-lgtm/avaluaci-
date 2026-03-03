@@ -255,19 +255,49 @@ async function patchHeaders() {
 }
 
 // ── Observer: re-patchejar quan es recrea la capçalera ────────
-document.addEventListener('DOMContentLoaded', () => {
+// Estratègia: observar notesTbody (sempre canvia amb renderNotesGrid)
+// i notesThead amb subtree per detectar quan s'afegeixen els <th>
+
+let _patchScheduled = false;
+
+function schedulePatch() {
+  if (_patchScheduled) return;
+  _patchScheduled = true;
   setTimeout(() => {
-    const thead = document.getElementById('notesThead');
-    if (!thead) return;
-
-    new MutationObserver(() => {
-      setTimeout(patchHeaders, 400);
-    }).observe(thead, { childList: true, subtree: false });
-
-    // Patcheig inicial
+    _patchScheduled = false;
     patchHeaders();
-  }, 1800);
-});
+  }, 500);
+}
+
+function startObserving() {
+  // Observar notesTbody: quan es recrea el cos, la capçalera ja és llesta
+  const tbody = document.getElementById('notesTbody');
+  if (tbody) {
+    new MutationObserver(schedulePatch).observe(tbody, { childList: true });
+  }
+
+  // Observar notesThead amb subtree per detectar quan s'afegeixen th
+  const thead = document.getElementById('notesThead');
+  if (thead) {
+    new MutationObserver(schedulePatch).observe(thead, { childList: true, subtree: true });
+  }
+
+  // Patcheig immediat per si ja hi ha contingut
+  patchHeaders();
+}
+
+// Intentar iniciar l'observació repetidament fins que existeixin els elements
+function tryStart() {
+  const tbody = document.getElementById('notesTbody');
+  const thead = document.getElementById('notesThead');
+  if (tbody && thead) {
+    startObserving();
+  } else {
+    setTimeout(tryStart, 500);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => setTimeout(tryStart, 800));
 
 // ── Helper ────────────────────────────────────────────────────
 function escHtml(str) {
