@@ -178,7 +178,7 @@ function showMobileModal(actName, displayFormula, rawFormula) {
   overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
 }
 
-// ── Obtenir classId des del DOM (igual que auto-recalc.js) ───
+// ── Obtenir classId des del DOM ───────────────────────────────
 function getClassId() {
   const sub = document.getElementById('classSub');
   if (!sub) return null;
@@ -187,90 +187,66 @@ function getClassId() {
 }
 
 // ── Patcheig de capçaleres ────────────────────────────────────
-// No depèn de window.currentClassId ni window.classActivities:
-// llegeix directament del DOM (th amb data-activity-id o posició)
-// i de Firestore via getClassId()
+// Estratègia: usa la fila .formulas-row del tfoot que app.js ja
+// construeix amb la fórmula correcta per a cada columna (per posició).
+// Complementa amb displayFormula de Firestore per mostrar el nom llegible.
 async function patchHeaders() {
-  const classId = getClassId();
-  if (!classId) return;
-
   const thead = document.getElementById('notesThead');
   if (!thead) return;
 
-  // Necessitem calculatedActivities de Firestore
-  const db = window.firebase?.firestore?.();
-  if (!db) return;
+  // La fila de fórmules és la font de veritat per posició
+  const formulasRow = document.querySelector('#formulaTfoot .formulas-row');
+  if (!formulasRow) return; // encara no s'ha construït, l'observer ho tornarà a intentar
 
-  let calculatedActs = {};
-  try {
-    const classDoc = await db.collection('classes').doc(classId).get();
-    if (!classDoc.exists) return;
-    calculatedActs = classDoc.data().calculatedActivities || {};
-  } catch (e) { return; }
-
-  // Iterar sobre tots els <th> de la capçalera
   const allThs = thead.querySelectorAll('tr:first-child th');
 
-  allThs.forEach(thEl => {
+  // Carregar displayFormulas de Firestore (per mostrar nom llegible en lloc de __ACT__id)
+  let calcActsFromFirestore = {};
+  const classId = getClassId();
+  if (classId) {
+    try {
+      const db = window.firebase?.firestore?.();
+      if (db) {
+        const classDoc = await db.collection('classes').doc(classId).get();
+        calcActsFromFirestore = classDoc.exists ? (classDoc.data().calculatedActivities || {}) : {};
+      }
+    } catch (_) {}
+  }
+
+  // Iterar pels <th> — l'índex 0 és "Alumne", l'últim és "Comentaris"
+  // La formulasRow té: td[0]=label "Fórmula", td[1..n]=fórmules, td[n+1]=buit
+  allThs.forEach((thEl, thIdx) => {
+    if (thIdx === 0) return; // columna "Alumne"
+
     // Evitar duplicar
     if (thEl.querySelector('.fi-info-btn')) return;
 
-    // Trobar l'activityId: pot estar a data-activity-id (posat per competencial-config)
-    // o el deduïm buscant el lockIcon i mirant si té calcData
-    let actId = thEl.dataset.activityId;
+    // El td corresponent a la formulasRow (thIdx perquè td[0] és el label)
+    const formulaTd = formulasRow.children[thIdx];
+    if (!formulaTd) return;
 
-    // Si no té data-activity-id, intentar-ho per posició vs calculatedActs
-    // Busquem si algun calcData coincideix amb el nom del span
-    if (!actId) {
-      const spanText = thEl.querySelector('span')?.textContent?.trim();
-      if (!spanText) return;
-      // Buscar actId per nom a calculatedActs (displayFormula conté el nom)
-      // Alternativa: mirar si el th té fons blau (és calculat)
-      if (!thEl.style.backgroundColor?.includes('219') && 
-          !thEl.style.background?.includes('dbeafe') &&
-          thEl.style.backgroundColor !== 'rgb(219, 234, 254)') return;
-    }
+    const rawFormula = formulaTd.textContent?.trim();
+    if (!rawFormula) return; // columna sense fórmula
 
-    // Si tenim actId, verificar que és calculat
-    if (actId) {
-      const calcData = calculatedActs[actId];
-      if (!calcData || !calcData.formula) return;
-      addInfoBtn(thEl, calcData, actId);
-      return;
-    }
+    // Buscar displayFormula: mirar si algun calcAct té aquesta formula exacta
+    let displayFormula = rawFormula;
+    let actId = thEl.dataset.activityId || null;
 
-    // Sense actId: buscar per fons blau de capçalera calculada i nom
-    // (fallback per capçaleres sense data-activity-id)
-    const spanText = thEl.querySelector('span')?.textContent?.trim();
-    if (!spanText) return;
-
-    // Buscar entre les activitats calculades aquella amb displayFormula que conté el nom
-    for (const [id, data] of Object.entries(calculatedActs)) {
-      if (!data.formula) continue;
-      // El nom de l'activitat apareix al span del th
-      // Intentem fer match per nom
-      const display = data.displayFormula || '';
-      // Si el th té background blau és calculat
-      const bgBlue = thEl.style.backgroundColor === 'rgb(219, 234, 254)' ||
-                     thEl.getAttribute('style')?.includes('dbeafe');
-      if (bgBlue) {
-        // Agafar el primer que trobem (heurística per capçaleres sense actId)
-        if (!thEl.dataset.fiActId) {
-          thEl.dataset.fiActId = id;
-          addInfoBtn(thEl, data, id);
-          break;
-        }
+    for (const [id, data] of Object.entries(calcActsFromFirestore)) {
+      if (data.formula === rawFormula) {
+        displayFormula = data.displayFormula || rawFormula;
+        actId = id;
+        break;
       }
     }
+
+    const actName = thEl.querySelector('span')?.textContent?.trim() || actId || '?';
+    addInfoBtn(thEl, actName, displayFormula, rawFormula);
   });
 }
 
-function addInfoBtn(thEl, calcData, actId) {
-  if (thEl.querySelector('.fi-info-btn')) return; // ja té
-
-  const displayFormula = calcData.displayFormula || calcData.formula || '';
-  const rawFormula = calcData.formula || '';
-  const actName = thEl.querySelector('span')?.textContent?.trim() || actId;
+function addInfoBtn(thEl, actName, displayFormula, rawFormula) {
+  if (thEl.querySelector('.fi-info-btn')) return;
 
   const btn = document.createElement('button');
   btn.className = 'fi-info-btn';
