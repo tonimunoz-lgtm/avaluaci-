@@ -95,7 +95,6 @@ function openTutoriaModal() {
   modal.innerHTML = buildModalHTML();
   document.body.appendChild(modal);
 
-  // Inicialitzar interaccions
   initModalInteractions(modal);
 }
 
@@ -124,18 +123,39 @@ function buildModalHTML() {
     <div class="sticky top-0 bg-rose-500 text-white px-6 py-4 rounded-t-2xl flex justify-between items-center z-10">
       <div>
         <h2 class="text-xl font-bold">📋 Generador de comentaris de tutoria</h2>
-        <p class="text-rose-100 text-sm">Omple el formulari i la IA crearà un comentari personalitzat per a la família</p>
+        <p class="text-rose-100 text-sm">Omple el formulari i la IA crearà un comentari per al butlletí</p>
       </div>
       <button id="btnCloseTutoria" class="text-white hover:text-rose-200 text-3xl leading-none font-bold">✕</button>
     </div>
 
     <div class="p-6 space-y-6">
 
-      <!-- NOM ALUMNE -->
+      <!-- NOM I GÈNERE -->
       <div class="bg-gray-50 rounded-xl p-4">
-        <label class="block text-sm font-bold text-gray-700 mb-2">👤 Nom de l'alumne/a</label>
-        <input id="tutoriaNom" type="text" placeholder="Ex: Maria García" 
+        <label class="block text-sm font-bold text-gray-700 mb-3">👤 Alumne/a</label>
+        <div class="flex gap-3 mb-3">
+          <label class="flex items-center gap-2 cursor-pointer border-2 rounded-lg px-3 py-2 flex-1 justify-center font-semibold text-sm transition-all border-blue-300 hover:bg-blue-50 has-[:checked]:bg-blue-500 has-[:checked]:text-white has-[:checked]:border-blue-500">
+            <input type="radio" name="genere" value="noi" checked class="sr-only">
+            👦 Noi (El...)
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer border-2 rounded-lg px-3 py-2 flex-1 justify-center font-semibold text-sm transition-all border-pink-300 hover:bg-pink-50 has-[:checked]:bg-pink-500 has-[:checked]:text-white has-[:checked]:border-pink-500">
+            <input type="radio" name="genere" value="noia" class="sr-only">
+            👧 Noia (La...)
+          </label>
+        </div>
+        <input id="tutoriaNom" type="text" placeholder="Nom de l'alumne/a (ex: Toni, Júlia...)" 
           class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-rose-400 focus:outline-none text-sm">
+      </div>
+
+      <!-- TRIMESTRE / MOMENT AVALUACIÓ -->
+      <div class="bg-gray-50 rounded-xl p-4">
+        <label class="block text-sm font-bold text-gray-700 mb-3">📅 Moment d'avaluació</label>
+        <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          ${buildOption('trimestre', '1r trimestre', '1r Trimestre', 'blue')}
+          ${buildOption('trimestre', '2n trimestre', '2n Trimestre', 'blue')}
+          ${buildOption('trimestre', '3r trimestre', '3r Trimestre', 'blue')}
+          ${buildOption('trimestre', 'final de curs', 'Final de curs', 'blue')}
+        </div>
       </div>
 
       <!-- CURS -->
@@ -161,13 +181,10 @@ function buildModalHTML() {
           <label class="text-sm font-bold text-red-700">❌ Assignatures suspeses</label>
           <button type="button" id="btnDesmarcarSuspeses" class="text-xs text-gray-500 hover:text-red-600 underline">Desmarcar tot</button>
         </div>
-        
-        <!-- Pestanyes ESO / Batxillerat -->
         <div class="flex gap-2 mb-3">
           <button type="button" id="tabSuspESO" class="tab-susp-btn px-3 py-1 rounded-lg text-xs font-semibold bg-red-500 text-white">ESO</button>
           <button type="button" id="tabSuspBatx" class="tab-susp-btn px-3 py-1 rounded-lg text-xs font-semibold bg-gray-200 text-gray-600">Batxillerat</button>
         </div>
-        
         <div id="suspesesESO" class="grid grid-cols-2 gap-1">${esoOptions}</div>
         <div id="suspesesBatx" class="grid grid-cols-2 gap-1 hidden">${batxOptions}</div>
       </div>
@@ -202,8 +219,8 @@ function buildModalHTML() {
         <label class="block text-sm font-bold text-purple-700 mb-3">📝 Lliurament de tasques</label>
         <div class="grid grid-cols-3 gap-2">
           ${buildOption('tasques', 'sempre', '✅ Sempre lliura', 'green')}
-          ${buildOption('tasques', 'gairebe', '🟡 Quasi sempre', 'yellow')}
-          ${buildOption('tasques', 'vegades', '⚠️ A vegades', 'orange')}
+          ${buildOption('tasques', 'gairebé sempre', '🟡 Quasi sempre', 'yellow')}
+          ${buildOption('tasques', 'a vegades', '⚠️ A vegades', 'orange')}
           ${buildOption('tasques', 'rarament', '❌ Rarament', 'red')}
           ${buildOption('tasques', 'mai', '🚫 Mai lliura', 'red')}
         </div>
@@ -212,11 +229,11 @@ function buildModalHTML() {
       <!-- ASSISTÈNCIA -->
       <div class="bg-teal-50 border border-teal-200 rounded-xl p-4">
         <label class="block text-sm font-bold text-teal-700 mb-3">📅 Assistència</label>
-        <div class="grid grid-cols-3 gap-2">
+        <div class="grid grid-cols-2 gap-2">
           ${buildOption('assistencia', 'perfecta', '✅ Perfecta', 'green')}
           ${buildOption('assistencia', 'bona', '🟡 Bona', 'yellow')}
-          ${buildOption('assistencia', 'irregular', '⚠️ Irregular', 'orange')}
-          ${buildOption('assistencia', 'moltes faltes', '❌ Moltes faltes', 'red')}
+          ${buildOption('assistencia', 'irregular amb justificació', '⚠️ Irregular (justificada)', 'orange')}
+          ${buildOption('assistencia', 'moltes faltes sense justificar', '❌ Moltes faltes injustificades', 'red')}
         </div>
       </div>
 
@@ -224,29 +241,22 @@ function buildModalHTML() {
       <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
         <label class="block text-sm font-bold text-indigo-700 mb-3">🤝 Actitud i participació</label>
         <div class="grid grid-cols-2 gap-2">
-          ${buildOption('actitud', 'participa molt', '🙋 Participa molt', 'green')}
-          ${buildOption('actitud', 'participa', '✅ Participa', 'green')}
-          ${buildOption('actitud', 'poc participativa', '➖ Poc participativa', 'yellow')}
-          ${buildOption('actitud', 'passiva', '⚠️ Passiva', 'orange')}
-          ${buildOption('actitud', 'negativa', '❌ Actitud negativa', 'red')}
+          ${buildOption('actitud', 'participa molt activament', '🙋 Molt activa', 'green')}
+          ${buildOption('actitud', 'participa adequadament', '✅ Adequada', 'green')}
+          ${buildOption('actitud', 'poc participativa', '➖ Poc activa', 'yellow')}
+          ${buildOption('actitud', 'passiva i desinteressada', '⚠️ Passiva', 'orange')}
+          ${buildOption('actitud', 'negativa i desmotivada', '❌ Negativa', 'red')}
         </div>
       </div>
 
-      <!-- PUNTS FORTS (text lliure) -->
+      <!-- PUNTS FORTS -->
       <div class="bg-green-50 border border-green-200 rounded-xl p-4">
         <label class="block text-sm font-bold text-green-700 mb-2">🌟 Punts forts destacables (opcional)</label>
-        <textarea id="tutoriaPuntsForts" placeholder="Ex: Molt creatiu/va, bon sentit de l'humor, ajuda als companys..." 
+        <textarea id="tutoriaPuntsForts" placeholder="Ex: Molt creatiu/va, bon sentit de l'humor, ajuda als companys, destaca en ..." 
           class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-400 focus:outline-none text-sm h-20 resize-none"></textarea>
       </div>
 
-      <!-- ÀREES DE MILLORA (text lliure) -->
-      <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-        <label class="block text-sm font-bold text-yellow-700 mb-2">🎯 Àrees de millora específiques (opcional)</label>
-        <textarea id="tutoriaMillora" placeholder="Ex: Ha de millorar l'organització, cal que estudii amb més antelació..." 
-          class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-yellow-400 focus:outline-none text-sm h-20 resize-none"></textarea>
-      </div>
-
-      <!-- IDIOMA DEL COMENTARI -->
+      <!-- IDIOMA -->
       <div class="bg-gray-50 rounded-xl p-4">
         <label class="block text-sm font-bold text-gray-700 mb-2">🌐 Idioma del comentari</label>
         <select id="tutoriaIdioma" class="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-rose-400 focus:outline-none text-sm w-full">
@@ -270,8 +280,6 @@ function buildModalHTML() {
           </div>
           <div id="tutoriaComentariText" class="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap bg-white rounded-lg p-4 border border-rose-100 min-h-[100px]"></div>
         </div>
-        
-        <!-- Regenerar -->
         <button id="btnRegenerarComentari" 
           class="w-full mt-3 border-2 border-rose-300 text-rose-600 hover:bg-rose-50 font-semibold py-2 rounded-xl text-sm transition-colors">
           🔄 Generar altra versió
@@ -282,13 +290,14 @@ function buildModalHTML() {
   </div>`;
 }
 
-// Helper: construir opció de checkbox estil botó
+// Helper: construir opció estil botó seleccionable
 function buildOption(grup, valor, label, color) {
   const colors = {
-    green: 'border-green-300 hover:bg-green-100 has-[:checked]:bg-green-500 has-[:checked]:text-white has-[:checked]:border-green-500',
+    blue:   'border-blue-300 hover:bg-blue-100 has-[:checked]:bg-blue-500 has-[:checked]:text-white has-[:checked]:border-blue-500',
+    green:  'border-green-300 hover:bg-green-100 has-[:checked]:bg-green-500 has-[:checked]:text-white has-[:checked]:border-green-500',
     yellow: 'border-yellow-300 hover:bg-yellow-100 has-[:checked]:bg-yellow-400 has-[:checked]:text-white has-[:checked]:border-yellow-400',
     orange: 'border-orange-300 hover:bg-orange-100 has-[:checked]:bg-orange-500 has-[:checked]:text-white has-[:checked]:border-orange-500',
-    red: 'border-red-300 hover:bg-red-100 has-[:checked]:bg-red-500 has-[:checked]:text-white has-[:checked]:border-red-500',
+    red:    'border-red-300 hover:bg-red-100 has-[:checked]:bg-red-500 has-[:checked]:text-white has-[:checked]:border-red-500',
   };
   return `
     <label class="flex items-center gap-1 cursor-pointer border-2 rounded-lg px-2 py-1.5 text-xs font-medium transition-all ${colors[color] || colors.green}">
@@ -301,11 +310,9 @@ function buildOption(grup, valor, label, color) {
 // INTERACCIONS DEL MODAL
 // ============================================================
 function initModalInteractions(modal) {
-  // Tancar
   modal.querySelector('#btnCloseTutoria').addEventListener('click', () => modal.remove());
   modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
 
-  // Pestanyes assignatures suspeses
   const tabESO = modal.querySelector('#tabSuspESO');
   const tabBatx = modal.querySelector('#tabSuspBatx');
   const contESO = modal.querySelector('#suspesesESO');
@@ -325,21 +332,14 @@ function initModalInteractions(modal) {
     contESO.classList.add('hidden');
   });
 
-  // Desmarcar suspeses
   modal.querySelector('#btnDesmarcarSuspeses').addEventListener('click', () => {
     modal.querySelectorAll('.assignatura-check').forEach(c => c.checked = false);
   });
 
-  // Generar comentari
   modal.querySelector('#btnGenerarComentari').addEventListener('click', () => generarComentari(modal));
-  
-  // Regenerar
+
   modal.addEventListener('click', (e) => {
     if (e.target.id === 'btnRegenerarComentari') generarComentari(modal);
-  });
-
-  // Copiar
-  modal.addEventListener('click', (e) => {
     if (e.target.id === 'btnCopiarComentari') {
       const text = modal.querySelector('#tutoriaComentariText').textContent;
       navigator.clipboard.writeText(text).then(() => {
@@ -358,21 +358,25 @@ function recollidaDades(modal) {
   const curs = modal.querySelector('#tutoriaCurs').value.trim();
   const idioma = modal.querySelector('#tutoriaIdioma').value;
   const puntsForts = modal.querySelector('#tutoriaPuntsForts').value.trim();
-  const millora = modal.querySelector('#tutoriaMillora').value.trim();
 
-  // Assignatures suspeses
   const suspeses = [...modal.querySelectorAll('.assignatura-check:checked')].map(c => c.value);
 
-  // Comportament, esforç, tasques, assistència, actitud
   const getValue = (name) => {
     const el = modal.querySelector(`input[name="${name}"]:checked`);
     return el ? el.value : null;
   };
 
+  const genere = getValue('genere') || 'noi';
+  const article = genere === 'noia' ? 'La' : 'El';
+
   return {
     nom,
+    nomAmbArticle: `${article} ${nom}`,
+    genere,
+    article,
     curs,
     idioma,
+    trimestre: getValue('trimestre'),
     suspeses,
     comportament: getValue('comportament'),
     esforc: getValue('esforc'),
@@ -380,7 +384,6 @@ function recollidaDades(modal) {
     assistencia: getValue('assistencia'),
     actitud: getValue('actitud'),
     puntsForts,
-    millora,
   };
 }
 
@@ -388,63 +391,104 @@ function recollidaDades(modal) {
 // CONSTRUIR PROMPT PER A LA IA
 // ============================================================
 function buildPrompt(dades) {
+  const { nom, nomAmbArticle, genere, article } = dades;
+  const ell_ella = genere === 'noia' ? 'ella' : 'ell';
+  const el_la = genere === 'noia' ? 'la' : 'el';
+  const del_de_la = genere === 'noia' ? 'de la' : 'del';
+
   const suspesesTxt = dades.suspeses.length > 0
-    ? `Ha suspès les següents assignatures: ${dades.suspeses.join(', ')}.`
-    : 'No ha suspès cap assignatura.';
+    ? `Assignatures suspeses: ${dades.suspeses.join(', ')}.`
+    : 'No té cap assignatura suspesa.';
+
+  const trimestreTxt = dades.trimestre
+    ? `Moment d'avaluació: ${dades.trimestre}.`
+    : '';
 
   const campOpcional = (label, val) => val ? `- ${label}: ${val}` : '';
 
+  // Avaluació de la gravetat per ajustar el to
+  const aspectesNegatius = [
+    dades.comportament === 'dolent' || dades.comportament === 'disruptiu',
+    dades.esforc === 'baix' || dades.esforc === 'molt baix',
+    dades.tasques === 'rarament' || dades.tasques === 'mai',
+    dades.assistencia === 'moltes faltes sense justificar',
+    dades.actitud === 'passiva i desinteressada' || dades.actitud === 'negativa i desmotivada',
+  ].filter(Boolean).length;
+
+  const teSuspeses = dades.suspeses.length > 0;
+  const situacioGreu = aspectesNegatius >= 3 || (teSuspeses && aspectesNegatius >= 2);
+
   const context = [
-    `Alumne/a: ${dades.nom}`,
+    `Nom de l'alumne/a: ${nom} (article: "${article} ${nom}")`,
+    `Gènere: ${genere}`,
+    trimestreTxt,
     dades.curs ? `Curs: ${dades.curs}` : '',
     suspesesTxt,
-    campOpcional('Comportament', dades.comportament),
+    campOpcional('Comportament a l\'aula', dades.comportament),
     campOpcional('Esforç i treball', dades.esforc),
     campOpcional('Lliurament de tasques', dades.tasques),
     campOpcional('Assistència', dades.assistencia),
     campOpcional('Actitud i participació', dades.actitud),
     campOpcional('Punts forts', dades.puntsForts),
-    campOpcional('Àrees de millora específiques', dades.millora),
   ].filter(Boolean).join('\n');
 
   const idiomaInstruccio = dades.idioma === 'castella'
-    ? 'Escriu el comentari completament en castellano.'
-    : 'Escriu el comentari completament en català.';
+    ? `Escriu el comentari completament en castellano. Usa "El ${nom}" o "La ${nom}" segons el gènere. Usa els pronoms "él/ella" correctament.`
+    : `Escriu el comentari completament en català correcte. Usa "${article} ${nom}" per referir-te a l'alumne/a. Usa "ell/ella" correctament.`;
 
-  return `Ets un tutor/a escolar que ha d'escriure un comentari personalitzat per al butlletí de notes que anirà dirigit a la família de l'alumne/a.
+  const trimestreContext = dades.trimestre
+    ? `El comentari és per al ${dades.trimestre}, per tant adapta el missatge final: si és un trimestre intermedi, anima'l/la a continuar o millorar de cara als propers trimestres; si és final de curs, reflexiona sobre l'any.`
+    : '';
 
-DADES DE L'ALUMNE/A:
+  const toGreu = situacioGreu
+    ? `L'alumne/a té múltiples aspectes preocupants. El comentari ha de ser honest i directe: menciona clarament que la manca de treball, les faltes o el comportament han contribuït als resultats, però sempre des d'un punt de vista constructiu i animant a millorar. NO amaguis els problemes amb eufemismes excessius.`
+    : `El comentari pot ser més positiu, però si hi ha suspesos o aspectes a millorar, esmenta'ls clarament com a reptes a superar.`;
+
+  return `Ets un tutor/a escolar experimentat que escriu comentaris per al butlletí de notes.
+
+DADES:
 ${context}
 
-INSTRUCCIONS:
+INSTRUCCIONS OBLIGATÒRIES:
 - ${idiomaInstruccio}
-- El to ha de ser SEMPRE positiu, empàtic i constructiu, fins i tot si hi ha suspesos o comportament dolent.
-- Comença adreçant-te a la família de manera càlida.
-- Menciona els punts positius primer.
-- Si hi ha assignatures suspeses o aspectes a millorar, presenta-ho com una oportunitat de creixement, animant l'alumne/a a superar-ho.
-- Acaba amb un missatge d'encoratjament per a l'alumne/a i la família.
-- Longitud: entre 100 i 180 paraules.
-- No facis llistes. Escriu en paràgrafs fluids.
-- No mencions notes numèriques específiques.
-- Personalitza el comentari amb el nom de l'alumne/a.
+- Comença SEMPRE amb "${nomAmbArticle}" (mai amb "Estimada família" ni cap altre salut).
+- El comentari és sobre l'alumne/a, NO adreçat a la família.
+- Longitud: entre 80 i 150 paraules. Màxim 2-3 frases per paràgraf.
+- No facis llistes. Escriu en paràgrafs fluids i naturals.
+- No mencions notes numèriques.
+- ${trimestreContext}
+- ${toGreu}
+- Si hi ha assignatures suspeses, menciona-les específicament i explica breument quines carències o mancances han portat a aquest resultat (falta de treball, poca assistència, no lliura tasques...).
+- Acaba sempre amb una frase d'encoratjament genuïna i realista, no buida.
+- Usa concordança de gènere correcta en tots els adjectius i pronoms.
 
-Escriu NOMÉS el comentari final, sense cap introducció, titol ni explicació addicional.`;
+EXEMPLES DE COM COMENÇA:
+- "El Marc ha mostrat..." / "La Sara presenta..."
+- "El Toni, tot i tenir capacitat, ha demostrat poc esforç aquest trimestre..."
+- "La Júlia ha tingut un trimestre irregular..."
+
+Escriu NOMÉS el comentari final, sense cap títol, introducció ni explicació.`;
 }
 
 // ============================================================
-// GENERAR COMENTARI AMB IA (API ANTHROPIC)
+// GENERAR COMENTARI AMB IA
 // ============================================================
 async function generarComentari(modal) {
   const dades = recollidaDades(modal);
+
+  if (!dades.nom || dades.nom === 'l\'alumne/a') {
+    alert('⚠️ Si us plau, escriu el nom de l\'alumne/a');
+    return;
+  }
+
   const prompt = buildPrompt(dades);
 
-  // UI: loading
   const btnGenerar = modal.querySelector('#btnGenerarComentari');
   const resultatDiv = modal.querySelector('#tutoriaResultat');
   const comentariText = modal.querySelector('#tutoriaComentariText');
 
   btnGenerar.disabled = true;
-  btnGenerar.innerHTML = '<span class="animate-spin">⏳</span> Generant...';
+  btnGenerar.innerHTML = '⏳ Generant...';
   resultatDiv.classList.remove('hidden');
   comentariText.innerHTML = '<span class="text-gray-400 italic">La IA està escrivint el comentari...</span>';
 
@@ -463,8 +507,6 @@ async function generarComentari(modal) {
     const text = data.text || 'No s\'ha pogut generar el comentari.';
 
     comentariText.textContent = text;
-
-    // Scroll al resultat
     resultatDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
   } catch (err) {
