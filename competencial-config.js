@@ -546,6 +546,30 @@ function buildCompWrapper(activityId, studentId, numericVal) {
     } catch (e) { console.error('Error guardant nota competencial:', e); }
   });
 
+  // ── Navegació amb Enter i fletxes (igual que els inputs numèrics d'app.js) ──
+  input.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+    e.preventDefault();
+
+    const notesTbody = document.getElementById('notesTbody');
+    if (!notesTbody) return;
+
+    const rows = Array.from(notesTbody.querySelectorAll('tr[data-student-id]'));
+    const currentRow = input.closest('tr');
+    const rowIndex = rows.indexOf(currentRow);
+
+    let targetIndex;
+    if (e.key === 'Enter') targetIndex = e.shiftKey ? rowIndex - 1 : rowIndex + 1;
+    else if (e.key === 'ArrowUp') targetIndex = rowIndex - 1;
+    else targetIndex = rowIndex + 1;
+
+    const targetRow = rows[targetIndex];
+    if (!targetRow) return;
+
+    const targetInput = targetRow.querySelector(`input[data-activity-id="${activityId}"]`);
+    if (targetInput && !targetInput.disabled) targetInput.focus();
+  });
+
   wrapper.appendChild(input);
   wrapper.appendChild(badge);
   return wrapper;
