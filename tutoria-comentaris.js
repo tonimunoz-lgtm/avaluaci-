@@ -373,6 +373,21 @@ function tcBuildHTML() {
       </div>
 
       <div class="bg-gray-50 rounded-xl p-4">
+        <label class="block text-sm font-bold text-gray-700 mb-3">📏 Llargada del comentari</label>
+        <div class="grid grid-cols-3 gap-2">
+          <label class="flex items-center gap-1 cursor-pointer border-2 rounded-lg px-2 py-2 justify-center text-xs font-semibold transition-all border-gray-300 hover:bg-gray-100 has-[:checked]:bg-gray-700 has-[:checked]:text-white has-[:checked]:border-gray-700">
+            <input type="radio" name="tc_llarg" value="curt" class="sr-only">📝 Curt<br><span class="font-normal opacity-75">(50-80 p.)</span>
+          </label>
+          <label class="flex items-center gap-1 cursor-pointer border-2 rounded-lg px-2 py-2 justify-center text-xs font-semibold transition-all border-indigo-300 hover:bg-indigo-50 has-[:checked]:bg-indigo-500 has-[:checked]:text-white has-[:checked]:border-indigo-500">
+            <input type="radio" name="tc_llarg" value="mitja" checked class="sr-only">📄 Mitjà<br><span class="font-normal opacity-75">(80-150 p.)</span>
+          </label>
+          <label class="flex items-center gap-1 cursor-pointer border-2 rounded-lg px-2 py-2 justify-center text-xs font-semibold transition-all border-violet-300 hover:bg-violet-50 has-[:checked]:bg-violet-500 has-[:checked]:text-white has-[:checked]:border-violet-500">
+            <input type="radio" name="tc_llarg" value="llarg" class="sr-only">📃 Llarg<br><span class="font-normal opacity-75">(150-250 p.)</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="bg-gray-50 rounded-xl p-4">
         <label class="block text-sm font-bold text-gray-700 mb-2">🌐 Idioma</label>
         <select id="tcIdioma" class="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full">
           <option value="catala">Català</option>
@@ -465,6 +480,7 @@ function tcDades(modal) {
     nom, nomAmbArticle: `${article} ${nom}`, genere, article,
     curs:      modal.querySelector('#tcCurs').value.trim(),
     idioma:    modal.querySelector('#tcIdioma').value,
+    llargada:  modal.querySelector('input[name="tc_llarg"]:checked')?.value || 'mitja',
     trimestre: g('tc_trim'),
     suspeses:  [...modal.querySelectorAll('.tc-check:checked')].map(c => c.value),
     comportament: g('tc_comp'),
@@ -515,7 +531,7 @@ ${ctx}
 INSTRUCCIONS:
 - ${idioma}
 - Comença SEMPRE amb "${d.nomAmbArticle}". Mai amb "Estimada família".
-- 80-150 paraules. Paràgrafs fluids, sense llistes, sense notes numèriques.
+- ${d.llargada === 'curt' ? '50-80 paraules (molt concís)' : d.llargada === 'llarg' ? '150-250 paraules (desenvolupat)' : '80-150 paraules'}. Paràgrafs fluids, sense llistes, sense notes numèriques.
 - ${d.trimestre === 'final de curs' ? 'Reflexiona sobre tot el curs.' : d.trimestre ? `Anima a millorar de cara als propers trimestres.` : ''}
 - ${greu ? 'Sigues honest/a: menciona les mancances clarament però de forma constructiva.' : 'Tracta els aspectes a millorar com a reptes.'}
 - Si hi ha suspeses, menciona-les i explica les carències concretes.
