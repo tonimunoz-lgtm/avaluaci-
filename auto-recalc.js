@@ -1,59 +1,104 @@
 // auto-recalc.js
-// Injector que recalcula automàticament les activitats amb fórmula
-// quan es modifica una nota que en forma part.
-// No modifica cap fitxer existent.
+// Recalcula automàticament columnes amb fórmula quan canvia una nota.
 
 console.log('✅ auto-recalc.js carregat');
 
-// ── Estat intern ──────────────────────────────────────────────
-let _recalcPending = false;       // evita recàlculs en cascada
-let _debounceTimer = null;        // agrupa canvis ràpids
-const DEBOUNCE_MS = 800;          // espera 800ms després de l'últim canvi
-
-// Mapa cache: activityId → formula (es refresca quan canvia la classe)
-let _formulaCache = {};           // { calcActId: formulaText }
+// ── Estat ─────────────────────────────────────────────────────
+let _cache = {};          // { calcActId: { formula, dependsOn: Set } }
+let _debounce = null;
+let _pending = false;
 let _lastClassId = null;
 
-// ── Inicialització ─────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  setTimeout(init, 2000);
-});
+const DEBOUNCE_MS = 600;
 
-function init() {
-  // Escolta canvis a la taula de notes usant event delegation
-  // (funciona fins i tot quan els inputs es recreen per renderNotesGrid)
-  const notesTbody = document.getElementById('notesTbody');
-  if (!notesTbody) {
-    setTimeout(init, 500);
+// ── Escolta GLOBAL sobre document (no es perd mai amb re-renders) ──
+document.addEventListener('change', handleAnyChange, true); // capture phase
+
+function handleAnyChange(e) {
+  const input = e.target;
+  if (!input || input.tagName !== 'INPUT') return;
+
+  const activityId = input.dataset.activityId;
+  if (!activityId) return;
+
+  // Ignorar inputs desactivats (calculats/bloquejats)
+  if (input.disabled || input.readOnly) return;
+
+  // Ha de ser dins de notesTbody
+  if (!input.closest('#notesTbody')) return;
+
+  console.log(`📝 auto-recalc: canvi detectat a activitat=${activityId}`);
+
+  clearTimeout(_debounce);
+  _debounce = setTimeout(() => scheduleRecalc(activityId), DEBOUNCE_MS);
+}
+
+// ── Recàlcul ─────────────────────────────────────────────────
+async function scheduleRecalc(changedActId) {
+  if (_pending) {
+    _debounce = setTimeout(() => scheduleRecalc(changedActId), 300);
     return;
   }
 
-  // Event delegation: captura 'change' de qualsevol input dins notesTbody
-  notesTbody.addEventListener('change', handleNoteChange);
+  await ensureCache();
 
-  // També observem quan es recrea notesTbody (renderNotesGrid el buida i el refà)
-  // per refrescar la cache de fórmules
-  const observer = new MutationObserver(() => {
-    refreshFormulaCache();
-  });
-  observer.observe(notesTbody, { childList: true });
+  const affected = Object.entries(_cache).filter(([, d]) => d.dependsOn.has(changedActId));
 
-  // Carreguem la cache inicial
-  refreshFormulaCache();
+  if (affected.length === 0) {
+    console.log(`ℹ️ auto-recalc: cap fórmula depèn de ${changedActId}`);
+    return;
+  }
 
-  console.log('✅ auto-recalc.js: event delegation actiu sobre notesTbody');
+  console.log(`🔄 auto-recalc: recalculant ${affected.length} fórmula(es)...`);
+  await doRecalc(affected);
 }
 
-// ── Cache de fórmules ──────────────────────────────────────────
-// Llegeix calculatedActivities de Firestore i construeix un mapa
-// activityId_calculada → { formula, dependsOn: Set<activityId> }
-async function refreshFormulaCache() {
+async function doRecalc(formulas) {
+  _pending = true;
+  const db = window.firebase?.firestore?.();
+  if (!db) { _pending = false; return; }
+
+  const students = window.classStudents || [];
+  if (students.length === 0) { _pending = false; return; }
+
+  showToast();
+
+  try {
+    for (const [calcActId, { formula }] of formulas) {
+      await Promise.all(students.map(async sid => {
+        try {
+          const result = await evalFormula(formula, sid, db);
+          if (result === null || isNaN(result)) return;
+          const rounded = Math.round(result * 100) / 100;
+          await db.collection('alumnes').doc(sid).update({
+            [`notes.${calcActId}`]: rounded
+          });
+          flashCell(sid, calcActId, rounded);
+        } catch (err) {
+          console.error(`auto-recalc: error alumne ${sid}:`, err);
+        }
+      }));
+      console.log(`✅ auto-recalc: fórmula ${calcActId} actualitzada`);
+    }
+
+    if (typeof window.renderAverages === 'function') window.renderAverages();
+
+  } finally {
+    _pending = false;
+    hideToast();
+  }
+}
+
+// ── Cache de fórmules ─────────────────────────────────────────
+async function ensureCache() {
   const classId = window.currentClassId;
   if (!classId) return;
 
-  // Només recarreguem si ha canviat la classe
-  if (classId === _lastClassId && Object.keys(_formulaCache).length > 0) return;
-  _lastClassId = classId;
+  if (classId !== _lastClassId) {
+    _cache = {};
+    _lastClassId = classId;
+  }
+  if (Object.keys(_cache).length > 0) return;
 
   try {
     const db = window.firebase?.firestore?.();
@@ -65,296 +110,123 @@ async function refreshFormulaCache() {
     const calculatedActs = classDoc.data().calculatedActivities || {};
     const newCache = {};
 
-    for (const [calcActId, calcData] of Object.entries(calculatedActs)) {
-      if (!calcData.calculated || !calcData.formula) continue;
+    for (const [actId, data] of Object.entries(calculatedActs)) {
+      if (!data.calculated || !data.formula) continue;
 
-      const formula = calcData.formula;
-
-      // Extreure IDs d'activitats referenciades per la fórmula (__ACT__id)
+      const formula = data.formula;
       const dependsOn = new Set();
-      const matches = formula.matchAll(/__ACT__([a-zA-Z0-9_]+)/g);
-      for (const m of matches) {
+
+      for (const m of formula.matchAll(/__ACT__([a-zA-Z0-9_]+)/g)) {
         dependsOn.add(m[1]);
       }
 
-      // Fallback: fórmules antigues que usen noms d'activitat (no __ACT__)
-      // Les detectem comparant amb les activitats existents
-      // Però per no fer massa queries, les gestionem al moment del canvi
-
-      newCache[calcActId] = { formula, dependsOn };
-    }
-
-    _formulaCache = newCache;
-    console.log(`🔄 auto-recalc: cache actualitzada, ${Object.keys(newCache).length} fórmules`);
-  } catch (e) {
-    console.error('auto-recalc: error refrescant cache:', e);
-  }
-}
-
-// ── Gestió del canvi de nota ───────────────────────────────────
-function handleNoteChange(e) {
-  const input = e.target;
-
-  // Ignorar inputs de fórmules calculades (readOnly/disabled)
-  if (input.disabled || input.readOnly) return;
-  if (!input.dataset.activityId) return;
-  // Ignorar inputs competencials gestionats per competencial-config.js
-  if (input.dataset.isCompetencyNumeric === 'true') return;
-
-  const changedActivityId = input.dataset.activityId;
-  const studentId = input.closest('tr')?.dataset.studentId;
-  if (!studentId) return;
-
-  console.log(`📝 Nota canviada: activitat=${changedActivityId}, alumne=${studentId}`);
-
-  // Debounce: esperar que l'usuari acabi d'escriure
-  clearTimeout(_debounceTimer);
-  _debounceTimer = setTimeout(() => {
-    triggerRecalc(changedActivityId, studentId);
-  }, DEBOUNCE_MS);
-}
-
-// ── Recalcul ──────────────────────────────────────────────────
-async function triggerRecalc(changedActivityId, studentId) {
-  if (_recalcPending) return;
-
-  // Trobar quines activitats calculades depenen de l'activitat canviada
-  const affectedFormulas = Object.entries(_formulaCache).filter(([, data]) =>
-    data.dependsOn.has(changedActivityId)
-  );
-
-  if (affectedFormulas.length === 0) {
-    // Pot ser una fórmula antiga amb noms. Refresca cache i torna a provar.
-    await refreshFormulaCache();
-    const retry = Object.entries(_formulaCache).filter(([, data]) =>
-      data.dependsOn.has(changedActivityId)
-    );
-    if (retry.length === 0) return;
-    return triggerRecalcFormulas(retry, studentId);
-  }
-
-  await triggerRecalcFormulas(affectedFormulas, studentId);
-}
-
-async function triggerRecalcFormulas(formulas, changedStudentId) {
-  _recalcPending = true;
-
-  try {
-    const db = window.firebase?.firestore?.();
-    if (!db) return;
-
-    const classStudents = window.classStudents || [];
-    const classId = window.currentClassId;
-    if (!classId || classStudents.length === 0) return;
-
-    // Mostrar indicador visual
-    showRecalcIndicator(formulas.map(([id]) => id));
-
-    for (const [calcActId, { formula }] of formulas) {
-      console.log(`🔄 Recalculant fórmula per activitat ${calcActId}...`);
-
-      // Recalcular TOTS els alumnes (no només el que ha canviat)
-      // perquè pot haver-hi fórmules que depenen de mitjanes de grup, etc.
-      // En la majoria de casos és per alumne individual, però per seguretat ho fem tot.
-      await Promise.all(classStudents.map(async (sid) => {
-        try {
-          const result = await evalFormula(formula, sid, db);
-          if (result === null || isNaN(result)) return;
-
-          const rounded = Math.round(result * 100) / 100;
-
-          // Guardar a Firestore
-          await db.collection('alumnes').doc(sid).update({
-            [`notes.${calcActId}`]: rounded
-          });
-
-          // Actualitzar la cel·la al DOM directament (sense re-render complet)
-          updateCellInDOM(sid, calcActId, rounded);
-
-        } catch (err) {
-          console.error(`Error recalculant alumne ${sid}:`, err);
+      // Fórmules antigues amb noms d'activitat
+      if (dependsOn.size === 0) {
+        const acts = window.classActivities || [];
+        for (const aid of acts) {
+          try {
+            const adoc = await db.collection('activitats').doc(aid).get();
+            if (!adoc.exists) continue;
+            const nom = adoc.data().nom || '';
+            if (nom && formula.includes(nom)) dependsOn.add(aid);
+          } catch (_) {}
         }
-      }));
+      }
 
-      console.log(`✅ Fórmula ${calcActId} recalculada`);
-    }
-
-    // Actualitzar mitjanes de la fila de totals
-    if (window.renderAverages) {
-      window.renderAverages();
-    } else {
-      // Fallback: buscar i cridar renderAverages si existeix
-      requestAnimationFrame(() => {
-        document.dispatchEvent(new CustomEvent('auto-recalc-done'));
-      });
-    }
-
-  } catch (e) {
-    console.error('auto-recalc: error en recàlcul:', e);
-  } finally {
-    _recalcPending = false;
-    hideRecalcIndicator();
-  }
-}
-
-// ── Avaluació de fórmules ─────────────────────────────────────
-// Replica la lògica de evalFormulaAsync d'app.js però sense dependre d'ella
-async function evalFormula(formula, studentId, db) {
-  try {
-    const studentDoc = await db.collection('alumnes').doc(studentId).get();
-    const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
-
-    let evalStr = formula;
-
-    // Substituir __ACT__id per valors numèrics
-    const idMatches = [...formula.matchAll(/__ACT__([a-zA-Z0-9_]+)/g)];
-    for (const m of idMatches) {
-      const actId = m[1];
-      const val = Number(notes[actId]);
-      const safeVal = isNaN(val) ? 0 : val;
-      evalStr = evalStr.replace(
-        new RegExp(m[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
-        safeVal
-      );
-    }
-
-    // Substituir noms d'activitat (fórmules antigues sense __ACT__)
-    // Busquem al _formulaCache si hi ha noms literals
-    if (idMatches.length === 0) {
-      // Obtenir tots els noms d'activitats de la classe
-      const classId = window.currentClassId;
-      const classDoc = await db.collection('classes').doc(classId).get();
-      const allActIds = new Set();
-      const terms = classDoc.data()?.terms || {};
-      Object.values(terms).forEach(t => (t.activities || []).forEach(id => allActIds.add(id)));
-      (classDoc.data()?.activitats || []).forEach(id => allActIds.add(id));
-
-      for (const actId of allActIds) {
-        const actDoc = await db.collection('activitats').doc(actId).get();
-        if (!actDoc.exists) continue;
-        const actName = actDoc.data().nom;
-        if (!actName) continue;
-        const val = Number(notes[actId]);
-        const safeVal = isNaN(val) ? 0 : val;
-        evalStr = evalStr.replace(
-          new RegExp(actName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
-          safeVal
-        );
+      if (dependsOn.size > 0) {
+        newCache[actId] = { formula, dependsOn };
       }
     }
 
-    const result = Function('"use strict"; return (' + evalStr + ')')();
+    _cache = newCache;
+    console.log(`🗂️ auto-recalc: cache OK — ${Object.keys(_cache).length} fórmules`, _cache);
+  } catch (e) {
+    console.error('auto-recalc: error cache:', e);
+  }
+}
+
+// Invalidar cache quan es re-renderitza la capçalera (nova fórmula aplicada, etc.)
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    const thead = document.getElementById('notesThead');
+    if (thead) {
+      new MutationObserver(() => { _cache = {}; }).observe(thead, { childList: true });
+    }
+  }, 1500);
+});
+
+// ── Avaluació de fórmules ─────────────────────────────────────
+async function evalFormula(formula, studentId, db) {
+  try {
+    const sdoc = await db.collection('alumnes').doc(studentId).get();
+    const notes = sdoc.exists ? (sdoc.data().notes || {}) : {};
+
+    let expr = formula;
+
+    for (const m of [...formula.matchAll(/__ACT__([a-zA-Z0-9_]+)/g)]) {
+      const val = Number(notes[m[1]]);
+      expr = expr.replace(
+        new RegExp(m[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
+        isNaN(val) ? 0 : val
+      );
+    }
+
+    const result = Function('"use strict"; return (' + expr + ')')();
     return typeof result === 'number' ? result : null;
   } catch (e) {
-    console.error('auto-recalc: error avaluant fórmula:', e);
+    console.error('auto-recalc evalFormula:', e);
     return null;
   }
 }
 
-// ── Actualitzar DOM sense re-render complet ───────────────────
-function updateCellInDOM(studentId, activityId, value) {
+// ── Actualitzar cel·la al DOM ────────────────────────────────
+function flashCell(studentId, activityId, value) {
   const tr = document.querySelector(`tr[data-student-id="${studentId}"]`);
   if (!tr) return;
-
   const input = tr.querySelector(`input[data-activity-id="${activityId}"]`);
   if (!input) return;
 
-  // Actualitzar valor
   input.value = value;
-
-  // Ressaltar breument per mostrar que s'ha actualitzat
-  input.style.transition = 'background-color 0.3s ease';
-  input.style.backgroundColor = '#bbf7d0'; // verd clar
+  input.style.transition = 'background-color 0.4s';
+  input.style.backgroundColor = '#bbf7d0';
   setTimeout(() => {
     input.style.backgroundColor = '';
-    // Reaplicar color d'app.js si existeix
-    if (window.applyCellColor) {
-      window.applyCellColor(input);
-    }
-  }, 1200);
+    if (typeof window.applyCellColor === 'function') window.applyCellColor(input);
+  }, 1000);
 }
 
-// ── Indicador visual de recàlcul ──────────────────────────────
-function showRecalcIndicator(calcActIds) {
-  calcActIds.forEach(actId => {
-    // Marcar la capçalera de la columna
-    const th = document.querySelector(`th[data-activity-id="${actId}"]`);
-    if (th) {
-      th.dataset.recalculating = 'true';
-      th.style.opacity = '0.6';
+// ── Toast ────────────────────────────────────────────────────
+function showToast() {
+  let t = document.getElementById('autoRecalcToast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'autoRecalcToast';
+    t.style.cssText = 'position:fixed;bottom:1rem;left:1rem;background:#2563eb;color:#fff;font-size:12px;padding:6px 12px;border-radius:8px;z-index:99999;display:flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(0,0,0,.2)';
+    t.innerHTML = '<span style="animation:spin 1s linear infinite;display:inline-block">⟳</span> Actualitzant fórmules...';
+    document.body.appendChild(t);
+    if (!document.getElementById('arSpinStyle')) {
+      const s = document.createElement('style');
+      s.id = 'arSpinStyle';
+      s.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
+      document.head.appendChild(s);
     }
-
-    // Marcar totes les cel·les de la columna
-    document.querySelectorAll(`input[data-activity-id="${actId}"]`).forEach(inp => {
-      inp.style.opacity = '0.5';
-    });
-  });
-
-  // Toast discret
-  let toast = document.getElementById('autoRecalcToast');
-  if (!toast) {
-    toast = document.createElement('div');
-    toast.id = 'autoRecalcToast';
-    toast.className = 'fixed bottom-4 left-4 bg-blue-600 text-white text-xs px-3 py-2 rounded-lg shadow-lg z-[99999] flex items-center gap-2 transition-opacity';
-    toast.innerHTML = '<span class="animate-spin">⟳</span> Actualitzant fórmules...';
-    document.body.appendChild(toast);
   }
-  toast.style.opacity = '1';
+  t.style.opacity = '1';
 }
 
-function hideRecalcIndicator() {
-  // Treure marcadors de capçaleres
-  document.querySelectorAll('th[data-recalculating="true"]').forEach(th => {
-    th.style.opacity = '';
-    delete th.dataset.recalculating;
-  });
-
-  // Treure opacitat de cel·les
-  Object.keys(_formulaCache).forEach(actId => {
-    document.querySelectorAll(`input[data-activity-id="${actId}"]`).forEach(inp => {
-      inp.style.opacity = '';
-    });
-  });
-
-  // Amagar toast
-  const toast = document.getElementById('autoRecalcToast');
-  if (toast) {
-    toast.style.opacity = '0';
-    setTimeout(() => toast.remove(), 400);
-  }
+function hideToast() {
+  const t = document.getElementById('autoRecalcToast');
+  if (t) { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }
 }
 
-// ── Refrescar cache quan es recarrega la classe ────────────────
-// Interceptem quan _classData s'actualitza (app.js ho fa a la línia 639)
-// Usem un proxy sobre window.currentClassId o escoltem l'event de Firestore
-const classChangeObserver = new MutationObserver(() => {
-  const classId = window.currentClassId;
-  if (classId && classId !== _lastClassId) {
-    _formulaCache = {};
-    _lastClassId = null;
-    setTimeout(refreshFormulaCache, 500);
-  }
-});
-
-document.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => {
-    // Observem la capçalera de la taula: quan es recrea, vol dir que s'ha fet renderNotesGrid
-    const notesThead = document.getElementById('notesThead');
-    if (notesThead) {
-      classChangeObserver.observe(notesThead, { childList: true, subtree: true });
-    }
-  }, 2000);
-});
-
-// ── Exposar per a ús extern ───────────────────────────────────
+// ── API pública ───────────────────────────────────────────────
 window.autoRecalc = {
-  refreshCache: refreshFormulaCache,
+  invalidateCache: () => { _cache = {}; },
   forceRecalcAll: async () => {
-    _formulaCache = {};
-    await refreshFormulaCache();
-    const all = Object.entries(_formulaCache);
-    if (all.length > 0) await triggerRecalcFormulas(all, null);
+    _cache = {};
+    await ensureCache();
+    if (Object.keys(_cache).length > 0) await doRecalc(Object.entries(_cache));
   }
 };
 
-console.log('🔄 auto-recalc.js: inicialitzat correctament');
+console.log('🔄 auto-recalc.js: llest');
