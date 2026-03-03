@@ -452,11 +452,7 @@ async function generarComentari(modal) {
     const response = await fetch('/api/tutoria', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{ role: 'user', content: prompt }],
-      }),
+      body: JSON.stringify({ prompt }),
     });
 
     if (!response.ok) {
@@ -464,7 +460,7 @@ async function generarComentari(modal) {
     }
 
     const data = await response.json();
-    const text = data.content?.find(b => b.type === 'text')?.text || 'No s\'ha pogut generar el comentari.';
+    const text = data.text || 'No s\'ha pogut generar el comentari.';
 
     comentariText.textContent = text;
 
