@@ -1,4 +1,5 @@
 // auto-recalc.js — Recalcula fórmules automàticament quan canvia una nota.
+// v2: evalFormula llegeix del DOM primer (0 lectures Firestore en recàlcul normal)
 
 console.log('✅ auto-recalc.js carregat');
 
@@ -6,7 +7,7 @@ let _cache = {};
 let _debounce = null;
 let _pending = false;
 let _lastClassId = null;
-const DEBOUNCE_MS = 600;
+const DEBOUNCE_MS = 400; // ⚡ Reduït de 600ms → 400ms (respon més ràpid)
 
 // ── Obtenir classId des del DOM (app.js escriu "ID: xxx" a #classSub) ────
 function getClassId() {
@@ -28,7 +29,6 @@ const _origLog = console.log.bind(console);
 console.log = function(...args) {
   _origLog(...args);
   if (typeof args[0] === 'string' && args[0].includes('_classData actualizado')) {
-    // La classe s'ha recarregat: invalidar cache
     _cache = {};
     _lastClassId = null;
     _origLog('🔄 auto-recalc: cache invalidada per canvi de classe');
@@ -78,32 +78,56 @@ async function doRecalc(formulas) {
   const db = getDb();
   if (!db) { _pending = false; return; }
 
-  // Obtenir llista d'alumnes de la classe
-  const classId = getClassId();
-  if (!classId) { _pending = false; return; }
+  // ⚡ OPTIMITZACIÓ: Llegir alumnes del DOM primer (evita 1 lectura Firestore)
+  const students = getStudentsFromDOM();
 
-  let students = [];
-  try {
-    const classDoc = await db.collection('classes').doc(classId).get();
-    students = classDoc.exists ? (classDoc.data().alumnes || []) : [];
-  } catch(e) { _pending = false; return; }
+  if (students.length === 0) {
+    // Fallback: llegir de Firestore si el DOM no té files
+    const classId = getClassId();
+    if (!classId) { _pending = false; return; }
+    try {
+      const classDoc = await db.collection('classes').doc(classId).get();
+      const fsStudents = classDoc.exists ? (classDoc.data().alumnes || []) : [];
+      if (fsStudents.length === 0) { _pending = false; return; }
+      await doRecalcWithStudents(formulas, fsStudents, db);
+    } catch(e) {
+      _origLog('auto-recalc: error llegint alumnes de Firestore:', e);
+      _pending = false;
+    }
+    return;
+  }
 
-  if (students.length === 0) { _pending = false; return; }
+  await doRecalcWithStudents(formulas, students, db);
+}
 
+async function doRecalcWithStudents(formulas, students, db) {
   showToast();
   try {
     for (const [calcActId, { formula }] of formulas) {
+      // ⚡ Processar tots els alumnes en paral·lel
       await Promise.all(students.map(async sid => {
         try {
-          const result = await evalFormula(formula, sid, db);
-          if (result === null || isNaN(result)) return;
-          const rounded = Math.round(result * 100) / 100;
-          await db.collection('alumnes').doc(sid).update({ [`notes.${calcActId}`]: rounded });
+          // ⚡ evalFormula ara llegeix del DOM — 0 lectures Firestore per alumne
+          const result = evalFormulaFromDOM(formula, sid);
+
+          // Si no hem pogut llegir del DOM (alumne no visible), caiem a Firestore
+          const finalResult = result !== null ? result : await evalFormulaFromFirestore(formula, sid, db);
+
+          if (finalResult === null || isNaN(finalResult)) return;
+          const rounded = Math.round(finalResult * 100) / 100;
+
+          // ⚡ Actualitzar DOM immediatament (sense esperar Firestore)
           flashCell(sid, calcActId, rounded);
+
+          // Guardar a Firestore en background (no bloqueja UI)
+          db.collection('alumnes').doc(sid).update({ [`notes.${calcActId}`]: rounded })
+            .catch(err => _origLog('auto-recalc: error guardant a Firestore:', err));
+
         } catch(err) { _origLog('auto-recalc error alumne:', err); }
       }));
       _origLog(`✅ auto-recalc: ${calcActId} recalculat`);
     }
+
     // Actualitzar mitjanes
     const notesTbody = document.getElementById('notesTbody');
     if (notesTbody) notesTbody.dispatchEvent(new Event('auto-recalc-done'));
@@ -111,6 +135,60 @@ async function doRecalc(formulas) {
     _pending = false;
     hideToast();
   }
+}
+
+// ── ⚡ Llegir llista d'alumnes del DOM (evita lectura Firestore) ──────────
+function getStudentsFromDOM() {
+  const rows = document.querySelectorAll('#notesTbody tr[data-student-id]');
+  return Array.from(rows).map(r => r.dataset.studentId).filter(Boolean);
+}
+
+// ── ⚡ Avaluar fórmula llegint valors del DOM (0 Firestore) ───────────────
+// Retorna null si no pot llegir (alumne no al DOM)
+function evalFormulaFromDOM(formula, studentId) {
+  try {
+    const tr = document.querySelector(`tr[data-student-id="${studentId}"]`);
+    if (!tr) return null; // Alumne no al DOM → fallback Firestore
+
+    let expr = formula;
+    let allFound = true;
+
+    for (const m of [...formula.matchAll(/__ACT__([a-zA-Z0-9_]+)/g)]) {
+      const actId = m[1];
+      const input = tr.querySelector(`input[data-activity-id="${actId}"]`);
+      if (!input) {
+        // Activitat no trobada al DOM (pot ser d'un altre terme)
+        allFound = false;
+        break;
+      }
+      const val = parseFloat(input.value);
+      const safeVal = isNaN(val) ? 0 : val;
+      expr = expr.replace(new RegExp(m[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), safeVal);
+    }
+
+    if (!allFound) return null; // Fallback a Firestore si falta alguna activitat
+
+    const result = Function('"use strict"; return (' + expr + ')')();
+    return typeof result === 'number' ? result : null;
+  } catch(e) {
+    return null;
+  }
+}
+
+// ── Fallback: Avaluar fórmula llegint de Firestore ────────────────────────
+// Només s'usa quan l'alumne o activitat no és visible al DOM
+async function evalFormulaFromFirestore(formula, studentId, db) {
+  try {
+    const sdoc = await db.collection('alumnes').doc(studentId).get();
+    const notes = sdoc.exists ? (sdoc.data().notes || {}) : {};
+    let expr = formula;
+    for (const m of [...formula.matchAll(/__ACT__([a-zA-Z0-9_]+)/g)]) {
+      const val = Number(notes[m[1]]);
+      expr = expr.replace(new RegExp(m[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), isNaN(val) ? 0 : val);
+    }
+    const result = Function('"use strict"; return (' + expr + ')')();
+    return typeof result === 'number' ? result : null;
+  } catch(e) { return null; }
 }
 
 // ── Cache ─────────────────────────────────────────────────────
@@ -134,7 +212,6 @@ async function ensureCache() {
     _origLog('🔍 auto-recalc: calculatedActs =', JSON.stringify(calculatedActs));
 
     for (const [actId, data] of Object.entries(calculatedActs)) {
-      // Suporta tant {calculated:true, formula:"..."} com el format antic {true} (booleà)
       let formula = null;
       if (typeof data === 'object' && data !== null) {
         formula = data.formula || null;
@@ -152,7 +229,6 @@ async function ensureCache() {
       // Fórmules antigues amb noms d'activitat (sense __ACT__)
       if (dependsOn.size === 0 && formula.length > 0) {
         _origLog(`🔍 auto-recalc: [${actId}] fórmula antiga amb noms: "${formula}"`);
-        // Llegir totes les activitats de la classe per fer matching
         const allActIds = new Set([
           ...(classDoc.data().activitats || []),
           ...Object.values(classDoc.data().terms || {}).flatMap(t => t.activities || [])
@@ -180,21 +256,6 @@ async function ensureCache() {
   } catch(e) {
     _origLog('auto-recalc: error ensureCache:', e);
   }
-}
-
-// ── Avaluació ─────────────────────────────────────────────────
-async function evalFormula(formula, studentId, db) {
-  try {
-    const sdoc = await db.collection('alumnes').doc(studentId).get();
-    const notes = sdoc.exists ? (sdoc.data().notes || {}) : {};
-    let expr = formula;
-    for (const m of [...formula.matchAll(/__ACT__([a-zA-Z0-9_]+)/g)]) {
-      const val = Number(notes[m[1]]);
-      expr = expr.replace(new RegExp(m[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), isNaN(val) ? 0 : val);
-    }
-    const result = Function('"use strict"; return (' + expr + ')')();
-    return typeof result === 'number' ? result : null;
-  } catch(e) { return null; }
 }
 
 // ── DOM update ────────────────────────────────────────────────
@@ -242,4 +303,4 @@ window.autoRecalc = {
   getClassId
 };
 
-console.log('🔄 auto-recalc.js: llest');
+console.log('🔄 auto-recalc.js v2 llest (DOM-first)');
