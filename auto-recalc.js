@@ -108,10 +108,15 @@ async function ensureCache() {
     if (!classDoc.exists) return;
 
     const calculatedActs = classDoc.data().calculatedActivities || {};
+    console.log('🔍 calculatedActs complet:', JSON.stringify(calculatedActs));
     const newCache = {};
 
     for (const [actId, data] of Object.entries(calculatedActs)) {
-      if (!data.calculated || !data.formula) continue;
+      console.log(`🔍 entrada [${actId}]:`, JSON.stringify(data));
+      if (!data.calculated || !data.formula) {
+        console.log(`⏭️ saltat [${actId}]: calculated=${data.calculated}, formula=${data.formula}`);
+        continue;
+      }
 
       const formula = data.formula;
       const dependsOn = new Set();
