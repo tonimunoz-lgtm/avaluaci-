@@ -710,30 +710,36 @@ function sortStudentsAlpha(){
 }
 /* ---------------- Activities ---------------- */
 btnAddActivity.addEventListener('click', ()=> openModal('modalAddActivity'));
-modalAddActivityBtn.addEventListener('click', (e) => { e.stopPropagation(); createActivityModal(); });
+modalAddActivityBtn.addEventListener('click', createActivityModal);
 
 async function createActivityModal() {
     const name = document.getElementById("modalActivityName").value.trim();
     if (!name) return;
 
+    const ref = db.collection("activitats").doc();
+
+    await ref.set({
+        nom: name,
+        data: new Date().toISOString().split("T")[0],
+        calcType: "numeric",
+        formula: ""
+    });
+
+    // 🔥 Aquí afegim l'activitat al terme actiu
+    if (window.Terms && Terms.addActivityToActiveTerm) {
+        await Terms.addActivityToActiveTerm(ref.id);
+    } else {
+        console.error("❌ Terms no està carregat. Revisa l'import a app.js");
+    }
+
     closeModal("modalAddActivity");
     document.getElementById("modalActivityName").value = "";
 
-    try {
-        const ref = db.collection("activitats").doc();
-        await ref.set({
-            nom: name,
-            data: new Date().toISOString().split("T")[0],
-            calcType: "numeric",
-            formula: ""
-        });
-        if (window.Terms && Terms.addActivityToActiveTerm) {
-            await Terms.addActivityToActiveTerm(ref.id);
-        }
-    } catch (e) {
-        console.error("Error creant activitat:", e);
-        alert("Error creant l'activitat: " + e.message);
-    }
+    // 🔥 NO posar loadClassData() si tens dubtes!
+    // Si vols recarregar:
+    //if (typeof loadClassData === "function") {
+     //   loadClassData();
+   // }
 }
 
 function removeActivity(actId){
