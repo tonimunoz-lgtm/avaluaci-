@@ -412,113 +412,139 @@ function showToastComp(msg) {
 // PARCHEAR INPUTS COMPETENCIALS: NUMÈRICS 1-4 en lloc de selects
 // ============================================================
 
-// Observem inputs marcats com a competencials per competencial.js
-// i els convertim en el nostre wrapper numèric 1-4
+let _upgradeScheduled = false;
+
 const numericObserver = new MutationObserver(() => {
-  setTimeout(upgradeCompetencyInputs, 150);
+  // Debounce: una sola crida pendent màxima
+  if (_upgradeScheduled) return;
+  _upgradeScheduled = true;
+  setTimeout(() => {
+    _upgradeScheduled = false;
+    upgradeCompetencyInputs();
+  }, 200);
 });
 
 document.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
-    numericObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-is-competency'] });
+    numericObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['data-is-competency']
+    });
   }, 2000);
 });
 
-// Converteix inputs amb data-is-competency="true" al nostre format numèric 1-4
 async function upgradeCompetencyInputs() {
-  // Gestionar tant inputs marcats per competencial.js com selects antics (fallback)
+  // Recollir els targets SINCRÒNAMENT (snapshot instantani del DOM)
   const targets = [
     ...document.querySelectorAll('input[type="number"][data-is-competency="true"]:not([data-upgraded="true"]):not([data-is-competency-numeric="true"])'),
     ...document.querySelectorAll('select.competency-select:not([data-upgraded="true"])')
   ];
-
   if (targets.length === 0) return;
 
-  for (const el of targets) {
-    el.dataset.upgraded = 'true';
-    const activityId = el.dataset.activityId;
-    const studentId = el.dataset.studentId || el.closest('tr')?.dataset.studentId;
-    if (!activityId || !studentId) continue;
+  // Marcar TOTS immediatament per evitar re-processos mentre fem awaits
+  targets.forEach(el => { el.dataset.upgraded = 'true'; });
 
-    // Llegir valor numèric actual
-    let numericVal = null;
-    try {
-      const studentDoc = await _db.collection('alumnes').doc(studentId).get();
-      const rawVal = studentDoc.exists ? studentDoc.data().notes?.[activityId] : null;
-      numericVal = rawVal !== undefined && rawVal !== null ? parseFloat(rawVal) : null;
-    } catch (e) { /* no crític */ }
+  // Desconnectar l'observer mentre modifiquem el DOM
+  numericObserver.disconnect();
 
-    // Crear wrapper
-    const wrapper = document.createElement('div');
-    wrapper.className = 'comp-cell-wrapper flex flex-col items-center gap-0.5';
-    wrapper.style.minWidth = '70px';
+  try {
+    for (const el of targets) {
+      // Si l'element ja no és al DOM (renderNotesGrid l'ha eliminat), saltar
+      if (!document.body.contains(el)) continue;
 
-    const input = document.createElement('input');
-    input.type = 'number';
-    input.min = '1';
-    input.max = '4';
-    input.step = '0.01';
-    input.className = 'border rounded px-1 py-0.5 w-full text-center text-sm font-semibold focus:ring-2 focus:ring-purple-400';
-    input.style.width = '70px';
-    input.dataset.activityId = activityId;
-    input.dataset.studentId = studentId;
-    input.dataset.isCompetencyNumeric = 'true';
-    input.dataset.patched = 'true'; // Evitar que competencial.js el torni a processar
-    input.dataset.upgraded = 'true';
-    input.placeholder = '1-4';
-    if (numericVal !== null && !isNaN(numericVal)) {
-      input.value = numericVal;
+      const activityId = el.dataset.activityId;
+      const studentId = el.dataset.studentId || el.closest('tr')?.dataset.studentId;
+      if (!activityId || !studentId) continue;
+
+      // Llegir valor de Firestore
+      let numericVal = null;
+      try {
+        const studentDoc = await _db.collection('alumnes').doc(studentId).get();
+        const rawVal = studentDoc.exists ? studentDoc.data().notes?.[activityId] : null;
+        numericVal = (rawVal != null) ? parseFloat(rawVal) : null;
+      } catch (_) {}
+
+      // Comprovar de nou que l'element segueix al DOM després de l'await
+      if (!document.body.contains(el) || !el.parentNode) continue;
+
+      // Construir wrapper
+      const wrapper = buildCompWrapper(activityId, studentId, numericVal);
+
+      // Substituir — ara sabem que parentNode existeix
+      el.parentNode.replaceChild(wrapper, el);
     }
+  } finally {
+    // Reconnectar sempre, fins i tot si hi ha hagut errors
+    numericObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['data-is-competency']
+    });
+  }
+}
 
-    // Badge NA/AS/AN/AE
-    const badge = document.createElement('span');
-    badge.className = 'comp-badge text-xs font-bold px-2 py-0.5 rounded w-full text-center';
-    badge.style.minWidth = '44px';
-    badge.dataset.compDisplay = 'true';
-    badge.dataset.numericVal = numericVal ?? '';
+function buildCompWrapper(activityId, studentId, numericVal) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'comp-cell-wrapper flex flex-col items-center gap-0.5';
+  wrapper.style.minWidth = '70px';
 
-    if (numericVal !== null && !isNaN(numericVal)) {
-      applyBadgeStyle(badge, numericToCompetency(numericVal));
-    } else {
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.min = '1';
+  input.max = '4';
+  input.step = '0.01';
+  input.className = 'border rounded px-1 py-0.5 w-full text-center text-sm font-semibold focus:ring-2 focus:ring-purple-400';
+  input.style.width = '70px';
+  input.dataset.activityId = activityId;
+  input.dataset.studentId = studentId;
+  input.dataset.isCompetencyNumeric = 'true';
+  input.dataset.patched = 'true';
+  input.dataset.upgraded = 'true';
+  input.placeholder = '1-4';
+  if (numericVal !== null && !isNaN(numericVal)) input.value = numericVal;
+
+  const badge = document.createElement('span');
+  badge.className = 'comp-badge text-xs font-bold px-2 py-0.5 rounded w-full text-center';
+  badge.style.minWidth = '44px';
+
+  if (numericVal !== null && !isNaN(numericVal)) {
+    applyBadgeStyle(badge, numericToCompetency(numericVal));
+  } else {
+    badge.textContent = '-';
+    badge.style.backgroundColor = '#f3f4f6';
+    badge.style.color = '#555';
+  }
+
+  input.addEventListener('change', async () => {
+    const val = parseFloat(input.value);
+    if (isNaN(val) || val < 1 || val > 4) {
+      input.value = '';
       badge.textContent = '-';
       badge.style.backgroundColor = '#f3f4f6';
       badge.style.color = '#555';
-    }
-
-    input.addEventListener('change', async () => {
-      const val = parseFloat(input.value);
-      if (isNaN(val) || val < 1 || val > 4) {
-        input.value = '';
-        badge.textContent = '-';
-        badge.style.backgroundColor = '#f3f4f6';
-        badge.style.color = '#555';
-        badge.dataset.numericVal = '';
-        try {
-          await _db.collection('alumnes').doc(studentId).update({
-            [`notes.${activityId}`]: firebase.firestore.FieldValue.delete()
-          });
-        } catch (e) { console.error('Error esborrant nota:', e); }
-        return;
-      }
-      const rounded = Math.round(val * 100) / 100;
-      input.value = rounded;
-      const label = numericToCompetency(rounded);
-      applyBadgeStyle(badge, label);
-      badge.dataset.numericVal = rounded;
       try {
         await _db.collection('alumnes').doc(studentId).update({
-          [`notes.${activityId}`]: rounded
+          [`notes.${activityId}`]: firebase.firestore.FieldValue.delete()
         });
-      } catch (e) { console.error('Error guardant nota competencial:', e); }
-    });
-
-    wrapper.appendChild(input);
-    wrapper.appendChild(badge);
-
+      } catch (e) { console.error('Error esborrant nota:', e); }
+      return;
+    }
+    const rounded = Math.round(val * 100) / 100;
+    input.value = rounded;
+    applyBadgeStyle(badge, numericToCompetency(rounded));
     try {
-      el.parentNode.replaceChild(wrapper, el);
-    } catch (e) { console.error('Error substituint element:', e); }
-  }
+      await _db.collection('alumnes').doc(studentId).update({
+        [`notes.${activityId}`]: rounded
+      });
+    } catch (e) { console.error('Error guardant nota competencial:', e); }
+  });
+
+  wrapper.appendChild(input);
+  wrapper.appendChild(badge);
+  return wrapper;
 }
 
 // ============================================================
