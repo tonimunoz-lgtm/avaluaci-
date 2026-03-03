@@ -716,6 +716,10 @@ async function createActivityModal() {
     const name = document.getElementById("modalActivityName").value.trim();
     if (!name) return;
 
+    // Tancar modal i netejar camp IMMEDIATAMENT (no esperar Firestore)
+    closeModal("modalAddActivity");
+    document.getElementById("modalActivityName").value = "";
+
     try {
         const ref = db.collection("activitats").doc();
 
@@ -731,10 +735,6 @@ async function createActivityModal() {
         } else {
             console.error("❌ Terms no està carregat. Revisa l'import a app.js");
         }
-
-        // Tancar modal i netejar camp (igual que createStudentModal)
-        closeModal("modalAddActivity");
-        document.getElementById("modalActivityName").value = "";
 
         // Recarregar graella perquè aparegui la nova activitat
         if (typeof loadClassData === "function") loadClassData();
