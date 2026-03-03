@@ -905,14 +905,17 @@ async function renderNotesGrid() {
   const headRow = document.createElement('tr');
   headRow.appendChild(th('Alumne'));
 
-  // Carrega classe
-  const classDoc = await db.collection('classes').doc(currentClassId).get();
+  // ⚡ OPTIMITZACIÓ: Llançar totes les lectures en paral·lel (classDoc + actDocs + studentDocs)
+  // Abans: 3 rondes sequencials → ara: 1 sola ronda concurrent
+  const [classDoc, actDocs, studentDocs] = await Promise.all([
+    db.collection('classes').doc(currentClassId).get(),
+    Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get())),
+    Promise.all(classStudents.map(id => db.collection('alumnes').doc(id).get()))
+  ]);
+
   if (!classDoc.exists) return;
   const classData = classDoc.data();
   const calculatedActs = classData.calculatedActivities || {};
-
-  // Carrega activitats
-  const actDocs = await Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()));
 
   // Capçalera activitats amb icona refresh i candau
   actDocs.forEach(adoc => {
@@ -1120,9 +1123,6 @@ menuDiv.querySelector('.delete-btn').addEventListener('click', () => {
     renderAverages();
     return;
   }
-
-  // Carrega alumnes (una sola vegada)
-  const studentDocs = await Promise.all(classStudents.map(id => db.collection('alumnes').doc(id).get()));
 
   studentDocs.forEach(sdoc => {
     const studentId = sdoc.id;
@@ -2370,21 +2370,44 @@ document.getElementById('btnImportALConfirm').addEventListener('click', () => {
 });
 
 // Funció per afegir alumnes a Firestore i a la classe
+// ⚡ OPTIMITZACIÓ: Batch write en lloc de bucle seqüencial
+// Abans: 2 crides Firestore per alumne (set + update) en sèrie → N*2 rondes
+// Ara: 1 batch.commit() per tots els alumnes + 1 update de la classe = 2 crides totals
 async function addImportedStudents(names) {
   if (!currentClassId) return alert('No hi ha cap classe seleccionada.');
 
   const classRef = db.collection('classes').doc(currentClassId);
 
   try {
-    for (const name of names) {
-      const studentRef = db.collection('alumnes').doc();
-      // Crear alumne a Firestore
-      await studentRef.set({ nom: name, notes: {} });
-      // Afegir ID alumne a la classe
-      await classRef.update({
-        alumnes: firebase.firestore.FieldValue.arrayUnion(studentRef.id)
-      });
+    // Firestore batch té límit de 500 operacions → dividim si cal
+    const BATCH_SIZE = 490;
+    const chunks = [];
+    for (let i = 0; i < names.length; i += BATCH_SIZE) {
+      chunks.push(names.slice(i, i + BATCH_SIZE));
     }
+
+    const allStudentIds = [];
+
+    for (const chunk of chunks) {
+      const batch = db.batch();
+      const chunkIds = [];
+
+      // Crear tots els documents d'alumnes en un sol batch
+      chunk.forEach(name => {
+        const studentRef = db.collection('alumnes').doc();
+        batch.set(studentRef, { nom: name, notes: {} });
+        chunkIds.push(studentRef.id);
+      });
+
+      // Un sol commit per tot el chunk
+      await batch.commit();
+      allStudentIds.push(...chunkIds);
+    }
+
+    // Una sola actualització per afegir tots els IDs a la classe
+    await classRef.update({
+      alumnes: firebase.firestore.FieldValue.arrayUnion(...allStudentIds)
+    });
 
     // Recarregar la graella perquè apareguin amb menú i drag & drop
     loadClassData();
