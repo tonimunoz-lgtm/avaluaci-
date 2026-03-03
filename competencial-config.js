@@ -435,7 +435,6 @@ async function upgradeCompetencyInputs() {
   if (targets.length === 0) return;
 
   for (const el of targets) {
-    
     el.dataset.upgraded = 'true';
     const activityId = el.dataset.activityId;
     const studentId = el.dataset.studentId || el.closest('tr')?.dataset.studentId;
