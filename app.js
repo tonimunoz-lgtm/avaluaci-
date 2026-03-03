@@ -716,30 +716,29 @@ async function createActivityModal() {
     const name = document.getElementById("modalActivityName").value.trim();
     if (!name) return;
 
-    const ref = db.collection("activitats").doc();
+    try {
+        const ref = db.collection("activitats").doc();
 
-    await ref.set({
-        nom: name,
-        data: new Date().toISOString().split("T")[0],
-        calcType: "numeric",
-        formula: ""
-    });
+        await ref.set({
+            nom: name,
+            data: new Date().toISOString().split("T")[0],
+            calcType: "numeric",
+            formula: ""
+        });
 
-    // 🔥 Aquí afegim l'activitat al terme actiu
-    if (window.Terms && Terms.addActivityToActiveTerm) {
-        await Terms.addActivityToActiveTerm(ref.id);
-    } else {
-        console.error("❌ Terms no està carregat. Revisa l'import a app.js");
+        if (window.Terms && Terms.addActivityToActiveTerm) {
+            await Terms.addActivityToActiveTerm(ref.id);
+        } else {
+            console.error("❌ Terms no està carregat. Revisa l'import a app.js");
+        }
+    } catch (e) {
+        console.error("Error creant activitat:", e);
+        alert("Error creant l'activitat: " + e.message);
+    } finally {
+        // S'executa SEMPRE, tant si hi ha error com si no
+        closeModal("modalAddActivity");
+        document.getElementById("modalActivityName").value = "";
     }
-
-    closeModal("modalAddActivity");
-    document.getElementById("modalActivityName").value = "";
-
-    // 🔥 NO posar loadClassData() si tens dubtes!
-    // Si vols recarregar:
-    //if (typeof loadClassData === "function") {
-     //   loadClassData();
-   // }
 }
 
 function removeActivity(actId){
