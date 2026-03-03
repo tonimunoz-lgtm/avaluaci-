@@ -16,7 +16,6 @@ let _tcMateriesExtra = { eso: [], batxillerat: [] };
 let _tcApartatsExtra = [];
 let _tcStudentId   = null;
 let _tcStudentName = null;
-let _tcClassId     = null;
 
 // ============================================================
 // ASSIGNATURES BASE
@@ -66,9 +65,6 @@ function tcInit() {
 
   // Observar la graella per injectar el botó d'exportar
   observeCapcaleraComentaris();
-
-  // Interceptar clicks de classe per capturar currentClassId
-  interceptOpenClass();
 }
 
 // ============================================================
@@ -97,66 +93,24 @@ async function tcGuardarConfig() {
 }
 
 // ============================================================
-// INTERCEPTAR openCommentsModal PER CAPTURAR studentId I classId
+// OBSERVAR EL MODAL DE COMENTARIS I INJECTAR BOTÓ IA
 // ============================================================
 function observeCommentsModal() {
-  // Esperar que window.openCommentsModal existeixi (definit a app.js)
-  const tryIntercept = () => {
-    if (!window.openCommentsModal) { setTimeout(tryIntercept, 300); return; }
+  const observer = new MutationObserver(() => {
+    const modal = document.getElementById('modalComments');
+    if (!modal) return;
+    if (modal.dataset.tcInjected) return;
+    modal.dataset.tcInjected = 'true';
+    injectIAButtonInModal(modal);
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
 
-    const originalOpen = window.openCommentsModal;
-    window.openCommentsModal = function(studentId, studentName, currentComment) {
-      // Capturem els valors ABANS d'obrir el modal
-      _tcStudentId   = studentId;
-      _tcStudentName = studentName;
-
-      // Capturar currentClassId llegint la variable de l'scope de app.js
-      // via el DOM: el títol de la classe visible a la pantalla
-      _tcClassId = tcGetCurrentClassId();
-
-      // Cridar l'original
-      originalOpen.apply(this, arguments);
-
-      // Injectar el botó IA si no s'ha fet
-      setTimeout(() => {
-        const modal = document.getElementById('modalComments');
-        if (modal && !modal.dataset.tcInjected) {
-          modal.dataset.tcInjected = 'true';
-          injectIAButtonInModal(modal);
-        }
-      }, 100);
-    };
-    console.log('✅ openCommentsModal interceptat');
-  };
-  setTimeout(tryIntercept, 800);
-}
-
-// Obtenir currentClassId interceptant openClass de app.js
-function tcGetCurrentClassId() {
-  return _tcClassId || window._tcCurrentClassId || null;
-}
-
-// Interceptar openClass per capturar currentClassId
-function interceptOpenClass() {
-  const tryIntercept = () => {
-    // openClass no és window, però podem observar els clicks a les targetes de classe
-    // que criden openClass(id) - les targetes tenen data-id al DOM
-    const classesGrid = document.getElementById('classesGrid');
-    if (!classesGrid) { setTimeout(tryIntercept, 500); return; }
-
-    // Observar clicks al grid de classes per capturar l'id
-    classesGrid.addEventListener('click', e => {
-      const card = e.target.closest('[data-id]');
-      if (card?.dataset?.id) {
-        _tcClassId = card.dataset.id;
-        window._tcCurrentClassId = card.dataset.id;
-        console.log('✅ tcClassId capturat:', _tcClassId);
-      }
-    }, true);
-
-    console.log('✅ Listener de classe injectat');
-  };
-  setTimeout(tryIntercept, 800);
+  // Si ja existeix el modal al DOM
+  const modal = document.getElementById('modalComments');
+  if (modal && !modal.dataset.tcInjected) {
+    modal.dataset.tcInjected = 'true';
+    injectIAButtonInModal(modal);
+  }
 }
 
 function injectIAButtonInModal(modal) {
@@ -736,8 +690,8 @@ async function tcGuardarAAlumne(modal) {
   const text = modal.querySelector('#tcComentariText').textContent;
   if (!text || text.startsWith('❌') || text.includes('La IA està escrivint')) return;
 
-  const studentId = _tcStudentId;
-  const classId   = _tcClassId || window.currentClassId;
+  const studentId = _tcStudentId || window.currentCommentStudentId;
+  const classId   = window.currentClassId;
 
   if (!studentId || !classId || !_tcDB) {
     alert('Error: no es pot identificar l\'alumne o la classe');
