@@ -1222,14 +1222,7 @@ async function openMevesPlantillesModal() {
         <div style="text-align:center;padding:32px;color:#9ca3af;">
           <div style="font-size:32px;margin-bottom:8px;">📭</div>
           Encara no tens cap plantilla.<br>
-          // <button onclick="document.getElementById('ucMevesModal').remove();openCrearPlantillaModal();" style="margin-top:12px;background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-family:inherit;font-weight:600;">✨ Crear la primera</button>
-        <button onclick="
-const m = document.getElementById('ucMevesModal');
-if(m) m.remove();
-openCrearPlantillaModal();
-">
-✨ Crear la primera
-</button>
+          <button onclick="document.getElementById('ucMevesModal').remove();openCrearPlantillaModal();" style="margin-top:12px;background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-family:inherit;font-weight:600;">✨ Crear la primera</button>
         </div>`;
       return;
     }
