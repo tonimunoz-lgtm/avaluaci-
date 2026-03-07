@@ -755,7 +755,14 @@ function openCarregarPlantillaModal() {
 async function carregarIUsarPlantilla(codi, plantillaData = null) {
   if (!plantillaData) {
     try {
-      const db = window._tutoriaDB;
+      // Esperar que _tutoriaDB estigui disponible (max 5s)
+      let intents = 0;
+      while (!window._tutoriaDB && intents < 50) {
+        await new Promise(r => setTimeout(r, 100));
+        intents++;
+      }
+      const db = window._tutoriaDB || (window.firebase && window.firebase.firestore && window.firebase.firestore());
+      if (!db) throw new Error('Firebase no disponible');
       const doc = await db.collection('ultracomentator_plantilles').doc(codi).get();
       if (doc.exists) plantillaData = doc.data();
     } catch (e) { console.error(e); }
@@ -1061,18 +1068,13 @@ Escriu ÚNICAMENT el comentari final, sense cap introducció ni explicació.`;
     const response = await fetch('/api/tutoria', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.7,
-        max_tokens: 400,
-      })
+      body: JSON.stringify({ prompt })
     });
 
     const data = await response.json();
     if (!response.ok) throw new Error(data.error?.message || 'Error API');
 
-    const comentari = data.choices[0].message.content.trim();
+    const comentari = (data.text || '').trim();
     resultText.textContent = comentari;
 
     // Mostrar botó guardar si hi ha alumne actiu
