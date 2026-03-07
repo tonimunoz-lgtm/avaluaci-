@@ -103,7 +103,10 @@ function interceptarOpenCommentsModal() {
       original.apply(this, arguments);
 
       // Injectar botó IA al modal (amb delay per assegurar que el DOM existeix)
-      setTimeout(() => injectarBotoIA(), 100);
+      setTimeout(() => {
+        injectarBotoIA();
+        injectarBotoUC();
+      }, 100);
     };
     console.log('✅ openCommentsModal interceptat');
   };
@@ -134,6 +137,52 @@ function injectarBotoIA() {
     console.log('🔍 Obrint formulari - studentId:', _tcStudentId, 'classId:', _tcClassId, 'nom:', _tcStudentName);
     await openTCFormulari();
   });
+}
+
+// ============================================================
+// INJECTAR BOTÓ "⚡ Ultracomentator" AL MODAL DE COMENTARIS
+// ============================================================
+function injectarBotoUC() {
+  const modal = document.getElementById('modalComments');
+  if (!modal) return;
+  if (modal.querySelector('#tcBtnUltracomentator')) return;
+
+  // Trobar el contenidor dels botons principals
+  const botoesDiv = modal.querySelector('.flex.gap-2');
+  if (!botoesDiv) return;
+
+  // Crear fila nova a sota dels botons existents
+  let ucRow = modal.querySelector('#tcUCRow');
+  if (!ucRow) {
+    ucRow = document.createElement('div');
+    ucRow.id = 'tcUCRow';
+    ucRow.style.cssText = 'margin-top:8px;';
+    botoesDiv.parentNode.insertBefore(ucRow, botoesDiv.nextSibling);
+  }
+
+  const btn = document.createElement('button');
+  btn.id = 'tcBtnUltracomentator';
+  btn.style.cssText = `
+    width:100%;padding:9px 12px;border-radius:6px;border:none;cursor:pointer;
+    background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;
+    font-weight:700;font-size:13px;font-family:inherit;
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    transition:opacity .2s;
+  `;
+  btn.innerHTML = '⚡ Ultracomentator';
+  btn.addEventListener('mouseenter', () => { btn.style.opacity = '.88'; });
+  btn.addEventListener('mouseleave', () => { btn.style.opacity = '1'; });
+
+  btn.addEventListener('click', () => {
+    // Obrir directament el modal "Les meves plantilles" o el principal
+    if (typeof window.openUltracomentatorModal === 'function') {
+      window.openUltracomentatorModal();
+    } else {
+      alert('Ultracomentator no disponible. Assegura\'t que ultracomentator.js està carregat.');
+    }
+  });
+
+  ucRow.appendChild(btn);
 }
 
 // ============================================================
