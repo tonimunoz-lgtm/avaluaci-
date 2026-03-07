@@ -106,6 +106,12 @@ function openUltracomentatorModal() {
   const existing = document.getElementById('ucMainModal');
   if (existing) { existing.remove(); }
 
+  // S'obre des del botó tutoria (no des del modal de comentaris):
+  // netejar el context d'alumne per no arrossegar l'últim alumne vist
+  window._tcStudentName = null;
+  window._tcStudentId   = null;
+  window._tcClassId     = null;
+
   const modal = document.createElement('div');
   modal.id = 'ucMainModal';
   modal.style.cssText = `
