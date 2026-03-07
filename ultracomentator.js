@@ -19,18 +19,16 @@ function initUltracomentator() {
 function transformarBotoTutoria(originalBtn) {
   if (document.getElementById('btnTutoriaWrapper')) return;
 
-  const wrapper = document.createElement('div');
-  wrapper.id = 'btnTutoriaWrapper';
-  wrapper.style.cssText = 'position:relative;display:inline-flex;align-items:center;';
-
   // Un sol botó — un clic obre el menú (com el ⋮ verd)
   const btnMain = document.createElement('button');
   btnMain.id = 'btnTutoriaMain';
+  // Copiar classe exacta del botó original + position:relative per al menú
   btnMain.className = originalBtn.className;
+  btnMain.style.cssText = 'position:relative;';
   btnMain.innerHTML = '📋 Tutoria ▾';
   btnMain.title = 'Opcions de tutoria';
 
-  // Menú desplegable
+  // Menú desplegable — posicionat relatiu al btnMain
   const menu = document.createElement('div');
   menu.id = 'tutoriaDropdownMenu';
   menu.className = 'hidden';
@@ -59,13 +57,11 @@ function transformarBotoTutoria(originalBtn) {
     </div>
   `;
 
-  // Amagar el botó original
+  // Amagar el botó original i inserir el nou al seu lloc
   originalBtn.id = 'btnTutoria_hidden';
   originalBtn.style.display = 'none';
-  originalBtn.parentNode.insertBefore(wrapper, originalBtn);
-  wrapper.appendChild(originalBtn);
-  wrapper.appendChild(btnMain);
-  wrapper.appendChild(menu);
+  originalBtn.parentNode.insertBefore(btnMain, originalBtn);
+  btnMain.appendChild(menu);
 
   // Hover effects
   menu.querySelectorAll('button').forEach(b => {
@@ -79,6 +75,17 @@ function transformarBotoTutoria(originalBtn) {
     // Tancar altres menús oberts a l'app
     document.querySelectorAll('.menu').forEach(m => m.classList.add('hidden'));
     menu.classList.toggle('hidden');
+    if (!menu.classList.contains('hidden')) {
+      // Ajustar posició si surt de pantalla per la dreta
+      const rect = btnMain.getBoundingClientRect();
+      if (rect.left + 210 > window.innerWidth) {
+        menu.style.left = 'auto';
+        menu.style.right = '0';
+      } else {
+        menu.style.left = '0';
+        menu.style.right = 'auto';
+      }
+    }
   });
 
   // Tancar en clicar fora
