@@ -1156,7 +1156,7 @@ ${promptItems}
 
 INSTRUCCIONS ESTRICTES:
 - Escriu UN BLOC DE TEXT per cada ítem, en el mateix ordre que apareixen.
-- Cada bloc ha de COMENÇAR OBLIGATÒRIAMENT amb la capçalera indicada (copia-la exactament). Immediatament després de la capçalera, continua el text amb "${nomAmbArticle}" (amb concordança de gènere ${genere === 'noia' ? 'femení' : 'masculí'} correcta).
+- Cada bloc ha de COMENÇAR OBLIGATÒRIAMENT amb la capçalera indicada però SENSE els dos punts finals (ex: si la capçalera és "Pel que fa al mètode científic:", escriu "Pel que fa al mètode científic,"). Immediatament després, sense punt ni majúscula, continua amb "${nomAmbArticle}" en minúscules (ex: "Pel que fa al mètode científic, ${nomAmbArticle} ..."). Tot ha de ser una frase contínua i fluida.
 - Dins de cada bloc, integra el nivell d'assoliment i els comentaris en un text fluid i natural (com escriuria un professor), NO una llista.
 - Separa els blocs amb un salt de línia.
 - No afegeixes cap introducció, títol ni comentari final genèric.
