@@ -80,6 +80,7 @@ function interceptarClickClasse() {
     const card = e.target.closest('#classesGrid [data-id]');
     if (card?.dataset?.id) {
       _tcClassId = card.dataset.id;
+      window._tcClassId = card.dataset.id;
       console.log('✅ tc classId capturat:', _tcClassId);
     }
   }, true); // capture phase per capturar-ho abans que openClass ho processi
@@ -97,6 +98,9 @@ function interceptarOpenCommentsModal() {
       // Capturar SEMPRE que s'obre el modal
       _tcStudentId   = studentId;
       _tcStudentName = studentName;
+      // Exposar a window perquè ultracomentator.js hi pugui accedir
+      window._tcStudentId   = studentId;
+      window._tcStudentName = studentName;
       // _tcClassId ja s'ha capturat via el click a la targeta
 
       // Cridar original
