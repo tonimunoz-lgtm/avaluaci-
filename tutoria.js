@@ -54,6 +54,8 @@ async function initTutoria() {
       if (user) {
         _tutoriaUID = user.uid;
         _tutoriaDB = window.firebase.firestore();
+        window._tutoriaUID = user.uid;
+        window._tutoriaDB = window.firebase.firestore();
       }
     });
   };
