@@ -1738,7 +1738,7 @@ function _mostrarModalImport() {
 }
 
 // ============================================================
-// DESCARREGAR PLANTILLA EXCEL (amb fórmules, basada en ítems actuals)
+// DESCARREGAR PLANTILLA EXCEL (replica estructura original)
 // ============================================================
 function descarregarPlantillaExcel() {
   if (typeof XLSX === 'undefined') {
@@ -1746,7 +1746,7 @@ function descarregarPlantillaExcel() {
     return;
   }
 
-  // Recollir ítems actuals del formulari (titol + capcelera + comentaris)
+  // Recollir ítems actuals del formulari
   const items = [];
   document.querySelectorAll('#ucItemsContainer > [data-item-id]').forEach(itemDiv => {
     const titolEl = itemDiv.querySelector('.ucItemTitol');
@@ -1765,133 +1765,128 @@ function descarregarPlantillaExcel() {
     items.push({ titol, capcelera, comentaris });
   });
 
-  // Nom de la plantilla
-  const nomPlantilla = (document.getElementById('ucPlantillaNom')?.value.trim()) || 'Plantilla';
-  const desc = document.getElementById('ucPlantillaDesc')?.value.trim() || '';
-
-  const wb = XLSX.utils.book_new();
-  const wsData = {};
-  const merges = [];
-
-  // ── Estructura de columnes ──
-  // Col A: alumnes (fila 5+)
-  // Per cada ítem: [col titol_item][col+ comentari1][...comentaris][col TÍTOL][col COMENTARI][col ASSOLIMENT]
-  // Estructura real de l'excel original:
-  //   Fila 2: [col_item] = titol ítem
-  //   Fila 4: [col_item] = capçalera, [col+1..N] = comentaris
-  //   Fila 4: [col_títol] = "TÍTOL ÍTEM X", [col_com] = "COMENTARI ÍTEM X", [col_ass] = "ASSOLIMENT ÍTEM X"
-  //   Fila 5+: [col_item] = x per marcar, [col_títol] = =$titol$2, [col_com] = fórmula CONCATENATE, [col_ass] buit
-
-  const MAX_FILES = 35; // files d'alumnes
-  const colBase = 1; // índex 0 = col A (alumnes)
-
-  // Columna B = índex 1 = capçalera general / nom projecte
-  const set = (r, c, v) => {
-    const addr = XLSX.utils.encode_cell({ r, c });
-    wsData[addr] = { v, t: typeof v === 'number' ? 'n' : 's' };
-  };
-  const setF = (r, c, f) => {
-    const addr = XLSX.utils.encode_cell({ r, c });
-    wsData[addr] = { f, t: 's' };
-  };
-
-  // Fila 1: nom projecte a col C (índex 2)
-  set(0, 2, 'ULTRACOMENTATOR');
-  set(0, 3, nomPlantilla);
-
-  // Fila 2: nom projecte
-  set(1, 2, nomPlantilla);
-  if (desc) set(1, 3, desc);
-
-  // Fila 4 col B: etiqueta
-  set(3, 1, 'ALUMNES');
-
-  // Per cada ítem, calcular columna d'inici
-  // Layout: A=alumnes, B=etiqueta, llavors per cada ítem:
-  //   [colItem] capçalera/comentaris, [colTítol] TÍTOL, [colCom] COMENTARI, [colAss] ASSOLIMENT
-  // Deixem 1 col separació entre ítems
-
-  let colCursor = 2; // comença a índex 2 (col C)
-
-  items.forEach((item, itemIdx) => {
-    const numComs = item.comentaris.length;
-    const colItem = colCursor;          // columna capçalera + comentaris
-    const colTitolRes = colItem + numComs + 1;  // TÍTOL ÍTEM
-    const colComRes   = colTitolRes + 1;         // COMENTARI ÍTEM
-    const colAssRes   = colComRes + 1;            // ASSOLIMENT ÍTEM
-
-    const colItemLetter  = XLSX.utils.encode_col(colItem);
-    const colTitolLetter = XLSX.utils.encode_col(colTitolRes);
-    const colComLetter   = XLSX.utils.encode_col(colComRes);
-    const colAssLetter   = XLSX.utils.encode_col(colAssRes);
-
-    // Fila 2: títol de l'ítem
-    set(1, colItem, item.titol);
-
-    // Fila 3: marca d'actiu
-    set(2, colItem, 'x');
-
-    // Fila 4: capçalera + comentaris
-    if (item.capcelera) set(3, colItem, item.capcelera + (item.capcelera.endsWith(':') ? '' : ':'));
-    item.comentaris.forEach((com, ci) => {
-      set(3, colItem + 1 + ci, com);
-    });
-
-    // Fila 4: etiquetes columnes resultat
-    set(3, colTitolRes, `TÍTOL ÍTEM ${itemIdx + 1}`);
-    set(3, colComRes,   `COMENTARI ÍTEM ${itemIdx + 1}`);
-    set(3, colAssRes,   `ASSOLIMENT ÍTEM ${itemIdx + 1}`);
-
-    // Files 5 a MAX_FILES+4: fórmules per cada alumne
-    for (let row = 4; row < 4 + MAX_FILES; row++) {
-      const r1 = row + 1; // número de fila per a la fórmula (base 1)
-
-      // Columna TÍTOL: referència al títol de l'ítem
-      setF(row, colTitolRes, `$${colItemLetter}$2`);
-
-      // Columna COMENTARI: CONCATENATE capçalera + comentaris seleccionats
-      const colCapLetter = XLSX.utils.encode_col(colItem);
-      const parts = item.comentaris.map((_, ci) => {
-        const comCol = XLSX.utils.encode_col(colItem + 1 + ci);
-        return `IF(ISBLANK(${comCol}${r1}),"",${comCol === XLSX.utils.encode_col(colItem + 1) ? `$${comCol}$4` : `$${comCol}$4`})`;
-      });
-      // Fórmula: si la primera columna de comentari és buida, no posa res; si no, concatena
-      const firstComCol = XLSX.utils.encode_col(colItem + 1);
-      const concatParts = parts.length > 0
-        ? `$${colCapLetter}$4,${parts.join(',')}`
-        : `$${colCapLetter}$4`;
-      setF(row, colComRes,
-        `IF(ISBLANK(${firstComCol}${r1}),,CONCATENATE(${concatParts}))`
-      );
-
-      // Columna ASSOLIMENT: buida (el professor l'omple)
-      // (no posem res)
-    }
-
-    colCursor = colAssRes + 2; // +2 per deixar col de separació
-  });
-
-  // Fila 5+: col A alumnes (etiqueta)
-  set(3, 0, 'NOM ALUMNE');
-  for (let row = 4; row < 4 + MAX_FILES; row++) {
-    set(row, 0, '');
+  if (items.length === 0) {
+    alert('Afegeix almenys un ítem amb comentaris abans de descarregar la plantilla.');
+    return;
   }
 
-  // Rang total
-  const maxCol = colCursor;
+  const nomPlantilla = document.getElementById('ucPlantillaNom')?.value.trim() || 'Plantilla';
+  const MAX_FILES = 35;
+
+  const wb = XLSX.utils.book_new();
+  const ws = {};
+
+  const enc = (r, c) => XLSX.utils.encode_cell({ r, c });
+  const setV = (r, c, v) => { ws[enc(r,c)] = { v, t: 's' }; };
+  const setF = (r, c, f) => { ws[enc(r,c)] = { f, t: 's' }; };
+
+  // ── ESTRUCTURA PER CADA ÍTEM ──────────────────────────────────────────────
+  // Igual que l'original:
+  //   Fila 2 (r=1):  [colItem] = titol ítem
+  //   Fila 4 (r=3):  [colItem] = capçalera, [colItem+1..N] = comentaris
+  //   Fila 4 (r=3):  [colItem-3] = "TÍTOL ÍTEM X"
+  //                  [colItem-2] = "COMENTARI ÍTEM X"
+  //                  [colItem-1] = "ASSOLIMENT ÍTEM X"
+  //   Files 5+ (r=4+): [colItem-3] = =$[colItem]$2
+  //                    [colItem-2] = CONCATENATE(capçalera + comentaris marcats)
+  //
+  // Primer ítem: colItem = 6 (col G, índex 0-based)
+  // Separació entre ítems: 3 cols (TÍTOL/COMENTARI/ASSOLIMENT) + cols comentaris + 1 espai
+
+  // Fila 1 (r=0): capçalera general
+  setV(0, 2, 'ULTRACOMENTATOR');  // C1
+  setV(0, 6, nomPlantilla);        // G1 (o dinàmic)
+
+  // Fila 2 (r=1): nom plantilla
+  setV(1, 2, nomPlantilla);        // C2
+
+  // Fila 4 (r=3): col B = etiqueta alumnes
+  setV(3, 1, 'ALUMNES');
+
+  // Assignar columnes als ítems
+  // colItem per ítem 0 = índex 6 (col G), igual que l'original
+  // Cada ítem ocupa: 3 (TÍTOL/COM/ASS) + 1 (capçalera) + numComs cols, + 1 espai
+  // Però l'estructura original posa TÍTOL/COM/ASS ABANS de les cols de comentaris:
+  // D=TÍTOL, E=COMENTARI, F=ASSOLIMENT, G=capçalera, H..K=comentaris
+  // Per tant colItem = colTitol + 3
+
+  let colTitol = 3; // índex 3 = col D (igual que l'original)
+
+  items.forEach((item, idx) => {
+    const numComs = item.comentaris.length;
+    const colItem = colTitol + 3;                          // col capçalera
+    const colComLast = colItem + numComs;                  // última col comentari
+    const colTL = XLSX.utils.encode_col(colItem);          // lletra col capçalera
+    const colTitolL = XLSX.utils.encode_col(colTitol);
+
+    // Fila 2: títol ítem
+    setV(1, colItem, item.titol);
+
+    // Fila 3: marca x (actiu)
+    setV(2, colItem, 'x');
+
+    // Fila 4: capçalera
+    if (item.capcelera) {
+      setV(3, colItem, item.capcelera + (item.capcelera.endsWith(':') ? '' : ':') + '\\n');
+    }
+    // Fila 4: comentaris
+    item.comentaris.forEach((com, ci) => {
+      setV(3, colItem + 1 + ci, com);
+    });
+
+    // Fila 4: etiquetes TÍTOL/COMENTARI/ASSOLIMENT
+    setV(3, colTitol,     `TÍTOL ÍTEM ${idx + 1}`);
+    setV(3, colTitol + 1, `COMENTARI ÍTEM ${idx + 1}`);
+    setV(3, colTitol + 2, `ASSOLIMENT ÍTEM ${idx + 1}`);
+
+    // Construir fórmula CONCATENATE per columna COMENTARI
+    // =IF(ISBLANK([colItem][row]),,CONCATENATE($[colItem]$4, IF(ISBLANK([com1][row]),"",$[com1]$4),...))
+    const comCols = [];
+    for (let ci = 0; ci < numComs; ci++) {
+      comCols.push(XLSX.utils.encode_col(colItem + 1 + ci));
+    }
+    const firstComCol = comCols.length > 0 ? comCols[0] : colTL;
+
+    // Files alumnes (fila 5 a 5+MAX_FILES)
+    for (let row = 4; row < 4 + MAX_FILES; row++) {
+      const r1 = row + 1; // número de fila per a la fórmula
+
+      // TÍTOL: =$[colItem]$2
+      setF(row, colTitol, `$${colTL}$2`);
+
+      // COMENTARI: IF(ISBLANK(firstCom),,CONCATENATE(capçalera, com1, com2...))
+      if (comCols.length > 0) {
+        const parts = comCols.map(cl => `IF(ISBLANK(${cl}${r1}),"",\$${cl}\$4)`).join(',');
+        setF(row, colTitol + 1,
+          `IF(ISBLANK(${firstComCol}${r1}),,CONCATENATE(\$${colTL}\$4,${parts}))`
+        );
+      } else if (item.capcelera) {
+        // Sense comentaris, només capçalera
+        setF(row, colTitol + 1,
+          `IF(ISBLANK(${colTL}${r1}),,\$${colTL}\$4)`
+        );
+      }
+
+      // ASSOLIMENT: deixar buit (el professor l'omple)
+    }
+
+    // Avançar cursor: +3 (TÍTOL/COM/ASS) + 1 (capçalera) + numComs + 1 (espai)
+    colTitol = colItem + numComs + 2;
+  });
+
+  // Rang
+  const maxCol = colTitol + 2;
   const maxRow = 4 + MAX_FILES;
-  wsData['!ref'] = XLSX.utils.encode_range({ r: 0, c: 0 }, { r: maxRow, c: maxCol });
+  ws['!ref'] = XLSX.utils.encode_range({ r: 0, c: 0 }, { r: maxRow, c: maxCol });
 
-  // Amplades de columna
-  const colWidths = [];
-  colWidths[0] = { wch: 20 }; // alumnes
-  for (let i = 1; i < maxCol; i++) colWidths[i] = { wch: 18 };
-  wsData['!cols'] = colWidths;
+  // Amplades
+  const cols = [];
+  for (let i = 0; i < maxCol; i++) cols[i] = { wch: i < 3 ? 8 : 22 };
+  ws['!cols'] = cols;
 
-  XLSX.utils.book_append_sheet(wb, wsData, 'RECULL');
+  XLSX.utils.book_append_sheet(wb, ws, 'RECULL');
 
-  // Nom del fitxer
-  const safeName = nomPlantilla.replace(/[^a-zA-Z0-9À-ÿ\s\-_]/g, '').trim() || 'plantilla';
+  const safeName = nomPlantilla.replace(/[^\w\s\-]/g, '').trim() || 'plantilla';
   XLSX.writeFile(wb, `${safeName}_ULTRACOMENTATOR.xlsx`);
 }
 
