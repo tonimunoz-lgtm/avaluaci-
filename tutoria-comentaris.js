@@ -179,7 +179,9 @@ function injectarBotoUC() {
 
   btn.addEventListener('click', () => {
     // Obrir directament el modal "Les meves plantilles" o el principal
-    if (typeof window.openUltracomentatorModal === 'function') {
+    if (typeof window.openMevesPlantillesModal === 'function') {
+      window.openMevesPlantillesModal();
+    } else if (typeof window.openUltracomentatorModal === 'function') {
       window.openUltracomentatorModal();
     } else {
       alert('Ultracomentator no disponible. Assegura\'t que ultracomentator.js està carregat.');
