@@ -887,51 +887,9 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
 
       <div style="padding:20px 24px;">
         <!-- INFO ALUMNE + IDIOMA -->
-        ${window._tcStudentName ? `
-        <div style="background:#f5f3ff;border-radius:12px;padding:12px 16px;margin-bottom:16px;border:1.5px solid #a78bfa;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <span style="font-size:20px;">👤</span>
-            <div>
-              <div style="font-size:11px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.5px;">Alumne/a actiu/va</div>
-              <div style="font-size:16px;font-weight:800;color:#4c1d95;" id="ucAlumneNomBadge">${window._tcStudentName}</div>
-            </div>
-          </div>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <div style="display:flex;gap:6px;">
-              <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;cursor:pointer;padding:6px 12px;border:2px solid #a78bfa;border-radius:8px;background:#fff;transition:all .15s;" id="ucLblNoi">
-                <input type="radio" name="ucGenere" value="noi" checked style="accent-color:#7c3aed;"> 👦 Noi
-              </label>
-              <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;cursor:pointer;padding:6px 12px;border:2px solid #a78bfa;border-radius:8px;background:#fff;transition:all .15s;" id="ucLblNoia">
-                <input type="radio" name="ucGenere" value="noia" style="accent-color:#7c3aed;"> 👧 Noia
-              </label>
-            </div>
-            <select id="ucIdioma" style="border:1.5px solid #a78bfa;border-radius:8px;padding:7px 12px;font-size:13px;font-family:inherit;outline:none;background:#fff;color:#374151;">
-              <option value="catala">Català</option>
-              <option value="castella">Castellà</option>
-            </select>
-          </div>
+        <div id="ucInfoAlumneWrap" style="background:#fff;border-radius:12px;padding:16px;margin-bottom:16px;border:1px solid #e5e7eb;">
+          <!-- Omplert per JS -->
         </div>
-        <input id="ucAlumneNom" type="hidden" value="${window._tcStudentName}">
-        ` : `
-        <div style="background:#fff;border-radius:12px;padding:16px;margin-bottom:16px;border:1px solid #e5e7eb;">
-          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
-            <div style="flex:1;min-width:150px;">
-              <label style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px;">Nom de l'alumne/a</label>
-              <input id="ucAlumneNom" type="text" placeholder="Ex: Júlia Martínez"
-                style="width:100%;box-sizing:border-box;border:1.5px solid #e5e7eb;border-radius:8px;padding:8px 12px;font-size:14px;font-family:inherit;outline:none;">
-            </div>
-            <div style="display:flex;gap:6px;align-items:flex-end;">
-              <div style="min-width:120px;">
-                <label style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px;">Idioma</label>
-                <select id="ucIdioma" style="width:100%;border:1.5px solid #e5e7eb;border-radius:8px;padding:8px 12px;font-size:14px;font-family:inherit;outline:none;background:#fff;">
-                  <option value="catala">Català</option>
-                  <option value="castella">Castellà</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
-        `}
 
         <!-- ÍTEMS: ASSOLIMENT + COMENTARIS -->
         <div style="margin-bottom:16px;">
@@ -953,7 +911,7 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
           <div id="ucResultatText" style="font-size:14px;line-height:1.7;color:#374151;white-space:pre-wrap;"></div>
           <div style="display:flex;gap:8px;margin-top:12px;">
             <button id="ucCopiarResultat" style="background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">📋 Copiar</button>
-            <button id="ucGuardarAlumne" style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:${window._tcStudentId ? 'inline-flex' : 'none'};">💾 Guardar a l'alumne</button>
+            <button id="ucGuardarAlumne" style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:none;">💾 Guardar a l'alumne</button>
           </div>
         </div>
 
@@ -970,6 +928,74 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
   `;
 
   document.body.appendChild(modal);
+
+  // ── Omplir bloc INFO ALUMNE per JS (sempre correcte, independentment del timing) ──
+  const infoWrap = document.getElementById('ucInfoAlumneWrap');
+  const nomActiu = window._tcStudentName || null;
+  if (nomActiu && infoWrap) {
+    // Mode "ve del modal de comentaris": badge + gènere + idioma
+    infoWrap.style.cssText = 'background:#f5f3ff;border-radius:12px;padding:12px 16px;margin-bottom:16px;border:1.5px solid #a78bfa;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;';
+    infoWrap.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:20px;">👤</span>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.5px;">Alumne/a actiu/va</div>
+          <div style="font-size:16px;font-weight:800;color:#4c1d95;">${nomActiu}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <div style="display:flex;gap:6px;">
+          <label id="ucLblNoi" style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;cursor:pointer;padding:6px 12px;border:2px solid #7c3aed;border-radius:8px;background:#7c3aed;color:#fff;transition:all .15s;">
+            <input type="radio" name="ucGenere" value="noi" checked style="accent-color:#fff;"> 👦 Noi
+          </label>
+          <label id="ucLblNoia" style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;cursor:pointer;padding:6px 12px;border:2px solid #a78bfa;border-radius:8px;background:#fff;color:#374151;transition:all .15s;">
+            <input type="radio" name="ucGenere" value="noia" style="accent-color:#7c3aed;"> 👧 Noia
+          </label>
+        </div>
+        <select id="ucIdioma" style="border:1.5px solid #a78bfa;border-radius:8px;padding:7px 12px;font-size:13px;font-family:inherit;outline:none;background:#fff;color:#374151;">
+          <option value="catala">Català</option>
+          <option value="castella">Castellà</option>
+        </select>
+      </div>
+      <input id="ucAlumneNom" type="hidden" value="${nomActiu}">
+    `;
+    // Events gènere
+    infoWrap.querySelectorAll('input[name="ucGenere"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        infoWrap.querySelectorAll('label[id^="ucLbl"]').forEach(lbl => {
+          lbl.style.background = '#fff'; lbl.style.borderColor = '#a78bfa'; lbl.style.color = '#374151';
+        });
+        const lbl = radio.closest('label');
+        if (lbl) { lbl.style.background = '#7c3aed'; lbl.style.borderColor = '#7c3aed'; lbl.style.color = '#fff'; }
+      });
+    });
+    // Mostrar botó guardar
+    const btnG = document.getElementById('ucGuardarAlumne');
+    if (btnG) btnG.style.display = 'inline-flex';
+  } else if (infoWrap) {
+    // Mode normal: camp de text per escriure nom + idioma
+    infoWrap.innerHTML = `
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+        <div style="flex:1;min-width:150px;">
+          <label style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px;">Nom de l'alumne/a</label>
+          <input id="ucAlumneNom" type="text" placeholder="Ex: Júlia Martínez"
+            style="width:100%;box-sizing:border-box;border:1.5px solid #e5e7eb;border-radius:8px;padding:8px 12px;font-size:14px;font-family:inherit;outline:none;">
+        </div>
+        <div style="min-width:120px;">
+          <label style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px;">Idioma</label>
+          <select id="ucIdioma" style="width:100%;border:1.5px solid #e5e7eb;border-radius:8px;padding:8px 12px;font-size:14px;font-family:inherit;outline:none;background:#fff;">
+            <option value="catala">Català</option>
+            <option value="castella">Castellà</option>
+          </select>
+        </div>
+      </div>
+    `;
+    const nomEl2 = document.getElementById('ucAlumneNom');
+    if (nomEl2) {
+      nomEl2.addEventListener('focus', e => { e.target.style.borderColor = '#7c3aed'; });
+      nomEl2.addEventListener('blur', e => { e.target.style.borderColor = '#e5e7eb'; });
+    }
+  }
 
   // Tancar
   document.getElementById('ucUsarClose').addEventListener('click', () => { modal.remove(); });
@@ -1022,21 +1048,7 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
   });
 
   // Focus alumne
-  const ucNomEl = document.getElementById('ucAlumneNom');
-  if (ucNomEl && ucNomEl.type !== 'hidden') {
-    ucNomEl.addEventListener('focus', e => { e.target.style.borderColor = '#7c3aed'; });
-    ucNomEl.addEventListener('blur', e => { e.target.style.borderColor = '#e5e7eb'; });
-  }
-  // Estil botons gènere
-  modal.querySelectorAll('input[name="ucGenere"]').forEach(radio => {
-    radio.addEventListener('change', () => {
-      modal.querySelectorAll('label[id^="ucLbl"]').forEach(lbl => {
-        lbl.style.background = '#fff'; lbl.style.borderColor = '#a78bfa'; lbl.style.color = '#374151';
-      });
-      const lbl = radio.closest('label');
-      if (lbl) { lbl.style.background = '#7c3aed'; lbl.style.borderColor = '#7c3aed'; lbl.style.color = '#fff'; }
-    });
-  });
+  // Events nom/gènere: gestionats al bloc post-render superior
 
   // Copiar resultat
   document.getElementById('ucCopiarResultat').addEventListener('click', () => {
@@ -1054,13 +1066,15 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
 // GENERAR COMENTARI AMB IA (Groq via /api/tutoria)
 // ============================================================
 async function generarAmbIA(modal) {
+  // Nom: preferir window._tcStudentName si ve del modal de comentaris
   const nomEl = document.getElementById('ucAlumneNom');
-  const alumne = (nomEl ? nomEl.value.trim() : '') || "l'alumne/a";
+  const nomFromEl = nomEl ? nomEl.value.trim() : '';
+  const alumne = window._tcStudentName || nomFromEl || '';
   const idioma = document.getElementById('ucIdioma').value;
   const genereRadio = document.querySelector('input[name="ucGenere"]:checked');
   const genere = genereRadio ? genereRadio.value : 'noi';
   const article = genere === 'noia' ? 'La' : 'El';
-  const nomAmbArticle = `${article} ${alumne}`;
+  const nomAmbArticle = alumne ? `${article} ${alumne}` : `l'alumne/a`;
 
   // Recollir assoliments per ítem (desplegable independent)
   const assoliments = {};
@@ -1085,13 +1099,9 @@ async function generarAmbIA(modal) {
     alert('Cal seleccionar almenys un assoliment o un comentari!');
     return;
   }
-  if (!nomEl || !alumne || alumne === "l'alumne/a") {
-    // Si ve del modal de comentaris, el nom ja ve de _tcStudentName
-    // Si no, demanar nom
-    if (!window._tcStudentName) {
-      alert("Cal escriure el nom de l'alumne/a!");
-      return;
-    }
+  if (!alumne) {
+    alert("Cal escriure el nom de l'alumne/a!");
+    return;
   }
 
   const btn = document.getElementById('ucGenerar');
