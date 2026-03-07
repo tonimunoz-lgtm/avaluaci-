@@ -448,9 +448,11 @@ function recollirDadesPlantilla() {
   }
 
   const items = [];
-  document.querySelectorAll('#ucItemsContainer [data-item-id]').forEach(itemDiv => {
+  document.querySelectorAll('#ucItemsContainer > [data-item-id]').forEach(itemDiv => {
     const itemId = itemDiv.dataset.itemId;
-    const titol = itemDiv.querySelector('.ucItemTitol').value.trim();
+    const titolEl = itemDiv.querySelector('.ucItemTitol');
+    if (!titolEl) return;
+    const titol = titolEl.value.trim();
     if (!titol) return;
 
     const comentaris = [];
