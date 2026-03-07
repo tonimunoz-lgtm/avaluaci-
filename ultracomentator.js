@@ -385,12 +385,22 @@ function afegirItemUI(itemData = null) {
 // ============================================================
 // UI: AFEGIR COMENTARI A UN ÍTEM
 // ============================================================
+// Nivells d'assoliment (desplegable independent per ítem)
+const UC_ASSOLIMENTS = [
+  { val: 'ae',  label: 'Assoliment excel·lent', color: '#059669', bg: '#d1fae5' },
+  { val: 'an',  label: 'Assoliment notable',    color: '#2563eb', bg: '#dbeafe' },
+  { val: 'as',  label: 'Assoliment satisfactori',color: '#d97706', bg: '#fef3c7' },
+  { val: 'na',  label: 'No assolit',             color: '#dc2626', bg: '#fee2e2' },
+  { val: 'nc',  label: 'No cursa',               color: '#6b7280', bg: '#f3f4f6' },
+  { val: 'nav', label: 'No avaluat',             color: '#9ca3af', bg: '#f9fafb' },
+];
+
+// Etiquetes de comentaris (al formulari de creació — lliure, sense vincle amb assoliment)
 const UC_NIVELLS = [
-  { val: 'excel·lent', label: 'Excel·lent', color: '#059669', bg: '#d1fae5' },
-  { val: 'assolit', label: 'Assolit', color: '#2563eb', bg: '#dbeafe' },
-  { val: 'assolit_parcial', label: 'Assolit parcial', color: '#d97706', bg: '#fef3c7' },
-  { val: 'no_assolit', label: 'No assolit', color: '#dc2626', bg: '#fee2e2' },
-  { val: 'general', label: 'General', color: '#6b7280', bg: '#f3f4f6' },
+  { val: 'general',    label: 'General',          color: '#6b7280', bg: '#f3f4f6' },
+  { val: 'positiu',   label: 'Positiu',           color: '#059669', bg: '#d1fae5' },
+  { val: 'parcial',   label: 'Amb dificultats',   color: '#d97706', bg: '#fef3c7' },
+  { val: 'negatiu',  label: 'Negatiu',            color: '#dc2626', bg: '#fee2e2' },
 ];
 
 function afegirComentariUI(itemId, comData = null) {
@@ -402,7 +412,7 @@ function afegirComentariUI(itemId, comData = null) {
   const text = comData ? comData.text : '';
   const nivell = comData ? comData.nivell : 'general';
 
-  const nivellInfo = UC_NIVELLS.find(n => n.val === nivell) || UC_NIVELLS[4];
+  const nivellInfo = UC_NIVELLS.find(n => n.val === nivell) || UC_NIVELLS[0];
 
   const comDiv = document.createElement('div');
   comDiv.id = 'ucCom_' + comId;
@@ -444,7 +454,7 @@ function afegirComentariUI(itemId, comData = null) {
   // Events
   const sel = comDiv.querySelector('.ucNivellSel');
   sel.addEventListener('change', () => {
-    const nInfo = UC_NIVELLS.find(n => n.val === sel.value) || UC_NIVELLS[4];
+    const nInfo = UC_NIVELLS.find(n => n.val === sel.value) || UC_NIVELLS[0];
     sel.style.borderColor = nInfo.color + '33';
     sel.style.background = nInfo.bg;
     sel.style.color = nInfo.color;
@@ -745,14 +755,78 @@ function openCarregarPlantillaModal() {
 async function carregarIUsarPlantilla(codi, plantillaData = null) {
   if (!plantillaData) {
     try {
-      const db = window._tutoriaDB || (window.firebase && window.firebase.firestore && window.firebase.firestore());
+      const db = window._tutoriaDB;
       const doc = await db.collection('ultracomentator_plantilles').doc(codi).get();
       if (doc.exists) plantillaData = doc.data();
     } catch (e) { console.error(e); }
   }
-  if (!plantillaData) { alert('No s\'ha pogut carregar la plantilla.'); return; }
+  if (!plantillaData) { alert("No s'ha pogut carregar la plantilla."); return; }
 
   window._ucPlantillaActiva = plantillaData;
+
+  // HTML per cada ítem: desplegable assoliment + selecció comentaris independent
+  const itemsHTML = plantillaData.items.map((item, idx) => {
+    const assolimentOpts = UC_ASSOLIMENTS.map(a =>
+      `<option value="${a.val}">${a.label}</option>`
+    ).join('');
+
+    const comsHTML = item.comentaris.map(com => {
+      const nInfo = UC_NIVELLS.find(n => n.val === com.nivell) || UC_NIVELLS[0];
+      return `
+        <label class="ucComLabel" style="
+          display:flex;align-items:flex-start;gap:10px;padding:10px 12px;
+          border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;
+          background:#fff;transition:all .15s;
+        ">
+          <input type="checkbox" class="ucComCheck"
+            data-item-id="${item.id}"
+            data-item-titol="${item.titol.replace(/"/g,'&quot;')}"
+            data-com-text="${com.text.replace(/"/g,'&quot;')}"
+            style="margin-top:3px;accent-color:#7c3aed;width:16px;height:16px;flex-shrink:0;">
+          <div style="flex:1;">
+            <span style="
+              display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:10px;
+              background:${nInfo.bg};color:${nInfo.color};margin-bottom:4px;
+            ">${nInfo.label}</span>
+            <div style="font-size:13px;line-height:1.5;color:#374151;">${com.text}</div>
+          </div>
+        </label>
+      `;
+    }).join('');
+
+    return `
+      <div style="background:#fff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;margin-bottom:10px;">
+        <!-- Capçalera ítem -->
+        <div style="
+          padding:12px 16px;background:linear-gradient(135deg,#f5f3ff,#ede9fe);
+          border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+        ">
+          <div style="font-weight:700;font-size:14px;color:#374151;">🧩 ${item.titol}</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <label style="font-size:11px;font-weight:700;color:#7c3aed;white-space:nowrap;">Assoliment:</label>
+            <select class="ucAssolimentSel" data-item-id="${item.id}" style="
+              border:1.5px solid #a78bfa;border-radius:8px;padding:5px 10px;
+              font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;
+              background:#faf5ff;color:#5b21b6;outline:none;
+            ">
+              <option value="">— Selecciona —</option>
+              ${assolimentOpts}
+            </select>
+          </div>
+        </div>
+
+        <!-- Comentaris seleccionables -->
+        <div style="padding:12px;">
+          <div style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">
+            Selecciona els comentaris a incloure:
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            ${comsHTML}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
 
   const modal = document.createElement('div');
   modal.id = 'ucUsarModal';
@@ -760,68 +834,6 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
     position:fixed;inset:0;z-index:10001;display:flex;align-items:flex-start;justify-content:center;
     background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);overflow-y:auto;padding:20px 0;
   `;
-
-  // Construir HTML dels ítems
-  const itemsHTML = plantillaData.items.map(item => {
-    const comsPerNivell = {};
-    item.comentaris.forEach(com => {
-      if (!comsPerNivell[com.nivell]) comsPerNivell[com.nivell] = [];
-      comsPerNivell[com.nivell].push(com);
-    });
-
-    const nivellsUsats = UC_NIVELLS.filter(n => comsPerNivell[n.val] && comsPerNivell[n.val].length > 0);
-
-    const pestanyesHTML = nivellsUsats.map((n, idx) =>
-      `<button class="ucPestanya" data-item="${item.id}" data-nivell="${n.val}"
-        style="
-          padding:5px 12px;border:1.5px solid ${n.color}44;border-radius:20px;
-          background:${idx === 0 ? n.bg : '#fff'};color:${idx === 0 ? n.color : '#6b7280'};
-          font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;
-          transition:all .15s;white-space:nowrap;
-        "
-      >${n.label}</button>`
-    ).join('');
-
-    const checkboxesPerNivell = nivellsUsats.map((n, idx) => {
-      const coms = comsPerNivell[n.val];
-      return `
-        <div class="ucNivellGroup" data-item="${item.id}" data-nivell="${n.val}"
-          style="display:${idx === 0 ? 'flex' : 'none'};flex-direction:column;gap:6px;">
-          ${coms.map(com => `
-            <label style="
-              display:flex;align-items:flex-start;gap:10px;padding:10px 12px;
-              border:1.5px solid #e5e7eb;border-radius:8px;cursor:pointer;
-              background:#fff;transition:all .15s;
-            " class="ucComLabel">
-              <input type="checkbox" class="ucComCheck" 
-                data-item-id="${item.id}" data-item-titol="${item.titol.replace(/"/g,'&quot;')}"
-                data-com-text="${com.text.replace(/"/g,'&quot;')}" data-nivell="${n.val}"
-                style="margin-top:2px;accent-color:#7c3aed;width:16px;height:16px;flex-shrink:0;">
-              <span style="font-size:13px;line-height:1.5;color:#374151;">${com.text}</span>
-            </label>
-          `).join('')}
-        </div>
-      `;
-    }).join('');
-
-    return `
-      <div style="background:#fff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;margin-bottom:12px;">
-        <div style="
-          padding:14px 16px;background:linear-gradient(135deg,#f5f3ff,#ede9fe);
-          border-bottom:1px solid #e5e7eb;
-        ">
-          <div style="font-weight:700;font-size:15px;color:#374151;margin-bottom:10px;">🧩 ${item.titol}</div>
-          <div style="display:flex;flex-wrap:wrap;gap:6px;">
-            ${pestanyesHTML}
-          </div>
-        </div>
-        <div style="padding:12px;">
-          ${checkboxesPerNivell}
-        </div>
-      </div>
-    `;
-  }).join('');
-
   modal.innerHTML = `
     <div style="
       background:#fafafa;border-radius:20px;width:min(780px,95vw);
@@ -841,7 +853,7 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
       </div>
 
       <div style="padding:20px 24px;">
-        <!-- INFO ALUMNE -->
+        <!-- INFO ALUMNE + IDIOMA -->
         <div style="background:#fff;border-radius:12px;padding:16px;margin-bottom:16px;border:1px solid #e5e7eb;">
           <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
             <div style="flex:1;min-width:150px;">
@@ -859,10 +871,16 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
           </div>
         </div>
 
-        <!-- ÍTEMS I COMENTARIS -->
+        <!-- ÍTEMS: ASSOLIMENT + COMENTARIS -->
         <div style="margin-bottom:16px;">
-          <div style="font-size:13px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;">
-            Selecciona els comentaris que vols incloure:
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">
+              Ítems d'avaluació
+            </div>
+            <div style="display:flex;gap:6px;">
+              <button id="ucSelTots" style="background:#f3f4f6;color:#374151;border:none;border-radius:6px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">☑ Tot</button>
+              <button id="ucDeselTots" style="background:#f3f4f6;color:#374151;border:none;border-radius:6px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">☐ Cap</button>
+            </div>
           </div>
           ${itemsHTML}
         </div>
@@ -872,27 +890,18 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
           <div style="font-size:12px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">✨ Comentari generat per IA</div>
           <div id="ucResultatText" style="font-size:14px;line-height:1.7;color:#374151;white-space:pre-wrap;"></div>
           <div style="display:flex;gap:8px;margin-top:12px;">
-            <button id="ucCopiarResultat" style="
-              background:#f3f4f6;color:#374151;border:none;border-radius:8px;
-              padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;
-            ">📋 Copiar</button>
-            <button id="ucGuardarAlumne" style="
-              background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:8px;
-              padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;
-              display:none;
-            ">💾 Guardar a l'alumne</button>
+            <button id="ucCopiarResultat" style="background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">📋 Copiar</button>
+            <button id="ucGuardarAlumne" style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:none;">💾 Guardar a l'alumne</button>
           </div>
         </div>
 
-        <!-- BOTONS ACCIONS -->
-        <div style="display:flex;justify-content:flex-end;gap:10px;">
-          <button id="ucSelTots" style="background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Seleccionar tot</button>
-          <button id="ucDeselTots" style="background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Desseleccionar</button>
+        <!-- BOTÓ GENERAR -->
+        <div style="display:flex;justify-content:flex-end;">
           <button id="ucGenerar" style="
             background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:8px;
-            padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;
+            padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;
             display:flex;align-items:center;gap:8px;
-          ">✨ Generar amb IA</button>
+          ">✨ Generar comentari amb IA</button>
         </div>
       </div>
     </div>
@@ -900,33 +909,10 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
 
   document.body.appendChild(modal);
 
-  // ---- EVENTS ----
-
   // Tancar
   document.getElementById('ucUsarClose').addEventListener('click', () => { modal.remove(); });
 
-  // Pestanyes per ítem
-  modal.querySelectorAll('.ucPestanya').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const itemId = btn.dataset.item;
-      const nivell = btn.dataset.nivell;
-      const nInfo = UC_NIVELLS.find(n => n.val === nivell);
-
-      // Reset pestanyes d'aquest ítem
-      modal.querySelectorAll(`.ucPestanya[data-item="${itemId}"]`).forEach(p => {
-        const pNivell = p.dataset.nivell;
-        const pInfo = UC_NIVELLS.find(n => n.val === pNivell);
-        p.style.background = '#fff'; p.style.color = '#6b7280';
-      });
-      btn.style.background = nInfo.bg; btn.style.color = nInfo.color;
-
-      // Mostrar grup correcte
-      modal.querySelectorAll(`.ucNivellGroup[data-item="${itemId}"]`).forEach(g => { g.style.display = 'none'; });
-      modal.querySelector(`.ucNivellGroup[data-item="${itemId}"][data-nivell="${nivell}"]`).style.display = 'flex';
-    });
-  });
-
-  // Hover labels
+  // Hover + check estil labels
   modal.querySelectorAll('.ucComLabel').forEach(lbl => {
     lbl.addEventListener('mouseenter', () => { lbl.style.borderColor = '#a78bfa'; lbl.style.background = '#faf5ff'; });
     lbl.addEventListener('mouseleave', () => {
@@ -934,11 +920,27 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
       lbl.style.borderColor = chk.checked ? '#7c3aed' : '#e5e7eb';
       lbl.style.background = chk.checked ? '#faf5ff' : '#fff';
     });
-    const chk = lbl.querySelector('input');
-    chk.addEventListener('change', () => {
-      lbl.style.borderColor = chk.checked ? '#7c3aed' : '#e5e7eb';
-      lbl.style.background = chk.checked ? '#faf5ff' : '#fff';
+    lbl.querySelector('input').addEventListener('change', (e) => {
+      lbl.style.borderColor = e.target.checked ? '#7c3aed' : '#e5e7eb';
+      lbl.style.background = e.target.checked ? '#faf5ff' : '#fff';
     });
+  });
+
+  // Color dinàmic del select d'assoliment
+  modal.querySelectorAll('.ucAssolimentSel').forEach(sel => {
+    const updateColor = () => {
+      const a = UC_ASSOLIMENTS.find(x => x.val === sel.value);
+      if (a) {
+        sel.style.background = a.bg;
+        sel.style.color = a.color;
+        sel.style.borderColor = a.color + '88';
+      } else {
+        sel.style.background = '#faf5ff';
+        sel.style.color = '#5b21b6';
+        sel.style.borderColor = '#a78bfa';
+      }
+    };
+    sel.addEventListener('change', updateColor);
   });
 
   // Seleccionar / Desseleccionar tots
@@ -957,11 +959,11 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
     });
   });
 
-  // Inputs focus
-  document.getElementById('ucAlumneNom').addEventListener('focus', (e) => { e.target.style.borderColor = '#7c3aed'; });
-  document.getElementById('ucAlumneNom').addEventListener('blur', (e) => { e.target.style.borderColor = '#e5e7eb'; });
+  // Focus alumne
+  document.getElementById('ucAlumneNom').addEventListener('focus', e => { e.target.style.borderColor = '#7c3aed'; });
+  document.getElementById('ucAlumneNom').addEventListener('blur', e => { e.target.style.borderColor = '#e5e7eb'; });
 
-  // Copiar
+  // Copiar resultat
   document.getElementById('ucCopiarResultat').addEventListener('click', () => {
     navigator.clipboard.writeText(document.getElementById('ucResultatText').textContent);
     document.getElementById('ucCopiarResultat').innerHTML = '✅ Copiat!';
@@ -972,12 +974,22 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
   document.getElementById('ucGenerar').addEventListener('click', () => generarAmbIA(modal));
 }
 
+
 // ============================================================
 // GENERAR COMENTARI AMB IA (Groq via /api/tutoria)
 // ============================================================
 async function generarAmbIA(modal) {
   const alumne = document.getElementById('ucAlumneNom').value.trim() || "l'alumne/a";
   const idioma = document.getElementById('ucIdioma').value;
+
+  // Recollir assoliments per ítem (desplegable independent)
+  const assoliments = {};
+  modal.querySelectorAll('.ucAssolimentSel').forEach(sel => {
+    if (sel.value) {
+      const a = UC_ASSOLIMENTS.find(x => x.val === sel.value);
+      assoliments[sel.dataset.itemId] = a ? a.label : sel.value;
+    }
+  });
 
   // Recollir comentaris seleccionats agrupats per ítem
   const seleccionats = {};
@@ -988,8 +1000,9 @@ async function generarAmbIA(modal) {
     seleccionats[itemId].comentaris.push(chk.dataset.comText);
   });
 
-  if (Object.keys(seleccionats).length === 0) {
-    alert('Cal seleccionar almenys un comentari!');
+  // Cal almenys un assoliment O un comentari
+  if (Object.keys(assoliments).length === 0 && Object.keys(seleccionats).length === 0) {
+    alert('Cal seleccionar almenys un assoliment o un comentari!');
     return;
   }
 
@@ -1002,12 +1015,27 @@ async function generarAmbIA(modal) {
   resultWrap.style.display = 'block';
   resultText.textContent = 'Generant comentari...';
 
-  // Construir el prompt
+  // Construir el prompt combinant assoliments + comentaris
   const idiomaStr = idioma === 'catala' ? 'català' : 'castellà';
+
+  // Unió de tots els ítems (amb assoliment i/o comentaris)
+  const totsItems = {};
+  const plantilla = window._ucPlantillaActiva;
+  if (plantilla && plantilla.items) {
+    plantilla.items.forEach(item => {
+      totsItems[item.id] = { titol: item.titol, assoliment: assoliments[item.id] || null, comentaris: (seleccionats[item.id] || {}).comentaris || [] };
+    });
+  }
+
   let promptItems = '';
-  Object.values(seleccionats).forEach(item => {
-    promptItems += `\n- ÍTEM "${item.titol}":\n`;
-    item.comentaris.forEach(c => { promptItems += `  · ${c}\n`; });
+  Object.values(totsItems).forEach(item => {
+    if (!item.assoliment && item.comentaris.length === 0) return;
+    promptItems += `\n📌 ÍTEM: "${item.titol}"`;
+    if (item.assoliment) promptItems += `\n   Nivell d'assoliment: ${item.assoliment}`;
+    if (item.comentaris.length > 0) {
+      promptItems += `\n   Comentaris a integrar:`;
+      item.comentaris.forEach(c => { promptItems += `\n   · ${c}`; });
+    }
   });
 
   const prompt = `Ets un professor expert en redacció de comentaris per a butlletins de notes.
@@ -1015,14 +1043,14 @@ async function generarAmbIA(modal) {
 Alumne/a: ${alumne}
 Idioma de sortida: ${idiomaStr}
 
-Tens els següents comentaris predefinits per a cada ítem d'avaluació:
+Informació d'avaluació per ítem:
 ${promptItems}
 
 La teva tasca: Crea UN ÚNIC comentari de butlletí fluid i natural que:
-1. Integri l'essència de TOTS els comentaris seleccionats
-2. Suoni com un text continuat escrit per un professor, no com una llista
-3. Mantingui el nivell d'avaluació de cada ítem (no inflis ni baixes les valoracions)
-4. Tingui entre 80 i 180 paraules
+1. Reflecteixi el nivell d'assoliment indicat per a cada ítem
+2. Integri l'essència dels comentaris seleccionats (si n'hi ha)
+3. Soni com un text continuat escrit per un professor, no com una llista
+4. Tingui entre 80 i 200 paraules
 5. Estigui en ${idiomaStr}
 6. Comenci amb el nom "${alumne}"
 7. No faci servir punt i a part entre ítems — ha de fluir naturalment
@@ -1542,7 +1570,7 @@ function _mostrarModalImport() {
         <div style="font-size:13px;color:#166534;font-weight:600;margin-bottom:6px;">📋 Format esperat:</div>
         <div style="font-size:12px;color:#15803d;line-height:1.7;">
           • <strong>Fila 2:</strong> Títols dels ítems (ex: "Mètode científic", "Velocitat"...)<br>
-          • <strong>Fila 4:</strong> Introducció de l'ítem + comentaris per nivell en columnes seguides<br>
+          • <strong>Fila 4:</strong> Comentaris de l'ítem en columnes seguides (s'importen tots com a seleccionables)<br>
           • Compatible amb el format EXPERIMENTA/Ultracomentator
         </div>
       </div>
@@ -1722,8 +1750,6 @@ function parsejarFullExcel(ws, nomFitxer) {
   if (columnesItem.length === 0) return null;
 
   const items = [];
-  const nivellsDefaults = ['excel·lent', 'assolit', 'assolit_parcial', 'no_assolit', 'general'];
-
   columnesItem.forEach((colInici, idx) => {
     const titol = fila2[colInici];
     const colFi = columnesItem[idx + 1] ? columnesItem[idx + 1] : colInici + 10;
@@ -1740,21 +1766,11 @@ function parsejarFullExcel(ws, nomFitxer) {
       // Si és el text introductori (acaba en ":"), saltar-lo
       if (text.endsWith(':') && c === colInici) continue;
 
-      // Assignar nivell basat en la posició relativa
-      const posRel = c - colInici;
-      let nivell = 'general';
-      if (posRel === 1 || posRel === 0) nivell = 'excel·lent';
-      else if (posRel === 2) nivell = 'assolit';
-      else if (posRel === 3) nivell = 'assolit_parcial';
-      else if (posRel >= 4) nivell = 'no_assolit';
-
-      // Si hi ha 6+ comentaris, els últims son "no_assolit"
-      if (posRel >= 5) nivell = 'no_assolit';
-
+      // Tots els comentaris importats son 'general' — l'assoliment es tria independent
       comentaris.push({
         id: 'com_' + Date.now() + '_' + c,
         text: text.replace(/\\n/g, ' ').trim(),
-        nivell
+        nivell: 'general'
       });
     }
 
