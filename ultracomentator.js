@@ -1213,9 +1213,8 @@ async function guardarComentariAlumne(comentari, modal) {
     const db = window._tutoriaDB;
     if (!db) throw new Error('Firebase no disponible');
 
-    await db.collection('classes').doc(window._tcClassId)
-      .collection('students').doc(window._tcStudentId)
-      .update({ comment: comentari });
+    await db.collection('alumnes').doc(window._tcStudentId)
+      .update({ [`comentarios.${window._tcClassId}`]: comentari });
 
     // Omplir textarea del modal si està obert
     const taComment = document.getElementById('commentTextarea');
