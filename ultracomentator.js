@@ -210,7 +210,7 @@ function openCrearPlantillaModal(plantillaExistent = null, codiEdicio = null) {
           </div>
           <div style="display:flex;gap:8px;align-items:center;">
             <button id="ucDescarregarPlantillaExcel" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.25);color:#fff;border-radius:8px;padding:7px 14px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;display:flex;align-items:center;gap:6px;" title="Descarregar plantilla Excel buida">
-              ⬇ Plantilla Excel
+              📄 Descarregar plantilla .xlsx
             </button>
             <button id="ucImportarExcel" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:8px;padding:7px 14px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;display:flex;align-items:center;gap:6px;">
               📊 Importar Excel
@@ -1546,6 +1546,12 @@ setTimeout(() => { comprovarInvitacionsPendents(); }, 2000);
 // ============================================================
 // INICIALITZAR
 // ============================================================
+// Exposar funcions a window per poder usar-les en onclick inline
+window.openCrearPlantillaModal = openCrearPlantillaModal;
+window.openMevesPlantillesModal = openMevesPlantillesModal;
+window.openUltracomentatorModal = openUltracomentatorModal;
+window.carregarIUsarPlantilla = carregarIUsarPlantilla;
+
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initUltracomentator);
 } else {
@@ -1737,41 +1743,25 @@ function _mostrarModalImport() {
   });
 }
 
+
 // ============================================================
-// DESCARREGAR PLANTILLA EXCEL (replica estructura original)
+// DESCARREGAR PLANTILLA EXCEL (replica l'Excel original)
 // ============================================================
 function descarregarPlantillaExcel() {
   if (typeof XLSX === 'undefined') {
-    alert('La llibreria Excel no està disponible. Recarrega la pàgina.');
-    return;
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    script.onload = () => _generarExcelPlantilla();
+    script.onerror = () => alert('Error carregant la llibreria Excel.');
+    document.head.appendChild(script);
+  } else {
+    _generarExcelPlantilla();
   }
+}
 
-  // Recollir ítems actuals del formulari
-  const items = [];
-  document.querySelectorAll('#ucItemsContainer > [data-item-id]').forEach(itemDiv => {
-    const titolEl = itemDiv.querySelector('.ucItemTitol');
-    const capceleraEl = itemDiv.querySelector('.ucItemCapcelera');
-    if (!titolEl) return;
-    const titol = titolEl.value.trim();
-    if (!titol) return;
-    const capcelera = capceleraEl ? capceleraEl.value.trim() : '';
-    const comentaris = [];
-    itemDiv.querySelectorAll('[data-com-id]').forEach(comDiv => {
-      const taEl = comDiv.querySelector('.ucComText');
-      if (!taEl) return;
-      const text = taEl.value.trim();
-      if (text) comentaris.push(text);
-    });
-    items.push({ titol, capcelera, comentaris });
-  });
-
-  if (items.length === 0) {
-    alert('Afegeix almenys un ítem amb comentaris abans de descarregar la plantilla.');
-    return;
-  }
-
-  const nomPlantilla = document.getElementById('ucPlantillaNom')?.value.trim() || 'Plantilla';
-  const MAX_FILES = 35;
+function _generarExcelPlantilla() {
+  // Dades extretes de la plantilla original
+  const PLANTILLA = {"f1c3": "EXPERIMENTA", "f2c3": "COM ES MOUEN LES COSES?", "f4b": "EXPERIMENTA (alumnes)", "f4c": "Aquest trimestre a EXPERIMENTA, amb el projecte \"Com es mouen les coses?\", hem treballat el mètode científic i la física del moviment (cinemàtica i dinàmica) amb un producte final relacionat amb la seguretat viària.", "items": [{"titol": "Mètode científic", "capcelera": "Pel que fa al mètode científic:", "comentaris": ["Identifica les parts del mètode científic i es capç d'utilitzar-les en el disseny d'experimentació fent una pregunta investigable i identificant clarament les variables independents, dependents i a controlar.", "Identifica les parts del mètode científic però té algunes dificultats per utilitzar-les en el disseny d'experimentació i/o per fer una pregunta investigable i identificant clarament les variables independents, dependents i a controlar.", "Té dificultats per identificar les parts del mètode científic i per utilitzar-les en el disseny d'experimentació i/o per fer una pregunta investigable i identificant clarament les variables independents, dependents i a controlar.", "No és capaç d'identificar les parts del mètode científic i per tant d'utilitzar-les en el disseny d'experimentació ni de formular una pregunta investigable. No identifica les variables independents, dependents i a controlar."], "colTitol": 3, "colItem": 6}, {"titol": "Cinemàtica - Velocitat", "capcelera": "Pel que fa al concepte de velocitat:", "comentaris": ["Interpreta correctament el concepte de velocitat, realitza correctament els càlculs adients per interpretar el moviment uniforme i no uniforme , interpreta i genera correctament la irepresentació gràfica de la velocitat. Fa servir tots aquests conceptes per relacionar-los amb la seguretat viària en el seu producte final.", "Interpreta correctament el concepte de velocitat, però presenta algunes dificultats en els càlculs adients per interpretar el moviment uniforme i no uniforme , interpreta i genera correctament la irepresentació gràfica de la velocitat. Fa servir tots aquests conceptes per relacionar-los amb la seguretat viària en el seu producte final.", "Interpreta correctament el concepte de velocitat, realitza correctament els càlculs adients per interpretar el moviment uniforme i no uniforme , però presenta dificultats per interpretar i generar correctament la irepresentació gràfica de la velocitat. Fa servir tots aquests conceptes per relacionar-los amb la seguretat viària en el seu producte final.", "Interpreta correctament el concepte de velocitat, realitza correctament els càlculs adients per interpretar el moviment uniforme i no uniforme ,  interpreta i genera correctament la irepresentació gràfica de la velocitat. Presenta algunes dificultats en fer servir tots aquests conceptes per relacionar-los amb la seguretat viària en el seu producte final.", "Té algunes dificultats per interpretar correctament el concepte de velocitat, en els càlculs adients per interpretar el moviment uniforme i no uniforme , i per interpretar i generar correctament la representació gràfica de la velocitat. Té algunes dificultats per fer servir tots aquests conceptes per relacionar-los amb la seguretat viària en el seu producte final.", "No interpreta correctament el concepte de velocitat, comet errors greus en els càlculs per interpretar el moviment uniforme i no uniforme  i per interpretar i generar correctament la representació gràfica de la velocitat. No fa servir, o ho fa de forma incorrecta, tots aquests conceptes per relacionar-los amb la seguretat viària en el seu producte final."], "colTitol": 11, "colItem": 14}, {"titol": "Cinemàtica - Acceleració", "capcelera": "Pel que fa al concepte d'acceleració:", "comentaris": ["Interpreta correctament el concepte d'acceleració, realitza correctament els càlculs adients per interpretar el moviment no uniforme , interpreta correctament la representació vectorial de l'acceleració i velocitat. Fa servir tots aquests conceptes per relacionar-los amb la seguretat viària en el seu producte final.", "Interpreta correctament el concepte d'acceleració, però presenta algunes dificultats en els càlculs adients per interpretar el moviment no uniforme , interpreta correctament la representació vectorial de l'acceleració i velocitat. Fa servir tots aquests conceptes per relacionar-los amb la seguretat viària en el seu producte final.", "Interpreta correctament el concepte d'acceleració, realitza correctament els càlculs adients per interpretar el moviment no uniforme , però presenta dificultats en lairepresentació vectorial de l'acceleració i velocitat. Fa servir tots aquests conceptes per relacionar-los amb la seguretat viària en el seu producte final.", "Interpreta correctament el concepte de velocitat, realitza correctament els càlculs adients per interpretar el moviment uniforme i no uniforme ,  interpreta  correctament la representació vectorial de l'acceleració ivelocitat. Presenta algunes dificultats en fer servir tots aquests conceptes per relacionar-los amb la seguretat viària en el seu producte final.", "Té algunes dificultats per interpretar correctament el concepte d'acceleració, en els càlculs adients per interpretar el moviment no uniforme , i per interpretar i generar correctament la representació gràfica de l'acceleració. Té algunes dificultats per fer servir tots aquests conceptes per relacionar-los amb la seguretat viària en el seu producte final.", "No interpreta correctament el concepte d'acceleració, comet errors greus en els càlculs per interpretar el moviment no uniforme  i per interpretar la representació vectorial de l'acceleració i la velocitat. No fa servir, o ho fa de forma incorrecta, tots aquests conceptes per relacionar-los amb la seguretat viària en el seu producte final."], "colTitol": 21, "colItem": 24}, {"titol": "", "capcelera": "Pel que fa al concepte de força:", "comentaris": ["Interpreta correctament el concepte de força i realitza correctament els càlculs. Coneix, interpreta i aplica correctament les lleis de Newton. Fa servir tots aquests conceptes per relacionar-los amb la seguretat viària en el seu producte final.", "Interpreta correctament el concepte de foça però comet algun error en els càlculs. Coneix, interpreta i aplica correctament les lleis de Newton. Fa servir tots aquests conceptes per relacionar-los amb la seguretat viària en el seu producte final.", "Interpreta correctament el concepte de força i realitza correctament els càlculs. Presenta alguna dificultat en interpretar i aplicar correctament les lleis de Newton. Fa servir tots aquests conceptes per relacionar-los amb la seguretat viària en el seu producte final.", "Interpreta correctament el concepte de força i realitza correctament els càlculs.  Coneix, interpreta i aplica correctament les lleis de Newton. Presenta alguna dificultat per fer servir tots aquests conceptes per relacionar-los amb la seguretat viària en el seu producte final.", "Té algunes dificultats per Interpretar correctament el concepte de força i realitzar els càlculs.  Coneix, interpreta i aplica de forma parcial les lleis de Newton. Presenta alguna dificultat per fer servir tots aquests conceptes per relacionar-los amb la seguretat viària en el seu producte final.", "No Interpreta correctament el concepte de força i comet errors greus en els càlculs.  No coneix o té dificultats importants per  interpretar i aplicar les lleis de Newton. No relaciona tots aquests conceptes amb la seguretat viària en el seu producte final."], "colTitol": 31, "colItem": 34}]};
 
   const wb = XLSX.utils.book_new();
   const ws = {};
@@ -1780,114 +1770,79 @@ function descarregarPlantillaExcel() {
   const setV = (r, c, v) => { ws[enc(r,c)] = { v, t: 's' }; };
   const setF = (r, c, f) => { ws[enc(r,c)] = { f, t: 's' }; };
 
-  // ── ESTRUCTURA PER CADA ÍTEM ──────────────────────────────────────────────
-  // Igual que l'original:
-  //   Fila 2 (r=1):  [colItem] = titol ítem
-  //   Fila 4 (r=3):  [colItem] = capçalera, [colItem+1..N] = comentaris
-  //   Fila 4 (r=3):  [colItem-3] = "TÍTOL ÍTEM X"
-  //                  [colItem-2] = "COMENTARI ÍTEM X"
-  //                  [colItem-1] = "ASSOLIMENT ÍTEM X"
-  //   Files 5+ (r=4+): [colItem-3] = =$[colItem]$2
-  //                    [colItem-2] = CONCATENATE(capçalera + comentaris marcats)
-  //
-  // Primer ítem: colItem = 6 (col G, índex 0-based)
-  // Separació entre ítems: 3 cols (TÍTOL/COMENTARI/ASSOLIMENT) + cols comentaris + 1 espai
+  const MAX_FILES = 35;
 
-  // Fila 1 (r=0): capçalera general
-  setV(0, 2, 'ULTRACOMENTATOR');  // C1
-  setV(0, 6, nomPlantilla);        // G1 (o dinàmic)
+  // Fila 1 (r=0)
+  setV(0, 2, PLANTILLA.f1c3);
 
-  // Fila 2 (r=1): nom plantilla
-  setV(1, 2, nomPlantilla);        // C2
+  // Fila 2 (r=1): nom projecte
+  setV(1, 2, PLANTILLA.f2c3);
 
-  // Fila 4 (r=3): col B = etiqueta alumnes
-  setV(3, 1, 'ALUMNES');
+  // Fila 4 (r=3): etiqueta alumnes + descripció general
+  setV(3, 1, PLANTILLA.f4b);
+  setV(3, 2, PLANTILLA.f4c);
 
-  // Assignar columnes als ítems
-  // colItem per ítem 0 = índex 6 (col G), igual que l'original
-  // Cada ítem ocupa: 3 (TÍTOL/COM/ASS) + 1 (capçalera) + numComs cols, + 1 espai
-  // Però l'estructura original posa TÍTOL/COM/ASS ABANS de les cols de comentaris:
-  // D=TÍTOL, E=COMENTARI, F=ASSOLIMENT, G=capçalera, H..K=comentaris
-  // Per tant colItem = colTitol + 3
-
-  let colTitol = 3; // índex 3 = col D (igual que l'original)
-
-  items.forEach((item, idx) => {
-    const numComs = item.comentaris.length;
-    const colItem = colTitol + 3;                          // col capçalera
-    const colComLast = colItem + numComs;                  // última col comentari
-    const colTL = XLSX.utils.encode_col(colItem);          // lletra col capçalera
-    const colTitolL = XLSX.utils.encode_col(colTitol);
+  // Processar cada ítem
+  PLANTILLA.items.forEach((item, idx) => {
+    const colTitol = item.colTitol;  // 0-based
+    const colItem  = item.colItem;   // 0-based (capçalera)
+    const CL = XLSX.utils.encode_col;
 
     // Fila 2: títol ítem
-    setV(1, colItem, item.titol);
+    if (item.titol) setV(1, colItem, item.titol);
 
-    // Fila 3: marca x (actiu)
+    // Fila 3: marca x
     setV(2, colItem, 'x');
 
     // Fila 4: capçalera
-    if (item.capcelera) {
-      setV(3, colItem, item.capcelera + (item.capcelera.endsWith(':') ? '' : ':') + '\\n');
-    }
+    if (item.capcelera) setV(3, colItem, item.capcelera + '\n');
+
     // Fila 4: comentaris
     item.comentaris.forEach((com, ci) => {
       setV(3, colItem + 1 + ci, com);
     });
 
-    // Fila 4: etiquetes TÍTOL/COMENTARI/ASSOLIMENT
+    // Fila 4: etiquetes columnes resultat
     setV(3, colTitol,     `TÍTOL ÍTEM ${idx + 1}`);
     setV(3, colTitol + 1, `COMENTARI ÍTEM ${idx + 1}`);
     setV(3, colTitol + 2, `ASSOLIMENT ÍTEM ${idx + 1}`);
 
-    // Construir fórmula CONCATENATE per columna COMENTARI
-    // =IF(ISBLANK([colItem][row]),,CONCATENATE($[colItem]$4, IF(ISBLANK([com1][row]),"",$[com1]$4),...))
-    const comCols = [];
-    for (let ci = 0; ci < numComs; ci++) {
-      comCols.push(XLSX.utils.encode_col(colItem + 1 + ci));
-    }
-    const firstComCol = comCols.length > 0 ? comCols[0] : colTL;
+    // Fórmula CONCATENATE: capçalera + cada comentari si no buit
+    const capCol = CL(colItem);
+    const comCols = item.comentaris.map((_, ci) => CL(colItem + 1 + ci));
+    const firstCom = comCols.length > 0 ? comCols[0] : capCol;
 
-    // Files alumnes (fila 5 a 5+MAX_FILES)
+    // Files alumnes (r=4 a r=4+MAX_FILES-1)
     for (let row = 4; row < 4 + MAX_FILES; row++) {
-      const r1 = row + 1; // número de fila per a la fórmula
+      const r1 = row + 1;
 
-      // TÍTOL: =$[colItem]$2
-      setF(row, colTitol, `$${colTL}$2`);
+      // TÍTOL: =$[capCol]$2
+      setF(row, colTitol, `$${capCol}$$2`);
 
-      // COMENTARI: IF(ISBLANK(firstCom),,CONCATENATE(capçalera, com1, com2...))
+      // COMENTARI: IF(ISBLANK(firstCom_row),,CONCATENATE(cap, com1, com2...))
       if (comCols.length > 0) {
-        const parts = comCols.map(cl => `IF(ISBLANK(${cl}${r1}),"",\$${cl}\$4)`).join(',');
+        const parts = comCols.map(cl => `IF(ISBLANK(${cl}${r1}),"",$${cl}$$4)`).join(',');
         setF(row, colTitol + 1,
-          `IF(ISBLANK(${firstComCol}${r1}),,CONCATENATE(\$${colTL}\$4,${parts}))`
-        );
-      } else if (item.capcelera) {
-        // Sense comentaris, només capçalera
-        setF(row, colTitol + 1,
-          `IF(ISBLANK(${colTL}${r1}),,\$${colTL}\$4)`
+          `IF(ISBLANK(${firstCom}${r1}),,CONCATENATE($${capCol}$$4,${parts}))`
         );
       }
 
-      // ASSOLIMENT: deixar buit (el professor l'omple)
+      // ASSOLIMENT: buit
     }
-
-    // Avançar cursor: +3 (TÍTOL/COM/ASS) + 1 (capçalera) + numComs + 1 (espai)
-    colTitol = colItem + numComs + 2;
   });
 
   // Rang
-  const maxCol = colTitol + 2;
-  const maxRow = 4 + MAX_FILES;
-  ws['!ref'] = XLSX.utils.encode_range({ r: 0, c: 0 }, { r: maxRow, c: maxCol });
+  const lastItem = PLANTILLA.items[PLANTILLA.items.length - 1];
+  const maxCol = lastItem.colTitol + 3 + lastItem.comentaris.length + 2;
+  ws['!ref'] = XLSX.utils.encode_range({ r: 0, c: 0 }, { r: 4 + MAX_FILES, c: maxCol });
 
-  // Amplades
-  const cols = [];
-  for (let i = 0; i < maxCol; i++) cols[i] = { wch: i < 3 ? 8 : 22 };
-  ws['!cols'] = cols;
+  // Amplades columnes
+  const colWidths = [];
+  for (let i = 0; i < maxCol; i++) colWidths.push({ wch: i < 2 ? 8 : 24 });
+  ws['!cols'] = colWidths;
 
   XLSX.utils.book_append_sheet(wb, ws, 'RECULL');
-
-  const safeName = nomPlantilla.replace(/[^\w\s\-]/g, '').trim() || 'plantilla';
-  XLSX.writeFile(wb, `${safeName}_ULTRACOMENTATOR.xlsx`);
+  XLSX.writeFile(wb, 'Plantilla_ULTRACOMENTATOR.xlsx');
 }
 
 
