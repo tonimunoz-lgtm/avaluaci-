@@ -455,8 +455,11 @@ function recollirDadesPlantilla() {
 
     const comentaris = [];
     itemDiv.querySelectorAll('[data-com-id]').forEach(comDiv => {
-      const text = comDiv.querySelector('.ucComText').value.trim();
-      const nivell = comDiv.querySelector('.ucNivellSel').value;
+      const taEl = comDiv.querySelector('.ucComText');
+      const selEl = comDiv.querySelector('.ucNivellSel');
+      if (!taEl || !selEl) return; // saltar elements que no son divs de comentari del formulari
+      const text = taEl.value.trim();
+      const nivell = selEl.value;
       if (text) {
         comentaris.push({ id: comDiv.dataset.comId, text, nivell });
       }
