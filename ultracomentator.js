@@ -103,10 +103,8 @@ function transformarBotoTutoria(originalBtn) {
 // MODAL PRINCIPAL ULTRACOMENTATOR
 // ============================================================
 function openUltracomentatorModal() {
-  if (document.getElementById('ucMainModal')) {
-    document.getElementById('ucMainModal').style.display = 'flex';
-    return;
-  }
+  const existing = document.getElementById('ucMainModal');
+  if (existing) { existing.remove(); }
 
   const modal = document.createElement('div');
   modal.id = 'ucMainModal';
@@ -116,35 +114,43 @@ function openUltracomentatorModal() {
   `;
   modal.innerHTML = `
     <div style="
-      background:#fff;border-radius:20px;padding:40px;max-width:480px;width:90%;
+      background:#fff;border-radius:20px;padding:40px;max-width:500px;width:90%;
       box-shadow:0 24px 64px rgba(0,0,0,0.18);text-align:center;
       font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
     ">
       <div style="font-size:48px;margin-bottom:12px;">⚡</div>
       <h2 style="font-size:24px;font-weight:800;color:#1a1a2e;margin:0 0 8px;">Ultracomentator</h2>
-      <p style="color:#6b7280;font-size:14px;margin:0 0 32px;line-height:1.5;">
-        Sistema de plantilles de comentaris per ítems. Crea la teva pròpia plantilla o accedeix a una ja creada.
+      <p style="color:#6b7280;font-size:14px;margin:0 0 24px;line-height:1.5;">
+        Sistema de plantilles de comentaris per ítems.
       </p>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
         <button id="ucBtnCrear" style="
           background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:12px;
-          padding:20px 16px;cursor:pointer;font-family:inherit;transition:all .2s;
+          padding:18px 12px;cursor:pointer;font-family:inherit;transition:all .2s;
         ">
-          <div style="font-size:28px;margin-bottom:8px;">✨</div>
-          <div style="font-weight:700;font-size:15px;">Crear nova</div>
-          <div style="font-size:12px;opacity:.8;margin-top:4px;">Dissenya una plantilla</div>
+          <div style="font-size:24px;margin-bottom:6px;">✨</div>
+          <div style="font-weight:700;font-size:13px;">Crear nova</div>
+          <div style="font-size:11px;opacity:.8;margin-top:3px;">Dissenya una plantilla</div>
+        </button>
+        <button id="ucBtnMeves" style="
+          background:linear-gradient(135deg,#0369a1,#0ea5e9);color:#fff;border:none;border-radius:12px;
+          padding:18px 12px;cursor:pointer;font-family:inherit;transition:all .2s;
+        ">
+          <div style="font-size:24px;margin-bottom:6px;">📁</div>
+          <div style="font-weight:700;font-size:13px;">Les meves</div>
+          <div style="font-size:11px;opacity:.8;margin-top:3px;">Gestiona les teves</div>
         </button>
         <button id="ucBtnCarregar" style="
           background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff;border:none;border-radius:12px;
-          padding:20px 16px;cursor:pointer;font-family:inherit;transition:all .2s;
+          padding:18px 12px;cursor:pointer;font-family:inherit;transition:all .2s;
         ">
-          <div style="font-size:28px;margin-bottom:8px;">🔑</div>
-          <div style="font-weight:700;font-size:15px;">Carregar existent</div>
-          <div style="font-size:12px;opacity:.8;margin-top:4px;">Introdueix codi d'accés</div>
+          <div style="font-size:24px;margin-bottom:6px;">🔑</div>
+          <div style="font-weight:700;font-size:13px;">Codi d'accés</div>
+          <div style="font-size:11px;opacity:.8;margin-top:3px;">Accedeix per codi</div>
         </button>
       </div>
       <button id="ucBtnClose" style="
-        margin-top:20px;background:none;border:none;cursor:pointer;color:#9ca3af;font-size:13px;font-family:inherit;
+        margin-top:8px;background:none;border:none;cursor:pointer;color:#9ca3af;font-size:13px;font-family:inherit;
       ">✕ Tancar</button>
     </div>
   `;
@@ -156,13 +162,17 @@ function openUltracomentatorModal() {
     b.addEventListener('mouseleave', () => { b.style.transform = ''; b.style.boxShadow = ''; });
   });
 
-  document.getElementById('ucBtnClose').addEventListener('click', () => { modal.style.display = 'none'; });
+  document.getElementById('ucBtnClose').addEventListener('click', () => { modal.remove(); });
   document.getElementById('ucBtnCrear').addEventListener('click', () => {
-    modal.style.display = 'none';
+    modal.remove();
     openCrearPlantillaModal();
   });
+  document.getElementById('ucBtnMeves').addEventListener('click', () => {
+    modal.remove();
+    openMevesPlantillesModal();
+  });
   document.getElementById('ucBtnCarregar').addEventListener('click', () => {
-    modal.style.display = 'none';
+    modal.remove();
     openCarregarPlantillaModal();
   });
 }
@@ -170,12 +180,12 @@ function openUltracomentatorModal() {
 // ============================================================
 // MODAL CREAR PLANTILLA
 // ============================================================
-function openCrearPlantillaModal() {
-  // Estructura temporal de la plantilla en construcció
+function openCrearPlantillaModal(plantillaExistent = null, codiEdicio = null) {
+  window._ucCodiEdicio = codiEdicio; // null = nova, string = edició
   window._ucPlantilla = {
     nom: '',
     descripcio: '',
-    items: [] // [ { id, titol, comentaris: [ { id, text, nivell } ] } ]
+    items: []
   };
 
   const modal = document.createElement('div');
@@ -196,7 +206,7 @@ function openCrearPlantillaModal() {
         <div style="display:flex;align-items:center;justify-content:space-between;">
           <div>
             <div style="font-size:13px;opacity:.8;margin-bottom:4px;">⚡ ULTRACOMENTATOR</div>
-            <h2 style="margin:0;font-size:22px;font-weight:800;">Crea una nova plantilla</h2>
+            <h2 style="margin:0;font-size:22px;font-weight:800;" id="ucCrearTitol">Crea una nova plantilla</h2>
           </div>
           <div style="display:flex;gap:8px;align-items:center;">
             <button id="ucImportarExcel" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:8px;padding:7px 14px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;display:flex;align-items:center;gap:6px;">
@@ -260,6 +270,11 @@ function openCrearPlantillaModal() {
             padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;
             display:flex;align-items:center;gap:8px;
           ">💾 Guardar plantilla</button>
+          <button id="ucGuardarActualitzar" style="
+            background:linear-gradient(135deg,#059669,#34d399);color:#fff;border:none;border-radius:8px;
+            padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;
+            display:none;align-items:center;gap:8px;
+          ">✅ Actualitzar plantilla</button>
         </div>
       </div>
     </div>
@@ -272,6 +287,20 @@ function openCrearPlantillaModal() {
   document.getElementById('ucCrearCancel').addEventListener('click', () => { modal.remove(); openUltracomentatorModal(); });
   document.getElementById('ucAfegirItem').addEventListener('click', () => afegirItemUI());
   document.getElementById('ucGuardarPlantilla').addEventListener('click', guardarPlantilla);
+  document.getElementById('ucGuardarActualitzar').addEventListener('click', actualitzarPlantilla);
+
+  // Si és edició, omplir dades i canviar UI
+  if (plantillaExistent) {
+    document.getElementById('ucCrearTitol').textContent = 'Editar plantilla';
+    document.getElementById('ucPlantillaNom').value = plantillaExistent.nom || '';
+    document.getElementById('ucPlantillaDesc').value = plantillaExistent.descripcio || '';
+    document.getElementById('ucGuardarPlantilla').style.display = 'none';
+    document.getElementById('ucGuardarActualitzar').style.display = 'flex';
+    if (plantillaExistent.items && plantillaExistent.items.length > 0) {
+      document.getElementById('ucItemsEmpty').style.display = 'none';
+      plantillaExistent.items.forEach(item => afegirItemUI(item));
+    }
+  }
 
   // Focus effect inputs
   modal.querySelectorAll('input').forEach(inp => {
@@ -481,6 +510,42 @@ function recollirDadesPlantilla() {
 // ============================================================
 // GUARDAR PLANTILLA A FIREBASE
 // ============================================================
+// ============================================================
+// ACTUALITZAR PLANTILLA EXISTENT (EDICIÓ)
+// ============================================================
+async function actualitzarPlantilla() {
+  const dades = recollirDadesPlantilla();
+  if (!dades) return;
+  const codi = window._ucCodiEdicio;
+  if (!codi) { alert("Error: codi d'edició no trobat."); return; }
+
+  const btn = document.getElementById('ucGuardarActualitzar');
+  btn.innerHTML = '⏳ Actualitzant...';
+  btn.disabled = true;
+
+  try {
+    const db = window._tutoriaDB;
+    // Mantenir camps del document original (membres, codi, creatPer...)
+    await db.collection('ultracomentator_plantilles').doc(codi).update({
+      nom: dades.nom,
+      descripcio: dades.descripcio,
+      items: dades.items,
+      actualitzatEn: new Date().toISOString()
+    });
+
+    btn.innerHTML = '✅ Actualitzat!';
+    setTimeout(() => {
+      document.getElementById('ucCrearModal').remove();
+      openMevesPlantillesModal();
+    }, 700);
+  } catch (err) {
+    alert('Error actualitzant: ' + err.message);
+    btn.innerHTML = '✅ Actualitzar plantilla';
+    btn.disabled = false;
+  }
+}
+
+
 async function guardarPlantilla() {
   const dades = recollirDadesPlantilla();
   if (!dades) return;
@@ -495,9 +560,14 @@ async function guardarPlantilla() {
 
     // Generar codi d'accés de 6 caràcters
     const codi = generarCodi();
+    const uid = window._tutoriaUID || null;
+    const email = (window.firebase && window.firebase.auth && window.firebase.auth().currentUser && window.firebase.auth().currentUser.email) || null;
     dades.codi = codi;
     dades.creatEn = new Date().toISOString();
-    dades.creatPer = window._tutoriaUID || 'anon';
+    dades.creatPer = uid;
+    dades.creatPerEmail = email;
+    dades.membres = uid ? [uid] : [];   // propietari ja és membre
+    dades.membresEmail = email ? [email] : [];
 
     await db.collection('ultracomentator_plantilles').doc(codi).set(dades);
 
@@ -1027,6 +1097,385 @@ async function guardarComentariAlumne(comentari, modal) {
     btn.disabled = false;
   }
 }
+
+
+// ============================================================
+// LES MEVES PLANTILLES
+// ============================================================
+async function openMevesPlantillesModal() {
+  const uid = window._tutoriaUID;
+  if (!uid) { alert("Has d'iniciar sessió per veure les teves plantilles."); return; }
+
+  const modal = document.createElement('div');
+  modal.id = 'ucMevesModal';
+  modal.style.cssText = `
+    position:fixed;inset:0;z-index:10001;display:flex;align-items:flex-start;justify-content:center;
+    background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);overflow-y:auto;padding:20px 0;
+  `;
+  modal.innerHTML = `
+    <div style="
+      background:#fafafa;border-radius:20px;width:min(640px,95vw);
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      box-shadow:0 24px 80px rgba(0,0,0,0.2);overflow:hidden;
+    ">
+      <div style="background:linear-gradient(135deg,#0369a1,#0ea5e9);padding:22px 28px;color:#fff;display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="font-size:12px;opacity:.75;margin-bottom:3px;">⚡ ULTRACOMENTATOR</div>
+          <h2 style="margin:0;font-size:20px;font-weight:800;">Les meves plantilles</h2>
+        </div>
+        <button id="ucMevesClose" style="background:rgba(255,255,255,.2);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px;">✕</button>
+      </div>
+      <div style="padding:24px;">
+        <div id="ucMevesLlista" style="display:flex;flex-direction:column;gap:10px;">
+          <div style="text-align:center;padding:32px;color:#9ca3af;">
+            <div style="font-size:28px;margin-bottom:8px;">⏳</div>
+            Carregant plantilles...
+          </div>
+        </div>
+        <div style="margin-top:16px;text-align:center;">
+          <button id="ucMevesBack" style="background:none;border:none;color:#6b7280;font-size:13px;cursor:pointer;font-family:inherit;">← Tornar</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  document.getElementById('ucMevesClose').addEventListener('click', () => { modal.remove(); });
+  document.getElementById('ucMevesBack').addEventListener('click', () => { modal.remove(); openUltracomentatorModal(); });
+
+  // Carregar plantilles on l'usuari és propietari o membre
+  try {
+    const db = window._tutoriaDB;
+    const snap = await db.collection('ultracomentator_plantilles')
+      .where('membres', 'array-contains', uid)
+      .get();
+
+    const llista = document.getElementById('ucMevesLlista');
+    if (snap.empty) {
+      llista.innerHTML = `
+        <div style="text-align:center;padding:32px;color:#9ca3af;">
+          <div style="font-size:32px;margin-bottom:8px;">📭</div>
+          Encara no tens cap plantilla.<br>
+          <button onclick="document.getElementById('ucMevesModal').remove();openCrearPlantillaModal();" style="margin-top:12px;background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-family:inherit;font-weight:600;">✨ Crear la primera</button>
+        </div>`;
+      return;
+    }
+
+    llista.innerHTML = '';
+    snap.docs.forEach(doc => {
+      const p = doc.data();
+      const esPropi = p.creatPer === uid;
+      const card = document.createElement('div');
+      card.style.cssText = `
+        background:#fff;border:1.5px solid ${esPropi ? '#a78bfa' : '#e5e7eb'};border-radius:12px;
+        padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;
+      `;
+      card.innerHTML = `
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+            <span style="font-weight:700;font-size:15px;color:#1a1a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.nom}</span>
+            <span style="background:${esPropi ? '#ede9fe' : '#f0f9ff'};color:${esPropi ? '#7c3aed' : '#0369a1'};font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;white-space:nowrap;">
+              ${esPropi ? '👑 Propietari' : '👤 Membre'}
+            </span>
+          </div>
+          <div style="font-size:12px;color:#6b7280;">
+            ${p.descripcio ? p.descripcio + ' · ' : ''}
+            Codi: <strong style="font-family:monospace;letter-spacing:1px;">${p.codi}</strong> · 
+            ${p.items ? p.items.length : 0} ítems · 
+            ${(p.membresEmail || []).length} membre${(p.membresEmail || []).length !== 1 ? 's' : ''}
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          <button class="ucMevesUsar" data-codi="${p.codi}" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">▶ Usar</button>
+          <button class="ucMevesCodiBtn" data-codi="${p.codi}" data-nom="${p.nom.replace(/"/g,'&quot;')}" style="background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:7px 10px;font-size:12px;cursor:pointer;font-family:inherit;" title="Veure codi">🔑</button>
+          ${esPropi ? `
+            <button class="ucMevesConvidar" data-codi="${p.codi}" data-nom="${p.nom.replace(/"/g,'&quot;')}" style="background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;border-radius:8px;padding:7px 10px;font-size:12px;cursor:pointer;font-family:inherit;" title="Convidar usuaris">👥</button>
+            <button class="ucMevesEditar" data-codi="${p.codi}" style="background:#fef3c7;color:#92400e;border:none;border-radius:8px;padding:7px 10px;font-size:12px;cursor:pointer;font-family:inherit;" title="Editar">✏️</button>
+            <button class="ucMevesEsborrar" data-codi="${p.codi}" data-nom="${p.nom.replace(/"/g,'&quot;')}" style="background:#fee2e2;color:#ef4444;border:none;border-radius:8px;padding:7px 10px;font-size:12px;cursor:pointer;font-family:inherit;" title="Esborrar">🗑</button>
+          ` : ''}
+        </div>
+      `;
+      llista.appendChild(card);
+    });
+
+    // Events
+    llista.querySelectorAll('.ucMevesUsar').forEach(btn => {
+      btn.addEventListener('click', () => { modal.remove(); carregarIUsarPlantilla(btn.dataset.codi); });
+    });
+    llista.querySelectorAll('.ucMevesCodiBtn').forEach(btn => {
+      btn.addEventListener('click', () => mostrarCodiModal(btn.dataset.codi, btn.dataset.nom));
+    });
+    llista.querySelectorAll('.ucMevesConvidar').forEach(btn => {
+      btn.addEventListener('click', () => openConvidarModal(btn.dataset.codi, btn.dataset.nom));
+    });
+    llista.querySelectorAll('.ucMevesEditar').forEach(btn => {
+      btn.addEventListener('click', () => { modal.remove(); editarPlantilla(btn.dataset.codi); });
+    });
+    llista.querySelectorAll('.ucMevesEsborrar').forEach(btn => {
+      btn.addEventListener('click', () => esborrarPlantilla(btn.dataset.codi, btn.dataset.nom, modal));
+    });
+
+  } catch (err) {
+    document.getElementById('ucMevesLlista').innerHTML = `<div style="color:#ef4444;padding:16px;">Error: ${err.message}</div>`;
+    console.error(err);
+  }
+}
+
+// ============================================================
+// MODAL CONVIDAR USUARIS
+// ============================================================
+function openConvidarModal(codi, nomPlantilla) {
+  const modal = document.createElement('div');
+  modal.id = 'ucConvidarModal';
+  modal.style.cssText = `
+    position:fixed;inset:0;z-index:10002;display:flex;align-items:center;justify-content:center;
+    background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);
+  `;
+  modal.innerHTML = `
+    <div style="
+      background:#fff;border-radius:20px;padding:36px;max-width:480px;width:90%;
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      box-shadow:0 24px 64px rgba(0,0,0,0.2);
+    ">
+      <h2 style="margin:0 0 4px;font-size:20px;font-weight:800;color:#1a1a2e;">👥 Convidar a la plantilla</h2>
+      <p style="margin:0 0 6px;color:#6b7280;font-size:13px;">${nomPlantilla}</p>
+
+      <!-- CODI PER COMPARTIR -->
+      <div style="background:#f5f3ff;border-radius:10px;padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.5px;">Codi d'accés</div>
+          <div style="font-size:22px;font-weight:900;font-family:monospace;letter-spacing:4px;color:#4c1d95;">${codi}</div>
+        </div>
+        <button id="ucCopiarCodi" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">📋 Copiar</button>
+      </div>
+
+      <!-- INVITAR PER EMAIL -->
+      <div style="margin-bottom:16px;">
+        <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:8px;">Convidar per correu electrònic:</label>
+        <div style="display:flex;gap:8px;">
+          <input id="ucEmailConvidar" type="email" placeholder="professor@escola.cat"
+            style="flex:1;border:1.5px solid #e5e7eb;border-radius:8px;padding:10px 12px;font-size:14px;font-family:inherit;outline:none;">
+          <button id="ucBtnConvidar" style="background:#0369a1;color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">Convidar</button>
+        </div>
+        <div id="ucConvidarMsg" style="font-size:12px;margin-top:8px;display:none;"></div>
+      </div>
+
+      <!-- LLISTA MEMBRES -->
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Membres actuals:</div>
+        <div id="ucMembresList" style="display:flex;flex-direction:column;gap:6px;max-height:150px;overflow-y:auto;">
+          <div style="color:#9ca3af;font-size:13px;">Carregant...</div>
+        </div>
+      </div>
+
+      <button id="ucConvidarClose" style="margin-top:20px;background:none;border:none;color:#9ca3af;font-size:13px;cursor:pointer;font-family:inherit;display:block;width:100%;text-align:center;">Tancar</button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Copiar codi
+  document.getElementById('ucCopiarCodi').addEventListener('click', () => {
+    navigator.clipboard.writeText(codi);
+    document.getElementById('ucCopiarCodi').innerHTML = '✅ Copiat!';
+    setTimeout(() => { document.getElementById('ucCopiarCodi').innerHTML = '📋 Copiar'; }, 1500);
+  });
+
+  document.getElementById('ucEmailConvidar').addEventListener('focus', e => { e.target.style.borderColor = '#0369a1'; });
+  document.getElementById('ucEmailConvidar').addEventListener('blur', e => { e.target.style.borderColor = '#e5e7eb'; });
+  document.getElementById('ucEmailConvidar').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('ucBtnConvidar').click(); });
+
+  document.getElementById('ucConvidarClose').addEventListener('click', () => { modal.remove(); });
+
+  // Carregar membres
+  carregarMembres(codi);
+
+  // Convidar per email
+  document.getElementById('ucBtnConvidar').addEventListener('click', async () => {
+    const email = document.getElementById('ucEmailConvidar').value.trim().toLowerCase();
+    const msgEl = document.getElementById('ucConvidarMsg');
+    if (!email || !email.includes('@')) {
+      msgEl.style.color = '#ef4444';
+      msgEl.textContent = '❌ Introdueix un correu vàlid.';
+      msgEl.style.display = 'block';
+      return;
+    }
+
+    const btn = document.getElementById('ucBtnConvidar');
+    btn.innerHTML = '⏳';
+    btn.disabled = true;
+
+    try {
+      const db = window._tutoriaDB;
+      // Buscar l'usuari per email a professors
+      const profSnap = await db.collection('professors').where('email', '==', email).limit(1).get();
+
+      if (profSnap.empty) {
+        // No trobat → guardar invitació pendent per email
+        await db.collection('ultracomentator_plantilles').doc(codi).update({
+          invitacionsPendents: firebase.firestore.FieldValue.arrayUnion(email),
+          membresEmail: firebase.firestore.FieldValue.arrayUnion(email)
+        });
+        msgEl.style.color = '#0369a1';
+        msgEl.textContent = `✅ Invitació pendent enviada a ${email}. Podrà accedir quan entri a l'aplicació.`;
+      } else {
+        // Trobat → afegir directament com a membre
+        const profUid = profSnap.docs[0].id;
+        await db.collection('ultracomentator_plantilles').doc(codi).update({
+          membres: firebase.firestore.FieldValue.arrayUnion(profUid),
+          membresEmail: firebase.firestore.FieldValue.arrayUnion(email)
+        });
+        msgEl.style.color = '#059669';
+        msgEl.textContent = `✅ ${email} afegit/da com a membre.`;
+      }
+
+      msgEl.style.display = 'block';
+      document.getElementById('ucEmailConvidar').value = '';
+      carregarMembres(codi);
+
+    } catch (err) {
+      msgEl.style.color = '#ef4444';
+      msgEl.textContent = '❌ Error: ' + err.message;
+      msgEl.style.display = 'block';
+      console.error(err);
+    }
+
+    btn.innerHTML = 'Convidar';
+    btn.disabled = false;
+  });
+}
+
+async function carregarMembres(codi) {
+  const el = document.getElementById('ucMembresList');
+  if (!el) return;
+  try {
+    const db = window._tutoriaDB;
+    const doc = await db.collection('ultracomentator_plantilles').doc(codi).get();
+    if (!doc.exists) return;
+    const p = doc.data();
+    const emails = p.membresEmail || [];
+    const propietariEmail = p.creatPerEmail || '';
+    const invPendents = p.invitacionsPendents || [];
+
+    if (emails.length === 0) {
+      el.innerHTML = '<div style="color:#9ca3af;font-size:13px;">Sense membres afegits.</div>';
+      return;
+    }
+
+    el.innerHTML = emails.map(email => {
+      const esPropietari = email === propietariEmail;
+      const esPendent = invPendents.includes(email) && !esPropietari;
+      return `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+          <div>
+            <span style="font-size:13px;font-weight:600;color:#374151;">${email}</span>
+            <span style="margin-left:8px;font-size:11px;padding:2px 7px;border-radius:12px;font-weight:600;
+              background:${esPropietari ? '#ede9fe' : esPendent ? '#fef3c7' : '#dcfce7'};
+              color:${esPropietari ? '#7c3aed' : esPendent ? '#92400e' : '#166534'};">
+              ${esPropietari ? '👑 Propietari' : esPendent ? '⏳ Pendent' : '✅ Membre'}
+            </span>
+          </div>
+          ${!esPropietari ? `<button class="ucEliminarMembre" data-email="${email}" data-codi="${codi}"
+            style="background:none;border:none;color:#d1d5db;cursor:pointer;font-size:14px;padding:2px 6px;"
+            title="Eliminar membre">✕</button>` : ''}
+        </div>
+      `;
+    }).join('');
+
+    el.querySelectorAll('.ucEliminarMembre').forEach(btn => {
+      btn.addEventListener('mouseenter', () => { btn.style.color = '#ef4444'; });
+      btn.addEventListener('mouseleave', () => { btn.style.color = '#d1d5db'; });
+      btn.addEventListener('click', async () => {
+        if (!confirm(`Eliminar ${btn.dataset.email} de la plantilla?`)) return;
+        try {
+          const db = window._tutoriaDB;
+          const docRef = db.collection('ultracomentator_plantilles').doc(btn.dataset.codi);
+          const docSnap = await docRef.get();
+          const pd = docSnap.data();
+          // Buscar uid per email
+          const profSnap = await db.collection('professors').where('email', '==', btn.dataset.email).limit(1).get();
+          const updates = {
+            membresEmail: firebase.firestore.FieldValue.arrayRemove(btn.dataset.email),
+            invitacionsPendents: firebase.firestore.FieldValue.arrayRemove(btn.dataset.email)
+          };
+          if (!profSnap.empty) updates.membres = firebase.firestore.FieldValue.arrayRemove(profSnap.docs[0].id);
+          await docRef.update(updates);
+          carregarMembres(btn.dataset.codi);
+        } catch (err) { alert('Error: ' + err.message); }
+      });
+    });
+
+  } catch (err) {
+    el.innerHTML = `<div style="color:#ef4444;font-size:13px;">Error carregant membres: ${err.message}</div>`;
+  }
+}
+
+// ============================================================
+// EDITAR PLANTILLA EXISTENT
+// ============================================================
+async function editarPlantilla(codi) {
+  try {
+    const db = window._tutoriaDB;
+    const doc = await db.collection('ultracomentator_plantilles').doc(codi).get();
+    if (!doc.exists) { alert('Plantilla no trobada.'); return; }
+    const p = doc.data();
+
+    // Obrir modal crear amb dades existents
+    openCrearPlantillaModal(p, codi);
+  } catch (err) {
+    alert('Error carregant plantilla: ' + err.message);
+  }
+}
+
+// ============================================================
+// ESBORRAR PLANTILLA
+// ============================================================
+async function esborrarPlantilla(codi, nom, mevesModal) {
+  if (!confirm(`Segur que vols esborrar la plantilla "${nom}"?
+Aquesta acció no es pot desfer.`)) return;
+  try {
+    const db = window._tutoriaDB;
+    await db.collection('ultracomentator_plantilles').doc(codi).delete();
+    mevesModal.remove();
+    openMevesPlantillesModal();
+  } catch (err) {
+    alert('Error esborrant: ' + err.message);
+  }
+}
+
+// ============================================================
+// COMPROVAR INVITACIONS PENDENTS EN INICIAR SESSIÓ
+// ============================================================
+async function comprovarInvitacionsPendents() {
+  const uid = window._tutoriaUID;
+  const auth = window.firebase && window.firebase.auth && window.firebase.auth();
+  if (!uid || !auth || !auth.currentUser) return;
+  const email = auth.currentUser.email;
+  if (!email) return;
+
+  try {
+    const db = window._tutoriaDB;
+    const snap = await db.collection('ultracomentator_plantilles')
+      .where('invitacionsPendents', 'array-contains', email)
+      .get();
+
+    snap.docs.forEach(async doc => {
+      await doc.ref.update({
+        membres: firebase.firestore.FieldValue.arrayUnion(uid),
+        invitacionsPendents: firebase.firestore.FieldValue.arrayRemove(email)
+      });
+    });
+
+    if (!snap.empty) {
+      console.log(`✅ Ultracomentator: ${snap.size} invitació(ns) acceptada(es) per ${email}`);
+    }
+  } catch (err) {
+    console.warn('Ultracomentator invitacions:', err);
+  }
+}
+
+// Cridar en carregar si ja hi ha usuari autenticat
+setTimeout(() => { comprovarInvitacionsPendents(); }, 2000);
 
 // ============================================================
 // INICIALITZAR
