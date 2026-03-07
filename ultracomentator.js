@@ -319,6 +319,7 @@ function afegirItemUI(itemData = null) {
 
   const itemId = itemData ? itemData.id : 'item_' + Date.now();
   const titol = itemData ? itemData.titol : '';
+  const capcelera = itemData ? (itemData.capcelera || '') : '';
 
   const itemDiv = document.createElement('div');
   itemDiv.id = 'ucItem_' + itemId;
@@ -330,32 +331,48 @@ function afegirItemUI(itemData = null) {
   itemDiv.innerHTML = `
     <div style="
       background:linear-gradient(135deg,#f5f3ff,#ede9fe);
-      padding:12px 16px;display:flex;align-items:center;justify-content:space-between;
-      border-bottom:1px solid #e5e7eb;
+      padding:12px 16px;border-bottom:1px solid #e5e7eb;
     ">
-      <div style="display:flex;align-items:center;gap:10px;flex:1;">
-        <span style="color:#7c3aed;font-size:14px;">🧩</span>
-        <input 
-          class="ucItemTitol"
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:10px;flex:1;">
+          <span style="color:#7c3aed;font-size:14px;">🧩</span>
+          <input 
+            class="ucItemTitol"
+            data-item-id="${itemId}"
+            type="text" 
+            placeholder="Títol de l'ítem (ex: Mètode científic)" 
+            value="${titol}"
+            style="
+              flex:1;border:none;background:transparent;font-size:15px;font-weight:700;
+              color:#374151;font-family:inherit;outline:none;
+            "
+          >
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="ucBtnAfegirCom" data-item-id="${itemId}" style="
+            background:#7c3aed;color:#fff;border:none;border-radius:6px;
+            padding:5px 10px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600;
+          ">+ Comentari</button>
+          <button class="ucBtnEliminarItem" data-item-id="${itemId}" style="
+            background:#fee2e2;color:#ef4444;border:none;border-radius:6px;
+            padding:5px 10px;font-size:12px;cursor:pointer;font-family:inherit;
+          ">🗑</button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:11px;font-weight:700;color:#7c3aed;white-space:nowrap;">Capçalera:</span>
+        <input
+          class="ucItemCapcelera"
           data-item-id="${itemId}"
-          type="text" 
-          placeholder="Títol de l'ítem (ex: Mètode científic)" 
-          value="${titol}"
+          type="text"
+          placeholder="Ex: Pel que fa al mètode científic:"
+          value="${capcelera.replace(/"/g, '&quot;')}"
           style="
-            flex:1;border:none;background:transparent;font-size:15px;font-weight:700;
-            color:#374151;font-family:inherit;outline:none;
+            flex:1;border:1px solid #ddd6fe;border-radius:6px;background:rgba(255,255,255,0.7);
+            font-size:12px;font-style:italic;color:#5b21b6;font-family:inherit;
+            padding:4px 8px;outline:none;
           "
         >
-      </div>
-      <div style="display:flex;gap:8px;">
-        <button class="ucBtnAfegirCom" data-item-id="${itemId}" style="
-          background:#7c3aed;color:#fff;border:none;border-radius:6px;
-          padding:5px 10px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600;
-        ">+ Comentari</button>
-        <button class="ucBtnEliminarItem" data-item-id="${itemId}" style="
-          background:#fee2e2;color:#ef4444;border:none;border-radius:6px;
-          padding:5px 10px;font-size:12px;cursor:pointer;font-family:inherit;
-        ">🗑</button>
       </div>
     </div>
     <div id="ucComs_${itemId}" style="padding:12px;display:flex;flex-direction:column;gap:8px;background:#fff;">
@@ -493,6 +510,8 @@ function recollirDadesPlantilla() {
     if (!titolEl) return;
     const titol = titolEl.value.trim();
     if (!titol) return;
+    const capceleraEl = itemDiv.querySelector('.ucItemCapcelera');
+    const capcelera = capceleraEl ? capceleraEl.value.trim() : '';
 
     const comentaris = [];
     itemDiv.querySelectorAll('[data-com-id]').forEach(comDiv => {
@@ -506,7 +525,7 @@ function recollirDadesPlantilla() {
       }
     });
 
-    items.push({ id: itemId, titol, comentaris });
+    items.push({ id: itemId, titol, capcelera, comentaris });
   });
 
   if (items.length === 0) {
@@ -806,20 +825,23 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
         <!-- Capçalera ítem -->
         <div style="
           padding:12px 16px;background:linear-gradient(135deg,#f5f3ff,#ede9fe);
-          border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+          border-bottom:1px solid #e5e7eb;
         ">
-          <div style="font-weight:700;font-size:14px;color:#374151;">🧩 ${item.titol}</div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <label style="font-size:11px;font-weight:700;color:#7c3aed;white-space:nowrap;">Assoliment:</label>
-            <select class="ucAssolimentSel" data-item-id="${item.id}" style="
-              border:1.5px solid #a78bfa;border-radius:8px;padding:5px 10px;
-              font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;
-              background:#faf5ff;color:#5b21b6;outline:none;
-            ">
-              <option value="">— Selecciona —</option>
-              ${assolimentOpts}
-            </select>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:${item.capcelera ? '6px' : '4px'};">
+            <div style="font-weight:700;font-size:14px;color:#374151;">🧩 ${item.titol}</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <label style="font-size:11px;font-weight:700;color:#7c3aed;white-space:nowrap;">Assoliment:</label>
+              <select class="ucAssolimentSel" data-item-id="${item.id}" style="
+                border:1.5px solid #a78bfa;border-radius:8px;padding:5px 10px;
+                font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;
+                background:#faf5ff;color:#5b21b6;outline:none;
+              ">
+                <option value="">— Selecciona —</option>
+                ${assolimentOpts}
+              </select>
+            </div>
           </div>
+          ${item.capcelera ? `<div style="font-size:12px;font-style:italic;color:#5b21b6;padding:2px 0 0;">"${item.capcelera}"</div>` : ''}
         </div>
 
         <!-- Comentaris seleccionables -->
@@ -1022,47 +1044,57 @@ async function generarAmbIA(modal) {
   resultWrap.style.display = 'block';
   resultText.textContent = 'Generant comentari...';
 
-  // Construir el prompt combinant assoliments + comentaris
+  // Construir el prompt: un bloc per ítem, cadascun amb capçalera pròpia
   const idiomaStr = idioma === 'catala' ? 'català' : 'castellà';
-
-  // Unió de tots els ítems (amb assoliment i/o comentaris)
-  const totsItems = {};
   const plantilla = window._ucPlantillaActiva;
+
+  // Construir llista d'ítems actius (amb assoliment o comentaris seleccionats)
+  const itesMActius = [];
   if (plantilla && plantilla.items) {
     plantilla.items.forEach(item => {
-      totsItems[item.id] = { titol: item.titol, assoliment: assoliments[item.id] || null, comentaris: (seleccionats[item.id] || {}).comentaris || [] };
+      const ass = assoliments[item.id] || null;
+      const coms = (seleccionats[item.id] || {}).comentaris || [];
+      if (ass || coms.length > 0) {
+        itesMActius.push({
+          titol: item.titol,
+          capcelera: item.capcelera || '',
+          assoliment: ass,
+          comentaris: coms
+        });
+      }
     });
   }
 
+  // Construir instruccions per ítem
   let promptItems = '';
-  Object.values(totsItems).forEach(item => {
-    if (!item.assoliment && item.comentaris.length === 0) return;
-    promptItems += `\n📌 ÍTEM: "${item.titol}"`;
-    if (item.assoliment) promptItems += `\n   Nivell d'assoliment: ${item.assoliment}`;
+  itesMActius.forEach((item, idx) => {
+    promptItems += `\nÍTEM ${idx + 1}: "${item.titol}"`;
+    if (item.capcelera) promptItems += `\n  Capçalera (OBLIGATORIA, comença el bloc amb aquest text exacte): "${item.capcelera}"`;
+    if (item.assoliment) promptItems += `\n  Nivell d'assoliment: ${item.assoliment}`;
     if (item.comentaris.length > 0) {
-      promptItems += `\n   Comentaris a integrar:`;
-      item.comentaris.forEach(c => { promptItems += `\n   · ${c}`; });
+      promptItems += `\n  Contingut a integrar:`;
+      item.comentaris.forEach(cm => { promptItems += `\n  · ${cm}`; });
     }
   });
 
-  const prompt = `Ets un professor expert en redacció de comentaris per a butlletins de notes.
+  const prompt = `Ets un professor expert en redacció de comentaris per a butlletins de notes escolars.
 
 Alumne/a: ${alumne}
-Idioma de sortida: ${idiomaStr}
+Idioma: ${idiomaStr}
 
-Informació d'avaluació per ítem:
+Ítems d'avaluació:
 ${promptItems}
 
-La teva tasca: Crea UN ÚNIC comentari de butlletí fluid i natural que:
-1. Reflecteixi el nivell d'assoliment indicat per a cada ítem
-2. Integri l'essència dels comentaris seleccionats (si n'hi ha)
-3. Soni com un text continuat escrit per un professor, no com una llista
-4. Tingui entre 80 i 200 paraules
-5. Estigui en ${idiomaStr}
-6. Comenci amb el nom "${alumne}"
-7. No faci servir punt i a part entre ítems — ha de fluir naturalment
+INSTRUCCIONS ESTRICTES:
+- Escriu UN BLOC DE TEXT per cada ítem, en el mateix ordre que apareixen.
+- Cada bloc ha de COMENÇAR OBLIGATÒRIAMENT amb la capçalera indicada (copia-la exactament).
+- Dins de cada bloc, integra el nivell d'assoliment i els comentaris en un text fluid i natural (com escriuria un professor), NO una llista.
+- Separa els blocs amb un salt de línia.
+- No afegeixes cap introducció, títol ni comentari final genèric.
+- Idioma: ${idiomaStr}.
+- No menciones notes numèriques.
 
-Escriu ÚNICAMENT el comentari final, sense cap introducció ni explicació.`;
+Escriu ÚNICAMENT els blocs de comentari, res més.`;
 
   try {
     const response = await fetch('/api/tutoria', {
@@ -1756,19 +1788,16 @@ function parsejarFullExcel(ws, nomFitxer) {
     const titol = fila2[colInici];
     const colFi = columnesItem[idx + 1] ? columnesItem[idx + 1] : colInici + 10;
 
-    // Recollir comentaris de fila 4 per a les columnes d'aquest ítem
-    const comentaris = [];
-
-    // La primera columna pot ser un text introductori (no és un comentari)
+    // La primera columna (colInici) de fila4 és la CAPÇALERA de l'ítem
     // Els comentaris reals comencen a colInici + 1
-    for (let c = colInici; c < colFi && c < maxCol; c++) {
+    const capcelera = fila4[colInici]
+      ? fila4[colInici].replace(/\\n/g, '').replace(/:\s*$/, '').trim() + ':'
+      : '';
+
+    const comentaris = [];
+    for (let c = colInici + 1; c < colFi && c < maxCol; c++) {
       const text = fila4[c];
       if (!text) continue;
-
-      // Si és el text introductori (acaba en ":"), saltar-lo
-      if (text.endsWith(':') && c === colInici) continue;
-
-      // Tots els comentaris importats son 'general' — l'assoliment es tria independent
       comentaris.push({
         id: 'com_' + Date.now() + '_' + c,
         text: text.replace(/\\n/g, ' ').trim(),
@@ -1776,10 +1805,11 @@ function parsejarFullExcel(ws, nomFitxer) {
       });
     }
 
-    if (titol && comentaris.length > 0) {
+    if (titol && (comentaris.length > 0 || capcelera)) {
       items.push({
         id: 'item_' + Date.now() + '_' + colInici,
         titol,
+        capcelera,
         comentaris
       });
     }
