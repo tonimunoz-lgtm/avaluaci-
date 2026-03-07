@@ -13,7 +13,8 @@ function initUltracomentator() {
 }
 
 // ============================================================
-// TRANSFORMAR BOTÓ SIMPLE → DESPLEGABLE
+// TRANSFORMAR BOTÓ SIMPLE → DESPLEGABLE (un clic = menú)
+// Igual que el botó ⋮ verd de l'app
 // ============================================================
 function transformarBotoTutoria(originalBtn) {
   if (document.getElementById('btnTutoriaWrapper')) return;
@@ -22,46 +23,33 @@ function transformarBotoTutoria(originalBtn) {
   wrapper.id = 'btnTutoriaWrapper';
   wrapper.style.cssText = 'position:relative;display:inline-flex;align-items:center;';
 
-  // Botó principal (manté el clic original → Comentari IA)
+  // Un sol botó — un clic obre el menú (com el ⋮ verd)
   const btnMain = document.createElement('button');
   btnMain.id = 'btnTutoriaMain';
   btnMain.className = originalBtn.className;
-  btnMain.style.cssText = 'border-radius:6px 0 0 6px;border-right:1px solid rgba(255,255,255,0.3);';
-  btnMain.innerHTML = '📋 Tutoria';
-  btnMain.title = 'Generar comentari de butlletí amb IA';
-  // Copiar l'event listener original
-  btnMain.addEventListener('click', () => {
-    const orig = document.getElementById('btnTutoria_hidden');
-    if (orig) orig.click();
-  });
-
-  // Fletxa desplegable
-  const btnArrow = document.createElement('button');
-  btnArrow.id = 'btnTutoriaArrow';
-  btnArrow.className = originalBtn.className;
-  btnArrow.style.cssText = 'border-radius:0 6px 6px 0;padding:0 8px;';
-  btnArrow.innerHTML = '▾';
-  btnArrow.title = 'Més opcions';
+  btnMain.innerHTML = '📋 Tutoria ▾';
+  btnMain.title = 'Opcions de tutoria';
 
   // Menú desplegable
   const menu = document.createElement('div');
   menu.id = 'tutoriaDropdownMenu';
+  menu.className = 'hidden';
   menu.style.cssText = `
-    display:none;position:absolute;top:100%;left:0;min-width:200px;
+    position:absolute;top:calc(100% + 4px);left:0;min-width:210px;
     background:#fff;border:1px solid #e5e7eb;border-radius:8px;
-    box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:9999;overflow:hidden;margin-top:4px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.13);z-index:9999;overflow:hidden;
   `;
   menu.innerHTML = `
     <div style="padding:4px 0;">
-      <button id="ucOptIA" style="width:100%;text-align:left;padding:10px 16px;background:none;border:none;cursor:pointer;font-size:14px;display:flex;align-items:center;gap:10px;color:#374151;font-family:inherit;transition:background .15s;">
+      <button id="ucOptIA" style="width:100%;text-align:left;padding:10px 16px;background:none;border:none;cursor:pointer;font-size:14px;display:flex;align-items:center;gap:10px;color:#374151;font-family:inherit;">
         <span style="font-size:16px;">🤖</span>
         <div>
           <div style="font-weight:600;">Comentari IA</div>
           <div style="font-size:12px;color:#6b7280;">Genera comentari de tutoria</div>
         </div>
       </button>
-      <div style="height:1px;background:#f3f4f6;margin:2px 0;"></div>
-      <button id="ucOptUltra" style="width:100%;text-align:left;padding:10px 16px;background:none;border:none;cursor:pointer;font-size:14px;display:flex;align-items:center;gap:10px;color:#374151;font-family:inherit;transition:background .15s;">
+      <div style="height:1px;background:#f3f4f6;"></div>
+      <button id="ucOptUltra" style="width:100%;text-align:left;padding:10px 16px;background:none;border:none;cursor:pointer;font-size:14px;display:flex;align-items:center;gap:10px;color:#374151;font-family:inherit;">
         <span style="font-size:16px;">⚡</span>
         <div>
           <div style="font-weight:600;color:#7c3aed;">Ultracomentator</div>
@@ -71,47 +59,44 @@ function transformarBotoTutoria(originalBtn) {
     </div>
   `;
 
-  // Amagar el botó original però mantenir-lo per cridar-lo
+  // Amagar el botó original
   originalBtn.id = 'btnTutoria_hidden';
   originalBtn.style.display = 'none';
   originalBtn.parentNode.insertBefore(wrapper, originalBtn);
-  wrapper.appendChild(originalBtn); // moure el botó original dins el wrapper (ocult)
+  wrapper.appendChild(originalBtn);
   wrapper.appendChild(btnMain);
-  wrapper.appendChild(btnArrow);
   wrapper.appendChild(menu);
 
   // Hover effects
-  [btnMain, btnArrow].forEach(b => {
-    b.addEventListener('mouseenter', () => { b.style.filter = 'brightness(1.1)'; });
-    b.addEventListener('mouseleave', () => { b.style.filter = ''; });
-  });
   menu.querySelectorAll('button').forEach(b => {
-    b.addEventListener('mouseenter', () => { b.style.background = '#f9fafb'; });
+    b.addEventListener('mouseenter', () => { b.style.background = '#f5f3ff'; });
     b.addEventListener('mouseleave', () => { b.style.background = 'none'; });
   });
 
-  // Toggle menú
-  btnArrow.addEventListener('click', (e) => {
+  // Un clic al botó → toggle menú (igual que el ⋮ verd)
+  btnMain.addEventListener('click', (e) => {
     e.stopPropagation();
-    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    // Tancar altres menús oberts a l'app
+    document.querySelectorAll('.menu').forEach(m => m.classList.add('hidden'));
+    menu.classList.toggle('hidden');
   });
 
-  // Tancar menú en clicar fora
-  document.addEventListener('click', () => { menu.style.display = 'none'; });
+  // Tancar en clicar fora
+  document.addEventListener('click', () => { menu.classList.add('hidden'); });
 
   // Opció 1: Comentari IA
   document.getElementById('ucOptIA').addEventListener('click', () => {
-    menu.style.display = 'none';
+    menu.classList.add('hidden');
     document.getElementById('btnTutoria_hidden').click();
   });
 
   // Opció 2: Ultracomentator
   document.getElementById('ucOptUltra').addEventListener('click', () => {
-    menu.style.display = 'none';
+    menu.classList.add('hidden');
     openUltracomentatorModal();
   });
 
-  console.log('✅ Botó Tutoria transformat en desplegable');
+  console.log('✅ Botó Tutoria transformat en desplegable (un clic)');
 }
 
 // ============================================================
@@ -213,7 +198,12 @@ function openCrearPlantillaModal() {
             <div style="font-size:13px;opacity:.8;margin-bottom:4px;">⚡ ULTRACOMENTATOR</div>
             <h2 style="margin:0;font-size:22px;font-weight:800;">Crea una nova plantilla</h2>
           </div>
-          <button id="ucCrearClose" style="background:rgba(255,255,255,0.2);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;">✕</button>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button id="ucImportarExcel" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:8px;padding:7px 14px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;display:flex;align-items:center;gap:6px;">
+              📊 Importar Excel
+            </button>
+            <button id="ucCrearClose" style="background:rgba(255,255,255,0.2);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;">✕</button>
+          </div>
         </div>
       </div>
 
@@ -278,6 +268,7 @@ function openCrearPlantillaModal() {
   document.body.appendChild(modal);
 
   document.getElementById('ucCrearClose').addEventListener('click', () => { modal.remove(); openUltracomentatorModal(); });
+  document.getElementById('ucImportarExcel').addEventListener('click', () => importarExcelModal());
   document.getElementById('ucCrearCancel').addEventListener('click', () => { modal.remove(); openUltracomentatorModal(); });
   document.getElementById('ucAfegirItem').addEventListener('click', () => afegirItemUI());
   document.getElementById('ucGuardarPlantilla').addEventListener('click', guardarPlantilla);
@@ -1039,4 +1030,292 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initUltracomentator);
 } else {
   initUltracomentator();
+}
+
+// ============================================================
+// IMPORTACIÓ EXCEL
+// ============================================================
+
+function importarExcelModal() {
+  // Necessitem SheetJS (XLSX) — carregar-lo si no està disponible
+  if (!window.XLSX) {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    script.onload = () => { _mostrarModalImport(); };
+    script.onerror = () => { alert('Error carregant la llibreria Excel. Comprova la connexió.'); };
+    document.head.appendChild(script);
+  } else {
+    _mostrarModalImport();
+  }
+}
+
+function _mostrarModalImport() {
+  // Eliminar si ja existeix
+  const old = document.getElementById('ucImportModal');
+  if (old) old.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'ucImportModal';
+  modal.style.cssText = `
+    position:fixed;inset:0;z-index:10003;display:flex;align-items:center;justify-content:center;
+    background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);
+  `;
+  modal.innerHTML = `
+    <div style="
+      background:#fff;border-radius:20px;padding:36px;max-width:500px;width:90%;
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      box-shadow:0 24px 64px rgba(0,0,0,0.2);
+    ">
+      <h2 style="margin:0 0 6px;font-size:20px;font-weight:800;color:#1a1a2e;">📊 Importar des d'Excel</h2>
+      <p style="margin:0 0 24px;color:#6b7280;font-size:14px;line-height:1.5;">
+        Importa una plantilla des d'un fitxer Excel amb el format Ultracomentator.<br>
+        El full ha de tenir els ítems a la <strong>fila 2</strong> i els comentaris a la <strong>fila 4</strong>.
+      </p>
+
+      <!-- ZONA DROP -->
+      <div id="ucDropZone" style="
+        border:2px dashed #a78bfa;border-radius:12px;padding:32px;text-align:center;
+        background:#faf5ff;cursor:pointer;transition:all .2s;margin-bottom:16px;
+      ">
+        <div style="font-size:40px;margin-bottom:10px;">📂</div>
+        <div style="font-weight:700;color:#7c3aed;font-size:15px;margin-bottom:6px;">Arrossega l'Excel aquí</div>
+        <div style="color:#9ca3af;font-size:13px;">o clica per seleccionar fitxer</div>
+        <input type="file" id="ucFileInput" accept=".xlsx,.xls" style="display:none;">
+      </div>
+
+      <!-- FORMAT INFO -->
+      <div style="background:#f0fdf4;border-radius:10px;padding:12px 16px;margin-bottom:20px;">
+        <div style="font-size:13px;color:#166534;font-weight:600;margin-bottom:6px;">📋 Format esperat:</div>
+        <div style="font-size:12px;color:#15803d;line-height:1.7;">
+          • <strong>Fila 2:</strong> Títols dels ítems (ex: "Mètode científic", "Velocitat"...)<br>
+          • <strong>Fila 4:</strong> Introducció de l'ítem + comentaris per nivell en columnes seguides<br>
+          • Compatible amb el format EXPERIMENTA/Ultracomentator
+        </div>
+      </div>
+
+      <div id="ucImportError" style="color:#ef4444;font-size:13px;margin-bottom:12px;display:none;padding:10px;background:#fef2f2;border-radius:8px;"></div>
+      <div id="ucImportPreview" style="display:none;"></div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button id="ucImportCancel" style="background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:10px 18px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">Cancelar</button>
+        <button id="ucImportOk" style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:none;">✅ Importar plantilla</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  let plantillaImportada = null;
+
+  // Drag & Drop
+  const dropZone = document.getElementById('ucDropZone');
+  const fileInput = document.getElementById('ucFileInput');
+
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.style.background = '#ede9fe';
+    dropZone.style.borderColor = '#7c3aed';
+  });
+  dropZone.addEventListener('dragleave', () => {
+    dropZone.style.background = '#faf5ff';
+    dropZone.style.borderColor = '#a78bfa';
+  });
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.style.background = '#faf5ff';
+    dropZone.style.borderColor = '#a78bfa';
+    const file = e.dataTransfer.files[0];
+    if (file) processarFitxer(file);
+  });
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files[0]) processarFitxer(e.target.files[0]);
+  });
+
+  function processarFitxer(file) {
+    if (!file.name.match(/\.(xlsx|xls)$/i)) {
+      mostrarError('El fitxer ha de ser .xlsx o .xls');
+      return;
+    }
+
+    dropZone.innerHTML = `<div style="font-size:24px;margin-bottom:8px;">⏳</div><div style="color:#7c3aed;font-weight:600;">Llegint fitxer...</div>`;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, { type: 'array' });
+
+        // Buscar el full adequat (preferim RECULL, sinó el primer)
+        const sheetName = wb.SheetNames.includes('RECULL') ? 'RECULL' : wb.SheetNames[0];
+        const ws = wb.Sheets[sheetName];
+
+        plantillaImportada = parsejarFullExcel(ws, file.name.replace(/\.(xlsx|xls)$/i, ''));
+
+        if (!plantillaImportada || plantillaImportada.items.length === 0) {
+          mostrarError('No s\'han pogut trobar ítems al fitxer. Comprova que el format sigui correcte (títols a fila 2, comentaris a fila 4).');
+          dropZone.innerHTML = `<div style="font-size:40px;margin-bottom:10px;">📂</div><div style="font-weight:700;color:#7c3aed;font-size:15px;margin-bottom:6px;">Arrossega l'Excel aquí</div><div style="color:#9ca3af;font-size:13px;">o clica per seleccionar fitxer</div><input type="file" id="ucFileInput" accept=".xlsx,.xls" style="display:none;">`;
+          return;
+        }
+
+        mostrarPreview(plantillaImportada);
+        document.getElementById('ucImportOk').style.display = 'inline-block';
+        dropZone.innerHTML = `<div style="font-size:28px;margin-bottom:8px;">✅</div><div style="color:#059669;font-weight:700;">${file.name}</div><div style="color:#6b7280;font-size:12px;margin-top:4px;">${plantillaImportada.items.length} ítems trobats</div>`;
+        dropZone.style.borderColor = '#34d399';
+        dropZone.style.background = '#f0fdf4';
+
+      } catch (err) {
+        mostrarError('Error llegint el fitxer: ' + err.message);
+        console.error(err);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function mostrarError(msg) {
+    const el = document.getElementById('ucImportError');
+    el.textContent = '❌ ' + msg;
+    el.style.display = 'block';
+  }
+
+  function mostrarPreview(plantilla) {
+    const preview = document.getElementById('ucImportPreview');
+    preview.style.display = 'block';
+    preview.innerHTML = `
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:16px;max-height:200px;overflow-y:auto;">
+        <div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Previsualització (${plantilla.items.length} ítems):</div>
+        ${plantilla.items.map(item => `
+          <div style="margin-bottom:8px;">
+            <div style="font-weight:600;font-size:13px;color:#374151;">🧩 ${item.titol}</div>
+            <div style="font-size:12px;color:#6b7280;margin-left:16px;">${item.comentaris.length} comentaris</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  document.getElementById('ucImportCancel').addEventListener('click', () => { modal.remove(); });
+  document.getElementById('ucImportOk').addEventListener('click', () => {
+    if (!plantillaImportada) return;
+    modal.remove();
+
+    // Omplir el formulari de crear amb les dades importades
+    document.getElementById('ucPlantillaNom').value = plantillaImportada.nom;
+    document.getElementById('ucPlantillaDesc').value = plantillaImportada.descripcio || '';
+
+    // Netejar ítems existents
+    const container = document.getElementById('ucItemsContainer');
+    container.querySelectorAll('[data-item-id]').forEach(el => el.remove());
+    const empty = document.getElementById('ucItemsEmpty');
+    if (empty) empty.style.display = 'none';
+
+    // Afegir ítems importats
+    plantillaImportada.items.forEach(item => afegirItemUI(item));
+
+    // Scroll cap amunt
+    document.getElementById('ucCrearModal').scrollTop = 0;
+  });
+}
+
+// ============================================================
+// PARSEJAR FULL EXCEL → ESTRUCTURA PLANTILLA
+// ============================================================
+function parsejarFullExcel(ws, nomFitxer) {
+  const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:Z10');
+  const maxCol = range.e.c + 1;
+
+  // Llegir fila 2 (índex 1) i fila 4 (índex 3)
+  const fila2 = {};
+  const fila4 = {};
+
+  for (let c = 0; c < maxCol; c++) {
+    const addr2 = XLSX.utils.encode_cell({ r: 1, c });
+    const addr4 = XLSX.utils.encode_cell({ r: 3, c });
+    const cell2 = ws[addr2];
+    const cell4 = ws[addr4];
+
+    if (cell2 && cell2.v && typeof cell2.v === 'string' && !cell2.v.startsWith('=')) {
+      fila2[c] = cell2.v.trim();
+    }
+    if (cell4 && cell4.v && typeof cell4.v === 'string' && !cell4.v.startsWith('=')) {
+      const text = cell4.v.trim().replace(/\\n$/, '').trim();
+      if (text && !text.startsWith('TÍTOL') && !text.startsWith('COMENTARI') && !text.startsWith('ASSOLIMENT') && text !== 'EXPERIMENTA (alumnes)') {
+        fila4[c] = text;
+      }
+    }
+  }
+
+  // Nom de la plantilla: buscar a fila 2 columna C (índex 2) o nom del fitxer
+  const nomPlantilla = fila2[2] || nomFitxer || 'Plantilla importada';
+
+  // Detectar els grups d'ítems
+  // La fila 2 té els títols dels ítems en columnes específiques
+  // Les columnes que tenen títol a fila 2 i NO comencen per majúscula sola ni "EXPERIMENTA"...
+  // Estratègia: els títols reals d'ítems son les columnes fila2 que NO son "COM ES MOUEN..." etc.
+
+  const columnesItem = Object.entries(fila2)
+    .filter(([col, val]) => {
+      const c = parseInt(col);
+      // Excloure col 2 (títol projecte) i valors genèrics
+      if (c <= 2) return false;
+      if (val.startsWith('TÍTOL') || val.startsWith('COMENTARI') || val.startsWith('ASSOLIMENT')) return false;
+      if (val.toUpperCase() === val && val.length > 5) return false; // tot majúscules = títol secció
+      return true;
+    })
+    .map(([col]) => parseInt(col))
+    .sort((a, b) => a - b);
+
+  if (columnesItem.length === 0) return null;
+
+  const items = [];
+  const nivellsDefaults = ['excel·lent', 'assolit', 'assolit_parcial', 'no_assolit', 'general'];
+
+  columnesItem.forEach((colInici, idx) => {
+    const titol = fila2[colInici];
+    const colFi = columnesItem[idx + 1] ? columnesItem[idx + 1] : colInici + 10;
+
+    // Recollir comentaris de fila 4 per a les columnes d'aquest ítem
+    const comentaris = [];
+
+    // La primera columna pot ser un text introductori (no és un comentari)
+    // Els comentaris reals comencen a colInici + 1
+    for (let c = colInici; c < colFi && c < maxCol; c++) {
+      const text = fila4[c];
+      if (!text) continue;
+
+      // Si és el text introductori (acaba en ":"), saltar-lo
+      if (text.endsWith(':') && c === colInici) continue;
+
+      // Assignar nivell basat en la posició relativa
+      const posRel = c - colInici;
+      let nivell = 'general';
+      if (posRel === 1 || posRel === 0) nivell = 'excel·lent';
+      else if (posRel === 2) nivell = 'assolit';
+      else if (posRel === 3) nivell = 'assolit_parcial';
+      else if (posRel >= 4) nivell = 'no_assolit';
+
+      // Si hi ha 6+ comentaris, els últims son "no_assolit"
+      if (posRel >= 5) nivell = 'no_assolit';
+
+      comentaris.push({
+        id: 'com_' + Date.now() + '_' + c,
+        text: text.replace(/\\n/g, ' ').trim(),
+        nivell
+      });
+    }
+
+    if (titol && comentaris.length > 0) {
+      items.push({
+        id: 'item_' + Date.now() + '_' + colInici,
+        titol,
+        comentaris
+      });
+    }
+  });
+
+  return {
+    nom: nomPlantilla,
+    descripcio: '',
+    items
+  };
 }
