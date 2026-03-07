@@ -887,6 +887,32 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
 
       <div style="padding:20px 24px;">
         <!-- INFO ALUMNE + IDIOMA -->
+        ${window._tcStudentName ? `
+        <div style="background:#f5f3ff;border-radius:12px;padding:12px 16px;margin-bottom:16px;border:1.5px solid #a78bfa;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:20px;">👤</span>
+            <div>
+              <div style="font-size:11px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.5px;">Alumne/a actiu/va</div>
+              <div style="font-size:16px;font-weight:800;color:#4c1d95;" id="ucAlumneNomBadge">${window._tcStudentName}</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <div style="display:flex;gap:6px;">
+              <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;cursor:pointer;padding:6px 12px;border:2px solid #a78bfa;border-radius:8px;background:#fff;transition:all .15s;" id="ucLblNoi">
+                <input type="radio" name="ucGenere" value="noi" checked style="accent-color:#7c3aed;"> 👦 Noi
+              </label>
+              <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;cursor:pointer;padding:6px 12px;border:2px solid #a78bfa;border-radius:8px;background:#fff;transition:all .15s;" id="ucLblNoia">
+                <input type="radio" name="ucGenere" value="noia" style="accent-color:#7c3aed;"> 👧 Noia
+              </label>
+            </div>
+            <select id="ucIdioma" style="border:1.5px solid #a78bfa;border-radius:8px;padding:7px 12px;font-size:13px;font-family:inherit;outline:none;background:#fff;color:#374151;">
+              <option value="catala">Català</option>
+              <option value="castella">Castellà</option>
+            </select>
+          </div>
+        </div>
+        <input id="ucAlumneNom" type="hidden" value="${window._tcStudentName}">
+        ` : `
         <div style="background:#fff;border-radius:12px;padding:16px;margin-bottom:16px;border:1px solid #e5e7eb;">
           <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
             <div style="flex:1;min-width:150px;">
@@ -894,15 +920,18 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
               <input id="ucAlumneNom" type="text" placeholder="Ex: Júlia Martínez"
                 style="width:100%;box-sizing:border-box;border:1.5px solid #e5e7eb;border-radius:8px;padding:8px 12px;font-size:14px;font-family:inherit;outline:none;">
             </div>
-            <div style="min-width:120px;">
-              <label style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px;">Idioma</label>
-              <select id="ucIdioma" style="width:100%;border:1.5px solid #e5e7eb;border-radius:8px;padding:8px 12px;font-size:14px;font-family:inherit;outline:none;background:#fff;">
-                <option value="catala">Català</option>
-                <option value="castella">Castellà</option>
-              </select>
+            <div style="display:flex;gap:6px;align-items:flex-end;">
+              <div style="min-width:120px;">
+                <label style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px;">Idioma</label>
+                <select id="ucIdioma" style="width:100%;border:1.5px solid #e5e7eb;border-radius:8px;padding:8px 12px;font-size:14px;font-family:inherit;outline:none;background:#fff;">
+                  <option value="catala">Català</option>
+                  <option value="castella">Castellà</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
+        `}
 
         <!-- ÍTEMS: ASSOLIMENT + COMENTARIS -->
         <div style="margin-bottom:16px;">
@@ -924,7 +953,7 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
           <div id="ucResultatText" style="font-size:14px;line-height:1.7;color:#374151;white-space:pre-wrap;"></div>
           <div style="display:flex;gap:8px;margin-top:12px;">
             <button id="ucCopiarResultat" style="background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">📋 Copiar</button>
-            <button id="ucGuardarAlumne" style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:none;">💾 Guardar a l'alumne</button>
+            <button id="ucGuardarAlumne" style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:${window._tcStudentId ? 'inline-flex' : 'none'};">💾 Guardar a l'alumne</button>
           </div>
         </div>
 
@@ -993,8 +1022,21 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
   });
 
   // Focus alumne
-  document.getElementById('ucAlumneNom').addEventListener('focus', e => { e.target.style.borderColor = '#7c3aed'; });
-  document.getElementById('ucAlumneNom').addEventListener('blur', e => { e.target.style.borderColor = '#e5e7eb'; });
+  const ucNomEl = document.getElementById('ucAlumneNom');
+  if (ucNomEl && ucNomEl.type !== 'hidden') {
+    ucNomEl.addEventListener('focus', e => { e.target.style.borderColor = '#7c3aed'; });
+    ucNomEl.addEventListener('blur', e => { e.target.style.borderColor = '#e5e7eb'; });
+  }
+  // Estil botons gènere
+  modal.querySelectorAll('input[name="ucGenere"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      modal.querySelectorAll('label[id^="ucLbl"]').forEach(lbl => {
+        lbl.style.background = '#fff'; lbl.style.borderColor = '#a78bfa'; lbl.style.color = '#374151';
+      });
+      const lbl = radio.closest('label');
+      if (lbl) { lbl.style.background = '#7c3aed'; lbl.style.borderColor = '#7c3aed'; lbl.style.color = '#fff'; }
+    });
+  });
 
   // Copiar resultat
   document.getElementById('ucCopiarResultat').addEventListener('click', () => {
@@ -1012,8 +1054,13 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
 // GENERAR COMENTARI AMB IA (Groq via /api/tutoria)
 // ============================================================
 async function generarAmbIA(modal) {
-  const alumne = document.getElementById('ucAlumneNom').value.trim() || "l'alumne/a";
+  const nomEl = document.getElementById('ucAlumneNom');
+  const alumne = (nomEl ? nomEl.value.trim() : '') || "l'alumne/a";
   const idioma = document.getElementById('ucIdioma').value;
+  const genereRadio = document.querySelector('input[name="ucGenere"]:checked');
+  const genere = genereRadio ? genereRadio.value : 'noi';
+  const article = genere === 'noia' ? 'La' : 'El';
+  const nomAmbArticle = `${article} ${alumne}`;
 
   // Recollir assoliments per ítem (desplegable independent)
   const assoliments = {};
@@ -1037,6 +1084,14 @@ async function generarAmbIA(modal) {
   if (Object.keys(assoliments).length === 0 && Object.keys(seleccionats).length === 0) {
     alert('Cal seleccionar almenys un assoliment o un comentari!');
     return;
+  }
+  if (!nomEl || !alumne || alumne === "l'alumne/a") {
+    // Si ve del modal de comentaris, el nom ja ve de _tcStudentName
+    // Si no, demanar nom
+    if (!window._tcStudentName) {
+      alert("Cal escriure el nom de l'alumne/a!");
+      return;
+    }
   }
 
   const btn = document.getElementById('ucGenerar');
@@ -1083,7 +1138,7 @@ async function generarAmbIA(modal) {
 
   const prompt = `Ets un professor expert en redacció de comentaris per a butlletins de notes escolars.
 
-Alumne/a: ${alumne}
+Alumne/a: ${nomAmbArticle} (gènere: ${genere === 'noia' ? 'femení' : 'masculí'})
 Idioma: ${idiomaStr}
 
 Ítems d'avaluació:
@@ -1091,10 +1146,12 @@ ${promptItems}
 
 INSTRUCCIONS ESTRICTES:
 - Escriu UN BLOC DE TEXT per cada ítem, en el mateix ordre que apareixen.
-- Cada bloc ha de COMENÇAR OBLIGATÒRIAMENT amb la capçalera indicada (copia-la exactament).
+- Cada bloc ha de COMENÇAR OBLIGATÒRIAMENT amb la capçalera indicada (copia-la exactament). Immediatament després de la capçalera, continua el text amb "${nomAmbArticle}" (amb concordança de gènere ${genere === 'noia' ? 'femení' : 'masculí'} correcta).
 - Dins de cada bloc, integra el nivell d'assoliment i els comentaris en un text fluid i natural (com escriuria un professor), NO una llista.
 - Separa els blocs amb un salt de línia.
 - No afegeixes cap introducció, títol ni comentari final genèric.
+- Usa sempre "${nomAmbArticle}" per referir-te a l'alumne/a (mai "l'alumne/a" genèric).
+- Concordança de gènere correcta en tots els adjectius i participis.
 - Idioma: ${idiomaStr}.
 - No menciones notes numèriques.
 
@@ -1113,9 +1170,9 @@ Escriu ÚNICAMENT els blocs de comentari, res més.`;
     const comentari = (data.text || '').trim();
     resultText.textContent = comentari;
 
-    // Mostrar botó guardar si hi ha alumne actiu
-    if (window._tcStudentId && window._tcStudentName) {
-      const btnGuardar = document.getElementById('ucGuardarAlumne');
+    // Mostrar botó guardar si hi ha alumne actiu (modal comentaris obert)
+    const btnGuardar = document.getElementById('ucGuardarAlumne');
+    if (btnGuardar && window._tcStudentId) {
       btnGuardar.style.display = 'inline-flex';
       btnGuardar.onclick = () => guardarComentariAlumne(comentari, modal);
     }
@@ -1151,8 +1208,11 @@ async function guardarComentariAlumne(comentari, modal) {
       .update({ comment: comentari });
 
     // Omplir textarea del modal si està obert
-    const taComment = document.querySelector('#commentsModal textarea, textarea[name="comment"]');
-    if (taComment) taComment.value = comentari;
+    const taComment = document.getElementById('commentTextarea');
+    if (taComment) {
+      taComment.value = comentari;
+      taComment.dispatchEvent(new Event('input'));
+    }
 
     btn.innerHTML = '✅ Guardat!';
     setTimeout(() => { modal.remove(); }, 800);
