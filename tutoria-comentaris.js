@@ -151,34 +151,26 @@ function injectarBotoUC() {
   if (!modal) return;
   if (modal.querySelector('#tcBtnUltracomentator')) return;
 
-  // Trobar el contenidor dels botons principals
   const botoesDiv = modal.querySelector('.flex.gap-2');
   if (!botoesDiv) return;
 
-  // Crear fila nova a sota dels botons existents
-  let ucRow = modal.querySelector('#tcUCRow');
-  if (!ucRow) {
-    ucRow = document.createElement('div');
-    ucRow.id = 'tcUCRow';
-    ucRow.style.cssText = 'margin-top:8px;';
-    botoesDiv.parentNode.insertBefore(ucRow, botoesDiv.nextSibling);
-  }
+  // Fer que el contenidor permeti wrap i afegir el botó com a element de ple ample
+  botoesDiv.style.flexWrap = 'wrap';
 
   const btn = document.createElement('button');
   btn.id = 'tcBtnUltracomentator';
+  btn.className = 'flex-1 px-3 py-2 rounded border-none cursor-pointer font-semibold text-sm text-white';
   btn.style.cssText = `
-    width:100%;padding:9px 12px;border-radius:6px;border:none;cursor:pointer;
-    background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;
-    font-weight:700;font-size:13px;font-family:inherit;
-    display:flex;align-items:center;justify-content:center;gap:8px;
+    flex-basis:100%;background:linear-gradient(135deg,#7c3aed,#a855f7);
+    color:#fff;border:none;cursor:pointer;font-weight:700;font-size:0.875rem;
+    font-family:inherit;padding:0.5rem 0.75rem;border-radius:0.25rem;
     transition:opacity .2s;
   `;
   btn.innerHTML = '⚡ Ultracomentator';
-  btn.addEventListener('mouseenter', () => { btn.style.opacity = '.88'; });
+  btn.addEventListener('mouseenter', () => { btn.style.opacity = '.85'; });
   btn.addEventListener('mouseleave', () => { btn.style.opacity = '1'; });
 
   btn.addEventListener('click', () => {
-    // Obrir directament el modal "Les meves plantilles" o el principal
     if (typeof window.openMevesPlantillesModal === 'function') {
       window.openMevesPlantillesModal();
     } else if (typeof window.openUltracomentatorModal === 'function') {
@@ -188,7 +180,7 @@ function injectarBotoUC() {
     }
   });
 
-  ucRow.appendChild(btn);
+  botoesDiv.appendChild(btn);
 }
 
 // ============================================================
