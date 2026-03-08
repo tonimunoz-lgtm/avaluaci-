@@ -1025,16 +1025,22 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
         if (lbl) { lbl.style.background = '#7c3aed'; lbl.style.borderColor = '#7c3aed'; lbl.style.color = '#fff'; }
       });
     });
+    // Sincronitzar localStorage amb l'estat VISUAL dels checkboxes en el moment de renderitzar
+    // (evita que el default {"nom":true} sobreescrigui l'estat real si l'usuari ha desmarcat tot)
+    {
+      const prefsActuals = {};
+      infoWrap.querySelectorAll('input.uc-nom-check').forEach(c2 => { prefsActuals[c2.dataset.key] = c2.checked; });
+      localStorage.setItem('uc_nom_parts', JSON.stringify(prefsActuals));
+    }
     // Events checkboxes nom — guardar prefs i actualitzar nom visible
     infoWrap.querySelectorAll('input.uc-nom-check').forEach(chk => {
       chk.addEventListener('change', () => {
-        const prefs = JSON.parse(localStorage.getItem('uc_nom_parts') || '{"nom":true,"cognom1":false,"cognom2":false}');
+        const prefs = {};
         infoWrap.querySelectorAll('input.uc-nom-check').forEach(c2 => { prefs[c2.dataset.key] = c2.checked; });
-        // Si cap check actiu, el nom quedara buit (acceptable)
         localStorage.setItem('uc_nom_parts', JSON.stringify(prefs));
         // Actualitzar nom visible al badge
         const nomDisp = document.getElementById('ucNomDisplay');
-        if (nomDisp) nomDisp.textContent = _ucNomDisplay(nomActiu);
+        if (nomDisp) nomDisp.textContent = _ucNomDisplay(nomActiu) || '—';
       });
     });
     // Mostrar botons guardar
@@ -1140,16 +1146,15 @@ async function generarAmbIA(modal) {
   const nomEl = document.getElementById('ucAlumneNom');
   const nomFromEl = nomEl ? nomEl.value.trim() : '';
   const nomComplet = window._tcStudentName || nomFromEl || '';
-  const alumne = _ucNomDisplay(nomComplet) || nomComplet;
+  const alumne = _ucNomDisplay(nomComplet); // buit si cap checkbox actiu
   const idioma = document.getElementById('ucIdioma').value;
   const genereRadio = document.querySelector('input[name="ucGenere"]:checked');
   const genere = genereRadio ? genereRadio.value : 'noi';
-  // Apostorf catala: l'Albert, l'Aina (davant vocal o h muda)
-  const esVocalOH = alumne && /^[aeiouàèéíïóòúüh]/i.test(alumne.trim());
+  // Si no hi ha nom seleccionat -> mode neutre (sense nom ni article)
+  const modeNeutre = !alumne || !alumne.trim();
+  const esVocalOH = !modeNeutre && /^[aeiouàèéíïóòúüh]/i.test(alumne.trim());
   const articleBase = genere === 'noia' ? 'La' : 'El';
-  const nomAmbArticle = alumne && alumne.trim()
-    ? (esVocalOH ? `l'${alumne}` : `${articleBase} ${alumne}`)
-    : `l'alumne/a`;
+  const nomAmbArticle = modeNeutre ? '' : (esVocalOH ? `l'${alumne}` : `${articleBase} ${alumne}`);
 
   // Recollir assoliments per ítem (desplegable independent)
   const assoliments = {};
@@ -1221,9 +1226,13 @@ async function generarAmbIA(modal) {
     }
   });
 
-  const prompt = `Ets un professor expert en redacció de comentaris per a butlletins de notes escolars.
+  const instrNom = modeNeutre
+    ? `- Cada bloc ha de COMENÇAR OBLIGATÒRIAMENT amb la capçalera indicada però SENSE els dos punts finals (ex: "Pel que fa al mètode científic,"). Immediatament després, SENSE nom ni article, continua directament amb el verb en tercera persona (ex: "Pel que fa al mètode científic, demostra un bon domini..."). NO escriguis cap nom ni article.`
+    : `- Cada bloc ha de COMENÇAR OBLIGATÒRIAMENT amb la capçalera indicada però SENSE els dos punts finals (ex: "Pel que fa al mètode científic,"). Immediatament després, sense punt ni majúscula, continua amb "${nomAmbArticle}" en minúscules (ex: "Pel que fa al mètode científic, ${nomAmbArticle} ..."). Tot ha de ser una frase contínua i fluida.
+- Usa sempre "${nomAmbArticle}" per referir-te a l'alumne/a (mai cap genèric).`;
 
-Alumne/a: ${nomAmbArticle} (gènere: ${genere === 'noia' ? 'femení' : 'masculí'})
+  const prompt = `Ets un professor expert en redacció de comentaris per a butlletins de notes escolars.
+${modeNeutre ? '' : `\nAlumne/a: ${nomAmbArticle} (gènere: ${genere === 'noia' ? 'femení' : 'masculí'})`}
 Idioma: ${idiomaStr}
 
 Ítems d'avaluació:
@@ -1231,11 +1240,10 @@ ${promptItems}
 
 INSTRUCCIONS ESTRICTES:
 - Escriu UN BLOC DE TEXT per cada ítem, en el mateix ordre que apareixen.
-- Cada bloc ha de COMENÇAR OBLIGATÒRIAMENT amb la capçalera indicada però SENSE els dos punts finals (ex: si la capçalera és "Pel que fa al mètode científic:", escriu "Pel que fa al mètode científic,"). Immediatament després, sense punt ni majúscula, continua amb "${nomAmbArticle}" en minúscules (ex: "Pel que fa al mètode científic, ${nomAmbArticle} ..."). Tot ha de ser una frase contínua i fluida.
+${instrNom}
 - Dins de cada bloc, integra el nivell d'assoliment i els comentaris en un text fluid i natural (com escriuria un professor), NO una llista.
 - Separa els blocs amb un salt de línia.
 - No afegeixes cap introducció, títol ni comentari final genèric.
-- Usa sempre "${nomAmbArticle}" per referir-te a l'alumne/a (mai "l'alumne/a" genèric).
 - En català, omet el pronom subjecte "ell" o "ella" quan el subjecte és conegut pel context (pro-drop). Exemple: "serà capaç" en lloc de "ella serà capaç".
 - Concordança de gènere correcta en tots els adjectius i participis.
 - Idioma: ${idiomaStr}.
