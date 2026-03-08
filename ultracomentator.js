@@ -1265,7 +1265,7 @@ async function guardarComentariAlumne(comentari, modal, items = [], passarAlSegu
     }
 
     if (passarAlSeguent) {
-      // Trobar el següent alumne a la classe
+      // Trobar el seguent alumne a la classe
       if (btnActiu) btnActiu.innerHTML = '⏳ Buscant...';
       const classDoc = await db.collection('classes').doc(window._tcClassId).get();
       const alumnesIds = (classDoc.exists ? classDoc.data().alumnes : null) || [];
@@ -1273,7 +1273,7 @@ async function guardarComentariAlumne(comentari, modal, items = [], passarAlSegu
       const idxSeguent = idxActual + 1;
 
       if (idxSeguent >= alumnesIds.length) {
-        if (btnActiu) { btnActiu.innerHTML = '✅ Últim alumne!'; }
+        if (btnActiu) btnActiu.innerHTML = '✅ Ultim alumne!';
         setTimeout(() => { modal.remove(); }, 1000);
         return;
       }
@@ -1281,23 +1281,21 @@ async function guardarComentariAlumne(comentari, modal, items = [], passarAlSegu
       const idSeguent = alumnesIds[idxSeguent];
       const docSeguent = await db.collection('alumnes').doc(idSeguent).get();
       const nomSeguent = docSeguent.exists ? (docSeguent.data().nom || 'Alumne') : 'Alumne';
-      const comentariSeguent = docSeguent.exists
-        ? (docSeguent.data().comentarios?.[window._tcClassId] || '')
-        : '';
 
-      // Actualitzar variables globals
+      // Actualitzar variables globals al seguent alumne
       window._tcStudentId   = idSeguent;
       window._tcStudentName = nomSeguent;
 
-      // Tancar el modal UC actual i obrir el modal de comentaris del següent
+      // Tancar el modal UC actual i obrir directament el formulari UC del seguent
+      // (sense passar pel modal de comentaris)
+      const plantillaActual = window._ucPlantillaActiva;
       modal.remove();
-      if (typeof window.openCommentsModal === 'function') {
-        // Petit delay perquè el modal UC s'elimini correctament
-        setTimeout(() => {
-          window.openCommentsModal(idSeguent, nomSeguent, comentariSeguent);
-        }, 150);
-      }
+      setTimeout(() => {
+        carregarIUsarPlantilla(null, plantillaActual);
+      }, 150);
+
     } else {
+      // Comportament normal: tanca i deixa el modal de comentaris obert per editar
       if (btnActiu) btnActiu.innerHTML = '✅ Guardat!';
       setTimeout(() => { modal.remove(); }, 800);
     }
