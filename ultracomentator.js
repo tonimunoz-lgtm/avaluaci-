@@ -1227,6 +1227,30 @@ Escriu ÚNICAMENT els blocs de comentari, res més.`;
 // ============================================================
 // GUARDAR COMENTARI A L'ALUMNE (integració tutoria-comentaris.js)
 // ============================================================
+// Actualitza la cel·la de comentari a la taula del DOM sense recarregar
+function _ucActualitzarFilaComentari(studentId, classId, comentari) {
+  try {
+    const tr = document.querySelector(`tr[data-student-id="${studentId}"]`);
+    if (!tr) return;
+    // La cel·la de comentari és la que té cursor-pointer i hover:bg-yellow-100
+    const td = tr.querySelector('td.cursor-pointer');
+    if (!td) return;
+    const displayComment = comentari
+      ? comentari.split(' ')[0] + (comentari.split(' ').length > 1 ? '...' : '')
+      : '(sense comentari)';
+    td.innerHTML = `<span style="display:block;">${displayComment}</span>`;
+    td.title = comentari || 'Fes clic per afegir comentari';
+    // Actualitzar el listener de click per passar el nou comentari
+    const tdClone = td.cloneNode(true);
+    tdClone.addEventListener('click', () => {
+      if (typeof window.openCommentsModal === 'function') {
+        window.openCommentsModal(studentId, tr.querySelector('td:first-child')?.textContent?.trim() || '', comentari);
+      }
+    });
+    td.parentNode.replaceChild(tdClone, td);
+  } catch(e) { console.warn('[UC] Error actualitzant fila:', e); }
+}
+
 async function guardarComentariAlumne(comentari, modal, items = [], passarAlSeguent = false) {
   // Capturar IDs en el moment de cridar la funcio (no pas per referencia)
   const studentIdActual = window._tcStudentId;
@@ -1270,8 +1294,7 @@ async function guardarComentariAlumne(comentari, modal, items = [], passarAlSegu
       taComment.dispatchEvent(new Event('input'));
     }
 
-    // Refrescar la taula de notes (igual que fa tutoria-comentaris)
-    if (typeof window.renderNotesGrid === 'function') window.renderNotesGrid();
+    _ucActualitzarFilaComentari(studentIdActual, classIdActual, comentari);
 
     if (passarAlSeguent) {
       // Trobar el seguent alumne a la classe
@@ -1283,10 +1306,7 @@ async function guardarComentariAlumne(comentari, modal, items = [], passarAlSegu
 
       if (idxSeguent >= alumnesIds.length) {
         if (btnActiu) btnActiu.innerHTML = '✅ Ultim alumne!';
-        setTimeout(() => {
-          modal.remove();
-          if (typeof window.renderNotesGrid === 'function') window.renderNotesGrid();
-        }, 1000);
+        setTimeout(() => { modal.remove(); }, 1000);
         return;
       }
 
@@ -1315,10 +1335,7 @@ async function guardarComentariAlumne(comentari, modal, items = [], passarAlSegu
     } else {
       // Comportament normal: tanca el modal UC i refresca la taula
       if (btnActiu) btnActiu.innerHTML = '✅ Guardat!';
-      setTimeout(() => {
-        modal.remove();
-        if (typeof window.renderNotesGrid === 'function') window.renderNotesGrid();
-      }, 800);
+      setTimeout(() => { modal.remove(); }, 800);
     }
 
   } catch (err) {
