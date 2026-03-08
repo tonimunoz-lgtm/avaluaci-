@@ -679,7 +679,9 @@ function recollidaDades(modal) {
   const suspeses = [...modal.querySelectorAll('.assignatura-check:checked')].map(c => c.value);
 
   const genere  = getValue('genere') || 'noi';
-  const article = genere === 'noia' ? 'La' : 'El';
+  // Apòstrof català: l'Albert, l'Aina (davant vocal o h muda)
+  const _esVH   = nom && nom !== "l'alumne/a" && /^[aeiouàèéíïóòúüh]/i.test(nom.trim());
+  const article = _esVH ? "l'" : (genere === 'noia' ? 'La' : 'El');
 
   // Recollir apartats personalitzats
   const apartatsValors = _apartatsExtra.map(ap => ({
