@@ -18,6 +18,23 @@ let _tcStudentId   = null;
 let _tcStudentName = null;
 let _tcClassId     = null;
 
+// Parseja un nom complet i retorna les parts visibles segons preferencies localStorage
+function _tcCap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+function _tcNomDisplay(nomComplet) {
+  if (!nomComplet || nomComplet === 'alumne/a') return nomComplet || 'alumne/a';
+  const parts = nomComplet.trim().split(/\s+/);
+  const nom     = _tcCap(parts[0] || '');
+  const cognom1 = _tcCap(parts[1] || '');
+  const cognom2 = _tcCap(parts[2] || '');
+  const prefs = JSON.parse(localStorage.getItem('uc_nom_parts') || '{"nom":true,"cognom1":false,"cognom2":false}');
+  const seleccionats = [
+    prefs.nom     ? nom     : '',
+    prefs.cognom1 ? cognom1 : '',
+    prefs.cognom2 ? cognom2 : '',
+  ].filter(Boolean);
+  return seleccionats.join(' '); // pot ser buit si cap check actiu
+}
+
 // ============================================================
 // ASSIGNATURES BASE
 // ============================================================
@@ -344,6 +361,33 @@ async function openTCFormulari() {
 // ============================================================
 // HTML DEL FORMULARI
 // ============================================================
+function _tcNomPartsHTML() {
+  if (!_tcStudentName) return '';
+  const parts = (_tcStudentName || '').trim().split(/\s+/);
+  const nom     = _tcCap(parts[0] || '');
+  const cognom1 = _tcCap(parts[1] || '');
+  const cognom2 = _tcCap(parts[2] || '');
+  if (!nom) return '';
+  const prefs = JSON.parse(localStorage.getItem('uc_nom_parts') || '{"nom":true,"cognom1":false,"cognom2":false}');
+  const mkCheck = (key, label, val) => val ? `
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;color:#374151;">
+      <input type="checkbox" class="tc-nom-check" data-key="${key}"
+        style="accent-color:#7c3aed;width:14px;height:14px;"
+        ${prefs[key] ? 'checked' : ''}>
+      <span style="font-weight:600;color:#4c1d95;">${val}</span>
+      <span style="color:#9ca3af;">(${label})</span>
+    </label>` : '';
+  return `
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid #e5e7eb;">
+      <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Mostrar al comentari</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        ${mkCheck('nom','nom',nom)}
+        ${mkCheck('cognom1','1r cognom',cognom1)}
+        ${mkCheck('cognom2','2n cognom',cognom2)}
+      </div>
+    </div>`;
+}
+
 function tcBuildHTML() {
   const nom = _tcStudentName || 'alumne/a';
 
@@ -387,6 +431,7 @@ function tcBuildHTML() {
             <input type="radio" name="tc_genere" value="noia" class="sr-only">👧 Noia (La...)
           </label>
         </div>
+        ${_tcNomPartsHTML()}
       </div>
 
       <div class="bg-gray-50 rounded-xl p-4">
@@ -605,6 +650,16 @@ function tcInitInteraccions(modal) {
 
   modal.querySelector('#tcBtnGenerar').addEventListener('click', () => tcGenerar(modal));
 
+  // Checkboxes de parts del nom: guardar preferencia a localStorage
+  modal.querySelectorAll('.tc-nom-check').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const prefs = JSON.parse(localStorage.getItem('uc_nom_parts') || '{"nom":true,"cognom1":false,"cognom2":false}');
+      modal.querySelectorAll('.tc-nom-check').forEach(c2 => { prefs[c2.dataset.key] = c2.checked; });
+
+      localStorage.setItem('uc_nom_parts', JSON.stringify(prefs));
+    });
+  });
+
   modal.addEventListener('click', e => {
     if (e.target.id === 'tcBtnRegen')    tcGenerar(modal);
     if (e.target.id === 'tcBtnCopiar')   tcCopiar(modal, e.target);
@@ -618,10 +673,12 @@ function tcInitInteraccions(modal) {
 function tcDades(modal) {
   const g = (n) => { const el = modal.querySelector(`input[name="${n}"]:checked`); return el?.value || null; };
   const genere  = g('tc_genere') || 'noi';
-  const nom     = _tcStudentName || 'alumne/a';
+  const nom     = _tcNomDisplay(_tcStudentName || 'alumne/a');
   const _esVH   = nom && nom !== 'alumne/a' && /^[aeiouàèéíïóòúüh]/i.test(nom.trim());
   const article = _esVH ? "l'" : (genere === 'noia' ? 'La' : 'El');
-  const nomAmbArticle = _esVH ? `l'${nom}` : `${article} ${nom}`;
+  const nomAmbArticle = nom && nom.trim() && nom !== 'alumne/a'
+    ? (_esVH ? `l'${nom}` : `${article} ${nom}`)
+    : `l'alumne/a`;
   return {
     nom, nomAmbArticle, genere, article,
     curs:      modal.querySelector('#tcCurs').value.trim(),
