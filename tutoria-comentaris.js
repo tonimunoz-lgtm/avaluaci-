@@ -685,7 +685,7 @@ function tcPrompt(d) {
 
   const idioma = d.idioma === 'castella'
     ? `Escriu en castellano. Usa "${d.nomAmbArticle}" i pronoms él/ella.`
-    : `Escriu en català. Usa "${d.nomAmbArticle}" i pronoms ell/ella.`;
+    : `Escriu en català. Usa "${d.nomAmbArticle}". Omet el pronom subjecte ell/ella quan el subjecte és conegut (pro-drop).`;
 
   return `Ets un tutor/a que escriu comentaris per al butlletí de notes.
 
