@@ -215,6 +215,35 @@ function observeCapcaleraComentaris() {
 // ============================================================
 // EXPORTAR COMENTARIS A EXCEL
 // ============================================================
+// ============================================================
+// APÒSTROF CATALÀ: el/la → l' davant vocal o h muda
+// Norma: s'apostrofa sempre davant vocal o h (l'Albert, l'Aina)
+// Excepció àtona femenina (la iaia, la una) — poc freqüent en noms propis
+// ============================================================
+function _articleApostrof(nom) {
+  if (!nom) return "l'";
+  const esVocalOH = /^[aeiouàèéíïóòúüh]/i.test(nom.trim());
+  return esVocalOH ? "l'" : null; // null = no apostrofar, usar el/la original
+}
+
+// Separar el comentari en ítems per paràgrafs
+// Cada paràgraf = un ítem. La capçalera és el fragment fins a la primera coma.
+function _parsarComentariItems(text) {
+  if (!text) return [];
+  return text.split(/\n\s*\n/).map(bloc => {
+    const net = bloc.trim();
+    if (!net) return null;
+    const comaIdx = net.indexOf(',');
+    if (comaIdx > 0 && comaIdx < 80) {
+      return {
+        item: net.slice(0, comaIdx).trim(),
+        comentari: net.slice(comaIdx + 1).trim()
+      };
+    }
+    return { item: '', comentari: net };
+  }).filter(Boolean);
+}
+
 async function exportarComentarisExcel() {
   const classId = _tcClassId;
   if (!classId || !_tcDB) { alert('Selecciona una classe primer'); return; }
@@ -226,17 +255,48 @@ async function exportarComentarisExcel() {
     if (alumnesIds.length === 0) { alert('No hi ha alumnes'); return; }
 
     const docs = await Promise.all(alumnesIds.map(id => _tcDB.collection('alumnes').doc(id).get()));
-    const files = docs
-      .filter(d => d.exists)
-      .map(d => {
-        const data = d.data();
-        return [data.nom || 'Desconegut', data.comentarios?.[classId] || ''];
-      });
+    const alumnes = docs.filter(d => d.exists).map(d => {
+      const data = d.data();
+      return {
+        nom: data.nom || 'Desconegut',
+        comentari: data.comentarios?.[classId] || ''
+      };
+    });
 
     if (!window.XLSX) { alert('La llibreria XLSX no està disponible'); return; }
+
+    // Determinar el màxim d'ítems per construir la capçalera
+    const itemsParsats = alumnes.map(a => _parsarComentariItems(a.comentari));
+    const maxItems = Math.max(1, ...itemsParsats.map(i => i.length));
+
+    // Capçalera: Alumne, Ítem 1, Comentari 1, Assoliment 1, Ítem 2, ...
+    const capcalera = ['Alumne'];
+    for (let i = 1; i <= maxItems; i++) {
+      capcalera.push(`Ítem ${i}`, `Comentari ${i}`, `Assoliment ${i}`);
+    }
+
+    // Files de dades
+    const files = alumnes.map((a, idx) => {
+      const items = itemsParsats[idx];
+      const fila = [a.nom];
+      for (let i = 0; i < maxItems; i++) {
+        const it = items[i];
+        fila.push(it ? it.item : '');
+        fila.push(it ? it.comentari : '');
+        fila.push(''); // Assoliment buit (per omplir manualment)
+      }
+      return fila;
+    });
+
     const wb = window.XLSX.utils.book_new();
-    const ws = window.XLSX.utils.aoa_to_sheet([['Alumne', 'Comentari'], ...files]);
-    ws['!cols'] = [{ wch: 30 }, { wch: 100 }];
+    const ws = window.XLSX.utils.aoa_to_sheet([capcalera, ...files]);
+
+    // Amplades: Alumne=25, Ítem=30, Comentari=80, Assoliment=20
+    ws['!cols'] = [{ wch: 25 }];
+    for (let i = 0; i < maxItems; i++) {
+      ws['!cols'].push({ wch: 30 }, { wch: 80 }, { wch: 20 });
+    }
+
     window.XLSX.utils.book_append_sheet(wb, ws, 'Comentaris');
     const avui = new Date();
     const data = `${avui.getFullYear()}${String(avui.getMonth()+1).padStart(2,'0')}${String(avui.getDate()).padStart(2,'0')}`;
