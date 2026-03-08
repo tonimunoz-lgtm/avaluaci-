@@ -1263,12 +1263,15 @@ async function guardarComentariAlumne(comentari, modal, items = [], passarAlSegu
 
     await db.collection('alumnes').doc(studentIdActual).update(update);
 
-    // Omplir textarea del modal de comentaris si està obert
+    // Omplir textarea del modal de comentaris si esta obert
     const taComment = document.getElementById('commentTextarea');
     if (taComment) {
       taComment.value = comentari;
       taComment.dispatchEvent(new Event('input'));
     }
+
+    // Refrescar la taula de notes (igual que fa tutoria-comentaris)
+    if (typeof window.renderNotesGrid === 'function') window.renderNotesGrid();
 
     if (passarAlSeguent) {
       // Trobar el seguent alumne a la classe
