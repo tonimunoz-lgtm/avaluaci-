@@ -1,3 +1,4 @@
+
 // tutoria-comentaris.js v2 — net
 // 1. Botó "✨ Generar per IA" al modal de comentaris
 // 2. Formulari clon amb "💾 Guardar a l'alumne"
@@ -257,33 +258,40 @@ async function exportarComentarisExcel() {
     const docs = await Promise.all(alumnesIds.map(id => _tcDB.collection('alumnes').doc(id).get()));
     const alumnes = docs.filter(d => d.exists).map(d => {
       const data = d.data();
-      return {
-        nom: data.nom || 'Desconegut',
-        comentari: data.comentarios?.[classId] || ''
-      };
+      const comentari = data.comentarios?.[classId] || '';
+      const metadades = data.comentarisItems?.[classId] || []; // títols + assoliments guardats
+      const blocs = _parsarComentariItems(comentari);
+      // Combinar blocs de text amb metadades (títol real + assoliment)
+      const items = blocs.map((bloc, i) => ({
+        titol: metadades[i]?.titol || bloc.item || `Ítem ${i+1}`,
+        comentari: bloc.comentari,
+        assoliment: metadades[i]?.assoliment || ''
+      }));
+      return { nom: data.nom || 'Desconegut', items };
     });
 
     if (!window.XLSX) { alert('La llibreria XLSX no està disponible'); return; }
 
-    // Determinar el màxim d'ítems per construir la capçalera
-    const itemsParsats = alumnes.map(a => _parsarComentariItems(a.comentari));
-    const maxItems = Math.max(1, ...itemsParsats.map(i => i.length));
+    const maxItems = Math.max(1, ...alumnes.map(a => a.items.length));
 
-    // Capçalera: Alumne, Ítem 1, Comentari 1, Assoliment 1, Ítem 2, ...
-    const capcalera = ['Alumne'];
-    for (let i = 1; i <= maxItems; i++) {
-      capcalera.push(`Ítem ${i}`, `Comentari ${i}`, `Assoliment ${i}`);
+    // Capçalera dinàmica amb títols reals del primer alumne que els tingui
+    const titolsCapcalera = [];
+    for (let i = 0; i < maxItems; i++) {
+      const titol = alumnes.find(a => a.items[i]?.titol && !a.items[i].titol.startsWith('Ítem'))?.items[i].titol || `Ítem ${i+1}`;
+      titolsCapcalera.push(titol);
     }
 
+    const capcalera = ['Alumne'];
+    titolsCapcalera.forEach(t => capcalera.push(t, 'Comentari', 'Assoliment'));
+
     // Files de dades
-    const files = alumnes.map((a, idx) => {
-      const items = itemsParsats[idx];
+    const files = alumnes.map(a => {
       const fila = [a.nom];
       for (let i = 0; i < maxItems; i++) {
-        const it = items[i];
-        fila.push(it ? it.item : '');
+        const it = a.items[i];
+        fila.push(it ? it.titol : '');
         fila.push(it ? it.comentari : '');
-        fila.push(''); // Assoliment buit (per omplir manualment)
+        fila.push(it ? it.assoliment : '');
       }
       return fila;
     });
