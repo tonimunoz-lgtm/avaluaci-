@@ -1228,7 +1228,13 @@ Escriu ÚNICAMENT els blocs de comentari, res més.`;
 // GUARDAR COMENTARI A L'ALUMNE (integració tutoria-comentaris.js)
 // ============================================================
 async function guardarComentariAlumne(comentari, modal, items = [], passarAlSeguent = false) {
-  if (!window._tcStudentId || !window._tcClassId) {
+  // Capturar IDs en el moment de cridar la funcio (no pas per referencia)
+  const studentIdActual = window._tcStudentId;
+  const classIdActual   = window._tcClassId;
+
+  console.log('[UC guardar] studentId:', studentIdActual, 'classId:', classIdActual, 'seguent:', passarAlSeguent);
+
+  if (!studentIdActual || !classIdActual) {
     alert('No hi ha cap alumne actiu. Obre primer el modal de comentaris d\'un alumne.');
     return;
   }
@@ -1249,13 +1255,13 @@ async function guardarComentariAlumne(comentari, modal, items = [], passarAlSegu
     }));
 
     const update = {
-      [`comentarios.${window._tcClassId}`]: comentari,
+      [`comentarios.${classIdActual}`]: comentari,
     };
     if (metadades.length > 0) {
-      update[`comentarisItems.${window._tcClassId}`] = metadades;
+      update[`comentarisItems.${classIdActual}`] = metadades;
     }
 
-    await db.collection('alumnes').doc(window._tcStudentId).update(update);
+    await db.collection('alumnes').doc(studentIdActual).update(update);
 
     // Omplir textarea del modal de comentaris si està obert
     const taComment = document.getElementById('commentTextarea');
@@ -1267,9 +1273,9 @@ async function guardarComentariAlumne(comentari, modal, items = [], passarAlSegu
     if (passarAlSeguent) {
       // Trobar el seguent alumne a la classe
       if (btnActiu) btnActiu.innerHTML = '⏳ Buscant...';
-      const classDoc = await db.collection('classes').doc(window._tcClassId).get();
+      const classDoc = await db.collection('classes').doc(classIdActual).get();
       const alumnesIds = (classDoc.exists ? classDoc.data().alumnes : null) || [];
-      const idxActual = alumnesIds.indexOf(window._tcStudentId);
+      const idxActual = alumnesIds.indexOf(studentIdActual);
       const idxSeguent = idxActual + 1;
 
       if (idxSeguent >= alumnesIds.length) {
