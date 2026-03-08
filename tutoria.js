@@ -764,7 +764,7 @@ function buildPrompt(dades) {
 
   const idiomaInstruccio = dades.idioma === 'castella'
     ? `Escriu en castellano. Usa "${article === 'El' ? 'El' : 'La'} ${nom}" i pronoms él/ella.`
-    : `Escriu en català. Usa "${nomAmbArticle}" i pronoms ell/ella.`;
+    : `Escriu en català. Usa "${nomAmbArticle}". Omet el pronom subjecte ell/ella quan el subjecte és conegut (pro-drop).`;
 
   const trimestreCtx = dades.trimestre
     ? `És el ${dades.trimestre}: ${dades.trimestre === 'final de curs' ? 'reflexiona sobre tot el curs' : 'anima a millorar de cara als propers trimestres'}.`
