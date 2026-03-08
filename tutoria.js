@@ -682,6 +682,7 @@ function recollidaDades(modal) {
   // Apòstrof català: l'Albert, l'Aina (davant vocal o h muda)
   const _esVH   = nom && nom !== "l'alumne/a" && /^[aeiouàèéíïóòúüh]/i.test(nom.trim());
   const article = _esVH ? "l'" : (genere === 'noia' ? 'La' : 'El');
+  const nomAmbArticle = _esVH ? `l'${nom}` : `${article} ${nom}`;
 
   // Recollir apartats personalitzats
   const apartatsValors = _apartatsExtra.map(ap => ({
@@ -690,7 +691,7 @@ function recollidaDades(modal) {
   })).filter(a => a.valor);
 
   return {
-    nom, nomAmbArticle: `${article} ${nom}`,
+    nom, nomAmbArticle,
     genere, article, curs, idioma,
     trimestre: getValue('trimestre'),
     suspeses,
