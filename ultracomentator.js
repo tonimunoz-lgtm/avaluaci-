@@ -1283,7 +1283,10 @@ async function guardarComentariAlumne(comentari, modal, items = [], passarAlSegu
 
       if (idxSeguent >= alumnesIds.length) {
         if (btnActiu) btnActiu.innerHTML = '✅ Ultim alumne!';
-        setTimeout(() => { modal.remove(); }, 1000);
+        setTimeout(() => {
+          modal.remove();
+          if (typeof window.renderNotesGrid === 'function') window.renderNotesGrid();
+        }, 1000);
         return;
       }
 
@@ -1310,9 +1313,12 @@ async function guardarComentariAlumne(comentari, modal, items = [], passarAlSegu
       }, 150);
 
     } else {
-      // Comportament normal: tanca i deixa el modal de comentaris obert per editar
+      // Comportament normal: tanca el modal UC i refresca la taula
       if (btnActiu) btnActiu.innerHTML = '✅ Guardat!';
-      setTimeout(() => { modal.remove(); }, 800);
+      setTimeout(() => {
+        modal.remove();
+        if (typeof window.renderNotesGrid === 'function') window.renderNotesGrid();
+      }, 800);
     }
 
   } catch (err) {
