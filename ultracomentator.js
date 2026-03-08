@@ -1178,6 +1178,7 @@ INSTRUCCIONS ESTRICTES:
 - Separa els blocs amb un salt de línia.
 - No afegeixes cap introducció, títol ni comentari final genèric.
 - Usa sempre "${nomAmbArticle}" per referir-te a l'alumne/a (mai "l'alumne/a" genèric).
+- En català, omet el pronom subjecte "ell" o "ella" quan el subjecte és conegut pel context (pro-drop). Exemple: "serà capaç" en lloc de "ella serà capaç".
 - Concordança de gènere correcta en tots els adjectius i participis.
 - Idioma: ${idiomaStr}.
 - No menciones notes numèriques.
