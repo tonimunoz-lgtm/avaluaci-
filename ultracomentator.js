@@ -1086,8 +1086,12 @@ async function generarAmbIA(modal) {
   const idioma = document.getElementById('ucIdioma').value;
   const genereRadio = document.querySelector('input[name="ucGenere"]:checked');
   const genere = genereRadio ? genereRadio.value : 'noi';
-  const article = genere === 'noia' ? 'La' : 'El';
-  const nomAmbArticle = alumne ? `${article} ${alumne}` : `l'alumne/a`;
+  // Apòstrof català: l'Albert, l'Aina (davant vocal o h muda)
+  const esVocalOH = alumne && /^[aeiouàèéíïóòúüh]/i.test(alumne.trim());
+  const articleBase = genere === 'noia' ? 'La' : 'El';
+  const nomAmbArticle = alumne
+    ? (esVocalOH ? `l'${alumne}` : `${articleBase} ${alumne}`)
+    : `l'alumne/a`;
 
   // Recollir assoliments per ítem (desplegable independent)
   const assoliments = {};
