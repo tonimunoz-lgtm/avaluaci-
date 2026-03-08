@@ -618,10 +618,12 @@ function tcInitInteraccions(modal) {
 function tcDades(modal) {
   const g = (n) => { const el = modal.querySelector(`input[name="${n}"]:checked`); return el?.value || null; };
   const genere  = g('tc_genere') || 'noi';
-  const article = genere === 'noia' ? 'La' : 'El';
   const nom     = _tcStudentName || 'alumne/a';
+  const _esVH   = nom && nom !== 'alumne/a' && /^[aeiouàèéíïóòúüh]/i.test(nom.trim());
+  const article = _esVH ? "l'" : (genere === 'noia' ? 'La' : 'El');
+  const nomAmbArticle = _esVH ? `l'${nom}` : `${article} ${nom}`;
   return {
-    nom, nomAmbArticle: `${article} ${nom}`, genere, article,
+    nom, nomAmbArticle, genere, article,
     curs:      modal.querySelector('#tcCurs').value.trim(),
     idioma:    modal.querySelector('#tcIdioma').value,
     llargada:  modal.querySelector('input[name="tc_llarg"]:checked')?.value || 'mitja',
