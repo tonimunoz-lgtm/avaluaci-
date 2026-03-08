@@ -925,6 +925,7 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
           <div style="display:flex;gap:8px;margin-top:12px;">
             <button id="ucCopiarResultat" style="background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">📋 Copiar</button>
             <button id="ucGuardarAlumne" style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:none;">💾 Guardar a l'alumne</button>
+            <button id="ucGuardarSeguent" style="background:linear-gradient(135deg,#059669,#10b981);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:none;">💾 Guardar i següent ▶</button>
           </div>
         </div>
 
@@ -982,9 +983,11 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
         if (lbl) { lbl.style.background = '#7c3aed'; lbl.style.borderColor = '#7c3aed'; lbl.style.color = '#fff'; }
       });
     });
-    // Mostrar botó guardar
+    // Mostrar botons guardar
     const btnG = document.getElementById('ucGuardarAlumne');
+    const btnS = document.getElementById('ucGuardarSeguent');
     if (btnG) btnG.style.display = 'inline-flex';
+    if (btnS) btnS.style.display = 'inline-flex';
   } else if (infoWrap) {
     // Mode normal: camp de text per escriure nom + idioma
     infoWrap.innerHTML = `
@@ -1200,9 +1203,16 @@ Escriu ÚNICAMENT els blocs de comentari, res més.`;
 
     // Mostrar botó guardar si hi ha alumne actiu (modal comentaris obert)
     const btnGuardar = document.getElementById('ucGuardarAlumne');
-    if (btnGuardar && window._tcStudentId) {
-      btnGuardar.style.display = 'inline-flex';
-      btnGuardar.onclick = () => guardarComentariAlumne(comentari, modal, itesMActius);
+    const btnSeguent = document.getElementById('ucGuardarSeguent');
+    if (window._tcStudentId) {
+      if (btnGuardar) {
+        btnGuardar.style.display = 'inline-flex';
+        btnGuardar.onclick = () => guardarComentariAlumne(comentari, modal, itesMActius, false);
+      }
+      if (btnSeguent) {
+        btnSeguent.style.display = 'inline-flex';
+        btnSeguent.onclick = () => guardarComentariAlumne(comentari, modal, itesMActius, true);
+      }
     }
 
   } catch (err) {
@@ -1217,15 +1227,16 @@ Escriu ÚNICAMENT els blocs de comentari, res més.`;
 // ============================================================
 // GUARDAR COMENTARI A L'ALUMNE (integració tutoria-comentaris.js)
 // ============================================================
-async function guardarComentariAlumne(comentari, modal, items = []) {
+async function guardarComentariAlumne(comentari, modal, items = [], passarAlSeguent = false) {
   if (!window._tcStudentId || !window._tcClassId) {
     alert('No hi ha cap alumne actiu. Obre primer el modal de comentaris d\'un alumne.');
     return;
   }
 
-  const btn = document.getElementById('ucGuardarAlumne');
-  btn.innerHTML = '⏳ Guardant...';
-  btn.disabled = true;
+  const btnGuardar = document.getElementById('ucGuardarAlumne');
+  const btnSeguent = document.getElementById('ucGuardarSeguent');
+  const btnActiu = passarAlSeguent ? btnSeguent : btnGuardar;
+  if (btnActiu) { btnActiu.innerHTML = '⏳ Guardant...'; btnActiu.disabled = true; }
 
   try {
     const db = window._tutoriaDB;
@@ -1246,20 +1257,54 @@ async function guardarComentariAlumne(comentari, modal, items = []) {
 
     await db.collection('alumnes').doc(window._tcStudentId).update(update);
 
-    // Omplir textarea del modal si està obert
+    // Omplir textarea del modal de comentaris si està obert
     const taComment = document.getElementById('commentTextarea');
     if (taComment) {
       taComment.value = comentari;
       taComment.dispatchEvent(new Event('input'));
     }
 
-    btn.innerHTML = '✅ Guardat!';
-    setTimeout(() => { modal.remove(); }, 800);
+    if (passarAlSeguent) {
+      // Trobar el següent alumne a la classe
+      if (btnActiu) btnActiu.innerHTML = '⏳ Buscant...';
+      const classDoc = await db.collection('classes').doc(window._tcClassId).get();
+      const alumnesIds = (classDoc.exists ? classDoc.data().alumnes : null) || [];
+      const idxActual = alumnesIds.indexOf(window._tcStudentId);
+      const idxSeguent = idxActual + 1;
+
+      if (idxSeguent >= alumnesIds.length) {
+        if (btnActiu) { btnActiu.innerHTML = '✅ Últim alumne!'; }
+        setTimeout(() => { modal.remove(); }, 1000);
+        return;
+      }
+
+      const idSeguent = alumnesIds[idxSeguent];
+      const docSeguent = await db.collection('alumnes').doc(idSeguent).get();
+      const nomSeguent = docSeguent.exists ? (docSeguent.data().nom || 'Alumne') : 'Alumne';
+      const comentariSeguent = docSeguent.exists
+        ? (docSeguent.data().comentarios?.[window._tcClassId] || '')
+        : '';
+
+      // Actualitzar variables globals
+      window._tcStudentId   = idSeguent;
+      window._tcStudentName = nomSeguent;
+
+      // Tancar el modal UC actual i obrir el modal de comentaris del següent
+      modal.remove();
+      if (typeof window.openCommentsModal === 'function') {
+        // Petit delay perquè el modal UC s'elimini correctament
+        setTimeout(() => {
+          window.openCommentsModal(idSeguent, nomSeguent, comentariSeguent);
+        }, 150);
+      }
+    } else {
+      if (btnActiu) btnActiu.innerHTML = '✅ Guardat!';
+      setTimeout(() => { modal.remove(); }, 800);
+    }
 
   } catch (err) {
     alert('Error guardant: ' + err.message);
-    btn.innerHTML = '💾 Guardar a l\'alumne';
-    btn.disabled = false;
+    if (btnActiu) { btnActiu.innerHTML = passarAlSeguent ? '💾 Guardar i següent ▶' : '💾 Guardar a l\'alumne'; btnActiu.disabled = false; }
   }
 }
 
