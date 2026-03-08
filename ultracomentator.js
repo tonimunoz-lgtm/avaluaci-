@@ -1694,7 +1694,7 @@ function _mostrarModalImport() {
       <h2 style="margin:0 0 6px;font-size:20px;font-weight:800;color:#1a1a2e;">📊 Importar des d'Excel</h2>
       <p style="margin:0 0 24px;color:#6b7280;font-size:14px;line-height:1.5;">
         Importa una plantilla des d'un fitxer Excel amb el format Ultracomentator.<br>
-        El full ha de tenir els ítems a la <strong>fila 2</strong> i els comentaris a la <strong>fila 4</strong>.
+        Qualsevol Excel amb columnes <strong>TÍTOL ÍTEM N</strong>, <strong>COMENTARI ÍTEM N</strong> i <strong>ASSOLIMENT ÍTEM N</strong> — els títols i comentaris es detecten automàticament.
       </p>
 
       <!-- ZONA DROP -->
@@ -1778,7 +1778,7 @@ function _mostrarModalImport() {
         plantillaImportada = parsejarFullExcel(ws, file.name.replace(/\.(xlsx|xls)$/i, ''));
 
         if (!plantillaImportada || plantillaImportada.items.length === 0) {
-          mostrarError('No s\'han pogut trobar ítems al fitxer. Comprova que el format sigui correcte (títols a fila 2, comentaris a fila 4).');
+          mostrarError('No s\'han pogut trobar ítems al fitxer. Assegura\'t que el full tingui columnes TÍTOL ÍTEM N, COMENTARI ÍTEM N i ASSOLIMENT ÍTEM N.');
           dropZone.innerHTML = `<div style="font-size:40px;margin-bottom:10px;">📂</div><div style="font-weight:700;color:#7c3aed;font-size:15px;margin-bottom:6px;">Arrossega l'Excel aquí</div><div style="color:#9ca3af;font-size:13px;">o clica per seleccionar fitxer</div><input type="file" id="ucFileInput" accept=".xlsx,.xls" style="display:none;">`;
           return;
         }
@@ -1946,90 +1946,102 @@ function _generarExcelPlantilla() {
 
 
 // ============================================================
-// PARSEJAR FULL EXCEL → ESTRUCTURA PLANTILLA
+// PARSEJAR FULL EXCEL → ESTRUCTURA PLANTILLA (parser universal)
+// Funciona amb qualsevol Excel que tingui "TÍTOL ÍTEM N", "COMENTARI ÍTEM N",
+// "ASSOLIMENT ÍTEM N" a qualsevol fila, i els comentaris a la mateixa fila.
 // ============================================================
 function parsejarFullExcel(ws, nomFitxer) {
   const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:Z10');
+  const maxRow = range.e.r + 1;
   const maxCol = range.e.c + 1;
 
-  // Llegir fila 2 (índex 1) i fila 4 (índex 3)
-  const fila2 = {};
-  const fila4 = {};
+  const getCellVal = (r, c) => {
+    const cell = ws[XLSX.utils.encode_cell({ r, c })];
+    if (!cell || cell.v === undefined || cell.v === null) return null;
+    const v = String(cell.v).trim();
+    return v || null;
+  };
 
-  for (let c = 0; c < maxCol; c++) {
-    const addr2 = XLSX.utils.encode_cell({ r: 1, c });
-    const addr4 = XLSX.utils.encode_cell({ r: 3, c });
-    const cell2 = ws[addr2];
-    const cell4 = ws[addr4];
-
-    if (cell2 && cell2.v && typeof cell2.v === 'string' && !cell2.v.startsWith('=')) {
-      fila2[c] = cell2.v.trim();
+  // ── 1. Trobar la fila que conté "TÍTOL ÍTEM 1" (pot ser qualsevol fila) ──
+  let filaEstructura = -1;
+  for (let r = 0; r < Math.min(maxRow, 20); r++) {
+    for (let c = 0; c < maxCol; c++) {
+      const v = getCellVal(r, c);
+      if (v && v.includes('TÍTOL ÍTEM 1')) { filaEstructura = r; break; }
     }
-    if (cell4 && cell4.v && typeof cell4.v === 'string' && !cell4.v.startsWith('=')) {
-      const text = cell4.v.trim().replace(/\\n$/, '').trim();
-      if (text && !text.startsWith('TÍTOL') && !text.startsWith('COMENTARI') && !text.startsWith('ASSOLIMENT') && text !== 'EXPERIMENTA (alumnes)') {
-        fila4[c] = text;
+    if (filaEstructura >= 0) break;
+  }
+  if (filaEstructura < 0) return null;
+
+  // ── 2. Detectar tots els ítems a partir de "TÍTOL ÍTEM N" ──
+  const items = [];
+  let col = 0;
+  while (col < maxCol) {
+    const v = getCellVal(filaEstructura, col);
+    if (v && v.includes('TÍTOL ÍTEM')) {
+      // Estructura: col=TÍTOL, col+1=COMENTARI, col+2=ASSOLIMENT, col+3=capçalera, col+4..=coms
+      const colCap  = col + 3;
+      const colCom1 = col + 4;
+
+      // Títol: buscar a les files ANTERIORS, a les columnes [col .. col+4]
+      // ignorant: x/X, fórmules, paraules clau estructurals
+      const IGNORA = new Set(['x', 'X', '']);
+      const IGNORA_PREFIX = ['TÍTOL', 'ÍTEM', 'COMENTARI', 'ASSOLIMENT', '='];
+      let titol = '';
+      for (let r = filaEstructura - 1; r >= 0 && !titol; r--) {
+        for (let tc = col; tc <= col + 4 && tc < maxCol && !titol; tc++) {
+          const vt = getCellVal(r, tc);
+          if (!vt || IGNORA.has(vt)) continue;
+          if (IGNORA_PREFIX.some(p => vt.toUpperCase().startsWith(p))) continue;
+          titol = vt;
+        }
       }
+
+      // Capçalera
+      const capRaw = getCellVal(filaEstructura, colCap) || '';
+      const capcelera = capRaw.replace(/\n/g, '').trim();
+
+      // Comentaris: columnes col+4 en avant fins al pròxim TÍTOL ÍTEM
+      const comentaris = [];
+      let c2 = colCom1;
+      while (c2 < maxCol) {
+        const v2 = getCellVal(filaEstructura, c2);
+        if (!v2) { c2++; continue; }
+        if (v2.includes('TÍTOL ÍTEM')) break;
+        if (!v2.startsWith('=')) {
+          comentaris.push({
+            id: 'com_' + Date.now() + '_' + c2,
+            text: v2.replace(/\n/g, ' ').trim(),
+            nivell: 'general'
+          });
+        }
+        c2++;
+      }
+
+      if (capcelera || comentaris.length > 0) {
+        items.push({
+          id: 'item_' + Date.now() + '_' + col,
+          titol: titol || capcelera.replace(/:.*/, '').trim(),
+          capcelera,
+          comentaris
+        });
+      }
+      col = c2;
+    } else {
+      col++;
     }
   }
 
-  // Nom de la plantilla: buscar a fila 2 columna C (índex 2) o nom del fitxer
-  const nomPlantilla = fila2[2] || nomFitxer || 'Plantilla importada';
+  if (items.length === 0) return null;
 
-  // Detectar els grups d'ítems
-  // La fila 2 té els títols dels ítems en columnes específiques
-  // Les columnes que tenen títol a fila 2 i NO comencen per majúscula sola ni "EXPERIMENTA"...
-  // Estratègia: els títols reals d'ítems son les columnes fila2 que NO son "COM ES MOUEN..." etc.
-
-  const columnesItem = Object.entries(fila2)
-    .filter(([col, val]) => {
-      const c = parseInt(col);
-      // Excloure col 2 (títol projecte) i valors genèrics
-      if (c <= 2) return false;
-      if (val.startsWith('TÍTOL') || val.startsWith('COMENTARI') || val.startsWith('ASSOLIMENT')) return false;
-      if (val.toUpperCase() === val && val.length > 5) return false; // tot majúscules = títol secció
-      return true;
-    })
-    .map(([col]) => parseInt(col))
-    .sort((a, b) => a - b);
-
-  if (columnesItem.length === 0) return null;
-
-  const items = [];
-  columnesItem.forEach((colInici, idx) => {
-    const titol = fila2[colInici];
-    const colFi = columnesItem[idx + 1] ? columnesItem[idx + 1] : colInici + 10;
-
-    // La primera columna (colInici) de fila4 és la CAPÇALERA de l'ítem
-    // Els comentaris reals comencen a colInici + 1
-    const capcelera = fila4[colInici]
-      ? fila4[colInici].replace(/\\n/g, '').replace(/:\s*$/, '').trim() + ':'
-      : '';
-
-    const comentaris = [];
-    for (let c = colInici + 1; c < colFi && c < maxCol; c++) {
-      const text = fila4[c];
-      if (!text) continue;
-      comentaris.push({
-        id: 'com_' + Date.now() + '_' + c,
-        text: text.replace(/\\n/g, ' ').trim(),
-        nivell: 'general'
-      });
+  // Nom de la plantilla: primer text no buit de les files anteriors a filaEstructura
+  let nomPlantilla = nomFitxer || 'Plantilla importada';
+  for (let r = 0; r < filaEstructura && nomPlantilla === (nomFitxer || 'Plantilla importada'); r++) {
+    for (let c = 0; c < Math.min(maxCol, 10); c++) {
+      const v = getCellVal(r, c);
+      if (v && !v.startsWith('=') && v.length > 3) { nomPlantilla = v; break; }
     }
+  }
 
-    if (titol && (comentaris.length > 0 || capcelera)) {
-      items.push({
-        id: 'item_' + Date.now() + '_' + colInici,
-        titol,
-        capcelera,
-        comentaris
-      });
-    }
-  });
-
-  return {
-    nom: nomPlantilla,
-    descripcio: '',
-    items
-  };
+  return { nom: nomPlantilla, descripcio: '', items };
 }
