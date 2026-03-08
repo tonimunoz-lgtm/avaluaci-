@@ -1201,7 +1201,7 @@ Escriu ÚNICAMENT els blocs de comentari, res més.`;
     const btnGuardar = document.getElementById('ucGuardarAlumne');
     if (btnGuardar && window._tcStudentId) {
       btnGuardar.style.display = 'inline-flex';
-      btnGuardar.onclick = () => guardarComentariAlumne(comentari, modal);
+      btnGuardar.onclick = () => guardarComentariAlumne(comentari, modal, itesMActius);
     }
 
   } catch (err) {
@@ -1216,7 +1216,7 @@ Escriu ÚNICAMENT els blocs de comentari, res més.`;
 // ============================================================
 // GUARDAR COMENTARI A L'ALUMNE (integració tutoria-comentaris.js)
 // ============================================================
-async function guardarComentariAlumne(comentari, modal) {
+async function guardarComentariAlumne(comentari, modal, items = []) {
   if (!window._tcStudentId || !window._tcClassId) {
     alert('No hi ha cap alumne actiu. Obre primer el modal de comentaris d\'un alumne.');
     return;
@@ -1230,8 +1230,20 @@ async function guardarComentariAlumne(comentari, modal) {
     const db = window._tutoriaDB;
     if (!db) throw new Error('Firebase no disponible');
 
-    await db.collection('alumnes').doc(window._tcStudentId)
-      .update({ [`comentarios.${window._tcClassId}`]: comentari });
+    // Guardar comentari + metadades ítems (títol + assoliment) per exportació Excel
+    const metadades = items.map(it => ({
+      titol: it.titol || '',
+      assoliment: it.assoliment || ''
+    }));
+
+    const update = {
+      [`comentarios.${window._tcClassId}`]: comentari,
+    };
+    if (metadades.length > 0) {
+      update[`comentarisItems.${window._tcClassId}`] = metadades;
+    }
+
+    await db.collection('alumnes').doc(window._tcStudentId).update(update);
 
     // Omplir textarea del modal si està obert
     const taComment = document.getElementById('commentTextarea');
