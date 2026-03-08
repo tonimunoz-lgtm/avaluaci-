@@ -789,19 +789,20 @@ function openCarregarPlantillaModal() {
 // MODAL US DE PLANTILLA (selecció comentaris + generar amb IA)
 // ============================================================
 // Retorna el nom a mostrar al comentari segons preferències guardades
+function _ucCap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
 function _ucNomDisplay(nomComplet) {
   if (!nomComplet || nomComplet === "l'alumne/a") return nomComplet || "l'alumne/a";
   const parts = nomComplet.trim().split(/\s+/);
-  const nom     = parts[0] || '';
-  const cognom1 = parts[1] || '';
-  const cognom2 = parts[2] || '';
+  const nom     = _ucCap(parts[0] || '');
+  const cognom1 = _ucCap(parts[1] || '');
+  const cognom2 = _ucCap(parts[2] || '');
   const prefs = JSON.parse(localStorage.getItem('uc_nom_parts') || '{"nom":true,"cognom1":false,"cognom2":false}');
   const sel = [
     prefs.nom     ? nom     : '',
     prefs.cognom1 ? cognom1 : '',
     prefs.cognom2 ? cognom2 : '',
   ].filter(Boolean);
-  return sel.length ? sel.join(' ') : nom; // fallback: nom sempre
+  return sel.join(' '); // pot ser buit si cap check actiu
 }
 
 async function carregarIUsarPlantilla(codi, plantillaData = null) {
@@ -965,14 +966,14 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
   if (nomActiu && infoWrap) {
     // Mode "ve del modal de comentaris": badge + gènere + idioma
     infoWrap.style.cssText = 'background:#f5f3ff;border-radius:12px;padding:12px 16px;margin-bottom:16px;border:1.5px solid #a78bfa;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;';
-    // Parts del nom
+    // Parts del nom — capitalitzades
     const _ucParts = nomActiu.trim().split(/\s+/);
-    const _ucNom     = _ucParts[0] || '';
-    const _ucCognom1 = _ucParts[1] || '';
-    const _ucCognom2 = _ucParts[2] || '';
+    const _ucNom     = _ucCap(_ucParts[0] || '');
+    const _ucCognom1 = _ucCap(_ucParts[1] || '');
+    const _ucCognom2 = _ucCap(_ucParts[2] || '');
     const _ucPrefs = JSON.parse(localStorage.getItem('uc_nom_parts') || '{"nom":true,"cognom1":false,"cognom2":false}');
     const mkCheck = (key, label, val) => val ? `
-      <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;padding:5px 10px;border:1.5px solid #e5e7eb;border-radius:8px;background:#fff;color:#374151;user-select:none;">
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;padding:4px 9px;border:1.5px solid #e5e7eb;border-radius:8px;background:#fff;color:#374151;user-select:none;">
         <input type="checkbox" class="uc-nom-check" data-key="${key}"
           style="accent-color:#7c3aed;width:14px;height:14px;"
           ${_ucPrefs[key] ? 'checked' : ''}>
@@ -981,32 +982,36 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
       </label>` : '';
 
     infoWrap.innerHTML = `
-      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
-        <span style="font-size:20px;">👤</span>
-        <div style="min-width:0;">
-          <div style="font-size:11px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.5px;">Alumne/a actiu/va</div>
-          <div id="ucNomDisplay" style="font-size:16px;font-weight:800;color:#4c1d95;">${nomActiu}</div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;width:100%;flex-wrap:wrap;">
+        <!-- Esquerra: nom + checkboxes -->
+        <div style="display:flex;align-items:flex-start;gap:10px;flex:1;min-width:0;">
+          <span style="font-size:20px;margin-top:2px;">👤</span>
+          <div style="min-width:0;">
+            <div style="font-size:11px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.5px;">Alumne/a actiu/va</div>
+            <div id="ucNomDisplay" style="font-size:16px;font-weight:800;color:#4c1d95;margin-bottom:8px;">${_ucNomDisplay(nomActiu) || nomActiu}</div>
+            <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">Mostrar al comentari</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              ${mkCheck('nom', 'nom', _ucNom)}
+              ${mkCheck('cognom1', '1r cog.', _ucCognom1)}
+              ${mkCheck('cognom2', '2n cog.', _ucCognom2)}
+            </div>
+          </div>
         </div>
-      </div>
-      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-        <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;width:100%;">Mostrar al comentari</div>
-        ${mkCheck('nom', 'nom', _ucNom)}
-        ${mkCheck('cognom1', '1r cog.', _ucCognom1)}
-        ${mkCheck('cognom2', '2n cog.', _ucCognom2)}
-      </div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-        <div style="display:flex;gap:6px;">
-          <label id="ucLblNoi" style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;cursor:pointer;padding:6px 12px;border:2px solid #7c3aed;border-radius:8px;background:#7c3aed;color:#fff;transition:all .15s;">
-            <input type="radio" name="ucGenere" value="noi" checked style="accent-color:#fff;"> 👦 Noi
-          </label>
-          <label id="ucLblNoia" style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;cursor:pointer;padding:6px 12px;border:2px solid #a78bfa;border-radius:8px;background:#fff;color:#374151;transition:all .15s;">
-            <input type="radio" name="ucGenere" value="noia" style="accent-color:#7c3aed;"> 👧 Noia
-          </label>
+        <!-- Dreta: gènere + idioma -->
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;">
+          <div style="display:flex;gap:6px;">
+            <label id="ucLblNoi" style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;cursor:pointer;padding:6px 12px;border:2px solid #7c3aed;border-radius:8px;background:#7c3aed;color:#fff;transition:all .15s;">
+              <input type="radio" name="ucGenere" value="noi" checked style="accent-color:#fff;"> 👦 Noi
+            </label>
+            <label id="ucLblNoia" style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;cursor:pointer;padding:6px 12px;border:2px solid #a78bfa;border-radius:8px;background:#fff;color:#374151;transition:all .15s;">
+              <input type="radio" name="ucGenere" value="noia" style="accent-color:#7c3aed;"> 👧 Noia
+            </label>
+          </div>
+          <select id="ucIdioma" style="border:1.5px solid #a78bfa;border-radius:8px;padding:7px 12px;font-size:13px;font-family:inherit;outline:none;background:#fff;color:#374151;">
+            <option value="catala">Català</option>
+            <option value="castella">Castellà</option>
+          </select>
         </div>
-        <select id="ucIdioma" style="border:1.5px solid #a78bfa;border-radius:8px;padding:7px 12px;font-size:13px;font-family:inherit;outline:none;background:#fff;color:#374151;">
-          <option value="catala">Català</option>
-          <option value="castella">Castellà</option>
-        </select>
       </div>
       <input id="ucAlumneNom" type="hidden" value="${nomActiu}">
     `;
@@ -1025,8 +1030,7 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
       chk.addEventListener('change', () => {
         const prefs = JSON.parse(localStorage.getItem('uc_nom_parts') || '{"nom":true,"cognom1":false,"cognom2":false}');
         infoWrap.querySelectorAll('input.uc-nom-check').forEach(c2 => { prefs[c2.dataset.key] = c2.checked; });
-        // Si cap check actiu, forçar nom=true
-        if (!prefs.nom && !prefs.cognom1 && !prefs.cognom2) { prefs.nom = true; chk.checked = true; }
+        // Si cap check actiu, el nom quedara buit (acceptable)
         localStorage.setItem('uc_nom_parts', JSON.stringify(prefs));
         // Actualitzar nom visible al badge
         const nomDisp = document.getElementById('ucNomDisplay');
@@ -1143,7 +1147,7 @@ async function generarAmbIA(modal) {
   // Apostorf catala: l'Albert, l'Aina (davant vocal o h muda)
   const esVocalOH = alumne && /^[aeiouàèéíïóòúüh]/i.test(alumne.trim());
   const articleBase = genere === 'noia' ? 'La' : 'El';
-  const nomAmbArticle = alumne
+  const nomAmbArticle = alumne && alumne.trim()
     ? (esVocalOH ? `l'${alumne}` : `${articleBase} ${alumne}`)
     : `l'alumne/a`;
 
