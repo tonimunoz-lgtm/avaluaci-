@@ -1,4 +1,3 @@
-
 // tutoria-comentaris.js v2 — net
 // 1. Botó "✨ Generar per IA" al modal de comentaris
 // 2. Formulari clon amb "💾 Guardar a l'alumne"
@@ -282,7 +281,9 @@ async function exportarComentarisExcel() {
     }
 
     const capcalera = ['Alumne'];
-    titolsCapcalera.forEach(t => capcalera.push(t, 'Comentari', 'Assoliment'));
+    for (let i = 1; i <= maxItems; i++) {
+      capcalera.push(`Ítem ${i}`, `Comentari ${i}`, `Assoliment ${i}`);
+    }
 
     // Files de dades
     const files = alumnes.map(a => {
@@ -302,7 +303,7 @@ async function exportarComentarisExcel() {
     // Amplades: Alumne=25, Ítem=30, Comentari=80, Assoliment=20
     ws['!cols'] = [{ wch: 25 }];
     for (let i = 0; i < maxItems; i++) {
-      ws['!cols'].push({ wch: 30 }, { wch: 80 }, { wch: 20 });
+      ws['!cols'].push({ wch: 30 }, { wch: 90 }, { wch: 22 });
     }
 
     window.XLSX.utils.book_append_sheet(wb, ws, 'Comentaris');
