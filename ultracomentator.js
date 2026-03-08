@@ -1282,7 +1282,13 @@ async function guardarComentariAlumne(comentari, modal, items = [], passarAlSegu
       const docSeguent = await db.collection('alumnes').doc(idSeguent).get();
       const nomSeguent = docSeguent.exists ? (docSeguent.data().nom || 'Alumne') : 'Alumne';
 
-      // Actualitzar variables globals al seguent alumne
+      // Tancar el modal de comentaris que hi ha per sota (si existeix)
+      // CRÍTIC: cal fer-ho ABANS d'actualitzar _tcStudentId, altrament
+      // el modal de comentaris guardaria amb l'ID del seguent alumne
+      const modalComentaris = document.getElementById('modalComments');
+      if (modalComentaris) modalComentaris.style.display = 'none';
+
+      // Ara si, actualitzar variables globals al seguent alumne
       window._tcStudentId   = idSeguent;
       window._tcStudentName = nomSeguent;
 
