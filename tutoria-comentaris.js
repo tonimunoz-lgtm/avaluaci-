@@ -234,13 +234,8 @@ function _parsarComentariItems(text) {
     const net = bloc.trim();
     if (!net) return null;
     const comaIdx = net.indexOf(',');
-    if (comaIdx > 0 && comaIdx < 80) {
-      return {
-        item: net.slice(0, comaIdx).trim(),
-        comentari: net.slice(comaIdx + 1).trim()
-      };
-    }
-    return { item: '', comentari: net };
+    const item = (comaIdx > 0 && comaIdx < 80) ? net.slice(0, comaIdx).trim() : '';
+    return { item, comentari: net }; // comentari = bloc complet sempre
   }).filter(Boolean);
 }
 
