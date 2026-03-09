@@ -1179,10 +1179,7 @@ async function generarAmbIA(modal) {
     alert('Cal seleccionar almenys un assoliment o un comentari!');
     return;
   }
-  if (!alumne) {
-    alert("Cal escriure el nom de l'alumne/a!");
-    return;
-  }
+  // alumne buit = mode neutre (sense nom al comentari), es valid
 
   const btn = document.getElementById('ucGenerar');
   btn.innerHTML = '⏳ Generant...';
