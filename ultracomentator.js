@@ -2087,102 +2087,158 @@ function _generarExcelPlantilla() {
 
 
 // ============================================================
-// PARSEJAR FULL EXCEL → ESTRUCTURA PLANTILLA (parser universal)
-// Funciona amb qualsevol Excel que tingui "TÍTOL ÍTEM N", "COMENTARI ÍTEM N",
-// "ASSOLIMENT ÍTEM N" a qualsevol fila, i els comentaris a la mateixa fila.
 // ============================================================
+// PARSEJAR EXCEL → ESTRUCTURA PLANTILLA (parser universal v2)
+// Suporta: TÍTOL ÍTEM N estàndard, ítems sense marcador, tots
+// els ítems amb el mateix número, fulls AP1/AP2... separats
+// ============================================================
+const _IS_HEADER = v => !!(v && /T[IÍ]TOL|COMENTAR|ASSOLIMENT/i.test(v));
+
+function _getCellWs(ws, r, c) {
+  const cell = ws[XLSX.utils.encode_cell({ r, c })];
+  if (!cell || cell.v === undefined || cell.v === null) return null;
+  const s = String(cell.v).trim();
+  return (s && !s.startsWith('=') && s !== '#REF!') ? s : null;
+}
+
+function _capFirst(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+
 function parsejarFullExcel(ws, nomFitxer) {
   const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:Z10');
   const maxRow = range.e.r + 1;
   const maxCol = range.e.c + 1;
+  const cell = (r, c) => _getCellWs(ws, r, c);
+  const isHdr = v => !v || _IS_HEADER(v) || /^[xX]$/.test(v.trim()) || v.startsWith('=') || v.includes('#REF');
 
-  const getCellVal = (r, c) => {
-    const cell = ws[XLSX.utils.encode_cell({ r, c })];
-    if (!cell || cell.v === undefined || cell.v === null) return null;
-    const v = String(cell.v).trim();
-    return v || null;
-  };
-
-  // ── 1. Trobar la fila que conté "TÍTOL ÍTEM 1" (pot ser qualsevol fila) ──
-  let filaEstructura = -1;
-  for (let r = 0; r < Math.min(maxRow, 20); r++) {
+  // ── 1. Trobar fila estructura: qualsevol TÍTOL ÍTEM o ASSOLIMENT ÍTEM ──
+  let filaEst = -1;
+  for (let r = 0; r < Math.min(maxRow, 20) && filaEst < 0; r++) {
     for (let c = 0; c < maxCol; c++) {
-      const v = getCellVal(r, c);
-      if (v && v.includes('TÍTOL ÍTEM 1')) { filaEstructura = r; break; }
+      const v = cell(r, c);
+      if (v && (/T[IÍ]TOL\s+[IÍ]TEM/i.test(v) || /ASSOLIMENT\s+[IÍ]TEM\s*1\b/i.test(v))) {
+        filaEst = r; break;
+      }
     }
-    if (filaEstructura >= 0) break;
   }
-  if (filaEstructura < 0) return null;
 
-  // ── 2. Detectar tots els ítems a partir de "TÍTOL ÍTEM N" ──
-  const items = [];
-  let col = 0;
-  while (col < maxCol) {
-    const v = getCellVal(filaEstructura, col);
-    if (v && v.includes('TÍTOL ÍTEM')) {
-      // Estructura: col=TÍTOL, col+1=COMENTARI, col+2=ASSOLIMENT, col+3=capçalera, col+4..=coms
-      const colCap  = col + 3;
-      const colCom1 = col + 4;
-
-      // Títol: buscar a les files ANTERIORS, a les columnes [col .. col+4]
-      // ignorant: x/X, fórmules, paraules clau estructurals
-      const IGNORA = new Set(['x', 'X', '']);
-      const IGNORA_PREFIX = ['TÍTOL', 'ÍTEM', 'COMENTARI', 'ASSOLIMENT', '='];
-      let titol = '';
-      for (let r = filaEstructura - 1; r >= 0 && !titol; r--) {
-        for (let tc = col; tc <= col + 4 && tc < maxCol && !titol; tc++) {
-          const vt = getCellVal(r, tc);
-          if (!vt || IGNORA.has(vt)) continue;
-          if (IGNORA_PREFIX.some(p => vt.toUpperCase().startsWith(p))) continue;
-          titol = vt;
+  // ── 2. Si no hi ha fila d'estructura: full tipus AP (títol+COMENTARI+ASSOLIMENT) ──
+  if (filaEst < 0) {
+    for (let r = 0; r < Math.min(maxRow, 10); r++) {
+      for (let c = 0; c < maxCol - 2; c++) {
+        const v = cell(r, c), v1 = cell(r, c+1), v2 = cell(r, c+2);
+        if (v && !isHdr(v) && v1 && /COMENTARI/i.test(v1) && v2 && /ASSOLIMENT/i.test(v2)) {
+          const coms = [];
+          for (let c2 = c+3; c2 < maxCol; c2++) {
+            const t = cell(r, c2); if (!t || isHdr(t)) break; coms.push(t);
+          }
+          const titol = _capFirst(v);
+          return { nom: nomFitxer || titol || 'Plantilla importada', descripcio: '',
+            items: [{ id: 'item_0', titol, capcelera: titol,
+              comentaris: coms.map((t,i) => ({ id:'com_'+i, text:t, nivell:'general' })) }] };
         }
       }
+    }
+    return null;
+  }
 
-      // Capçalera
-      const capRaw = getCellVal(filaEstructura, colCap) || '';
-      const capcelera = capRaw.replace(/\n/g, '').trim();
+  // ── 3. Escanejar la fila d'estructura col per col ──
+  const items = [];
+  let c = 0;
+  while (c < maxCol) {
+    const v = cell(filaEst, c);
 
-      // Comentaris: columnes col+4 en avant fins al pròxim TÍTOL ÍTEM
-      const comentaris = [];
-      let c2 = colCom1;
-      while (c2 < maxCol) {
-        const v2 = getCellVal(filaEstructura, c2);
-        if (!v2) { c2++; continue; }
-        if (v2.includes('TÍTOL ÍTEM')) break;
-        if (!v2.startsWith('=')) {
-          comentaris.push({
-            id: 'com_' + Date.now() + '_' + c2,
-            text: v2.replace(/\n/g, ' ').trim(),
-            nivell: 'general'
-          });
+    // Cas A: TÍTOL ÍTEM N  →  col+3=capçalera, col+4..=coms
+    if (v && /T[IÍ]TOL\s+[IÍ]TEM/i.test(v)) {
+      const colCap = c + 3, colCom1 = c + 4;
+      let titol = '';
+      for (let r = filaEst-1; r >= 0 && !titol; r--) {
+        for (let tc = c; tc < Math.min(c+5, maxCol) && !titol; tc++) {
+          const vt = cell(r, tc);
+          if (vt && !isHdr(vt)) titol = _capFirst(vt);
         }
+      }
+      const capcelera = !isHdr(cell(filaEst, colCap)) ? (cell(filaEst, colCap)||'') : '';
+      const comentaris = []; let c2 = colCom1;
+      while (c2 < maxCol) {
+        const v2 = cell(filaEst, c2);
+        if (!v2) { c2++; continue; }
+        if (/T[IÍ]TOL\s+[IÍ]TEM/i.test(v2)) break;
+        // Detectar nou grup sense TÍTOL ÍTEM: text llarg seguit de COMENTARI
+        const nxt = cell(filaEst, c2+1)||'';
+        if (!isHdr(v2) && v2.length > 15 && /^COMENTARI$/i.test(nxt)) break;
+        if (!isHdr(v2)) comentaris.push({ id:'com_'+Date.now()+'_'+c2, text:v2, nivell:'general' });
         c2++;
       }
+      if (!titol && capcelera) titol = _capFirst(capcelera.replace(/:.*/, '').trim());
+      if (capcelera || comentaris.length > 0)
+        items.push({ id:'item_'+Date.now()+'_'+c, titol, capcelera, comentaris });
+      c = c2;
 
-      if (capcelera || comentaris.length > 0) {
-        items.push({
-          id: 'item_' + Date.now() + '_' + col,
-          titol: titol || capcelera.replace(/:.*/, '').trim(),
-          capcelera,
-          comentaris
-        });
-      }
-      col = c2;
-    } else {
-      col++;
-    }
+    // Cas B: text llarg (títol) seguit de COMENTARI + ASSOLIMENT ÍTEM N
+    } else if (v && !isHdr(v) && v.length > 10) {
+      const nxt1 = cell(filaEst, c+1)||'', nxt2 = cell(filaEst, c+2)||'';
+      if (/^COMENTARI$/i.test(nxt1) && /ASSOLIMENT\s+[IÍ]TEM/i.test(nxt2)) {
+        const titol = _capFirst(v);
+        // Capçalera: primer text llarg a col+3
+        let capcelera = '', colCom1 = c+3;
+        const vc3 = cell(filaEst, c+3)||'';
+        if (!isHdr(vc3) && vc3.length > 20) { capcelera = vc3; colCom1 = c+4; }
+        const comentaris = []; let c2 = colCom1;
+        while (c2 < maxCol) {
+          const v2 = cell(filaEst, c2);
+          if (!v2) { c2++; continue; }
+          if (/T[IÍ]TOL\s+[IÍ]TEM/i.test(v2)) break;
+          const nxt = cell(filaEst, c2+1)||'';
+          if (!isHdr(v2) && v2.length > 15 && /^COMENTARI$/i.test(nxt)) break;
+          if (!isHdr(v2)) comentaris.push({ id:'com_'+Date.now()+'_'+c2, text:v2, nivell:'general' });
+          c2++;
+        }
+        if (capcelera || comentaris.length > 0)
+          items.push({ id:'item_'+Date.now()+'_'+c, titol, capcelera, comentaris });
+        c = c2;
+      } else { c++; }
+    } else { c++; }
   }
 
   if (items.length === 0) return null;
 
-  // Nom de la plantilla: primer text no buit de les files anteriors a filaEstructura
+  // Nom plantilla
   let nomPlantilla = nomFitxer || 'Plantilla importada';
-  for (let r = 0; r < filaEstructura && nomPlantilla === (nomFitxer || 'Plantilla importada'); r++) {
-    for (let c = 0; c < Math.min(maxCol, 10); c++) {
-      const v = getCellVal(r, c);
+  for (let r = 0; r < filaEst && nomPlantilla === (nomFitxer||'Plantilla importada'); r++) {
+    for (let c2 = 0; c2 < Math.min(maxCol, 10); c2++) {
+      const v = cell(r, c2);
       if (v && !v.startsWith('=') && v.length > 3) { nomPlantilla = v; break; }
     }
   }
-
   return { nom: nomPlantilla, descripcio: '', items };
+}
+
+// Gestiona el workbook sencer: RECULL, primer full, o fulls AP1/AP2...
+function parsejarWorkbook(wb, nomFitxer) {
+  // 1. Provar RECULL
+  if (wb.SheetNames.includes('RECULL')) {
+    const res = parsejarFullExcel(wb.Sheets['RECULL'], nomFitxer);
+    if (res && res.items.length > 0) return res;
+  }
+
+  // 2. Provar cada full (el primer que funcioni)
+  for (const sname of wb.SheetNames) {
+    const res = parsejarFullExcel(wb.Sheets[sname], nomFitxer);
+    if (res && res.items.length > 0) return res;
+  }
+
+  // 3. Cas fulls AP1, AP2... cada un és un ítem
+  const fulls_ap = wb.SheetNames.filter(s => /^AP\d+$/i.test(s));
+  if (fulls_ap.length > 0) {
+    const tots = [];
+    for (const sname of fulls_ap) {
+      const res = parsejarFullExcel(wb.Sheets[sname], nomFitxer);
+      if (res) tots.push(...res.items);
+    }
+    if (tots.length > 0) {
+      return { nom: nomFitxer || 'Plantilla importada', descripcio: '', items: tots };
+    }
+  }
+
+  return null;
 }
