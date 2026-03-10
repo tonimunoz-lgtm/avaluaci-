@@ -452,9 +452,11 @@ function afegirComentariUI(itemId, comData = null) {
   comDiv.id = 'ucCom_' + comId;
   comDiv.dataset.comId = comId;
   comDiv.dataset.itemId = itemId;
+  comDiv.draggable = true;
   comDiv.style.cssText = `
     display:flex;align-items:flex-start;gap:8px;padding:10px;
     background:#fafafa;border:1px solid #e5e7eb;border-radius:8px;
+    transition:box-shadow .15s,opacity .15s;
   `;
 
   const nivellOptions = UC_NIVELLS.map(n =>
@@ -462,6 +464,10 @@ function afegirComentariUI(itemId, comData = null) {
   ).join('');
 
   comDiv.innerHTML = `
+    <div class="ucDragHandle" title="Arrossega per canviar l'ordre" style="
+      cursor:grab;color:#d1d5db;font-size:14px;padding:4px 2px;flex-shrink:0;
+      display:flex;flex-direction:column;gap:2px;align-self:center;line-height:1;user-select:none;
+    ">⠿</div>
     <select class="ucNivellSel" data-com-id="${comId}" style="
       border:1.5px solid ${nivellInfo.color}33;border-radius:6px;padding:4px 8px;
       font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;
@@ -485,7 +491,7 @@ function afegirComentariUI(itemId, comData = null) {
 
   comsDiv.appendChild(comDiv);
 
-  // Events
+  // Events NivellSel
   const sel = comDiv.querySelector('.ucNivellSel');
   sel.addEventListener('change', () => {
     const nInfo = UC_NIVELLS.find(n => n.val === sel.value) || UC_NIVELLS[0];
@@ -494,10 +500,12 @@ function afegirComentariUI(itemId, comData = null) {
     sel.style.color = nInfo.color;
   });
 
+  // Events textarea
   const ta = comDiv.querySelector('.ucComText');
   ta.addEventListener('focus', () => { ta.style.borderColor = '#7c3aed'; });
   ta.addEventListener('blur', () => { ta.style.borderColor = '#e5e7eb'; });
 
+  // Eliminar
   comDiv.querySelector('.ucBtnEliminarCom').addEventListener('click', () => {
     comDiv.remove();
     if (!comsDiv.querySelector('[data-com-id]')) {
@@ -506,6 +514,55 @@ function afegirComentariUI(itemId, comData = null) {
   });
   comDiv.querySelector('.ucBtnEliminarCom').addEventListener('mouseenter', (e) => { e.target.style.color = '#ef4444'; });
   comDiv.querySelector('.ucBtnEliminarCom').addEventListener('mouseleave', (e) => { e.target.style.color = '#d1d5db'; });
+
+  // ── DRAG & DROP per reordenar ──
+  let _dragSrc = null;
+  comDiv.addEventListener('dragstart', (e) => {
+    _dragSrc = comDiv;
+    comDiv.style.opacity = '0.4';
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  comDiv.addEventListener('dragend', () => {
+    comDiv.style.opacity = '1';
+    comDiv.style.boxShadow = '';
+    comsDiv.querySelectorAll('[data-com-id]').forEach(d => {
+      d.style.borderColor = '#e5e7eb';
+      d.style.boxShadow = '';
+    });
+    _dragSrc = null;
+  });
+  comDiv.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (_dragSrc && _dragSrc !== comDiv) {
+      comDiv.style.borderColor = '#a78bfa';
+      comDiv.style.boxShadow = '0 0 0 2px #a78bfa44';
+    }
+  });
+  comDiv.addEventListener('dragleave', () => {
+    comDiv.style.borderColor = '#e5e7eb';
+    comDiv.style.boxShadow = '';
+  });
+  comDiv.addEventListener('drop', (e) => {
+    e.preventDefault();
+    comDiv.style.borderColor = '#e5e7eb';
+    comDiv.style.boxShadow = '';
+    if (!_dragSrc || _dragSrc === comDiv) return;
+    // Inserir _dragSrc just abans de comDiv
+    const allComs = [...comsDiv.querySelectorAll('[data-com-id]')];
+    const srcIdx = allComs.indexOf(_dragSrc);
+    const dstIdx = allComs.indexOf(comDiv);
+    if (srcIdx < dstIdx) {
+      comsDiv.insertBefore(_dragSrc, comDiv.nextSibling);
+    } else {
+      comsDiv.insertBefore(_dragSrc, comDiv);
+    }
+  });
+
+  // Prevent drag quan s'interacciona amb els controls interns
+  [sel, ta].forEach(el => {
+    el.addEventListener('mousedown', e => e.stopPropagation());
+  });
 }
 
 // ============================================================
@@ -830,8 +887,11 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
       `<option value="${a.val}">${a.label}</option>`
     ).join('');
 
-    const comsHTML = item.comentaris.map(com => {
+    // Mapa posició→assoliment (0=AE, 1=AN, 2=AS, 3=NA)
+    const _posToAssol = ['ae','an','as','na'];
+    const comsHTML = item.comentaris.map((com, posIdx) => {
       const nInfo = UC_NIVELLS.find(n => n.val === com.nivell) || UC_NIVELLS[0];
+      const assocLabel = posIdx < _posToAssol.length ? UC_ASSOLIMENTS.find(a => a.val === _posToAssol[posIdx]) : null;
       return `
         <label class="ucComLabel" style="
           display:flex;align-items:flex-start;gap:10px;padding:10px 12px;
@@ -842,12 +902,19 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
             data-item-id="${item.id}"
             data-item-titol="${item.titol.replace(/"/g,'&quot;')}"
             data-com-text="${com.text.replace(/"/g,'&quot;')}"
+            data-assol-auto="${posIdx < _posToAssol.length ? _posToAssol[posIdx] : ''}"
             style="margin-top:3px;accent-color:#7c3aed;width:16px;height:16px;flex-shrink:0;">
           <div style="flex:1;">
-            <span style="
-              display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:10px;
-              background:${nInfo.bg};color:${nInfo.color};margin-bottom:4px;
-            ">${nInfo.label}</span>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+              <span style="
+                display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:10px;
+                background:${nInfo.bg};color:${nInfo.color};
+              ">${nInfo.label}</span>
+              ${assocLabel ? `<span style="
+                display:inline-block;font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;
+                background:${assocLabel.bg};color:${assocLabel.color};opacity:.8;
+              ">→ ${assocLabel.label}</span>` : ''}
+            </div>
             <div style="font-size:13px;line-height:1.5;color:#374151;">${com.text}</div>
           </div>
         </label>
@@ -1076,7 +1143,23 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
   // Tancar
   document.getElementById('ucUsarClose').addEventListener('click', () => { modal.remove(); });
 
-  // Hover + check estil labels
+  // Funció helper: actualitzar color del select assoliment
+  function _updateAssolColor(sel) {
+    const a = UC_ASSOLIMENTS.find(x => x.val === sel.value);
+    if (a) { sel.style.background = a.bg; sel.style.color = a.color; sel.style.borderColor = a.color + '88'; }
+    else { sel.style.background = '#faf5ff'; sel.style.color = '#5b21b6'; sel.style.borderColor = '#a78bfa'; }
+  }
+
+  // Marcar si el select ha estat modificat MANUALMENT per l'usuari
+  modal.querySelectorAll('.ucAssolimentSel').forEach(sel => {
+    sel._manuallySet = false;
+    sel.addEventListener('change', () => {
+      sel._manuallySet = true;
+      _updateAssolColor(sel);
+    });
+  });
+
+  // Hover + check estil labels + auto-assoliment per posició
   modal.querySelectorAll('.ucComLabel').forEach(lbl => {
     lbl.addEventListener('mouseenter', () => { lbl.style.borderColor = '#a78bfa'; lbl.style.background = '#faf5ff'; });
     lbl.addEventListener('mouseleave', () => {
@@ -1085,26 +1168,45 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
       lbl.style.background = chk.checked ? '#faf5ff' : '#fff';
     });
     lbl.querySelector('input').addEventListener('change', (e) => {
-      lbl.style.borderColor = e.target.checked ? '#7c3aed' : '#e5e7eb';
-      lbl.style.background = e.target.checked ? '#faf5ff' : '#fff';
+      const chk = e.target;
+      // Estil visual
+      lbl.style.borderColor = chk.checked ? '#7c3aed' : '#e5e7eb';
+      lbl.style.background = chk.checked ? '#faf5ff' : '#fff';
+
+      // Auto-assoliment per posició
+      const itemId = chk.dataset.itemId;
+      const assolAuto = chk.dataset.assolAuto;  // data-assol-auto → dataset.assolAuto
+      const sel = modal.querySelector(`.ucAssolimentSel[data-item-id="${itemId}"]`);
+      if (!sel || !assolAuto) return;
+
+      if (chk.checked) {
+        // Posar assoliment automàtic NOMÉS si el sel no ha estat tocat manualment
+        if (!sel._manuallySet && !sel.value) {
+          sel.value = assolAuto;
+          _updateAssolColor(sel);
+        }
+      } else {
+        // Si es desmarca i el valor actual era l'automàtic, mirar si hi ha altres checks marcats per aquest ítem
+        if (!sel._manuallySet && sel.value === assolAuto) {
+          // Buscar si hi ha algun altre check marcat per aquest ítem
+          const altresChecks = modal.querySelectorAll(`.ucComCheck[data-item-id="${itemId}"]`);
+          let altreMarcat = false;
+          altresChecks.forEach(c2 => { if (c2 !== chk && c2.checked && c2.dataset.assolAuto) altreMarcat = true; });
+          if (!altreMarcat) {
+            // Buscar el primer check marcat i agafar el seu assoliment auto
+            let primerAuto = '';
+            altresChecks.forEach(c2 => { if (!primerAuto && c2.checked && c2.dataset.assolAuto) primerAuto = c2.dataset.assolAuto; });
+            sel.value = primerAuto;
+            _updateAssolColor(sel);
+          }
+        }
+      }
     });
   });
 
-  // Color dinàmic del select d'assoliment
+  // Color dinàmic del select d'assoliment (inicial)
   modal.querySelectorAll('.ucAssolimentSel').forEach(sel => {
-    const updateColor = () => {
-      const a = UC_ASSOLIMENTS.find(x => x.val === sel.value);
-      if (a) {
-        sel.style.background = a.bg;
-        sel.style.color = a.color;
-        sel.style.borderColor = a.color + '88';
-      } else {
-        sel.style.background = '#faf5ff';
-        sel.style.color = '#5b21b6';
-        sel.style.borderColor = '#a78bfa';
-      }
-    };
-    sel.addEventListener('change', updateColor);
+    _updateAssolColor(sel);
   });
 
   // Seleccionar / Desseleccionar tots
