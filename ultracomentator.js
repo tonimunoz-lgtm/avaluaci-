@@ -516,25 +516,25 @@ function afegirComentariUI(itemId, comData = null) {
   comDiv.querySelector('.ucBtnEliminarCom').addEventListener('mouseleave', (e) => { e.target.style.color = '#d1d5db'; });
 
   // ── DRAG & DROP per reordenar ──
-  let _dragSrc = null;
+  // Nota: _ucDragSrc és variable de mòdul (definida a sota) per compartir-la entre tots els comDiv
   comDiv.addEventListener('dragstart', (e) => {
-    _dragSrc = comDiv;
-    comDiv.style.opacity = '0.4';
+    _ucDragSrc = comDiv;
+    setTimeout(() => { comDiv.style.opacity = '0.4'; }, 0);
     e.dataTransfer.effectAllowed = 'move';
   });
   comDiv.addEventListener('dragend', () => {
     comDiv.style.opacity = '1';
-    comDiv.style.boxShadow = '';
+    // Netejar highlights de tots els germans
     comsDiv.querySelectorAll('[data-com-id]').forEach(d => {
       d.style.borderColor = '#e5e7eb';
       d.style.boxShadow = '';
     });
-    _dragSrc = null;
+    _ucDragSrc = null;
   });
   comDiv.addEventListener('dragover', (e) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    if (_dragSrc && _dragSrc !== comDiv) {
+    if (_ucDragSrc && _ucDragSrc !== comDiv) {
       comDiv.style.borderColor = '#a78bfa';
       comDiv.style.boxShadow = '0 0 0 2px #a78bfa44';
     }
@@ -547,15 +547,14 @@ function afegirComentariUI(itemId, comData = null) {
     e.preventDefault();
     comDiv.style.borderColor = '#e5e7eb';
     comDiv.style.boxShadow = '';
-    if (!_dragSrc || _dragSrc === comDiv) return;
-    // Inserir _dragSrc just abans de comDiv
+    if (!_ucDragSrc || _ucDragSrc === comDiv) return;
     const allComs = [...comsDiv.querySelectorAll('[data-com-id]')];
-    const srcIdx = allComs.indexOf(_dragSrc);
+    const srcIdx = allComs.indexOf(_ucDragSrc);
     const dstIdx = allComs.indexOf(comDiv);
     if (srcIdx < dstIdx) {
-      comsDiv.insertBefore(_dragSrc, comDiv.nextSibling);
+      comsDiv.insertBefore(_ucDragSrc, comDiv.nextSibling);
     } else {
-      comsDiv.insertBefore(_dragSrc, comDiv);
+      comsDiv.insertBefore(_ucDragSrc, comDiv);
     }
   });
 
@@ -1919,6 +1918,7 @@ function importarExcelModal() {
 
 let _wbActual = null;
 let _nomFitxerActual = '';
+let _ucDragSrc = null; // element arrossegat en el formulari de comentaris (compartit)
 
 function _mostrarModalImport() {
   // Eliminar si ja existeix
