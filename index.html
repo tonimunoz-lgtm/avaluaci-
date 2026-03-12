@@ -26,6 +26,36 @@
 
   <!-- XLSX per export -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<!-- ═══════════════════════════════════════
+     Afegir aquestes línies dins del <head>
+     de index.html (per exemple just abans
+     del </head>)
+════════════════════════════════════════ -->
+
+<!-- PWA: Manifest -->
+<link rel="manifest" href="/manifest.json">
+
+<!-- PWA: Color de la barra del navegador (Android) -->
+<meta name="theme-color" content="#4f46e5">
+
+<!-- PWA: Per a iOS (Safari no llegeix el manifest) -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="AvaluApp">
+<link rel="apple-touch-icon" href="/icon-192.png">
+
+<!-- PWA: Registre del Service Worker -->
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then(() => console.log('✅ Service Worker registrat'))
+        .catch(err => console.warn('SW error:', err));
+    });
+  }
+</script>
+  
 </head>
 <body class="bg-gradient-to-br from-gray-100 via-white to-gray-200 text-gray-900">
 
