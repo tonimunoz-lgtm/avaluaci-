@@ -1560,7 +1560,7 @@ function checkFormulaValidity(formula) {
   }
 
   // Validar caracteres permitidos
-  const validChars = /^[a-zA-Z0-9+\-*/(). ,áéíóúàèìòùäëïöü\[\]_]*$/;
+  const validChars = /^[a-zA-Z0-9+\-*/(). ,áéíóúÁÉÍÓÚàèìòùÀÈÌÒÙäëïöüÄËÏÖÜñÑçÇ·\[\]_]*$/;
   if (!validChars.test(formula)) {
     return {
       valid: false,
