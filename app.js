@@ -1503,14 +1503,42 @@ function setupFormulaValidation() {
     formulaValidationDiv.parentNode.insertBefore(formulaPreviewDiv, formulaValidationDiv.nextSibling);
   }
 
-  // 🔥 NUEVO: Permitir edición inline - hacer contentEditable
+  // Permetre cursor visible i teclat físic
+  formulaField.removeAttribute('readonly');
+
   formulaField.addEventListener('input', validateFormula);
+
   formulaField.addEventListener('click', () => {
-    // Permitir que el cursor se posicione en cualquier lugar
     formulaField.focus();
   });
-}
 
+  formulaField.addEventListener('keydown', e => {
+    if (e.key === 'Backspace') {
+      e.preventDefault();
+      deleteAtCursor();
+      return;
+    }
+    if (['+', '-', '*', '/', '(', ')'].includes(e.key)) {
+      e.preventDefault();
+      insertAtCursor(e.key);
+      return;
+    }
+    if (e.key === '.' || e.key === ',') {
+      e.preventDefault();
+      insertAtCursor('.');
+      return;
+    }
+    if (e.key >= '0' && e.key <= '9') {
+      e.preventDefault();
+      insertAtCursor(e.key);
+      return;
+    }
+    // Bloquejar qualsevol altra tecla que escrigui text (lletres, etc.)
+    if (e.key.length === 1) {
+      e.preventDefault();
+    }
+  });
+}
 function clearFormulaValidation() {
   if (formulaValidationDiv) formulaValidationDiv.innerHTML = '';
   if (formulaPreviewDiv) formulaPreviewDiv.classList.add('hidden');
