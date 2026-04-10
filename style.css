@@ -1,36 +1,34 @@
 /* ================================================
    AVALUAPP — Design System v2
-   Principi: No interferir amb les classes de Tailwind
-   que usa el JS (hidden, opacity-0, etc.)
+   Base: CSS original intacte + capa visual per sobre
    ================================================ */
 
+/* ---- Reset & base ---- */
 *, *::before, *::after { box-sizing: border-box; }
 
 body {
-  font-family: 'DM Sans', system-ui, sans-serif;
+  font-family: 'DM Sans', 'Inter', system-ui, sans-serif;
   margin: 0; padding: 0;
   background: #f0eff5;
-  color: #1a1a2e;
+  color: #1f2937;
   font-size: 14px;
   line-height: 1.5;
 }
 
 /* ================================================
-   LOGIN — el JS posa display:block via style inline
-   Per tant el fem block però amb flexbox via trick
+   LOGIN
+   El JS fa loginScreen.style.display='block'/'none'
+   Usem grid per centrar independentment del display
    ================================================ */
 
 #loginScreen {
   min-height: 100vh;
   background: linear-gradient(135deg, #1a1a2e 0%, #2d2b55 100%);
   padding: 24px;
-  /* Quan el JS posa display:block, volem que sembli flex */
-  /* Usem grid en comptes per centrar */
   display: grid;
   place-items: center;
 }
 
-/* Quan el JS el fa hidden (display:none via classe) */
 #loginScreen.hidden { display: none !important; }
 
 .login-card {
@@ -45,9 +43,6 @@ body {
   align-items: center;
 }
 
-/* Quan el JS fa display:block al loginScreen, el grid
-   no funciona correctament. Fix: el fill del grid ja centra. */
-
 .login-logo {
   width: 64px; height: 64px;
   background: linear-gradient(135deg, #6366f1, #818cf8);
@@ -57,14 +52,12 @@ body {
 }
 
 .login-card h1 {
-  font-size: 26px; font-weight: 800;
-  color: #1a1a2e; margin: 0 0 6px;
-  letter-spacing: -0.5px; text-align: center;
+  font-size: 26px; font-weight: 800; color: #1a1a2e;
+  margin: 0 0 6px; letter-spacing: -0.5px; text-align: center;
 }
 
 .login-card > p {
-  color: #6b7280; font-size: 14px;
-  margin: 0 0 24px; text-align: center;
+  color: #6b7280; font-size: 14px; margin: 0 0 24px; text-align: center;
 }
 
 .login-card input[type="email"],
@@ -81,32 +74,26 @@ body {
 }
 
 #btnLogin {
-  width: 100%; padding: 12px;
-  background: #6366f1; color: white;
-  border: none; border-radius: 10px;
-  font-size: 15px; font-weight: 600; font-family: inherit;
-  cursor: pointer; margin-bottom: 8px;
+  width: 100%; padding: 12px; background: #6366f1; color: white;
+  border: none; border-radius: 10px; font-size: 15px; font-weight: 600;
+  font-family: inherit; cursor: pointer; margin-bottom: 8px; display: block;
   transition: background 0.15s;
 }
 #btnLogin:hover { background: #4f46e5; }
 
 #googleLoginBtn {
-  width: 100%; padding: 11px;
-  background: white; color: #374151;
+  width: 100%; padding: 11px; background: white; color: #374151;
   border: 1.5px solid #e5e7eb; border-radius: 10px;
-  font-size: 14px; font-weight: 500; font-family: inherit;
-  cursor: pointer; margin-bottom: 8px;
-  transition: background 0.15s;
+  font-size: 14px; font-weight: 500; font-family: inherit; cursor: pointer;
+  margin-bottom: 8px; display: block; transition: background 0.15s;
 }
 #googleLoginBtn:hover { background: #f9fafb; }
 
 #btnRegister {
-  width: 100%; padding: 11px;
-  background: #f5f3ff; color: #5b21b6;
+  width: 100%; padding: 11px; background: #f5f3ff; color: #5b21b6;
   border: 1.5px solid #ede9fe; border-radius: 10px;
-  font-size: 14px; font-weight: 500; font-family: inherit;
-  cursor: pointer; margin-bottom: 10px;
-  transition: background 0.15s;
+  font-size: 14px; font-weight: 500; font-family: inherit; cursor: pointer;
+  margin-bottom: 10px; display: block; transition: background 0.15s;
 }
 #btnRegister:hover { background: #ede9fe; }
 
@@ -123,51 +110,41 @@ body {
 
 #appRoot {
   display: flex;
+  width: 100%;
   min-height: 100vh;
   background: #f0eff5;
 }
-
-/* El JS trau 'hidden' quan fa login.
-   Tailwind .hidden = display:none — no interferim */
 
 /* ================================================
    SIDEBAR
    ================================================ */
 
 #app-sidebar {
-  width: 64px; min-width: 64px;
-  background: #16162a;
+  width: 64px; min-width: 64px; background: #16162a;
   display: flex; flex-direction: column; align-items: center;
   padding: 16px 0; gap: 4px;
-  position: fixed; top: 0; left: 0; bottom: 0;
-  z-index: 100;
+  position: fixed; top: 0; left: 0; bottom: 0; z-index: 200;
 }
 
 .sidebar-logo {
   width: 38px; height: 38px;
   background: linear-gradient(135deg, #6366f1, #818cf8);
-  border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20px; margin-bottom: 20px; cursor: pointer;
+  border-radius: 10px; display: flex; align-items: center;
+  justify-content: center; font-size: 20px; margin-bottom: 20px; cursor: pointer;
 }
 
 .sidebar-item {
   width: 44px; height: 44px; border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer; color: rgba(255,255,255,0.3); font-size: 19px;
-  transition: all 0.15s;
+  cursor: pointer; color: rgba(255,255,255,0.3); font-size: 19px; transition: all 0.15s;
 }
 .sidebar-item.active { background: rgba(99,102,241,0.22); color: #818cf8; }
 .sidebar-item:hover  { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.65); }
 
-.sidebar-divider {
-  width: 32px; height: 1px;
-  background: rgba(255,255,255,0.08); margin: 6px 0;
-}
+.sidebar-divider { width: 32px; height: 1px; background: rgba(255,255,255,0.08); margin: 6px 0; }
 
 .sidebar-avatar {
-  margin-top: auto; width: 36px; height: 36px;
-  border-radius: 50%;
+  margin-top: auto; width: 36px; height: 36px; border-radius: 50%;
   background: linear-gradient(135deg, #6366f1, #a78bfa);
   display: flex; align-items: center; justify-content: center;
   color: white; font-size: 12px; font-weight: 700; cursor: pointer;
@@ -184,7 +161,7 @@ body {
 }
 
 /* ================================================
-   TOPBAR
+   TOPBAR / HEADER
    ================================================ */
 
 header {
@@ -194,8 +171,8 @@ header {
   height: 56px;
   display: flex !important; align-items: center !important; gap: 12px !important;
   flex-shrink: 0;
+  border-radius: 0 !important; box-shadow: none !important; margin: 0 !important;
   position: sticky; top: 0; z-index: 50;
-  box-shadow: none !important; border-radius: 0 !important; margin: 0 !important;
 }
 
 header h1 {
@@ -203,7 +180,7 @@ header h1 {
   color: #1a1a2e !important; margin: 0; flex: 1;
 }
 
-#userArea { display: flex; align-items: center; gap: 8px; position: relative; }
+#userArea { position: relative; display: inline-flex; align-items: center; gap: 0.5rem; }
 #usuariNom { font-size: 13px; color: #6b7280; }
 
 #userMenuBtn {
@@ -211,6 +188,10 @@ header h1 {
   font-size: 20px; cursor: pointer; padding: 4px 6px; border-radius: 6px;
 }
 #userMenuBtn:hover { background: #f3f4f6; color: #374151; }
+
+#userMenu { top: 100%; right: 0; z-index: 1000; min-width: 150px; }
+#userMenu button { border: none; background: none; cursor: pointer; }
+#userMenu button:hover { background-color: #f3f4f6; }
 
 #btnLogout {
   font-size: 12px; padding: 6px 12px;
@@ -221,35 +202,21 @@ header h1 {
 #btnLogout:hover { background: #fee2e2; }
 
 /* ================================================
-   MAIN AREA
+   MAIN
    ================================================ */
 
 main { flex: 1; overflow: auto; }
 
-/* Les dues pantalles — el JS les alterna amb .hidden
-   Quan NO tenen .hidden, han d'ocupar tota l'àrea */
-#screen-classes { 
-  padding: 28px; 
-  min-height: calc(100vh - 56px);
-}
-
-#screen-class {
-  display: flex; flex-direction: column;
-  min-height: calc(100vh - 56px);
-}
-
 /* ================================================
-   SCREEN CLASSES — targetes
+   SCREEN: CLASSES
    ================================================ */
 
-#screen-classes > div:first-child {
-  display: flex; align-items: center;
-  justify-content: space-between; margin-bottom: 20px;
+#screen-classes {
+  width: 100%; min-height: calc(100vh - 56px);
+  padding: 1rem; background: #f0eff5;
 }
 
-#screen-classes h2 {
-  font-size: 20px; font-weight: 700; color: #1a1a2e; margin: 0;
-}
+#screen-classes h2 { color: #1f2937; font-weight: 700; font-size: 20px; }
 
 #classesGrid {
   display: grid;
@@ -257,64 +224,51 @@ main { flex: 1; overflow: auto; }
   gap: 16px;
 }
 
-/* Targetes de classe — el JS les crea amb classes bg-gradient-to-br etc.
-   Sobreescrivim amb el nostre estil però mantenint el color de fons del JS */
+/* Targetes — el JS les crea amb bg-gradient-to-br i colors Tailwind */
 .class-card {
   cursor: pointer;
-  border-radius: 16px !important;
+  border-radius: 14px !important;
   padding: 20px !important;
   position: relative; overflow: hidden;
   transition: transform 0.18s, box-shadow 0.18s !important;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.15) !important;
-  min-height: 110px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18) !important;
   display: flex; flex-direction: column; gap: 6px;
+  color: white; /* mantenim blanc que és el que el JS posa */
 }
-.class-card::before {
-  content: '';
-  position: absolute; inset: 0;
-  background: rgba(0,0,0,0.08);
-  opacity: 0; transition: opacity 0.18s;
+.class-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.28) !important;
 }
-.class-card:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,0.25) !important; }
-.class-card:hover::before { opacity: 1; }
-
 .class-card h3 { font-size: 15px; font-weight: 700; color: white; margin: 0; }
-.class-card p  { font-size: 13px; color: rgba(255,255,255,0.8); margin: 0; }
+.class-card p  { font-size: 13px; color: rgba(255,255,255,0.85); margin: 0; }
 .class-card .click-hint { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: auto; padding-top: 8px; }
 
-/* Botó ⋮ de les targetes */
+/* Botó ⋮ de les targetes (creat pel JS) */
 .class-card .menu-btn {
-  background: rgba(255,255,255,0.2) !important;
-  border: none !important; border-radius: 6px !important;
-  width: 28px; height: 28px;
+  background: rgba(255,255,255,0.2) !important; border: none !important;
+  border-radius: 6px !important; width: 28px; height: 28px;
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer; color: white !important;
-  font-size: 16px; line-height: 1; font-weight: bold;
+  cursor: pointer; color: white !important; font-size: 16px; font-weight: bold;
   transition: background 0.15s;
 }
 .class-card .menu-btn:hover { background: rgba(255,255,255,0.35) !important; }
 
-/* El menú desplegable de les targetes — el JS afegeix/treu .hidden i opacity-0
-   Quan NO té .hidden ni opacity-0 ha de ser visible */
+/* Menú desplegable de les targetes */
 .class-card .menu:not(.hidden) {
-  opacity: 1 !important;
-  display: block !important;
-  background: white; border-radius: 10px;
-  border: 1px solid #e8e8f0;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-  padding: 4px; min-width: 140px;
-  overflow: hidden;
+  opacity: 1 !important; display: block !important;
+  background: white !important; border-radius: 10px !important;
+  border: 1px solid #e8e8f0 !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15) !important;
+  padding: 4px !important; min-width: 140px !important;
 }
-
 .class-card .menu button {
-  display: block; width: 100%; text-align: left;
-  padding: 8px 12px; border: none; background: none;
-  color: #374151 !important; font-size: 13px; font-family: inherit;
-  cursor: pointer; border-radius: 6px;
+  display: block !important; width: 100% !important; text-align: left !important;
+  padding: 8px 12px !important; border: none !important; background: none !important;
+  color: #374151 !important; font-size: 13px !important; cursor: pointer !important;
+  border-radius: 6px !important;
 }
-.class-card .menu button:hover { background: #f5f5ff; color: #6366f1 !important; }
+.class-card .menu button:hover { background: #f5f5ff !important; color: #6366f1 !important; }
 
-/* Botons pantalla classes */
 #btnCreateClass {
   background: #6366f1 !important; color: white !important; border: none !important;
   font-size: 13px; padding: 8px 16px; border-radius: 10px;
@@ -323,171 +277,138 @@ main { flex: 1; overflow: auto; }
 #btnCreateClass:hover { background: #4f46e5 !important; }
 
 #btnDeleteMode {
-  background: white; color: #374151;
-  border: 1px solid #e5e7eb;
+  background: white; color: #374151; border: 1px solid #e5e7eb;
   font-size: 13px; padding: 8px 14px; border-radius: 10px;
   font-weight: 500; font-family: inherit; cursor: pointer;
 }
 #btnDeleteMode:hover { background: #f9fafb; }
 
 /* ================================================
-   SCREEN CLASSE — barra controls
+   SCREEN: CLASSE OBERTA — barra controls
    ================================================ */
+
+#screen-class { display: flex; flex-direction: column; min-height: calc(100vh - 56px); }
 
 #screen-class > .flex.flex-col {
   background: white; border-bottom: 1px solid #e8e8f0;
-  padding: 10px 20px; gap: 8px; flex-shrink: 0;
+  padding: 10px 20px; flex-shrink: 0;
 }
 
 #btnBack {
   font-size: 13px; color: #6b7280 !important; background: none !important;
   border: none !important; cursor: pointer; padding: 4px 8px;
-  border-radius: 6px; font-weight: 500; font-family: inherit;
+  border-radius: 6px; font-weight: 500; margin-right: 4px; font-family: inherit;
 }
 #btnBack:hover { background: #f3f4f6 !important; color: #374151 !important; }
 
 #classTitle { font-size: 17px !important; font-weight: 700 !important; color: #1a1a2e !important; margin: 0; }
 #classSub   { display: none !important; }
 
-/* Botons de la barra */
+/* Botons barra classe — estil base que s'aplica per sobre dels colors Tailwind */
 #screen-class .flex.flex-wrap.gap-2 > button,
 #screen-class .flex.flex-wrap.gap-2 > select,
 #screen-class .flex.flex-wrap.gap-2 > div > button {
-  font-size: 12px !important; height: 30px;
-  padding: 0 12px !important; border-radius: 8px !important;
-  border: 1px solid #e5e7eb !important;
+  font-size: 12px !important; height: 30px; padding: 0 11px !important;
+  border-radius: 8px !important; border: 1px solid #e5e7eb !important;
   background: white !important; color: #374151 !important;
-  font-family: inherit !important; font-weight: 500 !important;
-  cursor: pointer; white-space: nowrap;
+  font-family: inherit !important; font-weight: 500 !important; cursor: pointer;
+  white-space: nowrap;
 }
 #screen-class .flex.flex-wrap.gap-2 > button:hover { background: #f9fafb !important; }
 
-#btnAddActivity {
-  background: #6366f1 !important; color: white !important;
-  border-color: #6366f1 !important; font-weight: 600 !important;
-}
+#btnAddActivity { background: #6366f1 !important; color: white !important; border-color: #6366f1 !important; font-weight: 600 !important; }
 #btnAddActivity:hover { background: #4f46e5 !important; }
 #btnAddStudent  { background: #ede9fe !important; color: #5b21b6 !important; border-color: #c4b5fd !important; }
 #btnAddTerm     { background: #ecfdf5 !important; color: #059669 !important; border-color: #a7f3d0 !important; font-size: 18px !important; }
 #termMenuBtn    { font-size: 16px !important; }
 #btnSortAlpha   { background: #fefce8 !important; color: #92400e !important; border-color: #fde68a !important; }
 #btnImportAL    { background: #eff6ff !important; color: #1d4ed8 !important; border-color: #bfdbfe !important; }
-#btnToggleStudentsMobile { background: #f3f4f6 !important; }
-#termsDropdown  { font-size: 12px !important; padding: 0 10px !important; }
+#termsDropdown  { font-size: 12px !important; padding: 0 10px !important; height: 30px; }
 
 /* ================================================
-   LAYOUT: ALUMNES + GRAELLA
+   LAYOUT CLASSE: ALUMNES + GRAELLA
+   (Estructura original conservada)
    ================================================ */
 
-#classScreenWrapper {
-  display: flex; flex: 1; overflow: hidden;
-  height: calc(100vh - 112px);
-}
+#classScreenWrapper { display: flex; gap: 0.5rem; }
 
-/* Panell alumnes */
+/* Panell alumnes — desktop */
 #studentsListContainer {
-  width: 200px; min-width: 200px; max-width: 200px;
-  background: white; border-right: 1px solid #e8e8f0;
-  display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0;
+  width: 250px; max-width: 250px; min-width: 200px;
+  overflow-y: auto; padding: 0.5rem;
+  background: white; border-radius: 0.5rem;
+  border-right: 1px solid #e8e8f0;
+  box-shadow: none;
 }
 
-#studentsListContent {
-  display: flex; flex-direction: column;
-  height: 100%; overflow: hidden; position: relative;
-}
-
-#studentsListContent > .flex {
-  padding: 12px 14px 8px; border-bottom: 1px solid #e8e8f0; flex-shrink: 0;
-}
+#studentsListContent .flex.items-center.justify-between { padding-bottom: 8px; }
 
 #studentsListContent h3 {
   font-size: 11px !important; font-weight: 600 !important;
   color: #9ca3af !important; text-transform: uppercase; letter-spacing: 0.5px; margin: 0;
 }
 
-#studentsCount { font-size: 11px; color: #c4b5fd; }
-
 #studentSearch {
-  display: block; margin: 8px 10px; padding: 6px 10px;
-  font-size: 12px; font-family: inherit;
-  border: 1px solid #e8e8f0; border-radius: 8px;
-  background: #f9fafb; color: #374151; outline: none;
-  width: calc(100% - 20px); flex-shrink: 0;
+  display: block; width: 100%; padding: 6px 10px; font-size: 12px;
+  font-family: inherit; border: 1px solid #e8e8f0; border-radius: 8px;
+  background: #f9fafb; color: #374151; outline: none; margin-bottom: 8px;
 }
 #studentSearch:focus { border-color: #818cf8; background: white; }
 
-#studentsList {
-  flex: 1; overflow-y: auto; list-style: none; margin: 0; padding: 4px 0;
-}
+#studentsList { list-style: none; margin: 0; padding: 0; }
 #studentsList li {
-  display: flex; align-items: center; gap: 8px;
-  padding: 7px 12px; cursor: pointer;
-  border-bottom: 1px solid #f3f4f6; transition: background 0.1s;
-  font-size: 13px; color: #374151;
+  padding: 7px 4px; cursor: pointer; border-bottom: 1px solid #f3f4f6;
+  transition: background 0.1s; font-size: 13px; color: #374151;
+  border-radius: 6px;
 }
 #studentsList li:hover { background: #f9fafb; }
 
 #studentsMenuBtn, #cancelDeleteStudentsBtn {
   background: none; border: none; font-size: 16px;
   color: #9ca3af; cursor: pointer; padding: 2px 6px; border-radius: 6px;
-  font-family: inherit;
 }
 #studentsMenuBtn:hover { background: #f3f4f6; color: #374151; }
 
-/* Menú alumnes */
 #studentsMenu:not(.hidden) {
-  background: white; border: 1px solid #e8e8f0;
-  border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-  padding: 4px; min-width: 160px; z-index: 9999;
+  background: white; border: 1px solid #e8e8f0; border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1); padding: 4px; min-width: 160px; z-index: 9999;
 }
 #studentsMenu button {
-  display: block; width: 100%; text-align: left;
-  padding: 7px 12px; border-radius: 6px; border: none;
-  background: none; color: #374151; font-size: 13px;
-  font-family: inherit; cursor: pointer;
+  display: block; width: 100%; text-align: left; padding: 7px 12px;
+  border-radius: 6px; border: none; background: none;
+  color: #374151; font-size: 13px; font-family: inherit; cursor: pointer;
 }
 #studentsMenu button:hover { background: #f5f5ff; color: #6366f1; }
 
-#closeStudentsMobile {
-  display: none;
-  position: absolute; top: 10px; right: 10px;
-  background: none; border: none; font-size: 20px;
-  cursor: pointer; color: #9ca3af; padding: 4px; border-radius: 6px; z-index: 10;
-}
-
-/* Notes grid */
+/* Graella */
 #notesTable-wrapper {
-  flex: 1; overflow: auto; background: #f0eff5; padding: 16px;
-  display: flex; flex-direction: column; gap: 10px;
+  flex-grow: 1; overflow-x: auto;
+  background: white; border-radius: 12px;
+  border: 1px solid #e8e8f0; padding: 12px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 }
-
-.grid-search-bar { flex-shrink: 0; }
 
 #gridStudentSearch {
-  padding: 8px 14px; font-size: 13px; font-family: inherit;
-  border: 1px solid #e8e8f0; border-radius: 10px;
-  background: white; color: #374151; outline: none; width: 280px;
+  padding: 7px 12px; font-size: 13px; font-family: inherit;
+  border: 1px solid #e8e8f0; border-radius: 8px;
+  background: white; color: #374151; outline: none; width: 260px; display: block;
+  margin-bottom: 10px;
 }
 #gridStudentSearch:focus { border-color: #818cf8; }
 
-#gridWrapper {
-  background: white; border-radius: 12px;
-  border: 1px solid #e8e8f0; overflow: auto;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05); flex: 1;
-}
+#gridWrapper { width: 100%; }
 
 /* ================================================
    TAULA DE NOTES
    ================================================ */
 
-#notesTable { width: 100%; min-width: 400px; border-collapse: collapse; }
+#notesTable { width: 100%; min-width: 600px; border-collapse: collapse; }
 
 #notesTable thead th {
   background: #fafafa; border-bottom: 1px solid #e8e8f0;
   padding: 9px 10px; font-size: 11px; font-weight: 600;
   color: #9ca3af; text-align: center; white-space: nowrap;
   text-transform: uppercase; letter-spacing: 0.4px;
-  position: sticky; top: 0; z-index: 2;
 }
 #notesTable thead th:first-child { text-align: left; padding-left: 14px; }
 
@@ -496,26 +417,23 @@ main { flex: 1; overflow: auto; }
 #notesTable tbody tr:last-child { border-bottom: none; }
 
 #notesTable tbody td {
-  padding: 6px 8px; font-size: 13px; color: #374151;
-  text-align: center; border-right: 1px solid #f5f5f5;
+  border: 1px solid #f0eff5; padding: 6px 8px;
+  font-size: 13px; color: #374151; text-align: center;
 }
-#notesTable tbody td:last-child { border-right: none; }
 #notesTable tbody td:first-child {
-  text-align: left; padding-left: 14px;
-  font-weight: 500; color: #1a1a2e;
+  text-align: left; padding-left: 14px; font-weight: 500; color: #1a1a2e;
 }
 
 #notesTfoot td, #formulaTfoot td {
   background: #f9fafb; border-top: 2px solid #e8e8f0;
-  padding: 8px 10px; font-size: 12px; font-weight: 600;
-  color: #6b7280; text-align: center;
+  padding: 8px 10px; font-size: 12px; font-weight: 600; color: #6b7280; text-align: center;
 }
 
 .table-input {
-  width: 44px; padding: 4px 2px; font-size: 13px; text-align: center;
-  font-family: inherit; border: 1.5px solid transparent; border-radius: 6px;
-  background: transparent; color: #374151; font-weight: 500;
-  transition: all 0.12s; outline: none;
+  background-color: transparent; border: 1.5px solid transparent;
+  color: #374151; border-radius: 6px; text-align: center;
+  font-family: inherit; font-size: 13px; font-weight: 500;
+  transition: all 0.12s; outline: none; width: 44px; padding: 3px;
 }
 .table-input:hover { border-color: #e5e7eb; background: #f9fafb; }
 .table-input:focus { border-color: #6366f1; background: white; box-shadow: 0 0 0 2px rgba(99,102,241,0.15); }
@@ -524,114 +442,101 @@ main { flex: 1; overflow: auto; }
 .bg-yellow-100 { background: #fef9c3 !important; color: #713f12 !important; border-radius: 5px; }
 .bg-green-100  { background: #dcfce7 !important; color: #166534 !important; border-radius: 5px; }
 
-input.blocked-cell { cursor: not-allowed; opacity: 0.55; background: #f9fafb !important; }
+input.blocked-cell {
+  cursor: not-allowed; opacity: 0.6;
+  background-image: linear-gradient(rgba(255,255,255,0.35),rgba(255,255,255,0.35));
+}
 
 /* ================================================
-   MENÚS INTERNS (termMenu, userMenu, etc.)
-   No tocar .hidden — el JS l'afegeix/treu
+   MENÚS (termMenu i similars creats pel JS)
+   Respectem la lògica original .hidden/.menu
    ================================================ */
 
+.menu {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  z-index: 9999 !important;
+}
+
+.menu.hidden { display: none !important; }
+
+/* Estil visual dels menús quan visibles */
 #termMenu:not(.hidden),
 #userMenu:not(.hidden) {
-  background: white; border: 1px solid #e8e8f0;
-  border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-  padding: 4px; min-width: 160px; z-index: 9999;
+  background: white; border: 1px solid #e8e8f0; border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1); padding: 4px; min-width: 160px;
 }
-
-#termMenu button,
-#userMenu button {
-  display: block; width: 100%; text-align: left;
-  padding: 7px 12px; border-radius: 6px; border: none;
-  background: none; color: #374151; font-size: 13px;
-  font-family: inherit; cursor: pointer;
+#termMenu button, #userMenu button {
+  display: block; width: 100%; text-align: left; padding: 7px 12px;
+  border-radius: 6px; border: none; background: none; color: #374151;
+  font-size: 13px; font-family: inherit; cursor: pointer;
 }
-#termMenu button:hover,
-#userMenu button:hover { background: #f5f5ff; color: #6366f1; }
+#termMenu button:hover, #userMenu button:hover { background: #f5f5ff; color: #6366f1; }
 
-/* Menús creats per JS en files de la taula */
+/* Menús inline de la taula */
 #notesTable .menu:not(.hidden),
-#studentsList .menu:not(.hidden) {
-  background: white; border: 1px solid #e8e8f0;
-  border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-  padding: 4px; min-width: 140px; z-index: 9999;
+#classesGrid .menu:not(.hidden) {
+  background: white; border: 1px solid #e8e8f0; border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12); padding: 4px; min-width: 140px;
 }
-
 #notesTable .menu button,
-#studentsList .menu button {
-  display: block; width: 100%; text-align: left;
-  padding: 7px 12px; border-radius: 6px; border: none;
-  background: none; color: #374151; font-size: 13px;
-  font-family: inherit; cursor: pointer;
+#classesGrid .menu button {
+  display: block; width: 100%; text-align: left; padding: 7px 12px;
+  border-radius: 6px; border: none; background: none;
+  color: #374151; font-size: 13px; font-family: inherit; cursor: pointer;
 }
 #notesTable .menu button:hover,
-#studentsList .menu button:hover { background: #f5f5ff; color: #6366f1; }
+#classesGrid .menu button:hover { background: #f5f5ff; color: #6366f1; }
 
 /* ================================================
    MODALS
    ================================================ */
 
-/* Backdrop — el JS fa display:flex quan obre modal */
-[id^="modal"] { z-index: 9000; }
+.modal-backdrop { background: rgba(10,10,30,0.5) !important; backdrop-filter: blur(3px); }
 
-[id^="modal"] .modal-backdrop,
-.modal-backdrop {
-  background: rgba(10,10,30,0.5) !important;
-  backdrop-filter: blur(3px);
-}
-
-/* Caixa del modal */
 [id^="modal"] > div:not(.modal-backdrop) {
-  background: white !important;
   border-radius: 16px !important;
-  padding: 24px !important;
   box-shadow: 0 20px 60px rgba(0,0,0,0.2) !important;
   border: 1px solid #e8e8f0 !important;
-  position: relative; z-index: 10;
-  max-height: 90vh; overflow-y: auto;
 }
 
-[id^="modal"] h2,
-[id^="modal"] h3 {
-  font-size: 17px !important; font-weight: 700 !important; color: #1a1a2e !important;
+[id^="modal"] h2, [id^="modal"] h3 {
+  font-size: 16px !important; font-weight: 700 !important; color: #1a1a2e !important;
 }
 
 [id^="modal"] input[type="text"],
 [id^="modal"] input[type="email"],
 [id^="modal"] input[type="number"],
 [id^="modal"] input[type="password"],
-[id^="modal"] select,
-[id^="modal"] textarea {
+[id^="modal"] select {
   border: 1.5px solid #e5e7eb !important; border-radius: 8px !important;
-  padding: 9px 12px !important; font-size: 14px !important; font-family: inherit !important;
-  outline: none !important; color: #1a1a2e !important; width: 100%;
+  padding: 9px 12px !important; font-size: 14px !important;
+  font-family: inherit !important; outline: none !important; color: #1a1a2e !important;
 }
 [id^="modal"] input:focus, [id^="modal"] select:focus {
   border-color: #818cf8 !important; box-shadow: 0 0 0 2px rgba(129,140,248,0.15) !important;
 }
 
-/* Botons dels modals */
 .modal-close {
   background: #f3f4f6 !important; color: #374151 !important; border: none !important;
   padding: 8px 16px !important; border-radius: 8px !important;
-  font-weight: 500 !important; font-family: inherit !important; font-size: 13px !important;
-  cursor: pointer;
+  font-weight: 500 !important; font-family: inherit !important; font-size: 13px !important; cursor: pointer;
 }
 .modal-close:hover { background: #e5e7eb !important; }
-
-/* El botó × gran del modal Classroom */
-.modal-close.text-2xl { padding: 4px 10px !important; font-size: 20px !important; background: none !important; }
+.modal-close.text-2xl { padding: 4px 10px !important; font-size: 20px !important; background: none !important; color: #9ca3af !important; }
 
 #modalCreateClassBtn, #modalAddStudentBtn, #modalAddActivityBtn,
-#btnImportALConfirm, #btnImportSelectedCourse, #modalApplyCalcBtn,
-.btn-primary {
+#btnImportALConfirm, #btnImportSelectedCourse, #modalApplyCalcBtn {
   background: #6366f1 !important; color: white !important; border: none !important;
   padding: 8px 18px !important; border-radius: 8px !important;
-  font-weight: 600 !important; font-family: inherit !important; font-size: 13px !important;
-  cursor: pointer;
+  font-weight: 600 !important; font-family: inherit !important; font-size: 13px !important; cursor: pointer;
 }
 #modalCreateClassBtn:hover, #modalAddStudentBtn:hover, #modalAddActivityBtn:hover,
-#btnImportALConfirm:hover, #btnImportSelectedCourse:hover, #modalApplyCalcBtn:hover,
-.btn-primary:hover { background: #4f46e5 !important; }
+#btnImportALConfirm:hover, #btnImportSelectedCourse:hover, #modalApplyCalcBtn:hover {
+  background: #4f46e5 !important;
+}
 #btnImportSelectedCourse:disabled { opacity: 0.5; cursor: not-allowed; }
 
 #confirmYes {
@@ -641,7 +546,6 @@ input.blocked-cell { cursor: not-allowed; opacity: 0.55; background: #f9fafb !im
 }
 #confirmYes:hover { background: #b91c1c !important; }
 
-/* Modal càlcul */
 #modalCalc {
   display: none; position: fixed; inset: 0;
   background: rgba(10,10,30,0.5); backdrop-filter: blur(3px);
@@ -664,44 +568,77 @@ input.blocked-cell { cursor: not-allowed; opacity: 0.55; background: #f9fafb !im
   padding: 48px 32px; text-align: center; color: #6b7280; font-size: 15px; margin: 24px;
 }
 
-#emptyInstructionMessage {
-  background: white; border-radius: 12px; border: 2px dashed #c4b5fd;
-  padding: 36px 24px; text-align: center; color: #6b7280; font-size: 15px;
-}
-
 /* ================================================
-   RESPONSIVE MÒBIL
+   RESPONSIVE — conservat idèntic a l'original
    ================================================ */
 
+@media (max-width: 1024px) {
+  #screen-classes, #screen-class { padding: 0.5rem; }
+}
+
+@media (max-width: 640px) {
+  .table-input { width: 2rem; font-size: 0.7rem; }
+  #notesTable th, #notesTable td { font-size: 0.7rem; padding: 0.25rem; }
+  .class-card { padding: 0.75rem !important; font-size: 0.75rem; }
+}
+
+/* ---- MÒBIL (768px) — comportament original conservat ---- */
 @media (max-width: 768px) {
+
+  /* Sidebar més estreta */
   #app-sidebar { width: 56px; min-width: 56px; }
   #app-main-content { margin-left: 56px; }
-  #studentsListContainer { display: none; }
 
+  /* Amaga la barra lateral */
+  #studentsListContainer {
+    display: none;
+    width: 0; max-width: none;
+  }
+
+  /* Quan s'obre en mòbil — overlay complet */
   #studentsListContainer.mobile-open {
-    display: flex; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.5); z-index: 9999;
-    justify-content: center; align-items: center;
-    width: auto; max-width: none; min-width: auto; border-right: none;
+    display: flex;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
   }
 
-  #studentsListContainer.mobile-open #studentsListContent {
-    background: white; width: 85%; max-width: 320px;
-    border-radius: 16px; max-height: 85vh; overflow-y: auto;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+  /* Panell interior blanc */
+  #studentsListContent {
+    background: white;
+    width: 90%;
+    max-width: 350px;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    max-height: 90%;
+    overflow-y: auto;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
   }
 
+  /* La graella ocupa tota l'amplada */
+  #notesTable-wrapper { width: 100% !important; }
+
+  /* Botó tancar alumnes visible */
   #closeStudentsMobile { display: block !important; }
 
-  #notesTable-wrapper { padding: 10px; }
-  #screen-classes { padding: 16px; }
+  /* Amaga títol "Les meves classes" en mòbil */
+  #screen-classes h2 { display: none !important; }
 
+  /* Barra de botons: scroll horitzontal en mòbil */
   #screen-class .flex.flex-wrap.gap-2 {
-    flex-wrap: nowrap; overflow-x: auto;
-    -webkit-overflow-scrolling: touch; overflow-y: visible; scrollbar-width: none;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    overflow-y: visible;
   }
   #screen-class .flex.flex-wrap.gap-2::-webkit-scrollbar { display: none; }
   #screen-class .flex.flex-wrap.gap-2 > * { flex-shrink: 0; }
+
+  /* Menú ⋮ fixat a la pantalla */
   #termMenu { position: fixed !important; z-index: 9999 !important; }
 }
 
@@ -723,9 +660,7 @@ input.blocked-cell { cursor: not-allowed; opacity: 0.55; background: #f9fafb !im
    GLOBALS
    ================================================ */
 
-button { font-family: inherit; }
-
-/* Taula admin */
-table { width: 100%; border-collapse: collapse; }
+button { font-family: inherit; transition: background 0.12s, opacity 0.12s; }
+table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; }
 th, td { border: 1px solid #f0eff5; padding: 8px 12px; text-align: left; font-size: 13px; }
 th { background: #fafafa; font-weight: 600; color: #6b7280; }
