@@ -2,11 +2,10 @@
    AVALUAPP — Design System v2
    ================================================ */
 
-/* ---- Reset & base ---- */
 *, *::before, *::after { box-sizing: border-box; }
 
 body {
-  font-family: 'DM Sans', 'Inter', system-ui, sans-serif;
+  font-family: 'DM Sans', system-ui, sans-serif;
   margin: 0; padding: 0;
   background: #f0eff5;
   color: #1a1a2e;
@@ -15,519 +14,640 @@ body {
 }
 
 /* ================================================
-   LAYOUT PRINCIPAL
+   LOGIN — pantalla completa independent
    ================================================ */
 
-.min-h-screen {
-  display: flex !important;
-  align-items: stretch !important;
-  min-height: 100vh;
-  padding: 0 !important;
-}
-
-#appRoot {
+#loginScreen {
   display: flex;
-  width: 100%;
+  align-items: center;
+  justify-content: center;
   min-height: 100vh;
-  background: #f0eff5;
-  border-radius: 0;
-  box-shadow: none;
-  padding: 0;
-  margin: 0;
-  max-width: none;
+  background: linear-gradient(135deg, #1a1a2e 0%, #2d2b55 100%);
+  padding: 24px;
 }
 
-/* ================================================
-   SIDEBAR VERTICAL
-   ================================================ */
+#loginScreen.hidden { display: none !important; }
 
-#app-sidebar {
-  width: 64px;
-  min-width: 64px;
-  background: #16162a;
+.login-card {
+  background: white;
+  border-radius: 20px;
+  padding: 40px 36px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 16px 0;
-  gap: 4px;
-  position: fixed;
-  top: 0; left: 0; bottom: 0;
-  z-index: 200;
+  gap: 0;
 }
 
-#app-sidebar .sidebar-logo {
+.login-logo {
+  width: 64px; height: 64px;
+  background: linear-gradient(135deg, #6366f1, #818cf8);
+  border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px;
+  margin-bottom: 16px;
+}
+
+.login-card h1 {
+  font-size: 26px; font-weight: 800;
+  color: #1a1a2e; margin: 0 0 6px;
+  letter-spacing: -0.5px;
+}
+
+.login-card p {
+  color: #6b7280; font-size: 14px;
+  margin: 0 0 24px; text-align: center;
+}
+
+.login-card input {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  margin-bottom: 10px;
+  display: block;
+  color: #1a1a2e;
+}
+.login-card input:focus {
+  border-color: #818cf8;
+  box-shadow: 0 0 0 3px rgba(129,140,248,0.15);
+}
+
+#btnLogin {
+  width: 100%; padding: 12px;
+  background: #6366f1; color: white;
+  border: none; border-radius: 10px;
+  font-size: 15px; font-weight: 600;
+  font-family: inherit; cursor: pointer;
+  margin-bottom: 8px; display: block;
+  transition: background 0.15s;
+}
+#btnLogin:hover { background: #4f46e5; }
+
+#googleLoginBtn {
+  width: 100%; padding: 11px;
+  background: white; color: #374151;
+  border: 1.5px solid #e5e7eb; border-radius: 10px;
+  font-size: 14px; font-weight: 500;
+  font-family: inherit; cursor: pointer;
+  margin-bottom: 8px; display: block;
+  transition: background 0.15s;
+}
+#googleLoginBtn:hover { background: #f9fafb; }
+
+#btnRegister {
+  width: 100%; padding: 11px;
+  background: #f5f3ff; color: #5b21b6;
+  border: 1.5px solid #ede9fe; border-radius: 10px;
+  font-size: 14px; font-weight: 500;
+  font-family: inherit; cursor: pointer;
+  margin-bottom: 10px; display: block;
+  transition: background 0.15s;
+}
+#btnRegister:hover { background: #ede9fe; }
+
+#btnRecover {
+  background: none; border: none;
+  color: #818cf8; font-size: 13px;
+  cursor: pointer; font-family: inherit;
+  text-decoration: underline; padding: 0;
+}
+#btnRecover:hover { color: #6366f1; }
+
+/* ================================================
+   APP ROOT
+   ================================================ */
+
+#appRoot {
+  display: flex;
+  min-height: 100vh;
+  background: #f0eff5;
+}
+
+#appRoot.hidden { display: none !important; }
+
+/* ================================================
+   SIDEBAR
+   ================================================ */
+
+#app-sidebar {
+  width: 64px; min-width: 64px;
+  background: #16162a;
+  display: flex; flex-direction: column;
+  align-items: center;
+  padding: 16px 0; gap: 4px;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  z-index: 100;
+}
+
+.sidebar-logo {
   width: 38px; height: 38px;
   background: linear-gradient(135deg, #6366f1, #818cf8);
   border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
-  margin-bottom: 20px;
-  font-size: 20px;
-  cursor: pointer;
-  flex-shrink: 0;
+  font-size: 20px; margin-bottom: 20px; cursor: pointer;
 }
 
-#app-sidebar .sidebar-item {
-  width: 44px; height: 44px;
-  border-radius: 12px;
+.sidebar-item {
+  width: 44px; height: 44px; border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-  color: rgba(255,255,255,0.35);
-  font-size: 19px;
-  transition: all 0.15s;
-  position: relative;
-  flex-shrink: 0;
+  cursor: pointer; color: rgba(255,255,255,0.3);
+  font-size: 19px; transition: all 0.15s;
 }
+.sidebar-item.active { background: rgba(99,102,241,0.22); color: #818cf8; }
+.sidebar-item:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.65); }
 
-#app-sidebar .sidebar-item.active {
-  background: rgba(99,102,241,0.22);
-  color: #818cf8;
-}
-
-#app-sidebar .sidebar-item:hover {
-  background: rgba(255,255,255,0.07);
-  color: rgba(255,255,255,0.65);
-}
-
-#app-sidebar .sidebar-divider {
+.sidebar-divider {
   width: 32px; height: 1px;
-  background: rgba(255,255,255,0.08);
-  margin: 6px 0;
+  background: rgba(255,255,255,0.08); margin: 6px 0;
 }
 
-#app-sidebar .sidebar-avatar {
+.sidebar-avatar {
   margin-top: auto;
-  width: 36px; height: 36px;
-  border-radius: 50%;
+  width: 36px; height: 36px; border-radius: 50%;
   background: linear-gradient(135deg, #6366f1, #a78bfa);
   display: flex; align-items: center; justify-content: center;
-  color: white;
-  font-size: 13px; font-weight: 600;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-#app-main-content {
-  margin-left: 64px;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  overflow: hidden;
+  color: white; font-size: 12px; font-weight: 700; cursor: pointer;
 }
 
 /* ================================================
-   TOPBAR
+   CONTINGUT PRINCIPAL
+   ================================================ */
+
+#app-main-content {
+  margin-left: 64px;
+  flex: 1; display: flex; flex-direction: column;
+  min-height: 100vh; overflow: hidden;
+}
+
+/* ================================================
+   TOPBAR / HEADER
    ================================================ */
 
 header {
-  background: white !important;
-  border-bottom: 1px solid #e8e8f0 !important;
-  padding: 12px 20px !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 12px !important;
-  margin-bottom: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
+  background: white;
+  border-bottom: 1px solid #e8e8f0;
+  padding: 0 20px;
+  height: 56px;
+  display: flex; align-items: center; gap: 12px;
   flex-shrink: 0;
+  position: sticky; top: 0; z-index: 50;
 }
 
 header h1 {
-  font-size: 17px !important;
-  font-weight: 600 !important;
-  color: #1a1a2e !important;
-  margin: 0;
-  flex: 1;
+  font-size: 16px; font-weight: 700;
+  color: #1a1a2e; margin: 0; flex: 1;
+  letter-spacing: -0.3px;
 }
 
-#userArea { display: flex; align-items: center; gap: 8px; position: relative; }
+#userArea {
+  display: flex; align-items: center; gap: 8px; position: relative;
+}
+
 #usuariNom { font-size: 13px; color: #6b7280; }
 
 #userMenuBtn {
   background: none; border: none; color: #9ca3af;
-  font-size: 20px; cursor: pointer; padding: 2px 6px; border-radius: 6px;
+  font-size: 20px; cursor: pointer; padding: 4px 6px; border-radius: 6px;
+  line-height: 1;
 }
-#userMenuBtn:hover { background: #f3f4f6; color: #374151; transform: none; }
+#userMenuBtn:hover { background: #f3f4f6; color: #374151; }
 
 #btnLogout {
-  font-size: 12px; padding: 6px 14px;
+  font-size: 12px; padding: 6px 12px;
   background: #fef2f2; color: #dc2626;
-  border: 1px solid #fca5a5; border-radius: 8px;
-  cursor: pointer; font-weight: 500; transition: all 0.15s;
+  border: 1px solid #fecaca; border-radius: 8px;
+  cursor: pointer; font-weight: 600; font-family: inherit;
 }
-#btnLogout:hover { background: #fee2e2; transform: none; }
+#btnLogout:hover { background: #fee2e2; }
 
 /* ================================================
-   PANTALLA: CLASSES
+   MAIN AREA
+   ================================================ */
+
+main {
+  flex: 1; overflow: auto;
+}
+
+/* ================================================
+   SCREEN: CLASSES (dashboard)
    ================================================ */
 
 #screen-classes {
   padding: 28px;
-  background: #f0eff5;
-  min-height: 100%;
+}
+
+#screen-classes > div:first-child {
+  display: flex; align-items: center;
+  justify-content: space-between; margin-bottom: 20px;
 }
 
 #screen-classes h2 {
-  font-size: 22px; font-weight: 700; color: #1a1a2e;
+  font-size: 20px; font-weight: 700; color: #1a1a2e; margin: 0;
 }
 
 #classesGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 16px;
 }
 
 .class-card {
-  cursor: pointer;
-  padding: 20px;
-  border-radius: 16px;
-  background: white;
-  border: 1px solid #e8e8f0;
-  color: #1a1a2e;
-  transition: transform 0.18s, box-shadow 0.18s;
+  cursor: pointer; padding: 20px; border-radius: 16px;
+  background: white; border: 1px solid #e8e8f0; color: #1a1a2e;
+  transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
   box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  position: relative;
-  overflow: hidden;
+  display: flex; flex-direction: column; gap: 6px;
+  position: relative; overflow: hidden;
 }
-
 .class-card::before {
   content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 4px;
+  position: absolute; top: 0; left: 0; right: 0; height: 4px;
   background: linear-gradient(90deg, #6366f1, #a78bfa);
-  border-radius: 16px 16px 0 0;
 }
-
 .class-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 8px 24px rgba(99,102,241,0.15);
+  box-shadow: 0 8px 28px rgba(99,102,241,0.18);
   border-color: #c7d2fe;
 }
-
-.class-card h3 { font-size: 16px; font-weight: 700; color: #1a1a2e; margin: 4px 0 0; }
-.class-card p { font-size: 13px; color: #6b7280; margin: 0; }
-.class-card .click-hint { font-size: 12px; color: #9ca3af; margin-top: 12px; }
+.class-card h3 { font-size: 15px; font-weight: 700; color: #1a1a2e; margin: 4px 0 0; }
+.class-card p  { font-size: 13px; color: #6b7280; margin: 0; }
+.class-card .click-hint { font-size: 12px; color: #9ca3af; margin-top: 10px; }
 
 #btnCreateClass {
-  background: #6366f1 !important; color: white !important; border: none !important;
-  font-size: 13px !important; padding: 8px 16px !important; border-radius: 10px !important;
-  font-weight: 600 !important; cursor: pointer;
+  background: #6366f1; color: white; border: none;
+  font-size: 13px; padding: 8px 16px; border-radius: 10px;
+  font-weight: 600; font-family: inherit; cursor: pointer;
 }
-#btnCreateClass:hover { background: #4f46e5 !important; transform: none; }
+#btnCreateClass:hover { background: #4f46e5; }
 
 #btnDeleteMode, #btnClassroomImport {
-  background: white !important; color: #374151 !important;
-  border: 1px solid #e5e7eb !important; font-size: 13px !important;
-  padding: 8px 14px !important; border-radius: 10px !important;
-  font-weight: 500 !important; cursor: pointer;
+  background: white; color: #374151;
+  border: 1px solid #e5e7eb;
+  font-size: 13px; padding: 8px 14px; border-radius: 10px;
+  font-weight: 500; font-family: inherit; cursor: pointer;
 }
-#btnDeleteMode:hover, #btnClassroomImport:hover { background: #f9fafb !important; transform: none; }
+#btnDeleteMode:hover, #btnClassroomImport:hover { background: #f9fafb; }
 
 /* ================================================
-   PANTALLA: CLASSE OBERTA
+   SCREEN: CLASSE OBERTA
    ================================================ */
 
 #screen-class {
-  display: flex; flex-direction: column; flex: 1;
-  background: #f0eff5; min-height: 100%;
+  display: flex; flex-direction: column; height: 100%;
 }
 
-#screen-class > .flex.flex-col.md\:flex-row {
+/* Barra de controls superior */
+#screen-class > .flex.flex-col {
   background: white; border-bottom: 1px solid #e8e8f0;
-  padding: 10px 20px; gap: 8px; flex-wrap: wrap; align-items: center;
+  padding: 10px 20px; gap: 8px; align-items: center;
+  flex-shrink: 0;
 }
 
 #btnBack {
-  font-size: 13px; color: #6b7280 !important; background: none !important;
-  border: none !important; cursor: pointer; padding: 4px 8px; border-radius: 6px;
-  font-weight: 500; margin-right: 4px;
+  font-size: 13px; color: #6b7280; background: none; border: none;
+  cursor: pointer; padding: 4px 8px; border-radius: 6px;
+  font-weight: 500; font-family: inherit; margin-right: 4px;
 }
-#btnBack:hover { background: #f3f4f6 !important; color: #374151 !important; transform: none; }
+#btnBack:hover { background: #f3f4f6; color: #374151; }
 
-#classTitle { font-size: 17px !important; font-weight: 700 !important; color: #1a1a2e !important; }
+#classTitle { font-size: 17px !important; font-weight: 700 !important; color: #1a1a2e !important; margin: 0; }
 #classSub { display: none !important; }
 
-#screen-class .flex.flex-wrap.gap-2 { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+/* Botons barra classe */
+#screen-class .flex.flex-wrap.gap-2 { display: flex; gap: 6px; align-items: center; }
 
-#screen-class .flex.flex-wrap.gap-2 button,
-#screen-class .flex.flex-wrap.gap-2 select {
-  font-size: 12px !important; padding: 6px 12px !important;
-  border-radius: 8px !important; font-weight: 500 !important;
-  border: 1px solid #e5e7eb !important; background: white !important;
-  color: #374151 !important; cursor: pointer; height: 32px;
+#screen-class .flex.flex-wrap.gap-2 > button,
+#screen-class .flex.flex-wrap.gap-2 > select,
+#screen-class .flex.flex-wrap.gap-2 > div > button {
+  font-size: 12px; padding: 5px 12px; height: 30px;
+  border-radius: 8px; border: 1px solid #e5e7eb;
+  background: white; color: #374151;
+  font-family: inherit; font-weight: 500; cursor: pointer;
+  white-space: nowrap;
 }
-#screen-class .flex.flex-wrap.gap-2 button:hover { background: #f9fafb !important; transform: none; }
+#screen-class .flex.flex-wrap.gap-2 > button:hover { background: #f9fafb; }
 
-#btnAddActivity { background: #6366f1 !important; color: white !important; border-color: #6366f1 !important; }
-#btnAddActivity:hover { background: #4f46e5 !important; transform: none; }
-#btnAddTerm { background: #ecfdf5 !important; color: #059669 !important; border-color: #a7f3d0 !important; font-size: 18px !important; padding: 2px 10px !important; }
-#termMenuBtn { background: #f9fafb !important; font-size: 16px !important; padding: 2px 10px !important; }
-#termsDropdown { font-size: 13px !important; background: white !important; border: 1px solid #e5e7eb !important; border-radius: 8px !important; padding: 4px 10px !important; height: 32px; }
-#btnSortAlpha { background: #fefce8 !important; color: #92400e !important; border-color: #fde68a !important; }
-#btnImportAL { background: #eff6ff !important; color: #1d4ed8 !important; border-color: #bfdbfe !important; }
-#btnToggleStudentsMobile { background: #ede9fe !important; color: #5b21b6 !important; border-color: #c4b5fd !important; }
+#btnAddActivity { background: #6366f1 !important; color: white !important; border-color: #6366f1 !important; font-weight: 600 !important; }
+#btnAddActivity:hover { background: #4f46e5 !important; }
+#btnAddStudent  { background: #ede9fe !important; color: #5b21b6 !important; border-color: #c4b5fd !important; }
+#btnAddTerm     { background: #ecfdf5 !important; color: #059669 !important; border-color: #a7f3d0 !important; font-size: 18px !important; padding: 2px 10px !important; }
+#termMenuBtn    { font-size: 16px !important; padding: 2px 10px !important; }
+#btnSortAlpha   { background: #fefce8 !important; color: #92400e !important; border-color: #fde68a !important; }
+#btnImportAL    { background: #eff6ff !important; color: #1d4ed8 !important; border-color: #bfdbfe !important; }
+#btnToggleStudentsMobile { background: #f3f4f6 !important; }
+
+#termsDropdown {
+  font-size: 12px; height: 30px; padding: 0 10px;
+  border: 1px solid #e5e7eb; border-radius: 8px;
+  background: white; color: #374151; font-family: inherit; cursor: pointer;
+}
 
 /* ================================================
-   LAYOUT CLASSE: ALUMNES + GRAELLA
+   LAYOUT: ALUMNES + GRAELLA
    ================================================ */
 
-#classScreenWrapper { display: flex; flex: 1; gap: 0; overflow: hidden; height: calc(100vh - 112px); }
+#classScreenWrapper {
+  display: flex; flex: 1; overflow: hidden;
+  height: calc(100vh - 112px);
+}
 
+/* ---- Panell alumnes ---- */
 #studentsListContainer {
-  width: 210px; min-width: 210px; max-width: 210px;
+  width: 200px; min-width: 200px; max-width: 200px;
   background: white; border-right: 1px solid #e8e8f0;
   display: flex; flex-direction: column; overflow: hidden;
+  flex-shrink: 0;
 }
 
 #studentsListContent {
-  display: flex; flex-direction: column; height: 100%; overflow: hidden; padding: 0;
+  display: flex; flex-direction: column;
+  height: 100%; overflow: hidden;
+  padding: 0; position: relative;
 }
 
-#studentsListContent .flex.items-center.justify-between {
-  padding: 10px 14px; border-bottom: 1px solid #e8e8f0;
-  background: white; flex-shrink: 0;
+#studentsListContent > .flex {
+  padding: 12px 14px 8px;
+  border-bottom: 1px solid #e8e8f0; flex-shrink: 0;
 }
 
 #studentsListContent h3 {
   font-size: 11px !important; font-weight: 600 !important;
-  color: #9ca3af !important; text-transform: uppercase; letter-spacing: 0.5px; margin: 0;
+  color: #9ca3af !important; text-transform: uppercase;
+  letter-spacing: 0.5px; margin: 0;
 }
 
+#studentsCount { font-size: 11px; color: #9ca3af; }
+
 #studentSearch {
-  margin: 8px 10px; padding: 6px 10px; font-size: 12px;
-  border: 1px solid #e8e8f0; border-radius: 8px; background: #f9fafb;
-  color: #374151; width: calc(100% - 20px); outline: none; flex-shrink: 0;
+  display: block; width: calc(100% - 20px); margin: 8px 10px;
+  padding: 6px 10px; font-size: 12px; font-family: inherit;
+  border: 1px solid #e8e8f0; border-radius: 8px;
+  background: #f9fafb; color: #374151; outline: none; flex-shrink: 0;
 }
 #studentSearch:focus { border-color: #818cf8; background: white; }
 
-#studentsList { flex: 1; overflow-y: auto; padding: 4px 0; }
+#studentsList {
+  flex: 1; overflow-y: auto; list-style: none;
+  margin: 0; padding: 4px 0;
+}
 
 #studentsList li {
   display: flex; align-items: center; gap: 8px;
-  padding: 7px 12px; cursor: pointer; border-bottom: 1px solid #f3f4f6; transition: background 0.1s;
+  padding: 7px 12px; cursor: pointer;
+  border-bottom: 1px solid #f3f4f6; transition: background 0.1s;
+  font-size: 13px; color: #374151;
 }
 #studentsList li:hover { background: #f9fafb; }
 
-#studentsMenuBtn, #cancelDeleteStudentsBtn {
-  font-size: 16px !important; background: none !important; border: none !important;
-  color: #9ca3af !important; cursor: pointer; padding: 2px 6px; border-radius: 6px;
+.drag-hint {
+  font-size: 11px; color: #d1d5db;
+  text-align: center; padding: 8px; flex-shrink: 0; margin: 0;
 }
-#studentsMenuBtn:hover { background: #f3f4f6 !important; color: #374151 !important; transform: none; }
 
-/* ================================================
-   GRAELLA DE NOTES
-   ================================================ */
+#studentsMenuBtn, #cancelDeleteStudentsBtn {
+  background: none; border: none; font-size: 16px;
+  color: #9ca3af; cursor: pointer; padding: 2px 6px; border-radius: 6px;
+  font-family: inherit;
+}
+#studentsMenuBtn:hover { background: #f3f4f6; color: #374151; }
 
+#closeStudentsMobile {
+  display: none;
+  position: absolute; top: 10px; right: 10px;
+  background: none; border: none; font-size: 20px;
+  cursor: pointer; color: #9ca3af; padding: 4px; border-radius: 6px;
+  font-family: inherit; z-index: 10;
+}
+#closeStudentsMobile:hover { color: #374151; background: #f3f4f6; }
+
+/* ---- Graella ---- */
 #notesTable-wrapper {
   flex: 1; overflow: auto; background: #f0eff5; padding: 16px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+
+.grid-search-bar {
+  flex-shrink: 0;
 }
 
 #gridStudentSearch {
-  margin-bottom: 10px; padding: 7px 12px; font-size: 13px;
-  border: 1px solid #e8e8f0; border-radius: 8px; background: white;
-  color: #374151; width: 280px; outline: none; display: block;
+  padding: 8px 14px; font-size: 13px; font-family: inherit;
+  border: 1px solid #e8e8f0; border-radius: 10px;
+  background: white; color: #374151; outline: none; width: 280px;
 }
 #gridStudentSearch:focus { border-color: #818cf8; }
 
 #gridWrapper {
-  background: white; border-radius: 12px; border: 1px solid #e8e8f0;
+  background: white; border-radius: 12px;
+  border: 1px solid #e8e8f0;
   overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  flex: 1; overflow: auto;
 }
 
-#notesTable { width: 100%; min-width: 500px; border-collapse: collapse; }
+/* ================================================
+   TAULA DE NOTES
+   ================================================ */
+
+#notesTable {
+  width: 100%; min-width: 400px; border-collapse: collapse;
+}
 
 #notesTable thead th {
   background: #fafafa; border-bottom: 1px solid #e8e8f0;
-  border-right: 1px solid #f0eff5; padding: 10px; font-size: 11px;
-  font-weight: 600; color: #9ca3af; text-align: center; white-space: nowrap;
-  text-transform: uppercase; letter-spacing: 0.3px;
+  padding: 9px 10px; font-size: 11px; font-weight: 600;
+  color: #9ca3af; text-align: center; white-space: nowrap;
+  text-transform: uppercase; letter-spacing: 0.4px;
+  position: sticky; top: 0; z-index: 2;
 }
 #notesTable thead th:first-child { text-align: left; padding-left: 14px; }
 
 #notesTable tbody tr { border-bottom: 1px solid #f3f4f6; transition: background 0.1s; }
-#notesTable tbody tr:hover { background: #fafaff; }
+#notesTable tbody tr:hover td { background: #fafaff; }
 #notesTable tbody tr:last-child { border-bottom: none; }
 
 #notesTable tbody td {
-  padding: 7px 8px; font-size: 13px; color: #374151;
-  text-align: center; border-right: 1px solid #f3f4f6;
+  padding: 6px 8px; font-size: 13px;
+  color: #374151; text-align: center;
+  border-right: 1px solid #f5f5f5;
 }
-#notesTable tbody td:first-child { text-align: left; padding-left: 14px; font-weight: 500; color: #1a1a2e; }
+#notesTable tbody td:last-child { border-right: none; }
+#notesTable tbody td:first-child {
+  text-align: left; padding-left: 14px;
+  font-weight: 500; color: #1a1a2e;
+}
 
 #notesTfoot td, #formulaTfoot td {
-  background: #f9fafb; border-top: 1px solid #e8e8f0;
-  padding: 8px 10px; font-size: 12px; font-weight: 600; color: #6b7280; text-align: center;
+  background: #f9fafb; border-top: 2px solid #e8e8f0;
+  padding: 8px 10px; font-size: 12px; font-weight: 600;
+  color: #6b7280; text-align: center; position: sticky; bottom: 0;
 }
 
 .table-input {
-  width: 44px; padding: 4px; font-size: 13px; text-align: center;
-  border: 1px solid transparent; border-radius: 6px; background: transparent;
-  color: #374151; font-weight: 500; transition: all 0.12s; outline: none;
+  width: 44px; padding: 4px 2px; font-size: 13px;
+  text-align: center; font-family: inherit;
+  border: 1.5px solid transparent; border-radius: 6px;
+  background: transparent; color: #374151;
+  font-weight: 500; transition: all 0.12s; outline: none;
 }
 .table-input:hover { border-color: #e5e7eb; background: #f9fafb; }
-.table-input:focus { border-color: #818cf8; background: white; box-shadow: 0 0 0 2px rgba(129,140,248,0.15); }
+.table-input:focus {
+  border-color: #6366f1; background: white;
+  box-shadow: 0 0 0 2px rgba(99,102,241,0.15);
+}
 
+/* Colors notes */
 .bg-red-100    { background: #fee2e2 !important; color: #991b1b !important; border-radius: 6px; }
 .bg-yellow-100 { background: #fef9c3 !important; color: #713f12 !important; border-radius: 6px; }
 .bg-green-100  { background: #dcfce7 !important; color: #166534 !important; border-radius: 6px; }
 
-input.blocked-cell { cursor: not-allowed; opacity: 0.6; background: #f9fafb !important; }
+input.blocked-cell { cursor: not-allowed; opacity: 0.55; background: #f9fafb !important; }
+
+/* ================================================
+   MENÚS DESPLEGABLES
+   ================================================ */
+
+.menu {
+  background: white; border: 1px solid #e8e8f0;
+  border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+  padding: 4px; min-width: 160px; z-index: 9999;
+  display: block; opacity: 1; visibility: visible;
+}
+.menu.hidden { display: none !important; }
+
+.menu button {
+  display: block; width: 100%; text-align: left;
+  padding: 7px 12px; border-radius: 6px; border: none;
+  background: none; color: #374151; font-size: 13px;
+  font-family: inherit; font-weight: 400; cursor: pointer;
+}
+.menu button:hover { background: #f5f5ff; color: #6366f1; }
+
+#userMenu { top: 100%; right: 0; min-width: 160px; position: absolute; }
 
 /* ================================================
    MODALS
    ================================================ */
 
-.modal-backdrop { background: rgba(10,10,30,0.45) !important; backdrop-filter: blur(2px); }
-
-[id^="modal"] > div:not(.modal-backdrop) {
-  border-radius: 16px !important;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.2) !important;
-  border: 1px solid #e8e8f0 !important;
+.modal-backdrop {
+  background: rgba(10,10,30,0.5) !important;
+  backdrop-filter: blur(3px);
 }
 
-[id^="modal"] h3 { font-size: 16px !important; font-weight: 700 !important; color: #1a1a2e !important; }
+.modal-box {
+  background: white; border-radius: 16px;
+  padding: 24px; width: 100%; max-width: 440px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  border: 1px solid #e8e8f0;
+  position: relative; z-index: 10;
+  display: flex; flex-direction: column; gap: 14px;
+  max-height: 90vh; overflow-y: auto;
+}
 
-[id^="modal"] input[type="text"],
-[id^="modal"] input[type="email"],
-[id^="modal"] input[type="number"],
-[id^="modal"] input[type="password"],
-[id^="modal"] select,
-[id^="modal"] textarea {
-  border: 1px solid #e5e7eb !important; border-radius: 8px !important;
-  padding: 8px 12px !important; font-size: 14px !important; outline: none !important;
-  transition: border-color 0.15s !important;
+.modal-box h3 {
+  font-size: 17px; font-weight: 700; color: #1a1a2e; margin: 0;
 }
-[id^="modal"] input:focus, [id^="modal"] select:focus {
-  border-color: #818cf8 !important; box-shadow: 0 0 0 2px rgba(129,140,248,0.15) !important;
+
+.modal-box input[type="text"],
+.modal-box input[type="email"],
+.modal-box input[type="number"],
+.modal-box input[type="password"],
+.modal-box select {
+  width: 100%; padding: 10px 12px; font-size: 14px; font-family: inherit;
+  border: 1.5px solid #e5e7eb; border-radius: 8px; outline: none;
+  transition: border-color 0.15s; color: #1a1a2e;
 }
+.modal-box input:focus, .modal-box select:focus {
+  border-color: #818cf8;
+  box-shadow: 0 0 0 2px rgba(129,140,248,0.15);
+}
+
+.modal-header { display: flex; justify-content: space-between; align-items: center; }
+.modal-header h3 { margin: 0; }
+
+.modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+
+.modal-info {
+  background: #f9fafb; border: 1px solid #f0eff5; border-radius: 8px;
+  padding: 12px 14px; font-size: 13px; color: #6b7280;
+}
+.modal-info ul { margin: 8px 0 0 16px; padding: 0; }
+.modal-info li { margin-bottom: 4px; }
+
+.modal-error { padding: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; font-size: 13px; color: #dc2626; }
 
 .modal-close {
-  background: #f3f4f6 !important; color: #374151 !important; border: none !important;
-  padding: 7px 14px !important; border-radius: 8px !important; font-weight: 500 !important;
-  cursor: pointer; font-size: 13px !important;
+  background: #f3f4f6; color: #374151; border: none;
+  padding: 8px 16px; border-radius: 8px; font-weight: 500;
+  font-family: inherit; font-size: 13px; cursor: pointer;
 }
-.modal-close:hover { background: #e5e7eb !important; transform: none; }
+.modal-close:hover { background: #e5e7eb; }
 
-#modalCreateClassBtn, #modalAddStudentBtn, #modalAddActivityBtn,
-#btnImportALConfirm, #btnImportSelectedCourse, #modalApplyCalcBtn {
-  background: #6366f1 !important; color: white !important; border: none !important;
-  padding: 7px 16px !important; border-radius: 8px !important;
-  font-weight: 600 !important; font-size: 13px !important; cursor: pointer;
+.modal-x {
+  align-self: flex-end; background: none !important; padding: 4px 8px !important;
+  color: #9ca3af !important; font-size: 18px !important;
 }
-#modalCreateClassBtn:hover, #modalAddStudentBtn:hover, #modalAddActivityBtn:hover,
-#btnImportALConfirm:hover, #btnImportSelectedCourse:hover, #modalApplyCalcBtn:hover {
-  background: #4f46e5 !important; transform: none;
+.modal-x:hover { background: #f3f4f6 !important; color: #374151 !important; }
+
+.btn-primary {
+  background: #6366f1; color: white; border: none;
+  padding: 8px 18px; border-radius: 8px; font-weight: 600;
+  font-family: inherit; font-size: 13px; cursor: pointer;
 }
+.btn-primary:hover { background: #4f46e5; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
-#confirmYes {
-  background: #dc2626 !important; color: white !important; border: none !important;
-  padding: 7px 16px !important; border-radius: 8px !important; font-weight: 600 !important; font-size: 13px !important;
+.btn-danger {
+  background: #dc2626; color: white; border: none;
+  padding: 8px 18px; border-radius: 8px; font-weight: 600;
+  font-family: inherit; font-size: 13px; cursor: pointer;
 }
-#confirmYes:hover { background: #b91c1c !important; transform: none; }
+.btn-danger:hover { background: #b91c1c; }
 
-/* ================================================
-   LOGIN
-   ================================================ */
-
-#loginScreen {
-  display: flex; align-items: center; justify-content: center;
-  min-height: 100vh; padding: 24px; background: #f0eff5;
-  width: 100%;
-}
-
-#loginScreen > div {
-  background: white !important; border-radius: 20px !important;
-  border: 1px solid #e8e8f0; box-shadow: 0 8px 40px rgba(99,102,241,0.12) !important;
-  padding: 40px 36px !important; width: 100%; max-width: 400px;
-}
-
-#loginScreen h1 { font-size: 24px !important; font-weight: 800 !important; color: #1a1a2e !important; letter-spacing: -0.5px; }
-#loginScreen p { color: #6b7280 !important; font-size: 14px; }
-
-#loginEmail, #loginPassword {
-  border: 1px solid #e5e7eb !important; border-radius: 10px !important;
-  padding: 10px 14px !important; font-size: 14px !important;
-  outline: none; width: 100%; margin-bottom: 10px; display: block;
-}
-#loginEmail:focus, #loginPassword:focus { border-color: #818cf8 !important; box-shadow: 0 0 0 3px rgba(129,140,248,0.12); }
-
-#btnLogin {
-  background: #6366f1 !important; color: white !important; border: none !important;
-  border-radius: 10px !important; padding: 11px !important; font-weight: 600 !important;
-  font-size: 14px !important; width: 100%; cursor: pointer; margin-bottom: 8px; display: block;
-}
-#btnLogin:hover { background: #4f46e5 !important; transform: none; }
-
-#googleLoginBtn {
-  background: white !important; color: #374151 !important; border: 1px solid #e5e7eb !important;
-  border-radius: 10px !important; padding: 11px !important; font-weight: 500 !important;
-  font-size: 14px !important; width: 100%; cursor: pointer; margin-bottom: 8px; display: block;
-}
-#googleLoginBtn:hover { background: #f9fafb !important; transform: none; }
-
-#btnRegister {
-  background: #f5f3ff !important; color: #5b21b6 !important; border: 1px solid #ede9fe !important;
-  border-radius: 10px !important; padding: 11px !important; font-weight: 500 !important;
-  font-size: 14px !important; width: 100%; cursor: pointer; margin-bottom: 8px; display: block;
-}
-#btnRegister:hover { background: #ede9fe !important; transform: none; }
-
-#btnRecover { color: #818cf8 !important; background: none !important; border: none !important; font-size: 13px !important; cursor: pointer; }
-#btnRecover:hover { color: #6366f1 !important; transform: none; }
-
-/* ================================================
-   MENÚS
-   ================================================ */
-
-.menu {
-  background: white !important; border: 1px solid #e8e8f0 !important;
-  border-radius: 10px !important; box-shadow: 0 8px 24px rgba(0,0,0,0.1) !important;
-  padding: 4px !important; min-width: 160px; z-index: 9999 !important;
-  display: block !important; opacity: 1 !important; visibility: visible !important;
-}
-.menu.hidden { display: none !important; }
-
-.menu button {
-  display: block !important; width: 100% !important; text-align: left !important;
-  padding: 7px 12px !important; border-radius: 6px !important; border: none !important;
-  background: none !important; color: #374151 !important; font-size: 13px !important;
-  font-weight: 400 !important; cursor: pointer;
-}
-.menu button:hover { background: #f5f5ff !important; color: #6366f1 !important; transform: none; }
-
-#userMenu { top: 100%; right: 0; z-index: 1000; min-width: 150px; }
-#userMenu button { border: none; background: none; cursor: pointer; }
-#userMenu button:hover { background-color: #f5f5ff; }
-
-/* ================================================
-   MODAL CÀLCUL
-   ================================================ */
-
+/* Modals genèrics de l'app (usats pel JS) */
 #modalCalc {
   display: none; position: fixed; inset: 0;
-  background: rgba(10,10,30,0.45); backdrop-filter: blur(2px);
+  background: rgba(10,10,30,0.5); backdrop-filter: blur(3px);
   justify-content: center; align-items: center; z-index: 9999;
 }
-#modalCalc .modal-close { background: none !important; border: none !important; font-size: 18px !important; cursor: pointer; color: #9ca3af; }
-#modalCalc .modal-close:hover { color: #374151 !important; transform: none; }
 
 #formulaButtons button {
-  font-size: 12px; padding: 4px 10px; border-radius: 6px; cursor: pointer;
-  border: 1px solid #e5e7eb;
+  font-size: 12px; padding: 4px 10px; border-radius: 6px;
+  cursor: pointer; border: 1px solid #e5e7eb; font-family: inherit;
+  background: white; color: #374151;
 }
-#formulaButtons button:hover { transform: none; filter: brightness(0.95); }
+#formulaButtons button:hover { background: #f3f4f6; }
 
 /* ================================================
-   MISSATGE BUIT
+   MISSATGES BUITS
    ================================================ */
 
-#emptyGroupMessage, #emptyInstructionMessage {
-  background: white; border-radius: 16px; border: 1px dashed #c4b5fd;
-  padding: 48px 32px; text-align: center; color: #6b7280; font-size: 16px; margin: 24px;
+#emptyGroupMessage {
+  background: white; border-radius: 16px;
+  border: 2px dashed #c4b5fd;
+  padding: 48px 32px; text-align: center;
+  color: #6b7280; font-size: 15px;
+  margin: 24px;
+}
+
+#emptyInstructionMessage {
+  background: white; border-radius: 12px;
+  border: 2px dashed #c4b5fd;
+  padding: 36px 24px; text-align: center;
+  color: #6b7280; font-size: 15px;
+}
+
+#btnAddTerm2 {
+  background: #6366f1; color: white; border: none;
+  padding: 4px 12px; border-radius: 8px; font-size: 18px;
+  cursor: pointer; margin: 0 6px; font-family: inherit;
 }
 
 /* ================================================
@@ -538,31 +658,40 @@ input.blocked-cell { cursor: not-allowed; opacity: 0.6; background: #f9fafb !imp
   #app-sidebar { width: 56px; min-width: 56px; }
   #app-main-content { margin-left: 56px; }
 
-  #studentsListContainer { display: none; }
+  #studentsListContainer {
+    display: none;
+    width: 200px; min-width: 200px; max-width: 200px;
+  }
 
   #studentsListContainer.mobile-open {
-    display: flex; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.45); justify-content: center;
-    align-items: center; z-index: 9999; width: auto; max-width: none; min-width: auto;
+    display: flex;
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,0.5);
+    width: auto; max-width: none; min-width: auto;
+    justify-content: center; align-items: center;
+    border-right: none;
   }
 
-  #studentsListContent {
-    background: white; width: 90%; max-width: 340px;
+  #studentsListContainer.mobile-open #studentsListContent {
+    background: white; width: 85%; max-width: 320px;
     border-radius: 16px; max-height: 85vh; overflow-y: auto;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.2); padding: 0;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
   }
 
-  #notesTable-wrapper { width: 100% !important; padding: 10px; }
   #closeStudentsMobile { display: block !important; }
-  #screen-classes h2 { display: none !important; }
+  #btnToggleStudentsMobile { display: inline-flex !important; }
+
+  #notesTable-wrapper { padding: 10px; }
 
   #screen-class .flex.flex-wrap.gap-2 {
     flex-wrap: nowrap; overflow-x: auto;
-    -webkit-overflow-scrolling: touch; scrollbar-width: none; overflow-y: visible;
+    -webkit-overflow-scrolling: touch; overflow-y: visible;
+    scrollbar-width: none;
   }
   #screen-class .flex.flex-wrap.gap-2::-webkit-scrollbar { display: none; }
   #screen-class .flex.flex-wrap.gap-2 > * { flex-shrink: 0; }
   #termMenu { position: fixed !important; z-index: 9999 !important; }
+  #screen-classes { padding: 16px; }
 }
 
 @media (min-width: 769px) {
@@ -571,19 +700,23 @@ input.blocked-cell { cursor: not-allowed; opacity: 0.6; background: #f9fafb !imp
 }
 
 /* ================================================
-   UTILS
+   SCROLL PERSONALITZAT
    ================================================ */
 
-button { transition: background 0.15s, opacity 0.15s; }
-button:hover { transform: none !important; }
-
-::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
 
-table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; }
+/* ================================================
+   GLOBALS
+   ================================================ */
+
+button { transition: background 0.12s, opacity 0.12s; }
+
+/* Taula admin */
+table { width: 100%; border-collapse: collapse; }
 th, td { border: 1px solid #f0eff5; padding: 8px 12px; text-align: left; font-size: 13px; }
 th { background: #fafafa; font-weight: 600; color: #6b7280; }
 
-#gradesModeToggle:hover { transform: none !important; }
+#gradesModeToggle:hover { opacity: 0.85; }
