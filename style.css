@@ -1,5 +1,7 @@
 /* ================================================
    AVALUAPP — Design System v2
+   Principi: No interferir amb les classes de Tailwind
+   que usa el JS (hidden, opacity-0, etc.)
    ================================================ */
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -14,18 +16,21 @@ body {
 }
 
 /* ================================================
-   LOGIN — pantalla completa independent
+   LOGIN — el JS posa display:block via style inline
+   Per tant el fem block però amb flexbox via trick
    ================================================ */
 
 #loginScreen {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   min-height: 100vh;
   background: linear-gradient(135deg, #1a1a2e 0%, #2d2b55 100%);
   padding: 24px;
+  /* Quan el JS posa display:block, volem que sembli flex */
+  /* Usem grid en comptes per centrar */
+  display: grid;
+  place-items: center;
 }
 
+/* Quan el JS el fa hidden (display:none via classe) */
 #loginScreen.hidden { display: none !important; }
 
 .login-card {
@@ -34,45 +39,41 @@ body {
   padding: 40px 36px;
   width: 100%;
   max-width: 400px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.35);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0;
 }
+
+/* Quan el JS fa display:block al loginScreen, el grid
+   no funciona correctament. Fix: el fill del grid ja centra. */
 
 .login-logo {
   width: 64px; height: 64px;
   background: linear-gradient(135deg, #6366f1, #818cf8);
   border-radius: 16px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 32px;
-  margin-bottom: 16px;
+  font-size: 32px; margin-bottom: 16px;
 }
 
 .login-card h1 {
   font-size: 26px; font-weight: 800;
   color: #1a1a2e; margin: 0 0 6px;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.5px; text-align: center;
 }
 
-.login-card p {
+.login-card > p {
   color: #6b7280; font-size: 14px;
   margin: 0 0 24px; text-align: center;
 }
 
-.login-card input {
-  width: 100%;
-  padding: 11px 14px;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 10px;
-  font-size: 14px;
-  font-family: inherit;
-  outline: none;
+.login-card input[type="email"],
+.login-card input[type="password"] {
+  width: 100%; padding: 11px 14px;
+  border: 1.5px solid #e5e7eb; border-radius: 10px;
+  font-size: 14px; font-family: inherit; outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
-  margin-bottom: 10px;
-  display: block;
-  color: #1a1a2e;
+  margin-bottom: 10px; color: #1a1a2e; background: white;
 }
 .login-card input:focus {
   border-color: #818cf8;
@@ -83,9 +84,8 @@ body {
   width: 100%; padding: 12px;
   background: #6366f1; color: white;
   border: none; border-radius: 10px;
-  font-size: 15px; font-weight: 600;
-  font-family: inherit; cursor: pointer;
-  margin-bottom: 8px; display: block;
+  font-size: 15px; font-weight: 600; font-family: inherit;
+  cursor: pointer; margin-bottom: 8px;
   transition: background 0.15s;
 }
 #btnLogin:hover { background: #4f46e5; }
@@ -94,9 +94,8 @@ body {
   width: 100%; padding: 11px;
   background: white; color: #374151;
   border: 1.5px solid #e5e7eb; border-radius: 10px;
-  font-size: 14px; font-weight: 500;
-  font-family: inherit; cursor: pointer;
-  margin-bottom: 8px; display: block;
+  font-size: 14px; font-weight: 500; font-family: inherit;
+  cursor: pointer; margin-bottom: 8px;
   transition: background 0.15s;
 }
 #googleLoginBtn:hover { background: #f9fafb; }
@@ -105,17 +104,15 @@ body {
   width: 100%; padding: 11px;
   background: #f5f3ff; color: #5b21b6;
   border: 1.5px solid #ede9fe; border-radius: 10px;
-  font-size: 14px; font-weight: 500;
-  font-family: inherit; cursor: pointer;
-  margin-bottom: 10px; display: block;
+  font-size: 14px; font-weight: 500; font-family: inherit;
+  cursor: pointer; margin-bottom: 10px;
   transition: background 0.15s;
 }
 #btnRegister:hover { background: #ede9fe; }
 
 #btnRecover {
-  background: none; border: none;
-  color: #818cf8; font-size: 13px;
-  cursor: pointer; font-family: inherit;
+  background: none; border: none; color: #818cf8;
+  font-size: 13px; cursor: pointer; font-family: inherit;
   text-decoration: underline; padding: 0;
 }
 #btnRecover:hover { color: #6366f1; }
@@ -130,7 +127,8 @@ body {
   background: #f0eff5;
 }
 
-#appRoot.hidden { display: none !important; }
+/* El JS trau 'hidden' quan fa login.
+   Tailwind .hidden = display:none — no interferim */
 
 /* ================================================
    SIDEBAR
@@ -139,11 +137,9 @@ body {
 #app-sidebar {
   width: 64px; min-width: 64px;
   background: #16162a;
-  display: flex; flex-direction: column;
-  align-items: center;
+  display: flex; flex-direction: column; align-items: center;
   padding: 16px 0; gap: 4px;
-  position: fixed;
-  top: 0; left: 0; bottom: 0;
+  position: fixed; top: 0; left: 0; bottom: 0;
   z-index: 100;
 }
 
@@ -158,11 +154,11 @@ body {
 .sidebar-item {
   width: 44px; height: 44px; border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer; color: rgba(255,255,255,0.3);
-  font-size: 19px; transition: all 0.15s;
+  cursor: pointer; color: rgba(255,255,255,0.3); font-size: 19px;
+  transition: all 0.15s;
 }
 .sidebar-item.active { background: rgba(99,102,241,0.22); color: #818cf8; }
-.sidebar-item:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.65); }
+.sidebar-item:hover  { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.65); }
 
 .sidebar-divider {
   width: 32px; height: 1px;
@@ -170,8 +166,8 @@ body {
 }
 
 .sidebar-avatar {
-  margin-top: auto;
-  width: 36px; height: 36px; border-radius: 50%;
+  margin-top: auto; width: 36px; height: 36px;
+  border-radius: 50%;
   background: linear-gradient(135deg, #6366f1, #a78bfa);
   display: flex; align-items: center; justify-content: center;
   color: white; font-size: 12px; font-weight: 700; cursor: pointer;
@@ -182,41 +178,37 @@ body {
    ================================================ */
 
 #app-main-content {
-  margin-left: 64px;
-  flex: 1; display: flex; flex-direction: column;
+  margin-left: 64px; flex: 1;
+  display: flex; flex-direction: column;
   min-height: 100vh; overflow: hidden;
 }
 
 /* ================================================
-   TOPBAR / HEADER
+   TOPBAR
    ================================================ */
 
 header {
-  background: white;
-  border-bottom: 1px solid #e8e8f0;
-  padding: 0 20px;
+  background: white !important;
+  border-bottom: 1px solid #e8e8f0 !important;
+  padding: 0 20px !important;
   height: 56px;
-  display: flex; align-items: center; gap: 12px;
+  display: flex !important; align-items: center !important; gap: 12px !important;
   flex-shrink: 0;
   position: sticky; top: 0; z-index: 50;
+  box-shadow: none !important; border-radius: 0 !important; margin: 0 !important;
 }
 
 header h1 {
-  font-size: 16px; font-weight: 700;
-  color: #1a1a2e; margin: 0; flex: 1;
-  letter-spacing: -0.3px;
+  font-size: 16px !important; font-weight: 700 !important;
+  color: #1a1a2e !important; margin: 0; flex: 1;
 }
 
-#userArea {
-  display: flex; align-items: center; gap: 8px; position: relative;
-}
-
+#userArea { display: flex; align-items: center; gap: 8px; position: relative; }
 #usuariNom { font-size: 13px; color: #6b7280; }
 
 #userMenuBtn {
   background: none; border: none; color: #9ca3af;
   font-size: 20px; cursor: pointer; padding: 4px 6px; border-radius: 6px;
-  line-height: 1;
 }
 #userMenuBtn:hover { background: #f3f4f6; color: #374151; }
 
@@ -232,17 +224,23 @@ header h1 {
    MAIN AREA
    ================================================ */
 
-main {
-  flex: 1; overflow: auto;
+main { flex: 1; overflow: auto; }
+
+/* Les dues pantalles — el JS les alterna amb .hidden
+   Quan NO tenen .hidden, han d'ocupar tota l'àrea */
+#screen-classes { 
+  padding: 28px; 
+  min-height: calc(100vh - 56px);
+}
+
+#screen-class {
+  display: flex; flex-direction: column;
+  min-height: calc(100vh - 56px);
 }
 
 /* ================================================
-   SCREEN: CLASSES (dashboard)
+   SCREEN CLASSES — targetes
    ================================================ */
-
-#screen-classes {
-  padding: 28px;
-}
 
 #screen-classes > div:first-child {
   display: flex; align-items: center;
@@ -259,96 +257,123 @@ main {
   gap: 16px;
 }
 
+/* Targetes de classe — el JS les crea amb classes bg-gradient-to-br etc.
+   Sobreescrivim amb el nostre estil però mantenint el color de fons del JS */
 .class-card {
-  cursor: pointer; padding: 20px; border-radius: 16px;
-  background: white; border: 1px solid #e8e8f0; color: #1a1a2e;
-  transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-  display: flex; flex-direction: column; gap: 6px;
+  cursor: pointer;
+  border-radius: 16px !important;
+  padding: 20px !important;
   position: relative; overflow: hidden;
+  transition: transform 0.18s, box-shadow 0.18s !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15) !important;
+  min-height: 110px;
+  display: flex; flex-direction: column; gap: 6px;
 }
 .class-card::before {
   content: '';
-  position: absolute; top: 0; left: 0; right: 0; height: 4px;
-  background: linear-gradient(90deg, #6366f1, #a78bfa);
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.08);
+  opacity: 0; transition: opacity 0.18s;
 }
-.class-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 28px rgba(99,102,241,0.18);
-  border-color: #c7d2fe;
-}
-.class-card h3 { font-size: 15px; font-weight: 700; color: #1a1a2e; margin: 4px 0 0; }
-.class-card p  { font-size: 13px; color: #6b7280; margin: 0; }
-.class-card .click-hint { font-size: 12px; color: #9ca3af; margin-top: 10px; }
+.class-card:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,0.25) !important; }
+.class-card:hover::before { opacity: 1; }
 
+.class-card h3 { font-size: 15px; font-weight: 700; color: white; margin: 0; }
+.class-card p  { font-size: 13px; color: rgba(255,255,255,0.8); margin: 0; }
+.class-card .click-hint { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: auto; padding-top: 8px; }
+
+/* Botó ⋮ de les targetes */
+.class-card .menu-btn {
+  background: rgba(255,255,255,0.2) !important;
+  border: none !important; border-radius: 6px !important;
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: white !important;
+  font-size: 16px; line-height: 1; font-weight: bold;
+  transition: background 0.15s;
+}
+.class-card .menu-btn:hover { background: rgba(255,255,255,0.35) !important; }
+
+/* El menú desplegable de les targetes — el JS afegeix/treu .hidden i opacity-0
+   Quan NO té .hidden ni opacity-0 ha de ser visible */
+.class-card .menu:not(.hidden) {
+  opacity: 1 !important;
+  display: block !important;
+  background: white; border-radius: 10px;
+  border: 1px solid #e8e8f0;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  padding: 4px; min-width: 140px;
+  overflow: hidden;
+}
+
+.class-card .menu button {
+  display: block; width: 100%; text-align: left;
+  padding: 8px 12px; border: none; background: none;
+  color: #374151 !important; font-size: 13px; font-family: inherit;
+  cursor: pointer; border-radius: 6px;
+}
+.class-card .menu button:hover { background: #f5f5ff; color: #6366f1 !important; }
+
+/* Botons pantalla classes */
 #btnCreateClass {
-  background: #6366f1; color: white; border: none;
+  background: #6366f1 !important; color: white !important; border: none !important;
   font-size: 13px; padding: 8px 16px; border-radius: 10px;
   font-weight: 600; font-family: inherit; cursor: pointer;
 }
-#btnCreateClass:hover { background: #4f46e5; }
+#btnCreateClass:hover { background: #4f46e5 !important; }
 
-#btnDeleteMode, #btnClassroomImport {
+#btnDeleteMode {
   background: white; color: #374151;
   border: 1px solid #e5e7eb;
   font-size: 13px; padding: 8px 14px; border-radius: 10px;
   font-weight: 500; font-family: inherit; cursor: pointer;
 }
-#btnDeleteMode:hover, #btnClassroomImport:hover { background: #f9fafb; }
+#btnDeleteMode:hover { background: #f9fafb; }
 
 /* ================================================
-   SCREEN: CLASSE OBERTA
+   SCREEN CLASSE — barra controls
    ================================================ */
 
-#screen-class {
-  display: flex; flex-direction: column; height: 100%;
-}
-
-/* Barra de controls superior */
 #screen-class > .flex.flex-col {
   background: white; border-bottom: 1px solid #e8e8f0;
-  padding: 10px 20px; gap: 8px; align-items: center;
-  flex-shrink: 0;
+  padding: 10px 20px; gap: 8px; flex-shrink: 0;
 }
 
 #btnBack {
-  font-size: 13px; color: #6b7280; background: none; border: none;
-  cursor: pointer; padding: 4px 8px; border-radius: 6px;
-  font-weight: 500; font-family: inherit; margin-right: 4px;
+  font-size: 13px; color: #6b7280 !important; background: none !important;
+  border: none !important; cursor: pointer; padding: 4px 8px;
+  border-radius: 6px; font-weight: 500; font-family: inherit;
 }
-#btnBack:hover { background: #f3f4f6; color: #374151; }
+#btnBack:hover { background: #f3f4f6 !important; color: #374151 !important; }
 
 #classTitle { font-size: 17px !important; font-weight: 700 !important; color: #1a1a2e !important; margin: 0; }
-#classSub { display: none !important; }
+#classSub   { display: none !important; }
 
-/* Botons barra classe */
-#screen-class .flex.flex-wrap.gap-2 { display: flex; gap: 6px; align-items: center; }
-
+/* Botons de la barra */
 #screen-class .flex.flex-wrap.gap-2 > button,
 #screen-class .flex.flex-wrap.gap-2 > select,
 #screen-class .flex.flex-wrap.gap-2 > div > button {
-  font-size: 12px; padding: 5px 12px; height: 30px;
-  border-radius: 8px; border: 1px solid #e5e7eb;
-  background: white; color: #374151;
-  font-family: inherit; font-weight: 500; cursor: pointer;
-  white-space: nowrap;
+  font-size: 12px !important; height: 30px;
+  padding: 0 12px !important; border-radius: 8px !important;
+  border: 1px solid #e5e7eb !important;
+  background: white !important; color: #374151 !important;
+  font-family: inherit !important; font-weight: 500 !important;
+  cursor: pointer; white-space: nowrap;
 }
-#screen-class .flex.flex-wrap.gap-2 > button:hover { background: #f9fafb; }
+#screen-class .flex.flex-wrap.gap-2 > button:hover { background: #f9fafb !important; }
 
-#btnAddActivity { background: #6366f1 !important; color: white !important; border-color: #6366f1 !important; font-weight: 600 !important; }
+#btnAddActivity {
+  background: #6366f1 !important; color: white !important;
+  border-color: #6366f1 !important; font-weight: 600 !important;
+}
 #btnAddActivity:hover { background: #4f46e5 !important; }
 #btnAddStudent  { background: #ede9fe !important; color: #5b21b6 !important; border-color: #c4b5fd !important; }
-#btnAddTerm     { background: #ecfdf5 !important; color: #059669 !important; border-color: #a7f3d0 !important; font-size: 18px !important; padding: 2px 10px !important; }
-#termMenuBtn    { font-size: 16px !important; padding: 2px 10px !important; }
+#btnAddTerm     { background: #ecfdf5 !important; color: #059669 !important; border-color: #a7f3d0 !important; font-size: 18px !important; }
+#termMenuBtn    { font-size: 16px !important; }
 #btnSortAlpha   { background: #fefce8 !important; color: #92400e !important; border-color: #fde68a !important; }
 #btnImportAL    { background: #eff6ff !important; color: #1d4ed8 !important; border-color: #bfdbfe !important; }
 #btnToggleStudentsMobile { background: #f3f4f6 !important; }
-
-#termsDropdown {
-  font-size: 12px; height: 30px; padding: 0 10px;
-  border: 1px solid #e5e7eb; border-radius: 8px;
-  background: white; color: #374151; font-family: inherit; cursor: pointer;
-}
+#termsDropdown  { font-size: 12px !important; padding: 0 10px !important; }
 
 /* ================================================
    LAYOUT: ALUMNES + GRAELLA
@@ -359,46 +384,41 @@ main {
   height: calc(100vh - 112px);
 }
 
-/* ---- Panell alumnes ---- */
+/* Panell alumnes */
 #studentsListContainer {
   width: 200px; min-width: 200px; max-width: 200px;
   background: white; border-right: 1px solid #e8e8f0;
-  display: flex; flex-direction: column; overflow: hidden;
-  flex-shrink: 0;
+  display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0;
 }
 
 #studentsListContent {
   display: flex; flex-direction: column;
-  height: 100%; overflow: hidden;
-  padding: 0; position: relative;
+  height: 100%; overflow: hidden; position: relative;
 }
 
 #studentsListContent > .flex {
-  padding: 12px 14px 8px;
-  border-bottom: 1px solid #e8e8f0; flex-shrink: 0;
+  padding: 12px 14px 8px; border-bottom: 1px solid #e8e8f0; flex-shrink: 0;
 }
 
 #studentsListContent h3 {
   font-size: 11px !important; font-weight: 600 !important;
-  color: #9ca3af !important; text-transform: uppercase;
-  letter-spacing: 0.5px; margin: 0;
+  color: #9ca3af !important; text-transform: uppercase; letter-spacing: 0.5px; margin: 0;
 }
 
-#studentsCount { font-size: 11px; color: #9ca3af; }
+#studentsCount { font-size: 11px; color: #c4b5fd; }
 
 #studentSearch {
-  display: block; width: calc(100% - 20px); margin: 8px 10px;
-  padding: 6px 10px; font-size: 12px; font-family: inherit;
+  display: block; margin: 8px 10px; padding: 6px 10px;
+  font-size: 12px; font-family: inherit;
   border: 1px solid #e8e8f0; border-radius: 8px;
-  background: #f9fafb; color: #374151; outline: none; flex-shrink: 0;
+  background: #f9fafb; color: #374151; outline: none;
+  width: calc(100% - 20px); flex-shrink: 0;
 }
 #studentSearch:focus { border-color: #818cf8; background: white; }
 
 #studentsList {
-  flex: 1; overflow-y: auto; list-style: none;
-  margin: 0; padding: 4px 0;
+  flex: 1; overflow-y: auto; list-style: none; margin: 0; padding: 4px 0;
 }
-
 #studentsList li {
   display: flex; align-items: center; gap: 8px;
   padding: 7px 12px; cursor: pointer;
@@ -407,11 +427,6 @@ main {
 }
 #studentsList li:hover { background: #f9fafb; }
 
-.drag-hint {
-  font-size: 11px; color: #d1d5db;
-  text-align: center; padding: 8px; flex-shrink: 0; margin: 0;
-}
-
 #studentsMenuBtn, #cancelDeleteStudentsBtn {
   background: none; border: none; font-size: 16px;
   color: #9ca3af; cursor: pointer; padding: 2px 6px; border-radius: 6px;
@@ -419,24 +434,34 @@ main {
 }
 #studentsMenuBtn:hover { background: #f3f4f6; color: #374151; }
 
+/* Menú alumnes */
+#studentsMenu:not(.hidden) {
+  background: white; border: 1px solid #e8e8f0;
+  border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+  padding: 4px; min-width: 160px; z-index: 9999;
+}
+#studentsMenu button {
+  display: block; width: 100%; text-align: left;
+  padding: 7px 12px; border-radius: 6px; border: none;
+  background: none; color: #374151; font-size: 13px;
+  font-family: inherit; cursor: pointer;
+}
+#studentsMenu button:hover { background: #f5f5ff; color: #6366f1; }
+
 #closeStudentsMobile {
   display: none;
   position: absolute; top: 10px; right: 10px;
   background: none; border: none; font-size: 20px;
-  cursor: pointer; color: #9ca3af; padding: 4px; border-radius: 6px;
-  font-family: inherit; z-index: 10;
+  cursor: pointer; color: #9ca3af; padding: 4px; border-radius: 6px; z-index: 10;
 }
-#closeStudentsMobile:hover { color: #374151; background: #f3f4f6; }
 
-/* ---- Graella ---- */
+/* Notes grid */
 #notesTable-wrapper {
   flex: 1; overflow: auto; background: #f0eff5; padding: 16px;
   display: flex; flex-direction: column; gap: 10px;
 }
 
-.grid-search-bar {
-  flex-shrink: 0;
-}
+.grid-search-bar { flex-shrink: 0; }
 
 #gridStudentSearch {
   padding: 8px 14px; font-size: 13px; font-family: inherit;
@@ -447,18 +472,15 @@ main {
 
 #gridWrapper {
   background: white; border-radius: 12px;
-  border: 1px solid #e8e8f0;
-  overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-  flex: 1; overflow: auto;
+  border: 1px solid #e8e8f0; overflow: auto;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05); flex: 1;
 }
 
 /* ================================================
    TAULA DE NOTES
    ================================================ */
 
-#notesTable {
-  width: 100%; min-width: 400px; border-collapse: collapse;
-}
+#notesTable { width: 100%; min-width: 400px; border-collapse: collapse; }
 
 #notesTable thead th {
   background: #fafafa; border-bottom: 1px solid #e8e8f0;
@@ -469,14 +491,13 @@ main {
 }
 #notesTable thead th:first-child { text-align: left; padding-left: 14px; }
 
-#notesTable tbody tr { border-bottom: 1px solid #f3f4f6; transition: background 0.1s; }
+#notesTable tbody tr { border-bottom: 1px solid #f3f4f6; }
 #notesTable tbody tr:hover td { background: #fafaff; }
 #notesTable tbody tr:last-child { border-bottom: none; }
 
 #notesTable tbody td {
-  padding: 6px 8px; font-size: 13px;
-  color: #374151; text-align: center;
-  border-right: 1px solid #f5f5f5;
+  padding: 6px 8px; font-size: 13px; color: #374151;
+  text-align: center; border-right: 1px solid #f5f5f5;
 }
 #notesTable tbody td:last-child { border-right: none; }
 #notesTable tbody td:first-child {
@@ -487,131 +508,140 @@ main {
 #notesTfoot td, #formulaTfoot td {
   background: #f9fafb; border-top: 2px solid #e8e8f0;
   padding: 8px 10px; font-size: 12px; font-weight: 600;
-  color: #6b7280; text-align: center; position: sticky; bottom: 0;
+  color: #6b7280; text-align: center;
 }
 
 .table-input {
-  width: 44px; padding: 4px 2px; font-size: 13px;
-  text-align: center; font-family: inherit;
-  border: 1.5px solid transparent; border-radius: 6px;
-  background: transparent; color: #374151;
-  font-weight: 500; transition: all 0.12s; outline: none;
+  width: 44px; padding: 4px 2px; font-size: 13px; text-align: center;
+  font-family: inherit; border: 1.5px solid transparent; border-radius: 6px;
+  background: transparent; color: #374151; font-weight: 500;
+  transition: all 0.12s; outline: none;
 }
 .table-input:hover { border-color: #e5e7eb; background: #f9fafb; }
-.table-input:focus {
-  border-color: #6366f1; background: white;
-  box-shadow: 0 0 0 2px rgba(99,102,241,0.15);
-}
+.table-input:focus { border-color: #6366f1; background: white; box-shadow: 0 0 0 2px rgba(99,102,241,0.15); }
 
-/* Colors notes */
-.bg-red-100    { background: #fee2e2 !important; color: #991b1b !important; border-radius: 6px; }
-.bg-yellow-100 { background: #fef9c3 !important; color: #713f12 !important; border-radius: 6px; }
-.bg-green-100  { background: #dcfce7 !important; color: #166534 !important; border-radius: 6px; }
+.bg-red-100    { background: #fee2e2 !important; color: #991b1b !important; border-radius: 5px; }
+.bg-yellow-100 { background: #fef9c3 !important; color: #713f12 !important; border-radius: 5px; }
+.bg-green-100  { background: #dcfce7 !important; color: #166534 !important; border-radius: 5px; }
 
 input.blocked-cell { cursor: not-allowed; opacity: 0.55; background: #f9fafb !important; }
 
 /* ================================================
-   MENÚS DESPLEGABLES
+   MENÚS INTERNS (termMenu, userMenu, etc.)
+   No tocar .hidden — el JS l'afegeix/treu
    ================================================ */
 
-.menu {
+#termMenu:not(.hidden),
+#userMenu:not(.hidden) {
   background: white; border: 1px solid #e8e8f0;
   border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.1);
   padding: 4px; min-width: 160px; z-index: 9999;
-  display: block; opacity: 1; visibility: visible;
 }
-.menu.hidden { display: none !important; }
 
-.menu button {
+#termMenu button,
+#userMenu button {
   display: block; width: 100%; text-align: left;
   padding: 7px 12px; border-radius: 6px; border: none;
   background: none; color: #374151; font-size: 13px;
-  font-family: inherit; font-weight: 400; cursor: pointer;
+  font-family: inherit; cursor: pointer;
 }
-.menu button:hover { background: #f5f5ff; color: #6366f1; }
+#termMenu button:hover,
+#userMenu button:hover { background: #f5f5ff; color: #6366f1; }
 
-#userMenu { top: 100%; right: 0; min-width: 160px; position: absolute; }
+/* Menús creats per JS en files de la taula */
+#notesTable .menu:not(.hidden),
+#studentsList .menu:not(.hidden) {
+  background: white; border: 1px solid #e8e8f0;
+  border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  padding: 4px; min-width: 140px; z-index: 9999;
+}
+
+#notesTable .menu button,
+#studentsList .menu button {
+  display: block; width: 100%; text-align: left;
+  padding: 7px 12px; border-radius: 6px; border: none;
+  background: none; color: #374151; font-size: 13px;
+  font-family: inherit; cursor: pointer;
+}
+#notesTable .menu button:hover,
+#studentsList .menu button:hover { background: #f5f5ff; color: #6366f1; }
 
 /* ================================================
    MODALS
    ================================================ */
 
+/* Backdrop — el JS fa display:flex quan obre modal */
+[id^="modal"] { z-index: 9000; }
+
+[id^="modal"] .modal-backdrop,
 .modal-backdrop {
   background: rgba(10,10,30,0.5) !important;
   backdrop-filter: blur(3px);
 }
 
-.modal-box {
-  background: white; border-radius: 16px;
-  padding: 24px; width: 100%; max-width: 440px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-  border: 1px solid #e8e8f0;
+/* Caixa del modal */
+[id^="modal"] > div:not(.modal-backdrop) {
+  background: white !important;
+  border-radius: 16px !important;
+  padding: 24px !important;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2) !important;
+  border: 1px solid #e8e8f0 !important;
   position: relative; z-index: 10;
-  display: flex; flex-direction: column; gap: 14px;
   max-height: 90vh; overflow-y: auto;
 }
 
-.modal-box h3 {
-  font-size: 17px; font-weight: 700; color: #1a1a2e; margin: 0;
+[id^="modal"] h2,
+[id^="modal"] h3 {
+  font-size: 17px !important; font-weight: 700 !important; color: #1a1a2e !important;
 }
 
-.modal-box input[type="text"],
-.modal-box input[type="email"],
-.modal-box input[type="number"],
-.modal-box input[type="password"],
-.modal-box select {
-  width: 100%; padding: 10px 12px; font-size: 14px; font-family: inherit;
-  border: 1.5px solid #e5e7eb; border-radius: 8px; outline: none;
-  transition: border-color 0.15s; color: #1a1a2e;
+[id^="modal"] input[type="text"],
+[id^="modal"] input[type="email"],
+[id^="modal"] input[type="number"],
+[id^="modal"] input[type="password"],
+[id^="modal"] select,
+[id^="modal"] textarea {
+  border: 1.5px solid #e5e7eb !important; border-radius: 8px !important;
+  padding: 9px 12px !important; font-size: 14px !important; font-family: inherit !important;
+  outline: none !important; color: #1a1a2e !important; width: 100%;
 }
-.modal-box input:focus, .modal-box select:focus {
-  border-color: #818cf8;
-  box-shadow: 0 0 0 2px rgba(129,140,248,0.15);
+[id^="modal"] input:focus, [id^="modal"] select:focus {
+  border-color: #818cf8 !important; box-shadow: 0 0 0 2px rgba(129,140,248,0.15) !important;
 }
 
-.modal-header { display: flex; justify-content: space-between; align-items: center; }
-.modal-header h3 { margin: 0; }
-
-.modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
-
-.modal-info {
-  background: #f9fafb; border: 1px solid #f0eff5; border-radius: 8px;
-  padding: 12px 14px; font-size: 13px; color: #6b7280;
-}
-.modal-info ul { margin: 8px 0 0 16px; padding: 0; }
-.modal-info li { margin-bottom: 4px; }
-
-.modal-error { padding: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; font-size: 13px; color: #dc2626; }
-
+/* Botons dels modals */
 .modal-close {
-  background: #f3f4f6; color: #374151; border: none;
-  padding: 8px 16px; border-radius: 8px; font-weight: 500;
-  font-family: inherit; font-size: 13px; cursor: pointer;
+  background: #f3f4f6 !important; color: #374151 !important; border: none !important;
+  padding: 8px 16px !important; border-radius: 8px !important;
+  font-weight: 500 !important; font-family: inherit !important; font-size: 13px !important;
+  cursor: pointer;
 }
-.modal-close:hover { background: #e5e7eb; }
+.modal-close:hover { background: #e5e7eb !important; }
 
-.modal-x {
-  align-self: flex-end; background: none !important; padding: 4px 8px !important;
-  color: #9ca3af !important; font-size: 18px !important;
-}
-.modal-x:hover { background: #f3f4f6 !important; color: #374151 !important; }
+/* El botó × gran del modal Classroom */
+.modal-close.text-2xl { padding: 4px 10px !important; font-size: 20px !important; background: none !important; }
 
+#modalCreateClassBtn, #modalAddStudentBtn, #modalAddActivityBtn,
+#btnImportALConfirm, #btnImportSelectedCourse, #modalApplyCalcBtn,
 .btn-primary {
-  background: #6366f1; color: white; border: none;
-  padding: 8px 18px; border-radius: 8px; font-weight: 600;
-  font-family: inherit; font-size: 13px; cursor: pointer;
+  background: #6366f1 !important; color: white !important; border: none !important;
+  padding: 8px 18px !important; border-radius: 8px !important;
+  font-weight: 600 !important; font-family: inherit !important; font-size: 13px !important;
+  cursor: pointer;
 }
-.btn-primary:hover { background: #4f46e5; }
-.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+#modalCreateClassBtn:hover, #modalAddStudentBtn:hover, #modalAddActivityBtn:hover,
+#btnImportALConfirm:hover, #btnImportSelectedCourse:hover, #modalApplyCalcBtn:hover,
+.btn-primary:hover { background: #4f46e5 !important; }
+#btnImportSelectedCourse:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.btn-danger {
-  background: #dc2626; color: white; border: none;
-  padding: 8px 18px; border-radius: 8px; font-weight: 600;
-  font-family: inherit; font-size: 13px; cursor: pointer;
+#confirmYes {
+  background: #dc2626 !important; color: white !important; border: none !important;
+  padding: 8px 18px !important; border-radius: 8px !important;
+  font-weight: 600 !important; font-family: inherit !important; font-size: 13px !important; cursor: pointer;
 }
-.btn-danger:hover { background: #b91c1c; }
+#confirmYes:hover { background: #b91c1c !important; }
 
-/* Modals genèrics de l'app (usats pel JS) */
+/* Modal càlcul */
 #modalCalc {
   display: none; position: fixed; inset: 0;
   background: rgba(10,10,30,0.5); backdrop-filter: blur(3px);
@@ -630,24 +660,13 @@ input.blocked-cell { cursor: not-allowed; opacity: 0.55; background: #f9fafb !im
    ================================================ */
 
 #emptyGroupMessage {
-  background: white; border-radius: 16px;
-  border: 2px dashed #c4b5fd;
-  padding: 48px 32px; text-align: center;
-  color: #6b7280; font-size: 15px;
-  margin: 24px;
+  background: white; border-radius: 16px; border: 2px dashed #c4b5fd;
+  padding: 48px 32px; text-align: center; color: #6b7280; font-size: 15px; margin: 24px;
 }
 
 #emptyInstructionMessage {
-  background: white; border-radius: 12px;
-  border: 2px dashed #c4b5fd;
-  padding: 36px 24px; text-align: center;
-  color: #6b7280; font-size: 15px;
-}
-
-#btnAddTerm2 {
-  background: #6366f1; color: white; border: none;
-  padding: 4px 12px; border-radius: 8px; font-size: 18px;
-  cursor: pointer; margin: 0 6px; font-family: inherit;
+  background: white; border-radius: 12px; border: 2px dashed #c4b5fd;
+  padding: 36px 24px; text-align: center; color: #6b7280; font-size: 15px;
 }
 
 /* ================================================
@@ -657,19 +676,13 @@ input.blocked-cell { cursor: not-allowed; opacity: 0.55; background: #f9fafb !im
 @media (max-width: 768px) {
   #app-sidebar { width: 56px; min-width: 56px; }
   #app-main-content { margin-left: 56px; }
-
-  #studentsListContainer {
-    display: none;
-    width: 200px; min-width: 200px; max-width: 200px;
-  }
+  #studentsListContainer { display: none; }
 
   #studentsListContainer.mobile-open {
-    display: flex;
-    position: fixed; inset: 0; z-index: 9999;
-    background: rgba(0,0,0,0.5);
-    width: auto; max-width: none; min-width: auto;
+    display: flex; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5); z-index: 9999;
     justify-content: center; align-items: center;
-    border-right: none;
+    width: auto; max-width: none; min-width: auto; border-right: none;
   }
 
   #studentsListContainer.mobile-open #studentsListContent {
@@ -679,19 +692,17 @@ input.blocked-cell { cursor: not-allowed; opacity: 0.55; background: #f9fafb !im
   }
 
   #closeStudentsMobile { display: block !important; }
-  #btnToggleStudentsMobile { display: inline-flex !important; }
 
   #notesTable-wrapper { padding: 10px; }
+  #screen-classes { padding: 16px; }
 
   #screen-class .flex.flex-wrap.gap-2 {
     flex-wrap: nowrap; overflow-x: auto;
-    -webkit-overflow-scrolling: touch; overflow-y: visible;
-    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch; overflow-y: visible; scrollbar-width: none;
   }
   #screen-class .flex.flex-wrap.gap-2::-webkit-scrollbar { display: none; }
   #screen-class .flex.flex-wrap.gap-2 > * { flex-shrink: 0; }
   #termMenu { position: fixed !important; z-index: 9999 !important; }
-  #screen-classes { padding: 16px; }
 }
 
 @media (min-width: 769px) {
@@ -700,7 +711,7 @@ input.blocked-cell { cursor: not-allowed; opacity: 0.55; background: #f9fafb !im
 }
 
 /* ================================================
-   SCROLL PERSONALITZAT
+   SCROLL
    ================================================ */
 
 ::-webkit-scrollbar { width: 5px; height: 5px; }
@@ -712,11 +723,9 @@ input.blocked-cell { cursor: not-allowed; opacity: 0.55; background: #f9fafb !im
    GLOBALS
    ================================================ */
 
-button { transition: background 0.12s, opacity 0.12s; }
+button { font-family: inherit; }
 
 /* Taula admin */
 table { width: 100%; border-collapse: collapse; }
 th, td { border: 1px solid #f0eff5; padding: 8px 12px; text-align: left; font-size: 13px; }
 th { background: #fafafa; font-weight: 600; color: #6b7280; }
-
-#gradesModeToggle:hover { opacity: 0.85; }
