@@ -27,21 +27,20 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(() => console.log('✅ SW registrat'))
-          .catch(err => console.warn('SW error:', err));
+        navigator.serviceWorker.register('/sw.js').catch(err => console.warn('SW error:', err));
       });
     }
   </script>
 </head>
 <body>
 
-<!-- ══════════════════════════════════════════
-     LOGIN SCREEN — independent del #appRoot
-══════════════════════════════════════════ -->
+<!-- =============================================
+     LOGIN — element arrel independent, fora d'#appRoot
+     El JS fa: loginScreen.style.display = 'block' / 'none'
+     i loginScreen.classList.add/remove('hidden')
+============================================= -->
 <section id="loginScreen">
   <div class="login-card">
-
     <div class="login-logo">🛡️</div>
     <h1>AvaluApp</h1>
     <p>El teu gestor d'avaluació escolar</p>
@@ -56,22 +55,20 @@
   </div>
 </section>
 
-<!-- ══════════════════════════════════════════
-     APP ROOT — mostra quan loguejat
-══════════════════════════════════════════ -->
+<!-- =============================================
+     APP ROOT — el JS treu 'hidden' quan fa login
+     Té display:flex al CSS per mostrar sidebar+contingut
+============================================= -->
 <div id="appRoot" class="hidden">
 
   <!-- SIDEBAR -->
   <nav id="app-sidebar">
     <div class="sidebar-logo">🛡️</div>
-
     <div class="sidebar-item active" title="Classes">⊞</div>
     <div class="sidebar-item" title="Tutoria">👤</div>
     <div class="sidebar-item" title="Estadístiques">📊</div>
-
     <div class="sidebar-divider"></div>
     <div class="sidebar-item" title="Configuració">⚙️</div>
-
     <div class="sidebar-avatar" id="sidebarAvatar">?</div>
   </nav>
 
@@ -79,13 +76,15 @@
   <div id="app-main-content">
 
     <!-- TOPBAR -->
-    <header>
-      <h1>AvaluApp</h1>
-      <div id="userArea">
+    <header class="flex items-center justify-between mb-6 p-4 rounded-xl shadow-md">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight">AvaluApp</h1>
+      </div>
+      <div id="userArea" class="flex items-center gap-2">
         <span id="usuariNom">usuari</span>
-        <button id="userMenuBtn">⋮</button>
-        <div id="userMenu" class="hidden menu absolute">
-          <button id="changePasswordBtn">Canviar contrasenya</button>
+        <button id="userMenuBtn" class="text-gray-600 hover:text-gray-800 text-2xl">⋮</button>
+        <div id="userMenu" class="hidden absolute bg-white border rounded shadow-md p-2">
+          <button id="changePasswordBtn" class="w-full text-left px-2 py-1 hover:bg-gray-100">Canviar contrasenya</button>
         </div>
         <button id="btnLogout">Sortir</button>
       </div>
@@ -93,45 +92,44 @@
 
     <main>
 
-      <!-- SCREEN: llista de classes -->
+      <!-- SCREEN: llista de classes — visible per defecte -->
       <section id="screen-classes" class="space-y-6">
         <div class="flex items-center justify-between">
-          <h2>Les meves classes</h2>
+          <h2 class="text-xl font-semibold">Les meves classes</h2>
           <div class="flex gap-3">
             <button id="btnCreateClass">+ Nova classe</button>
             <button id="btnDeleteMode">🗑️ Eliminar</button>
           </div>
         </div>
-        <div id="classesGrid"></div>
+        <div id="classesGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"></div>
       </section>
 
-      <!-- SCREEN: vista de classe -->
-      <section id="screen-class" class="hidden">
-
+      <!-- SCREEN: vista de classe — hidden per defecte, el JS la mostra -->
+      <section id="screen-class" class="hidden mt-4">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-3">
           <div>
-            <button id="btnBack">← Tornar</button>
-            <h2 id="classTitle" class="inline-block"></h2>
-            <p id="classSub"></p>
+            <button id="btnBack" class="text-sm text-gray-600 mr-3">← Tornar</button>
+            <h2 id="classTitle" class="text-2xl font-bold inline-block"></h2>
+            <p id="classSub" class="text-sm text-gray-500"></p>
           </div>
           <div class="flex flex-wrap gap-2">
-            <select id="termsDropdown"></select>
-            <button id="btnAddTerm">＋</button>
+            <select id="termsDropdown" class="border border-black rounded px-3 py-1 rounded text-black"></select>
+            <button id="btnAddTerm" class="bg-green-500 text-white px-3 py-1 rounded font-bold text-lg">＋</button>
             <div class="relative">
-              <button id="termMenuBtn">⋮</button>
-              <div id="termMenu" class="menu absolute left-0 mt-2 hidden z-50">
-                <button class="edit-term-btn">Editar graella</button>
-                <button class="delete-term-btn">Eliminar graella</button>
-                <button class="export-structure-btn">Exportar graella</button>
-                <button class="copy-structure-btn">Copiar estructura</button>
-                <button class="paste-structure-btn">Enganxar estructura</button>
+              <button id="termMenuBtn" class="bg-green-500 text-white px-3 py-1 rounded font-bold text-lg">⋮</button>
+              <div id="termMenu" class="menu absolute left-0 mt-2 bg-white border rounded shadow hidden z-50">
+                <button class="edit-term-btn px-2 py-1 w-full text-left hover:bg-gray-200 whitespace-nowrap">Editar graella</button>
+                <button class="delete-term-btn px-2 py-1 w-full text-left hover:bg-gray-200 whitespace-nowrap">Eliminar graella</button>
+                <button class="export-structure-btn px-2 py-1 w-full text-left hover:bg-gray-200 whitespace-nowrap">Exportar graella</button>
+                <button class="copy-structure-btn px-2 py-1 w-full text-left hover:bg-gray-200 whitespace-nowrap">Copiar estructura</button>
+                <button class="paste-structure-btn px-2 py-1 w-full text-left hover:bg-gray-200 whitespace-nowrap">Enganxar estructura</button>
               </div>
             </div>
-            <button id="btnSortAlpha">Ordenar</button>
-            <button id="btnImportAL">Importar</button>
-            <button id="btnToggleStudentsMobile">👥 Alumnes</button>
-            <button id="btnAddStudent">+ Alumne</button>
-            <button id="btnAddActivity">+ Activitat</button>
+            <button id="btnSortAlpha" class="bg-yellow-400 text-black px-3 py-1 rounded">Ordenar</button>
+            <button id="btnImportAL" class="bg-blue-500 text-white px-3 py-1 rounded">Importar</button>
+            <button id="btnToggleStudentsMobile" class="block md:hidden bg-indigo-500 text-white px-3 py-1 rounded shadow">👥Alumnes</button>
+            <button id="btnAddStudent" class="bg-purple-600 text-white px-3 py-1 rounded"><span class="text-xl text-white">+</span> Alumne</button>
+            <button id="btnAddActivity" class="bg-teal-600 text-white px-3 py-1 rounded"><span class="text-xl text-white">+</span> Activitat</button>
           </div>
         </div>
 
@@ -140,47 +138,46 @@
           <!-- Panell alumnes -->
           <aside id="studentsListContainer">
             <div id="studentsListContent">
-              <button id="closeStudentsMobile">✕</button>
+              <button id="closeStudentsMobile" class="absolute top-2 right-2 text-red-500 hover:text-red-800 font-bold text-3xl" style="display:none;">&times;</button>
 
               <div class="flex items-center justify-between mb-2">
-                <h3>Alumnes <span id="studentsCount"></span></h3>
+                <h3 class="font-semibold">
+                  Alumnes <span id="studentsCount" class="text-sm text-gray-400"></span>
+                </h3>
                 <div class="relative">
                   <button id="cancelDeleteStudentsBtn" style="display:none;">❌</button>
-                  <button id="studentsMenuBtn">⋮</button>
-                  <div id="studentsMenu" class="menu absolute right-0 mt-1 hidden z-50">
-                    <button id="deleteStudentsModeBtn">Eliminar alumnes</button>
+                  <button id="studentsMenuBtn" class="text-xl">⋮</button>
+                  <div id="studentsMenu" class="absolute right-0 mt-1 bg-white border rounded shadow hidden z-50">
+                    <button id="deleteStudentsModeBtn" class="px-3 py-1 w-full text-left hover:bg-gray-100 whitespace-nowrap">Eliminar alumnes</button>
                   </div>
                 </div>
               </div>
 
-              <input id="studentSearch" type="text" placeholder="Cerca per nom…">
-              <ul id="studentsList"></ul>
-              <p class="drag-hint">Arrossega per ordenar</p>
+              <input id="studentSearch" type="text" placeholder="Cerca per nom…" class="w-full mb-3 p-2 border rounded bg-white dark:bg-gray-800" />
+              <ul id="studentsList" class="space-y-2"></ul>
+              <p class="mt-3 text-xs text-gray-400">Arrossega per ordenar</p>
             </div>
           </aside>
 
           <!-- Graella de notes -->
-          <div id="notesTable-wrapper">
-
-            <div id="emptyInstructionMessage" style="display:none;">
-              🔰 Prem el botó <button id="btnAddTerm2">＋</button> per crear un nou grup d'activitats
+          <div id="notesTable-wrapper" class="flex-grow bg-white rounded-xl shadow p-3 overflow-x-auto">
+            <div id="emptyInstructionMessage" style="display:none; text-align:center; margin-top:50px; font-size:1.5rem; font-weight:bold; color:#555;">
+              🔰 Presiona el botó <button id="btnAddTerm2" class="bg-green-500 text-white px-3 py-1 rounded font-bold text-lg">＋</button> per crear un nou grup d'activitats
             </div>
-
-            <div class="grid-search-bar">
-              <input id="gridStudentSearch" type="text" placeholder="🔍 Cerca alumne a la graella…">
+            <div class="flex items-center justify-between mb-2">
+              <input id="gridStudentSearch" type="text" placeholder="Cerca alumne a la graella…" class="border rounded px-3 py-1 w-full">
             </div>
-
-            <div id="gridWrapper">
-              <table id="notesTable">
-                <thead id="notesThead"></thead>
+            <div id="gridWrapper" class="w-full">
+              <table id="notesTable" class="min-w-full border-collapse">
+                <thead id="notesThead" class="bg-gray-100"></thead>
                 <tbody id="notesTbody"></tbody>
-                <tfoot id="notesTfoot"></tfoot>
-                <tfoot id="formulaTfoot" class="hidden"></tfoot>
+                <tfoot id="notesTfoot" class="bg-gray-50"></tfoot>
+                <tfoot id="formulaTfoot" class="bg-gray-50 hidden"></tfoot>
               </table>
             </div>
           </div>
 
-        </div><!-- /classScreenWrapper -->
+        </div>
       </section>
 
     </main>
@@ -188,118 +185,121 @@
 </div><!-- /appRoot -->
 
 
-<!-- ══════════════════════════════════════════
-     MODALS
-══════════════════════════════════════════ -->
+<!-- =============================================
+     MODALS — idèntics a l'original perquè el JS
+     els controla directament
+============================================= -->
 
 <div id="modalClassroomImport" class="fixed inset-0 hidden items-center justify-center z-50">
   <div class="modal-backdrop absolute inset-0 bg-black opacity-30"></div>
-  <div class="modal-box">
-    <div class="modal-header">
-      <h3>Importar de Google Classroom</h3>
-      <button data-modal-close="modalClassroomImport" class="modal-close">×</button>
+  <div class="bg-white rounded shadow-lg z-10 w-full max-w-md p-6 flex flex-col gap-4">
+    <div class="flex justify-between items-center">
+      <h2 class="text-xl font-bold">Importar de Google Classroom</h2>
+      <button data-modal-close="modalClassroomImport" class="modal-close text-gray-500 hover:text-gray-700 text-2xl">×</button>
     </div>
     <div id="classroomLoadingState" class="text-center py-8">
       <div class="animate-spin h-8 w-8 border-4 border-indigo-500 border-t-transparent rounded-full mx-auto mb-2"></div>
-      <p>Carregant cursos...</p>
+      <p class="text-gray-600">Carregant cursos de Classroom...</p>
     </div>
     <div id="classroomCoursesList" class="hidden max-h-96 overflow-y-auto"></div>
-    <div id="classroomErrorState" class="hidden modal-error"></div>
-    <div class="modal-footer">
-      <button data-modal-close="modalClassroomImport" class="modal-close">Cancel·lar</button>
-      <button id="btnImportSelectedCourse" class="btn-primary" disabled>Importar seleccionats</button>
+    <div id="classroomErrorState" class="hidden p-4 bg-red-50 border border-red-200 rounded text-sm text-red-700"></div>
+    <div class="flex gap-2 justify-end">
+      <button data-modal-close="modalClassroomImport" class="modal-close px-4 py-2 rounded bg-gray-200 hover:bg-gray-300">Cancel·lar</button>
+      <button id="btnImportSelectedCourse" class="px-4 py-2 rounded bg-indigo-500 text-white hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed" disabled>Importar seleccionats</button>
     </div>
   </div>
 </div>
 
 <div id="modalImportAL" class="fixed inset-0 hidden items-center justify-center z-50">
   <div class="modal-backdrop absolute inset-0"></div>
-  <div class="modal-box">
-    <h3>Importar alumnes</h3>
-    <div class="modal-info">
+  <div class="bg-white rounded shadow-lg z-10 w-full max-w-md p-4">
+    <h3 class="text-lg font-semibold mb-2">Importar alumnes</h3>
+    <div class="text-sm text-gray-700 dark:text-gray-300 mb-4 p-2 bg-gray-100 dark:bg-gray-900 rounded">
       <strong>Instruccions:</strong>
-      <ul>
-        <li>Fitxer <code>.xlsx</code> o <code>.csv</code></li>
-        <li>Noms a la <strong>primera columna</strong>, sense capçalera</li>
-        <li>Un alumne per fila</li>
+      <ul class="list-disc list-inside mt-1">
+        <li>Prepara un fitxer <code>.xlsx</code> o <code>.csv</code>.</li>
+        <li>Escriu els <strong>noms i cognoms dels alumnes</strong> a <strong>la primera columna</strong>, sense cap fila de capçalera.</li>
+        <li>Cada alumne ha d'estar en una fila diferent.</li>
+        <li>Desa el fitxer i selecciona'l aquí per importar-lo.</li>
       </ul>
+      <p class="mt-1 text-xs text-gray-500">Exemple: una columna amb Maria Pérez, Joan García, Laura Rodríguez, etc. Un a sota de l'altre</p>
     </div>
-    <input type="file" id="fileImport" accept=".csv,.xlsx">
-    <div class="modal-footer">
-      <button data-modal-close="modalImportAL" class="modal-close">Cancel·lar</button>
-      <button id="btnImportALConfirm" class="btn-primary">Importa</button>
+    <input type="file" id="fileImport" accept=".csv,.xlsx" class="w-full mb-3" />
+    <div class="flex justify-end gap-2">
+      <button data-modal-close="modalImportAL" class="modal-close px-3 py-1 rounded bg-gray-200">Cancel·lar</button>
+      <button id="btnImportALConfirm" class="px-3 py-1 rounded bg-green-500 text-white">Importa</button>
     </div>
   </div>
 </div>
 
 <div id="modalCreateClass" class="fixed inset-0 hidden items-center justify-center z-50">
   <div class="modal-backdrop absolute inset-0"></div>
-  <div class="modal-box">
-    <h3>Crear nova classe</h3>
-    <input id="modalClassName" type="text" placeholder="Nom de la classe">
-    <div class="modal-footer">
-      <button data-modal-close="modalCreateClass" class="modal-close">Cancel·lar</button>
-      <button id="modalCreateClassBtn" class="btn-primary">Crear</button>
+  <div class="bg-white rounded shadow-lg z-10 w-full max-w-md p-4">
+    <h3 class="text-lg font-semibold mb-2">Crear nova classe</h3>
+    <input id="modalClassName" class="border rounded px-3 py-2 w-full mb-3" placeholder="Nom de la classe">
+    <div class="flex justify-end gap-2">
+      <button data-modal-close="modalCreateClass" class="modal-close px-3 py-1 rounded bg-gray-200">Cancel·lar</button>
+      <button id="modalCreateClassBtn" class="px-3 py-1 rounded bg-indigo-500 text-white">Crear</button>
     </div>
   </div>
 </div>
 
 <div id="modalAddStudent" class="fixed inset-0 hidden items-center justify-center z-50">
   <div class="modal-backdrop absolute inset-0"></div>
-  <div class="modal-box">
-    <h3>Afegir alumne</h3>
-    <input id="modalStudentName" type="text" placeholder="Nom de l'alumne">
-    <div class="modal-footer">
-      <button data-modal-close="modalAddStudent" class="modal-close">Cancel·lar</button>
-      <button id="modalAddStudentBtn" class="btn-primary">Afegir</button>
+  <div class="bg-white rounded shadow-lg z-10 w-full max-w-md p-4">
+    <h3 class="text-lg font-semibold mb-2">Afegir alumne</h3>
+    <input id="modalStudentName" class="border rounded px-3 py-2 w-full mb-3" placeholder="Nom de l'alumne">
+    <div class="flex justify-end gap-2">
+      <button data-modal-close="modalAddStudent" class="modal-close px-3 py-1 rounded bg-gray-200">Cancel·lar</button>
+      <button id="modalAddStudentBtn" class="px-3 py-1 rounded bg-purple-600 text-white">Afegir</button>
     </div>
   </div>
 </div>
 
 <div id="modalAddActivity" class="fixed inset-0 hidden items-center justify-center z-50">
   <div class="modal-backdrop absolute inset-0"></div>
-  <div class="modal-box">
-    <h3>Afegir activitat</h3>
-    <input id="modalActivityName" type="text" placeholder="Nom de l'activitat">
-    <div class="modal-footer">
-      <button data-modal-close="modalAddActivity" class="modal-close">Cancel·lar</button>
-      <button id="modalAddActivityBtn" class="btn-primary">Afegir</button>
+  <div class="bg-white rounded shadow-lg z-10 w-full max-w-md p-4">
+    <h3 class="text-lg font-semibold mb-2">Afegir activitat</h3>
+    <input id="modalActivityName" class="border rounded px-3 py-2 w-full mb-3" placeholder="Nom de l'activitat">
+    <div class="flex justify-end gap-2">
+      <button data-modal-close="modalAddActivity" class="modal-close px-3 py-1 rounded bg-gray-200">Cancel·lar</button>
+      <button id="modalAddActivityBtn" class="px-3 py-1 rounded bg-teal-600 text-white">Afegir</button>
     </div>
   </div>
 </div>
 
 <div id="modalConfirm" class="fixed inset-0 hidden items-center justify-center z-50">
   <div class="modal-backdrop absolute inset-0"></div>
-  <div class="modal-box">
-    <h3 id="confirmTitle">Confirmació</h3>
-    <p id="confirmMsg"></p>
-    <div class="modal-footer">
-      <button data-modal-close="modalConfirm" class="modal-close">Cancel·lar</button>
-      <button id="confirmYes" class="btn-danger">Sí, eliminar</button>
+  <div class="bg-white rounded shadow-lg z-10 w-full max-w-sm p-4">
+    <h3 id="confirmTitle" class="text-lg font-semibold mb-2">Confirmació</h3>
+    <p id="confirmMsg" class="text-sm text-gray-600 mb-4"></p>
+    <div class="flex justify-end gap-2">
+      <button data-modal-close="modalConfirm" class="modal-close px-3 py-1 rounded bg-gray-200">Cancel·lar</button>
+      <button id="confirmYes" class="px-3 py-1 rounded bg-red-500 text-white">Sí, eliminar</button>
     </div>
   </div>
 </div>
 
 <div id="modalCalc" class="modal hidden fixed inset-0 items-center justify-center z-50">
-  <div class="modal-box">
-    <button class="modal-close modal-x" data-modal-close="modalCalc">✖</button>
-    <h3>Càlcul d'activitat</h3>
-    <label>Tipus de càlcul:</label>
-    <select id="calcType">
-      <option value="numeric">Numèric</option>
+  <div class="bg-white p-6 rounded shadow-lg w-96 max-w-full flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
+    <button class="modal-close self-end" data-modal-close="modalCalc">✖</button>
+    <h2 class="text-lg font-bold">Calcul activitat</h2>
+    <label for="calcType">Tipus de càlcul:</label>
+    <select id="calcType" class="border rounded p-1">
+      <option value="numeric">Numeric</option>
       <option value="formula">Fórmula</option>
-      <option value="rounding">Arrodoniment</option>
+      <option value="rounding">Redondeig</option>
     </select>
     <div id="numericInput">
-      <label>Valor:</label>
-      <input type="number" id="numericField" min="0" max="10">
+      <label for="numericField">Valor:</label>
+      <input type="number" id="numericField" min="0" max="10" class="border rounded p-1 w-full">
     </div>
-    <div id="formulaInputs" class="hidden">
-      <input type="text" id="formulaField" readonly placeholder="Construeix la fórmula">
+    <div id="formulaInputs" class="hidden flex flex-col gap-2">
+      <input type="text" id="formulaField" readonly class="border rounded p-1 w-full bg-gray-50 font-mono text-sm" placeholder="Construeix la fórmula">
       <input type="hidden" id="formulaFieldHidden">
       <div id="formulaButtons" class="flex flex-wrap gap-1"></div>
     </div>
-    <button id="modalApplyCalcBtn" class="btn-primary">Aplica</button>
+    <button id="modalApplyCalcBtn" class="bg-indigo-500 text-white p-2 rounded font-semibold">Aplica</button>
   </div>
 </div>
 
@@ -308,22 +308,21 @@
   Prem el botó <strong>+</strong> per afegir un grup (per exemple, "1r trimestre")
 </div>
 
-<!-- Script avatar sidebar -->
+<!-- Avatar sidebar amb inicials -->
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    const nomEl = document.getElementById('usuariNom');
-    const avatarEl = document.getElementById('sidebarAvatar');
-    if (nomEl && avatarEl) {
-      const observer = new MutationObserver(() => {
-        const nom = nomEl.textContent.trim();
-        if (nom && nom !== 'usuari') {
-          const parts = nom.split(/[\s@]/);
-          avatarEl.textContent = parts.filter(Boolean).map(p => p[0]).join('').substring(0,2).toUpperCase();
-        }
-      });
-      observer.observe(nomEl, { childList: true, characterData: true, subtree: true });
-    }
-  });
+document.addEventListener('DOMContentLoaded', function() {
+  const nomEl = document.getElementById('usuariNom');
+  const avatarEl = document.getElementById('sidebarAvatar');
+  if (nomEl && avatarEl) {
+    const update = () => {
+      const nom = nomEl.textContent.trim();
+      if (nom && nom !== 'usuari') {
+        avatarEl.textContent = nom.split(/[\s@]/).filter(Boolean).map(p=>p[0]).join('').substring(0,2).toUpperCase();
+      }
+    };
+    new MutationObserver(update).observe(nomEl, { childList: true, characterData: true, subtree: true });
+  }
+});
 </script>
 
 <script type="module" src="./app.js"></script>
