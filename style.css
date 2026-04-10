@@ -205,7 +205,22 @@ header h1 {
    MAIN
    ================================================ */
 
-main { flex: 1; overflow: auto; }
+main {
+  flex: 1;
+  overflow: hidden; /* evita que les dues pantalles surtin alhora */
+  display: flex;
+  flex-direction: column;
+}
+
+#screen-classes:not(.hidden) {
+  flex: 1;
+  overflow-y: auto;
+}
+
+#screen-class:not(.hidden) {
+  flex: 1;
+  overflow: hidden;
+}
 
 /* ================================================
    SCREEN: CLASSES
@@ -304,26 +319,69 @@ main { flex: 1; overflow: auto; }
 #classTitle { font-size: 17px !important; font-weight: 700 !important; color: #1a1a2e !important; margin: 0; }
 #classSub   { display: none !important; }
 
-/* Botons barra classe — estil base que s'aplica per sobre dels colors Tailwind */
+/* Botons barra classe — només mides i forma, sense sobreescriure colors */
 #screen-class .flex.flex-wrap.gap-2 > button,
 #screen-class .flex.flex-wrap.gap-2 > select,
 #screen-class .flex.flex-wrap.gap-2 > div > button {
   font-size: 12px !important; height: 30px; padding: 0 11px !important;
-  border-radius: 8px !important; border: 1px solid #e5e7eb !important;
-  background: white !important; color: #374151 !important;
-  font-family: inherit !important; font-weight: 500 !important; cursor: pointer;
-  white-space: nowrap;
+  border-radius: 8px !important; font-family: inherit !important;
+  font-weight: 600 !important; cursor: pointer; white-space: nowrap;
 }
-#screen-class .flex.flex-wrap.gap-2 > button:hover { background: #f9fafb !important; }
 
-#btnAddActivity { background: #6366f1 !important; color: white !important; border-color: #6366f1 !important; font-weight: 600 !important; }
+/* Colors específics dels botons de la barra de classe */
+#btnAddActivity {
+  background: #6366f1 !important; color: white !important;
+  border: none !important; font-weight: 700 !important;
+}
 #btnAddActivity:hover { background: #4f46e5 !important; }
-#btnAddStudent  { background: #ede9fe !important; color: #5b21b6 !important; border-color: #c4b5fd !important; }
-#btnAddTerm     { background: #ecfdf5 !important; color: #059669 !important; border-color: #a7f3d0 !important; font-size: 18px !important; }
-#termMenuBtn    { font-size: 16px !important; }
-#btnSortAlpha   { background: #fefce8 !important; color: #92400e !important; border-color: #fde68a !important; }
-#btnImportAL    { background: #eff6ff !important; color: #1d4ed8 !important; border-color: #bfdbfe !important; }
-#termsDropdown  { font-size: 12px !important; padding: 0 10px !important; height: 30px; }
+
+#btnAddStudent {
+  background: #ede9fe !important; color: #5b21b6 !important;
+  border: 1px solid #c4b5fd !important; font-weight: 600 !important;
+}
+#btnAddStudent:hover { background: #ddd6fe !important; }
+
+#btnAddTerm {
+  background: #ecfdf5 !important; color: #059669 !important;
+  border: 1px solid #a7f3d0 !important; font-size: 18px !important;
+  font-weight: 700 !important;
+}
+#btnAddTerm:hover { background: #d1fae5 !important; }
+
+#termMenuBtn {
+  font-size: 16px !important; background: #f9fafb !important;
+  color: #374151 !important; border: 1px solid #e5e7eb !important;
+}
+#termMenuBtn:hover { background: #f3f4f6 !important; }
+
+#btnSortAlpha {
+  background: #fefce8 !important; color: #92400e !important;
+  border: 1px solid #fde68a !important;
+}
+#btnSortAlpha:hover { background: #fef9c3 !important; }
+
+#btnImportAL {
+  background: #eff6ff !important; color: #1d4ed8 !important;
+  border: 1px solid #bfdbfe !important;
+}
+#btnImportAL:hover { background: #dbeafe !important; }
+
+#btnToggleStudentsMobile {
+  background: #f3f4f6 !important; color: #374151 !important;
+  border: 1px solid #e5e7eb !important;
+}
+
+#termsDropdown {
+  font-size: 12px !important; padding: 0 10px !important; height: 30px;
+  background: white !important; border: 1px solid #e5e7eb !important;
+  border-radius: 8px !important; color: #374151 !important;
+}
+
+#btnBack {
+  background: transparent !important; border: none !important;
+  color: #6b7280 !important; padding: 4px 10px !important;
+}
+#btnBack:hover { background: #f3f4f6 !important; color: #374151 !important; }
 
 /* ================================================
    LAYOUT CLASSE: ALUMNES + GRAELLA
@@ -664,3 +722,23 @@ button { font-family: inherit; transition: background 0.12s, opacity 0.12s; }
 table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; }
 th, td { border: 1px solid #f0eff5; padding: 8px 12px; text-align: left; font-size: 13px; }
 th { background: #fafafa; font-weight: 600; color: #6b7280; }
+
+/* ================================================
+   FIXES CRÍTICS
+   ================================================ */
+
+/* screen-class quan NO té .hidden ha de ser flex */
+#screen-class:not(.hidden) {
+  display: flex !important;
+  flex-direction: column;
+}
+
+/* screen-classes quan NO té .hidden ha de ser block */
+#screen-classes:not(.hidden) {
+  display: block !important;
+}
+
+/* appRoot quan NO té .hidden ha de ser flex */
+#appRoot:not(.hidden) {
+  display: flex !important;
+}
