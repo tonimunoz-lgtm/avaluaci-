@@ -3,217 +3,254 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>AvaluApp</title>
+  <title>Gestor de Classes</title>
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
 
+  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google API para Classroom -->
   <script src="https://apis.google.com/js/api.js"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
+
+  <!-- CSS propi -->
   <link rel="stylesheet" href="style.css">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
 
+  <!-- Firebase (compat per la teva base actual) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+
+
+  <!-- XLSX per export -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
-  <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#6366f1">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="AvaluApp">
-  <link rel="apple-touch-icon" href="/icon-192.png">
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(err => console.warn('SW error:', err));
-      });
-    }
-  </script>
+<!-- ═══════════════════════════════════════
+     Afegir aquestes línies dins del <head>
+     de index.html (per exemple just abans
+     del </head>)
+════════════════════════════════════════ -->
+
+<!-- PWA: Manifest -->
+<link rel="manifest" href="/manifest.json">
+
+<!-- PWA: Color de la barra del navegador (Android) -->
+<meta name="theme-color" content="#4f46e5">
+
+<!-- PWA: Per a iOS (Safari no llegeix el manifest) -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="AvaluApp">
+<link rel="apple-touch-icon" href="/icon-192.png">
+
+<!-- PWA: Registre del Service Worker -->
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then(() => console.log('✅ Service Worker registrat'))
+        .catch(err => console.warn('SW error:', err));
+    });
+  }
+</script>
+  
 </head>
-<body>
+<body class="bg-gradient-to-br from-gray-100 via-white to-gray-200 text-gray-900">
 
-<!-- =============================================
-     LOGIN — element arrel independent, fora d'#appRoot
-     El JS fa: loginScreen.style.display = 'block' / 'none'
-     i loginScreen.classList.add/remove('hidden')
-============================================= -->
-<section id="loginScreen">
-  <div class="login-card">
-    <div class="login-logo">🛡️</div>
-    <h1>AvaluApp</h1>
-    <p>El teu gestor d'avaluació escolar</p>
+  <div class="min-h-screen flex items-center justify-center p-4">
 
-    <input id="loginEmail" type="email" placeholder="Correu electrònic">
-    <input id="loginPassword" type="password" placeholder="Contrasenya">
+    <!-- LOGIN SCREEN -->
+    <section id="loginScreen" class="w-full max-w-md p-6">
+      <div class="bg-white rounded-xl shadow-xl p-6 flex flex-col items-center">
+        <img src="https://img.icons8.com/ios-filled/100/6366f1/school.png" alt="Logo" class="w-24 h-24 mb-4">
+        <h1 class="text-2xl font-bold mb-2">Mini Gestor de Notes</h1>
+        <p class="mb-4 text-sm text-gray-500 text-center">Gestiona classes, alumnes i activitats — responsive i modern</p>
 
-    <button id="btnLogin">Inicia sessió</button>
-    <button id="googleLoginBtn">🔑 Continua amb Google</button>
-    <button id="btnRegister">Crear compte nou</button>
-    <button id="btnRecover">He oblidat la contrasenya</button>
-  </div>
-</section>
+        <input id="loginEmail" type="email" placeholder="Email" class="w-full rounded-lg p-3 mb-2 border border-gray-300 focus:ring-2 focus:ring-indigo-400 focus:outline-none">
+        <input id="loginPassword" type="password" placeholder="Contrasenya" class="w-full rounded-lg p-3 mb-3 border border-gray-300 focus:ring-2 focus:ring-indigo-400 focus:outline-none">
 
-<!-- =============================================
-     APP ROOT — el JS treu 'hidden' quan fa login
-     Té display:flex al CSS per mostrar sidebar+contingut
-============================================= -->
-<div id="appRoot" class="hidden">
-
-  <!-- SIDEBAR -->
-  <nav id="app-sidebar">
-    <div class="sidebar-logo">🛡️</div>
-    <div class="sidebar-item active" title="Classes">⊞</div>
-    <div class="sidebar-item" title="Tutoria">👤</div>
-    <div class="sidebar-item" title="Estadístiques">📊</div>
-    <div class="sidebar-divider"></div>
-    <div class="sidebar-item" title="Configuració">⚙️</div>
-    <div class="sidebar-avatar" id="sidebarAvatar">?</div>
-  </nav>
-
-  <!-- CONTINGUT PRINCIPAL -->
-  <div id="app-main-content">
-
-    <!-- TOPBAR -->
-    <header class="flex items-center justify-between mb-6 p-4 rounded-xl shadow-md">
-      <div>
-        <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight">AvaluApp</h1>
+        <button id="btnLogin" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-3 rounded-lg mb-2 transition-all duration-200">Inicia sessió amb mail i contrasenya</button>
+        <button id="googleLoginBtn" class="w-full bg-indigo-400 hover:bg-indigo-500 text-white font-semibold py-3 rounded-lg mb-2 transition-all duration-200">Inicia sessió amb Google</button>
+        <button id="btnRegister" class="w-full bg-indigo-100 hover:bg-indigo-200 text-indigo-800 font-semibold py-3 rounded-lg mb-2 transition-all duration-200">Registrar</button>
+        <button id="btnRecover" class="text-indigo-500 underline text-sm hover:text-indigo-700 transition-all duration-200">He oblidat la contrasenya</button>
       </div>
-      <div id="userArea" class="flex items-center gap-2">
-        <span id="usuariNom">usuari</span>
-        <button id="userMenuBtn" class="text-gray-600 hover:text-gray-800 text-2xl">⋮</button>
-        <div id="userMenu" class="hidden absolute bg-white border rounded shadow-md p-2">
-          <button id="changePasswordBtn" class="w-full text-left px-2 py-1 hover:bg-gray-100">Canviar contrasenya</button>
+    </section>
+
+    <!-- MAIN APP CONTAINER -->
+    <div id="appRoot" class="hidden w-full max-w-6xl mx-auto p-6 rounded-xl shadow-lg bg-white">
+
+      <!-- HEADER -->
+      <header class="flex items-center justify-between mb-6 p-4 rounded-xl shadow-md">
+        <div>
+          <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight">Gestor d'avaluació</h1>
         </div>
-        <button id="btnLogout">Sortir</button>
-      </div>
-    </header>
-
-    <main>
-
-      <!-- SCREEN: llista de classes — visible per defecte -->
-      <section id="screen-classes" class="space-y-6">
-        <div class="flex items-center justify-between">
-          <h2 class="text-xl font-semibold">Les meves classes</h2>
-          <div class="flex gap-3">
-            <button id="btnCreateClass">+ Nova classe</button>
-            <button id="btnDeleteMode">🗑️ Eliminar</button>
+        <div id="userArea" class="flex items-center gap-2">
+          <span id="usuariNom">usuari</span>
+          <button id="userMenuBtn" class="text-gray-600 hover:text-gray-800 text-2xl">⋮</button>
+          <div id="userMenu" class="hidden absolute bg-white border rounded shadow-md p-2">
+            <button id="changePasswordBtn" class="w-full text-left px-2 py-1 hover:bg-gray-100">Canviar contrasenya</button>
           </div>
+          <button id="btnLogout">Sortir</button>
         </div>
-        <div id="classesGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"></div>
-      </section>
 
-      <!-- SCREEN: vista de classe — hidden per defecte, el JS la mostra -->
-      <section id="screen-class" class="hidden mt-4">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-3">
-          <div>
-            <button id="btnBack" class="text-sm text-gray-600 mr-3">← Tornar</button>
-            <h2 id="classTitle" class="text-2xl font-bold inline-block"></h2>
-            <p id="classSub" class="text-sm text-gray-500"></p>
+      </header>
+
+      <main>
+
+        <!-- SCREEN: classes list -->
+        <section id="screen-classes" class="space-y-6">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xl font-semibold">Les meves classes</h2>
+            <div class="flex gap-3">
+              <button id="btnCreateClass" class="bg-indigo-500 hover:bg-indigo-600 text-white px-5 py-2 rounded-xl shadow transition-transform">+ Crear classe</button>
+              <button id="btnDeleteMode" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-xl shadow transition-transform">🗑️ Eliminar classe</button>
+            </div>
           </div>
-          <div class="flex flex-wrap gap-2">
-            <select id="termsDropdown" class="border border-black rounded px-3 py-1 rounded text-black"></select>
-            <button id="btnAddTerm" class="bg-green-500 text-white px-3 py-1 rounded font-bold text-lg">＋</button>
+          <div id="classesGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"></div>
+        </section>
+
+        <!-- SCREEN: class view -->
+        <section id="screen-class" class="hidden mt-4">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-3">
+            <div>
+              <button id="btnBack" class="text-sm text-gray-600 mr-3">← Tornar</button>
+              <h2 id="classTitle" class="text-2xl font-bold inline-block"></h2>
+              <p id="classSub" class="text-sm text-gray-500"></p>
+
+            </div>
+            <div class="flex flex-wrap gap-2">
+  <!-- Botó menú graella -->
+ 
+              <select id="termsDropdown" class="border border-black rounded px-3 py-1 rounded text-black"></select>
+              <button id="btnAddTerm" class="bg-green-500 text-white px-3 py-1 rounded font-bold text-lg">＋</button>
             <div class="relative">
               <button id="termMenuBtn" class="bg-green-500 text-white px-3 py-1 rounded font-bold text-lg">⋮</button>
-              <div id="termMenu" class="menu absolute left-0 mt-2 bg-white border rounded shadow hidden z-50">
-                <button class="edit-term-btn px-2 py-1 w-full text-left hover:bg-gray-200 whitespace-nowrap">Editar graella</button>
-                <button class="delete-term-btn px-2 py-1 w-full text-left hover:bg-gray-200 whitespace-nowrap">Eliminar graella</button>
-                <button class="export-structure-btn px-2 py-1 w-full text-left hover:bg-gray-200 whitespace-nowrap">Exportar graella</button>
-                <button class="copy-structure-btn px-2 py-1 w-full text-left hover:bg-gray-200 whitespace-nowrap">Copiar estructura</button>
-                <button class="paste-structure-btn px-2 py-1 w-full text-left hover:bg-gray-200 whitespace-nowrap">Enganxar estructura</button>
-              </div>
-            </div>
-            <button id="btnSortAlpha" class="bg-yellow-400 text-black px-3 py-1 rounded">Ordenar</button>
-            <button id="btnImportAL" class="bg-blue-500 text-white px-3 py-1 rounded">Importar</button>
-            <button id="btnToggleStudentsMobile" class="block md:hidden bg-indigo-500 text-white px-3 py-1 rounded shadow">👥Alumnes</button>
-            <button id="btnAddStudent" class="bg-purple-600 text-white px-3 py-1 rounded"><span class="text-xl text-white">+</span> Alumne</button>
-            <button id="btnAddActivity" class="bg-teal-600 text-white px-3 py-1 rounded"><span class="text-xl text-white">+</span> Activitat</button>
-          </div>
-        </div>
-
-        <div id="classScreenWrapper">
-
-          <!-- Panell alumnes -->
-          <aside id="studentsListContainer">
-            <div id="studentsListContent">
-              <button id="closeStudentsMobile" class="absolute top-2 right-2 text-red-500 hover:text-red-800 font-bold text-3xl" style="display:none;">&times;</button>
-
-              <div class="flex items-center justify-between mb-2">
-                <h3 class="font-semibold">
-                  Alumnes <span id="studentsCount" class="text-sm text-gray-400"></span>
-                </h3>
-                <div class="relative">
-                  <button id="cancelDeleteStudentsBtn" style="display:none;">❌</button>
-                  <button id="studentsMenuBtn" class="text-xl">⋮</button>
-                  <div id="studentsMenu" class="absolute right-0 mt-1 bg-white border rounded shadow hidden z-50">
-                    <button id="deleteStudentsModeBtn" class="px-3 py-1 w-full text-left hover:bg-gray-100 whitespace-nowrap">Eliminar alumnes</button>
-                  </div>
+                <div id="termMenu" class="menu absolute left-0 mt-2 bg-white border rounded shadow hidden z-50">
+                  <button class="edit-term-btn px-2 py-1 w-full text-left hover:bg-gray-200 whitespace-nowrap">Editar graella</button>
+                  <button class="delete-term-btn px-2 py-1 w-full text-left hover:bg-gray-200 whitespace-nowrap">Eliminar graella</button>
+                  <button class="export-structure-btn px-2 py-1 w-full text-left hover:bg-gray-200 whitespace-nowrap">Exportar graella</button>
+                  <button class="copy-structure-btn px-2 py-1 w-full text-left hover:bg-gray-200 whitespace-nowrap">Copiar estructura</button>
+                  <button class="paste-structure-btn px-2 py-1 w-full text-left hover:bg-gray-200 whitespace-nowrap">Enganxar estructura</button>
                 </div>
-              </div>
-
-              <input id="studentSearch" type="text" placeholder="Cerca per nom…" class="w-full mb-3 p-2 border rounded bg-white dark:bg-gray-800" />
-              <ul id="studentsList" class="space-y-2"></ul>
-              <p class="mt-3 text-xs text-gray-400">Arrossega per ordenar</p>
-            </div>
-          </aside>
-
-          <!-- Graella de notes -->
-          <div id="notesTable-wrapper" class="flex-grow bg-white rounded-xl shadow p-3 overflow-x-auto">
-            <div id="emptyInstructionMessage" style="display:none; text-align:center; margin-top:50px; font-size:1.5rem; font-weight:bold; color:#555;">
-              🔰 Presiona el botó <button id="btnAddTerm2" class="bg-green-500 text-white px-3 py-1 rounded font-bold text-lg">＋</button> per crear un nou grup d'activitats
-            </div>
-            <div class="flex items-center justify-between mb-2">
-              <input id="gridStudentSearch" type="text" placeholder="Cerca alumne a la graella…" class="border rounded px-3 py-1 w-full">
-            </div>
-            <div id="gridWrapper" class="w-full">
-              <table id="notesTable" class="min-w-full border-collapse">
-                <thead id="notesThead" class="bg-gray-100"></thead>
-                <tbody id="notesTbody"></tbody>
-                <tfoot id="notesTfoot" class="bg-gray-50"></tfoot>
-                <tfoot id="formulaTfoot" class="bg-gray-50 hidden"></tfoot>
-              </table>
+           </div>
+              <button id="btnSortAlpha" class="bg-yellow-400 text-black px-3 py-1 rounded">Ordenar</button>
+              <button id="btnImportAL" class="bg-blue-500 text-white px-3 py-1 rounded">Importar</button>
+              <button id="btnToggleStudentsMobile" class="block md:hidden bg-indigo-500 text-white px-3 py-1 rounded shadow">👥Alumnes</button>  
+              <button id="btnAddStudent" class="bg-purple-600 text-white px-3 py-1 rounded"><span class="text-xl text-white">+</span> Alumne</button>
+              <button id="btnAddActivity" class="bg-teal-600 text-white px-3 py-1 rounded"><span class="text-xl text-white">+</span> Activitat</button>
             </div>
           </div>
 
-        </div>
-      </section>
+          <div id="classScreenWrapper">
 
-    </main>
-  </div><!-- /app-main-content -->
-</div><!-- /appRoot -->
+  <!-- students col -->
+ <aside id="studentsListContainer">
+  <div id="studentsListContent">
+  <!-- Botó de tancament mòbil -->
+  <button id="closeStudentsMobile" class="absolute top-2 right-2 text-red-500 hover:text-red-800 font-bold text-3xl">&times;</button>
+
+  <div class="flex items-center justify-between mb-2">
+  <h3 class="font-semibold">
+    Alumnes <span id="studentsCount" class="text-sm text-gray-400"></span>
+  </h3>
+
+  <!-- 🔵 Botó menú global alumnes -->
+  <div class="relative">
+      <button id="cancelDeleteStudentsBtn" style="display:none;">❌</button>
+      <button id="studentsMenuBtn" class="text-xl">⋮</button>
+
+      <div id="studentsMenu" class="absolute right-0 mt-1 bg-white border rounded shadow hidden z-50">
+          <button id="deleteStudentsModeBtn" class="px-3 py-1 w-full text-left hover:bg-gray-100 whitespace-nowrap">Eliminar alumnes</button>
+      </div>
+  </div>
+</div>
 
 
-<!-- =============================================
-     MODALS — idèntics a l'original perquè el JS
-     els controla directament
-============================================= -->
+  <!-- 🔍 Cercador d'alumnes -->
+<input id="studentSearch"
+       type="text"
+       placeholder="Cerca per nom…"
+       class="w-full mb-3 p-2 border rounded bg-white dark:bg-gray-800" />  
 
+    
+  <ul id="studentsList" class="space-y-2"></ul>
+  <p class="mt-3 text-xs text-gray-400">Arrossega per ordenar</p>
+</div>
+</aside>
+
+  <!-- notes grid -->
+ <div id="notesTable-wrapper" class="flex-grow bg-white rounded-xl shadow p-3 overflow-x-auto">
+
+  <!-- MISSATGE CENTRAL GRAN -->
+  <div id="emptyInstructionMessage" 
+       style="display:none; text-align:center; margin-top:50px; font-size:1.5rem; font-weight:bold; color:#555;">
+    🔰 Presiona el botó <button id="btnAddTerm2" class="bg-green-500 text-white px-3 py-1 rounded font-bold text-lg">＋</button>per crear un nou grup d'activitats (primer trimestre, segon trimestre, etc.)
+      </div>
+
+<div class="flex items-center justify-between mb-2">
+  <input id="gridStudentSearch" type="text" placeholder="Cerca alumne a la graella…" class="border rounded px-3 py-1 w-full">
+</div>
+
+   
+  <div id="gridWrapper" class="w-full">
+    <table id="notesTable" class="min-w-full border-collapse">
+      <thead id="notesThead" class="bg-gray-100"></thead>
+      <tbody id="notesTbody"></tbody>
+      <tfoot id="notesTfoot" class="bg-gray-50"></tfoot>
+      <tfoot id="formulaTfoot" class="bg-gray-50 hidden"></tfoot>
+    </table>
+    </div>
+  </div>
+
+</div>
+
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- ---------- MODALS ---------- -->
+
+<!-- Modal Importar de Classroom -->
 <div id="modalClassroomImport" class="fixed inset-0 hidden items-center justify-center z-50">
   <div class="modal-backdrop absolute inset-0 bg-black opacity-30"></div>
   <div class="bg-white rounded shadow-lg z-10 w-full max-w-md p-6 flex flex-col gap-4">
+    
     <div class="flex justify-between items-center">
       <h2 class="text-xl font-bold">Importar de Google Classroom</h2>
       <button data-modal-close="modalClassroomImport" class="modal-close text-gray-500 hover:text-gray-700 text-2xl">×</button>
     </div>
+
     <div id="classroomLoadingState" class="text-center py-8">
       <div class="animate-spin h-8 w-8 border-4 border-indigo-500 border-t-transparent rounded-full mx-auto mb-2"></div>
-      <p class="text-gray-600">Carregant cursos de Classroom...</p>
+      <p class="text-gray-600">Cargando tus cursos de Classroom...</p>
     </div>
-    <div id="classroomCoursesList" class="hidden max-h-96 overflow-y-auto"></div>
+
+    <div id="classroomCoursesList" class="hidden max-h-96 overflow-y-auto">
+      <!-- Aquí se listan los cursos con checkbox -->
+    </div>
+
     <div id="classroomErrorState" class="hidden p-4 bg-red-50 border border-red-200 rounded text-sm text-red-700"></div>
+
     <div class="flex gap-2 justify-end">
-      <button data-modal-close="modalClassroomImport" class="modal-close px-4 py-2 rounded bg-gray-200 hover:bg-gray-300">Cancel·lar</button>
-      <button id="btnImportSelectedCourse" class="px-4 py-2 rounded bg-indigo-500 text-white hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed" disabled>Importar seleccionats</button>
+      <button data-modal-close="modalClassroomImport" class="modal-close px-4 py-2 rounded bg-gray-200 hover:bg-gray-300">Cancelar</button>
+      <button id="btnImportSelectedCourse" class="px-4 py-2 rounded bg-indigo-500 text-white hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed" disabled>Importar seleccionados</button>
     </div>
   </div>
 </div>
 
+
+<!-- Modal Importar Alumnes -->
 <div id="modalImportAL" class="fixed inset-0 hidden items-center justify-center z-50">
   <div class="modal-backdrop absolute inset-0"></div>
   <div class="bg-white rounded shadow-lg z-10 w-full max-w-md p-4">
     <h3 class="text-lg font-semibold mb-2">Importar alumnes</h3>
+
+    <!-- 📝 Instruccions -->
     <div class="text-sm text-gray-700 dark:text-gray-300 mb-4 p-2 bg-gray-100 dark:bg-gray-900 rounded">
       <strong>Instruccions:</strong>
       <ul class="list-disc list-inside mt-1">
@@ -224,6 +261,7 @@
       </ul>
       <p class="mt-1 text-xs text-gray-500">Exemple: una columna amb Maria Pérez, Joan García, Laura Rodríguez, etc. Un a sota de l'altre</p>
     </div>
+    
     <input type="file" id="fileImport" accept=".csv,.xlsx" class="w-full mb-3" />
     <div class="flex justify-end gap-2">
       <button data-modal-close="modalImportAL" class="modal-close px-3 py-1 rounded bg-gray-200">Cancel·lar</button>
@@ -232,6 +270,7 @@
   </div>
 </div>
 
+<!-- Create Class Modal -->
 <div id="modalCreateClass" class="fixed inset-0 hidden items-center justify-center z-50">
   <div class="modal-backdrop absolute inset-0"></div>
   <div class="bg-white rounded shadow-lg z-10 w-full max-w-md p-4">
@@ -244,6 +283,7 @@
   </div>
 </div>
 
+<!-- Add Student Modal -->
 <div id="modalAddStudent" class="fixed inset-0 hidden items-center justify-center z-50">
   <div class="modal-backdrop absolute inset-0"></div>
   <div class="bg-white rounded shadow-lg z-10 w-full max-w-md p-4">
@@ -256,6 +296,7 @@
   </div>
 </div>
 
+<!-- Add Activity Modal -->
 <div id="modalAddActivity" class="fixed inset-0 hidden items-center justify-center z-50">
   <div class="modal-backdrop absolute inset-0"></div>
   <div class="bg-white rounded shadow-lg z-10 w-full max-w-md p-4">
@@ -268,6 +309,7 @@
   </div>
 </div>
 
+<!-- Confirm Modal -->
 <div id="modalConfirm" class="fixed inset-0 hidden items-center justify-center z-50">
   <div class="modal-backdrop absolute inset-0"></div>
   <div class="bg-white rounded shadow-lg z-10 w-full max-w-sm p-4">
@@ -280,60 +322,61 @@
   </div>
 </div>
 
+<!-- Modal Calcul -->
 <div id="modalCalc" class="modal hidden fixed inset-0 items-center justify-center z-50">
-  <div class="bg-white p-6 rounded shadow-lg w-96 max-w-full flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
+ <div class="bg-white p-6 rounded shadow-lg w-96 max-w-full flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
     <button class="modal-close self-end" data-modal-close="modalCalc">✖</button>
     <h2 class="text-lg font-bold">Calcul activitat</h2>
+
     <label for="calcType">Tipus de càlcul:</label>
     <select id="calcType" class="border rounded p-1">
       <option value="numeric">Numeric</option>
       <option value="formula">Fórmula</option>
       <option value="rounding">Redondeig</option>
     </select>
+
+    <!-- Numeric -->
     <div id="numericInput">
       <label for="numericField">Valor:</label>
       <input type="number" id="numericField" min="0" max="10" class="border rounded p-1 w-full">
     </div>
+
+    <!-- Fórmula -->
     <div id="formulaInputs" class="hidden flex flex-col gap-2">
+      <!-- Camp visible amb noms llegibles -->
       <input type="text" id="formulaField" readonly class="border rounded p-1 w-full bg-gray-50 font-mono text-sm" placeholder="Construeix la fórmula">
+      <!-- Camp ocult amb IDs reals per al càlcul -->
       <input type="hidden" id="formulaFieldHidden">
       <div id="formulaButtons" class="flex flex-wrap gap-1"></div>
     </div>
+    
     <button id="modalApplyCalcBtn" class="bg-indigo-500 text-white p-2 rounded font-semibold">Aplica</button>
   </div>
 </div>
 
-<div id="emptyGroupMessage" style="display:none; padding:1.5rem; text-align:center; font-size:1.1rem; color:#555;">
+<div id="emptyGroupMessage"
+     style="display:none; padding:1.5rem; text-align:center; font-size:1.1rem; color:#555;">
   🔰 <strong>Crea el teu primer grup d'avaluació</strong><br>
   Prem el botó <strong>+</strong> per afegir un grup (per exemple, "1r trimestre")
 </div>
 
-<!-- Avatar sidebar amb inicials -->
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  const nomEl = document.getElementById('usuariNom');
-  const avatarEl = document.getElementById('sidebarAvatar');
-  if (nomEl && avatarEl) {
-    const update = () => {
-      const nom = nomEl.textContent.trim();
-      if (nom && nom !== 'usuari') {
-        avatarEl.textContent = nom.split(/[\s@]/).filter(Boolean).map(p=>p[0]).join('').substring(0,2).toUpperCase();
-      }
-    };
-    new MutationObserver(update).observe(nomEl, { childList: true, characterData: true, subtree: true });
-  }
-});
-</script>
-
+<!-- SCRIPTS PRINCIPALES -->
+<!-- Primero cargar app.js -->
 <script type="module" src="./app.js"></script>
+<!-- Después cargar classroom-ui.js que depende de app.js -->
 <script type="module" src="./classroom-ui.js"></script>
-<script type="module" src="./competencial.js"></script>
-<script type="module" src="./competencial-config.js"></script>
+<!-- Sistema de Evaluación Competencial -->
+<script type="module" src="./competencial.js"></script> 
+<!-- Configuració de Evaluación Competencial -->
+<script type="module" src="./competencial-config.js"></script> 
+<!-- Recàlcul automàtic de fórmules quan canvia una nota -->
 <script type="module" src="./auto-recalc.js"></script>
-<script type="module" src="./formula-info.js"></script>
+<!-- Info fórmules a capçaleres -->
+<script type="module" src="./formula-info.js"></script> 
 <script type="module" src="tutoria.js"></script>
 <script type="module" src="tutoria-comentaris.js"></script>
 <script type="module" src="ultracomentator.js"></script>
+
 
 </body>
 </html>
