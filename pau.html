@@ -1,60 +1,135 @@
 <!DOCTYPE html>
-
 <html lang="ca">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PAU Comptabilitat – EDTECH PRO</title>
+<title>PAU Comptabilitat – Versió Estable Institut</title>
+
 <style>
-body { font-family: system-ui; margin:0; background:#020617; color:#e2e8f0; }
-header { background:#0b1220; padding:20px; text-align:center; }
-section { max-width:1100px; margin:20px auto; padding:20px; background:#0f172a; border-radius:14px; }
-h2 { color:#38bdf8; }
-.card { background:#1e293b; padding:15px; border-radius:10px; margin:10px 0; }
-.exercise { background:#7c2d12; padding:15px; border-radius:10px; }
-button { padding:10px; margin:5px; border:none; border-radius:8px; cursor:pointer; }
-input, select { padding:10px; border-radius:8px; border:none; margin:5px; }
-.nav { display:flex; flex-wrap:wrap; justify-content:center; gap:10px; }
-.nav button { background:#1e293b; color:white; }
-.timer { font-size:18px; }
-.table { width:100%; border-collapse:collapse; }
-.table th, .table td { border:1px solid #334155; padding:8px; }
-.good { color:#22c55e; }
-.bad { color:#ef4444; }
+:root{
+ --bg:#0b1220;
+ --panel:#111c33;
+ --card:#1e293b;
+ --text:#e2e8f0;
+ --accent:#38bdf8;
+ --good:#22c55e;
+ --bad:#ef4444;
+}
+
+body.light{
+ --bg:#f1f5f9;
+ --panel:#ffffff;
+ --card:#e2e8f0;
+ --text:#0f172a;
+}
+
+body{
+ font-family:system-ui;
+ margin:0;
+ background:var(--bg);
+ color:var(--text);
+}
+
+header{
+ background:var(--panel);
+ padding:20px;
+ text-align:center;
+}
+
+section{
+ max-width:1000px;
+ margin:20px auto;
+ padding:20px;
+ background:var(--panel);
+ border-radius:14px;
+}
+
+h2{color:var(--accent)}
+
+.card{
+ background:var(--card);
+ padding:12px;
+ border-radius:10px;
+ margin:8px 0;
+}
+
+.exercise{
+ background:#7c2d12;
+ padding:12px;
+ border-radius:10px;
+}
+
+button{
+ padding:10px;
+ margin:5px;
+ border:none;
+ border-radius:8px;
+ cursor:pointer;
+}
+
+input{
+ padding:10px;
+ border-radius:8px;
+ border:none;
+ margin:5px;
+ width:200px;
+}
+
+.timer{
+ font-size:18px;
+}
+
+.table{
+ width:100%;
+ border-collapse:collapse;
+}
+
+.table th,.table td{
+ border:1px solid #334155;
+ padding:8px;
+}
+
 </style>
 
 <script>
-let exam = [];
-let index = 0;
-let score = 0;
-let time = 900;
-let interval;
-let student = "";
 
-const bank = [
- {t:"balanc", q:"Actiu 20000, Passiu 8000. PN?", a:"12000"},
- {t:"resultat", q:"Ingressos 15000, Despeses 11000. Resultat?", a:"4000"},
- {t:"ratios", q:"AC 12000 PC 8000. Liquiditat?", a:"1.5"},
- {t:"teoria", q:"El patrimoni net són...", a:"recursos propis"},
- {t:"balanc", q:"Actiu 30000, Passiu 15000. PN?", a:"15000"},
- {t:"ratios", q:"AC 10000 PC 10000. Liquiditat?", a:"1"}
+let exam=[];
+let index=0;
+let score=0;
+let time=600;
+let interval;
+let student="";
+
+const bank=[
+ {q:"Actiu 20000 i Passiu 8000. PN?",a:"12000"},
+ {q:"Ingressos 15000 i despeses 11000. Resultat?",a:"4000"},
+ {q:"AC 12000 PC 8000. Liquiditat?",a:"1.5"},
+ {q:"PN són...",a:"recursos propis"},
+ {q:"Actiu 30000 i Passiu 15000. PN?",a:"15000"},
+ {q:"AC 10000 PC 10000. Liquiditat?",a:"1"}
 ];
 
-function startExam(){
- student = document.getElementById("student").value;
- if(!student){alert("Introdueix nom");return;}
- generateExam(4);
- score=0; index=0;
- loadQ();
- interval = setInterval(()=>{
-  time--;
-  document.getElementById("time").innerText = format(time);
-  if(time<=0) finish();
- },1000);
+function toggleTheme(){
+ document.body.classList.toggle("light");
 }
 
-function generateExam(n){
- exam = bank.sort(()=>0.5-Math.random()).slice(0,n);
+function startExam(){
+ student=document.getElementById("student").value;
+ if(!student){alert("Introdueix nom");return;}
+
+ exam=[...bank].sort(()=>Math.random()-0.5).slice(0,4);
+ index=0;
+ score=0;
+ time=600;
+
+ loadQ();
+
+ clearInterval(interval);
+ interval=setInterval(()=>{
+  time--;
+  document.getElementById("time").innerText=format(time);
+  if(time<=0) finish();
+ },1000);
 }
 
 function format(t){
@@ -63,12 +138,12 @@ function format(t){
 
 function loadQ(){
  if(index>=exam.length){finish();return;}
- document.getElementById("q").innerText = exam[index].q;
+ document.getElementById("q").innerText=exam[index].q;
 }
 
 function answer(){
- let val = document.getElementById("ans").value.toLowerCase().trim();
- if(val==exam[index].a) score++;
+ let val=document.getElementById("ans").value.toLowerCase().trim();
+ if(val===exam[index].a) score++;
  index++;
  document.getElementById("ans").value="";
  loadQ();
@@ -76,22 +151,90 @@ function answer(){
 
 function finish(){
  clearInterval(interval);
- let nota = (score/exam.length)*10;
- let results = JSON.parse(localStorage.getItem("pau_results")||"[]");
- results.push({student, nota:nota.toFixed(2)});
- localStorage.setItem("pau_results", JSON.stringify(results));
- document.getElementById("result").innerHTML = `<h3>${student}</h3><p>Nota: ${nota.toFixed(2)}/10</p>`;
+ let nota=(score/exam.length)*10;
+
+ let data=JSON.parse(localStorage.getItem("pau")||"[]");
+ data.push({student,nota:nota.toFixed(2)});
+ localStorage.setItem("pau",JSON.stringify(data));
+
+ document.getElementById("result").innerHTML=
+ `<h3>${student}</h3><p>Nota: ${nota.toFixed(2)}/10</p>`;
 }
 
 function showResults(){
- let data = JSON.parse(localStorage.getItem("pau_results")||"[]");
- let html = "<table class='table'><tr><th>Alumne</th><th>Nota</th></tr>";
+ let data=JSON.parse(localStorage.getItem("pau")||"[]");
+ let html="<table class='table'><tr><th>Alumne</th><th>Nota</th></tr>";
  data.forEach(r=>{
   html+=`<tr><td>${r.student}</td><td>${r.nota}</td></tr>`;
  });
  html+="</table>";
- document.getElementById("teacher").innerHTML = html;
+ document.getElementById("teacher").innerHTML=html;
 }
 
 function exportCSV(){
- let data = JSON.parse(localStorage.getItem("pau_results")||"[]")
+ let data=JSON.parse(localStorage.getItem("pau")||"[]");
+ let csv="Alumne,Nota\n";
+
+ data.forEach(r=>{
+  csv+=`${r.student},${r.nota}\n`;
+ });
+
+ let blob=new Blob([csv],{type:"text/csv"});
+ let url=URL.createObjectURL(blob);
+ let a=document.createElement("a");
+ a.href=url;
+ a.download="resultats_pau.csv";
+ a.click();
+}
+
+</script>
+
+</head>
+
+<body>
+
+<header>
+<h1>🏫 PAU Comptabilitat – Versió Estable Institut</h1>
+<p>Plataforma d’avaluació per aula</p>
+<button onclick="toggleTheme()">🌗 Mode clar/fosc</button>
+<div class="timer">⏱ Temps: <span id="time">10:00</span></div>
+</header>
+
+<section>
+<h2>👤 Alumne</h2>
+<input id="student" placeholder="Nom alumne">
+<button onclick="startExam()">Iniciar examen</button>
+</section>
+
+<section>
+<h2>🧪 Examen</h2>
+<div class="exercise">
+<p id="q">Introdueix nom per començar</p>
+<input id="ans" placeholder="Resposta">
+<br>
+<button onclick="answer()">Enviar</button>
+</div>
+</section>
+
+<section>
+<h2>📊 Resultat</h2>
+<div id="result" class="card"></div>
+</section>
+
+<section>
+<h2>🏆 Professor</h2>
+<button onclick="showResults()">Veure classe</button>
+<button onclick="exportCSV()">Exportar CSV</button>
+<div id="teacher" class="card"></div>
+</section>
+
+<section>
+<h2>🧠 Continguts PAU</h2>
+<div class="card">Balanç de situació</div>
+<div class="card">Compte de resultats</div>
+<div class="card">Ràtios financeres</div>
+<div class="card">IVA i operacions</div>
+</section>
+
+</body>
+</html>
