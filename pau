@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PAU Comptabilitat – EDTECH PRO</title>
+<style>
+body { font-family: system-ui; margin:0; background:#020617; color:#e2e8f0; }
+header { background:#0b1220; padding:20px; text-align:center; }
+section { max-width:1100px; margin:20px auto; padding:20px; background:#0f172a; border-radius:14px; }
+h2 { color:#38bdf8; }
+.card { background:#1e293b; padding:15px; border-radius:10px; margin:10px 0; }
+.exercise { background:#7c2d12; padding:15px; border-radius:10px; }
+button { padding:10px; margin:5px; border:none; border-radius:8px; cursor:pointer; }
+input, select { padding:10px; border-radius:8px; border:none; margin:5px; }
+.nav { display:flex; flex-wrap:wrap; justify-content:center; gap:10px; }
+.nav button { background:#1e293b; color:white; }
+.timer { font-size:18px; }
+.table { width:100%; border-collapse:collapse; }
+.table th, .table td { border:1px solid #334155; padding:8px; }
+.good { color:#22c55e; }
+.bad { color:#ef4444; }
+</style>
+
+<script>
+let exam = [];
+let index = 0;
+let score = 0;
+let time = 900;
+let interval;
+let student = "";
+
+const bank = [
+ {t:"balanc", q:"Actiu 20000, Passiu 8000. PN?", a:"12000"},
+ {t:"resultat", q:"Ingressos 15000, Despeses 11000. Resultat?", a:"4000"},
+ {t:"ratios", q:"AC 12000 PC 8000. Liquiditat?", a:"1.5"},
+ {t:"teoria", q:"El patrimoni net són...", a:"recursos propis"},
+ {t:"balanc", q:"Actiu 30000, Passiu 15000. PN?", a:"15000"},
+ {t:"ratios", q:"AC 10000 PC 10000. Liquiditat?", a:"1"}
+];
+
+function startExam(){
+ student = document.getElementById("student").value;
+ if(!student){alert("Introdueix nom");return;}
+ generateExam(4);
+ score=0; index=0;
+ loadQ();
+ interval = setInterval(()=>{
+  time--;
+  document.getElementById("time").innerText = format(time);
+  if(time<=0) finish();
+ },1000);
+}
+
+function generateExam(n){
+ exam = bank.sort(()=>0.5-Math.random()).slice(0,n);
+}
+
+function format(t){
+ return Math.floor(t/60)+":"+(t%60<10?"0":"")+t%60;
+}
+
+function loadQ(){
+ if(index>=exam.length){finish();return;}
+ document.getElementById("q").innerText = exam[index].q;
+}
+
+function answer(){
+ let val = document.getElementById("ans").value.toLowerCase().trim();
+ if(val==exam[index].a) score++;
+ index++;
+ document.getElementById("ans").value="";
+ loadQ();
+}
+
+function finish(){
+ clearInterval(interval);
+ let nota = (score/exam.length)*10;
+ let results = JSON.parse(localStorage.getItem("pau_results")||"[]");
+ results.push({student, nota:nota.toFixed(2)});
+ localStorage.setItem("pau_results", JSON.stringify(results));
+ document.getElementById("result").innerHTML = `<h3>${student}</h3><p>Nota: ${nota.toFixed(2)}/10</p>`;
+}
+
+function showResults(){
+ let data = JSON.parse(localStorage.getItem("pau_results")||"[]");
+ let html = "<table class='table'><tr><th>Alumne</th><th>Nota</th></tr>";
+ data.forEach(r=>{
+  html+=`<tr><td>${r.student}</td><td>${r.nota}</td></tr>`;
+ });
+ html+="</table>";
+ document.getElementById("teacher").innerHTML = html;
+}
+
+function exportCSV(){
+ let data = JSON.parse(localStorage.getItem("pau_results")||"[]")
