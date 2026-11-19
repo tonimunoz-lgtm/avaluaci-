@@ -439,8 +439,18 @@ function renderClassCards() {
   if (_classSort === 'az') list = [...list].sort((a, b) => String(a.data.nom).localeCompare(String(b.data.nom), 'ca'));
   else if (_classSort === 'za') list = [...list].sort((a, b) => String(b.data.nom).localeCompare(String(a.data.nom), 'ca'));
   else if (_classSort === 'students') list = [...list].sort((a, b) => (b.data.alumnes || []).length - (a.data.alumnes || []).length);
+  screenClasses.classList.toggle('is-empty', _classCache.length === 0);
   if (_classCache.length === 0) {
-    classesGrid.innerHTML = `<div class="panel" style="grid-column:1/-1;text-align:center">🔰 No tens cap classe activa. <strong>Crea la primera!</strong></div>`;
+    classesGrid.innerHTML = `<div class="first-run">
+      <div class="fr-ico">🎓</div>
+      <h2>Comencem!</h2>
+      <p>Encara no tens cap classe. Crea-la o importa-la i en pocs minuts podràs posar notes.</p>
+      <div class="fr-btns">
+        <button type="button" id="frCreate" class="btn btn-primary fr-btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Crea la teva primera classe</button>
+        <button type="button" id="frClassroom" class="btn fr-btn"><img src="img/classroom.png" alt="" class="btn-logo">Importa una classe des de Classroom</button>
+      </div></div>`;
+    document.getElementById('frCreate').onclick = () => openModal('modalCreateClass');
+    document.getElementById('frClassroom').onclick = () => document.getElementById('btnClassroomImport')?.click();
     return;
   }
   if (list.length === 0) {
@@ -532,7 +542,15 @@ async function computePendingComments() {
   try {
     let pending = 0;
     const byClass = [];
-    await Promise.all(_classCache.map(async c => {
+    // Els comentaris només es posen a la classe de tutoria: només es llegeix aquella (estalvia lectures)
+    const tutId = window.AvaluConfig?.get().tutoriaClassId || '';
+    const target = _classCache.filter(c => c.id === tutId);
+    if (!target.length) {
+      el.textContent = '–';
+      window.dispatchEvent(new CustomEvent('pending-comments', { detail: { total: 0, byClass: [], noTutoria: true } }));
+      return;
+    }
+    await Promise.all(target.map(async c => {
       let cp = 0;
       const docs = await Promise.all((c.data.alumnes || []).map(id => db.collection('alumnes').doc(id).get()));
       // Un comentari pendent = alumne sense comentari en un grup amb activitats
@@ -1639,6 +1657,7 @@ function openCalcModal(activityId){
   document.getElementById('numericInput').classList.remove('hidden');
   document.getElementById('numericField').value = '';
   document.getElementById('formulaField').value = '';
+  _fCaret = null;
   if (document.getElementById('formulaFieldHidden')) document.getElementById('formulaFieldHidden').value = '';
   _selectedTermForFormula = null;
   
@@ -1707,12 +1726,14 @@ function setupFormulaValidation() {
 
   // Permetre cursor visible i teclat físic
   formulaField.removeAttribute('readonly');
+  // Sense teclat virtual al mòbil: s'escriu només amb els botons (el cursor continua visible)
+  formulaField.setAttribute('inputmode', 'none');
+  formulaField.setAttribute('autocomplete', 'off');
 
   formulaField.addEventListener('input', validateFormula);
-
-  formulaField.addEventListener('click', () => {
-    formulaField.focus();
-  });
+  ['click', 'keyup', 'select', 'mouseup', 'touchend'].forEach(ev =>
+    formulaField.addEventListener(ev, rememberCaret));
+  ['paste', 'drop', 'cut'].forEach(ev => formulaField.addEventListener(ev, e => e.preventDefault()));
 
   formulaField.addEventListener('keydown', e => {
     if (e.key === 'Backspace') {
@@ -1740,6 +1761,21 @@ function setupFormulaValidation() {
       e.preventDefault();
     }
   });
+}
+// Posició del cursor recordada: al mòbil, en tocar un botó el camp perd el focus i
+// selectionStart pot tornar 0 (feia que «2+5» es convertís en «52+»).
+let _fCaret = null;
+function rememberCaret() {
+  if (document.activeElement === formulaField && formulaField.selectionStart != null) _fCaret = formulaField.selectionStart;
+}
+function getCaretRange() {
+  const len = formulaField.value.length;
+  if (document.activeElement === formulaField && formulaField.selectionStart != null && formulaField.selectionStart !== formulaField.selectionEnd)
+    return [formulaField.selectionStart, formulaField.selectionEnd];
+  let p = _fCaret;
+  if (document.activeElement === formulaField && formulaField.selectionStart != null && _fCaret == null) p = formulaField.selectionStart;
+  if (p == null || p > len) p = len;
+  return [p, p];
 }
 function clearFormulaValidation() {
   if (formulaValidationDiv) formulaValidationDiv.innerHTML = '';
@@ -2042,11 +2078,11 @@ function buildFormulaButtons(){
 // str = text a inserir al camp OCULT (IDs)
 // displayStr = text a mostrar al camp VISIBLE (noms). Si és null, usa str.
 function insertAtCursor(str, displayStr) {
-  const display = displayStr !== undefined ? displayStr : str;
+  str = String(str);   // els dígits arribaven com a número: display.length era undefined → cursor NaN → 0
+  const display = displayStr !== undefined ? String(displayStr) : str;
   
   // -- Camp visual (noms) --
-  const startVis = formulaField.selectionStart;
-  const endVis = formulaField.selectionEnd;
+  const [startVis, endVis] = getCaretRange();
   const textVis = formulaField.value;
   formulaField.value = textVis.substring(0, startVis) + display + textVis.substring(endVis);
   
@@ -2064,10 +2100,11 @@ function insertAtCursor(str, displayStr) {
   }
   
   // Mover el cursor después del texto insertado
-  setTimeout(() => {
-    formulaField.focus();
-    formulaField.setSelectionRange(startVis + display.length, startVis + display.length);
-  }, 0);
+  _fCaret = startVis + display.length;
+  try { formulaField.setSelectionRange(_fCaret, _fCaret); } catch {}
+  formulaField.focus({ preventScroll: true });
+  try { formulaField.setSelectionRange(_fCaret, _fCaret); } catch {}
+  _fCaret = startVis + display.length;
   
   validateFormula();
 }
@@ -2110,7 +2147,7 @@ function getSelectionLengthInHidden(visText, visStart, visEnd, hidValue) {
 
 // 🔥 Borrar el último token al cursor (si és __ACT__id esborra tot el token)
 function deleteAtCursor() {
-  const start = formulaField.selectionStart;
+  const start = getCaretRange()[0];
   if (start > 0) {
     const visText = formulaField.value;
     const hidText = formulaFieldHidden ? formulaFieldHidden.value : '';
@@ -2137,10 +2174,11 @@ function deleteAtCursor() {
       formulaFieldHidden.value = hidText.substring(0, hidPos - tokenToDeleteHid) + hidText.substring(hidPos);
     }
     
-    setTimeout(() => {
-      formulaField.focus();
-      formulaField.setSelectionRange(start - tokenToDeleteVis, start - tokenToDeleteVis);
-    }, 0);
+    _fCaret = start - tokenToDeleteVis;
+    try { formulaField.setSelectionRange(_fCaret, _fCaret); } catch {}
+    formulaField.focus({ preventScroll: true });
+    try { formulaField.setSelectionRange(_fCaret, _fCaret); } catch {}
+    _fCaret = start - tokenToDeleteVis;
     
     validateFormula();
   }
@@ -2802,6 +2840,8 @@ window.AvaluApp = {
   openClass: (id, tab) => openClass(id, tab),
   getClassId: () => currentClassId,
   getClassData: () => _classData,
+  getClasses: () => _classCache.map(c => ({ id: c.id, nom: c.data.nom || 'Sense nom' })),
+  refreshPending: () => computePendingComments(),
   getCalculatedActivities: () => _gridCalculated,
   getStudentIds: () => Array.from(classStudents),
   getActivityIds: () => Array.from(classActivities)

@@ -1,0 +1,12 @@
+# Fase 9
+- Admin: els usuaris eliminats s'amaguen per defecte (filtre «Eliminats» per veure'ls); botons «Restaurar» i «Esborrar definitivament» (esborra el document de Firestore).
+- Botó «Opcions» en lloc de ⋮ (barra de període, capçalera Alumne i capçalera d'activitat). Tooltip del «+»: «Nou període»; «grup» → «període».
+- Camps, selectors i desplegables arrodonits (desplegable natiu estilitzat a Chrome/Edge recents).
+- Hover blau a tots els botons.
+- Modal de càlcul i constructor de fórmules redissenyats.
+- Mòbil: botons només amb icona, pestanyes compactes, columna d'alumne fixa, modal de càlcul a pantalla completa.
+- Configuració (config.js): perfil/centre, períodes per defecte, llindars de qualificació, idioma IA, assumpte/text/signatura del correu, densitat, avisos, connexions (informatiu) i còpia de seguretat JSON. Desa a localStorage i a professors/{uid}.config.
+- Classe de tutoria (Configuració): els comentaris pendents només es calculen per a aquesta classe (estalvia lectures).
+- Primera vegada (cap classe): targeta amb «Crea la teva primera classe» i «Importa una classe des de Classroom»; al mòbil s'amaguen la resta de controls.
+- Calculadora de fórmules: arreglat el cursor (els dígits es posaven al principi: «2+5» → «52+»); ara no surt el teclat del mòbil i es recorda la posició del cursor.
+- Mòbil: graella amb columna d'alumne fixa i estreta (nom en 2 línies, menú ⋮) i scroll horitzontal de notes.

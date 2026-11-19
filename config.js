@@ -4,7 +4,7 @@ const DEFAULTS = {
   nom: '', centre: '', curs: '', signatura: '',
   terms: ['1r trimestre', '2n trimestre', '3r trimestre'],
   th: { red: 5, yellow: 7, green: 9 },
-  idioma: 'catala',
+  idioma: 'catala', tutoriaClassId: '',
   assumpte: 'Notes de {nom}', intro: 'Hola {nom},\n\nAquestes són les teves notes:',
   densitat: 'normal', avisos: true
 };
@@ -72,6 +72,9 @@ export function renderConfigScreen(el) {
       row('Suspès per sota de', `<input id="cf_th_red" type="number" step="0.5" min="0" max="10" value="${c.th.red}">`) +
       row('Groc fins a', `<input id="cf_th_yellow" type="number" step="0.5" min="0" max="10" value="${c.th.yellow}">`) +
       row('Verd fort a partir de', `<input id="cf_th_green" type="number" step="0.5" min="0" max="10" value="${c.th.green}">`, 'Canvia els colors de la graella.'))}
+    ${card('🏫', 'Classe de tutoria',
+      row('La meva tutoria', `<select id="cf_tut"><option value="">— Cap —</option>${(window.AvaluApp?.getClasses?.() || []).map(k => `<option value="${esc(k.id)}" ${c.tutoriaClassId === k.id ? 'selected' : ''}>${esc(k.nom)}</option>`).join('')}</select>`,
+        'Els comentaris i els avisos de comentaris pendents només es calculen per a aquesta classe.'))}
     ${card('✨', 'Comentaris amb IA',
       row('Idioma per defecte', `<select id="cf_idioma"><option value="catala" ${c.idioma === 'catala' ? 'selected' : ''}>Català</option><option value="castella" ${c.idioma === 'castella' ? 'selected' : ''}>Castellano</option></select>`))}
     ${card('✉️', 'Correu de notes',
@@ -95,10 +98,10 @@ export function renderConfigScreen(el) {
       nom: n('cf_nom').value.trim(), centre: n('cf_centre').value.trim(), curs: n('cf_curs').value.trim(),
       terms: n('cf_terms').value.split(',').map(s => s.trim()).filter(Boolean),
       th: { red: +n('cf_th_red').value || 5, yellow: +n('cf_th_yellow').value || 7, green: +n('cf_th_green').value || 9 },
-      idioma: n('cf_idioma').value, assumpte: n('cf_assumpte').value, intro: n('cf_intro').value,
+      tutoriaClassId: n('cf_tut').value, idioma: n('cf_idioma').value, assumpte: n('cf_assumpte').value, intro: n('cf_intro').value,
       signatura: n('cf_signatura').value, densitat: n('cf_densitat').value, avisos: n('cf_avisos').value === '1'
     });
-    apply(); persist();
+    apply(); persist(); window.AvaluApp?.refreshPending?.();
   };
   let t; el.querySelectorAll('input, select, textarea').forEach(i => i.addEventListener('input', () => { clearTimeout(t); t = setTimeout(save, 500); }));
   el.querySelector('#cf_backup').addEventListener('click', backup);

@@ -1,5 +1,5 @@
 // sw.js — Service Worker per a AvaluApp
-const CACHE_NAME = 'avaluapp-v7-disseny';
+const CACHE_NAME = 'avaluapp-v8-icones';
 
 // Fitxers principals a cachear per funcionar offline
 const STATIC_ASSETS = [
@@ -22,8 +22,9 @@ const STATIC_ASSETS = [
   '/vistes.js', '/config.js',
   '/administrador.js',
   '/administrador-enhancements.js',
-  '/icon-192.png',
-  '/icon-512.png'
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/icons/apple-touch-icon.png'
 ];
 
 // Instal·lació: cachear recursos estàtics

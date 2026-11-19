@@ -369,11 +369,12 @@ const bell = $('btnBell'), bellMenu = $('bellMenu');
 bell.addEventListener('click', e => { e.stopPropagation(); bellMenu.classList.toggle('hidden'); });
 document.addEventListener('click', () => bellMenu.classList.add('hidden'));
 window.addEventListener('pending-comments', e => {
-  const { total, byClass } = e.detail;
+  const { total, byClass, noTutoria } = e.detail;
   $('bellDot').classList.toggle('hidden', !total || window.AvaluConfig?.get().avisos === false);
   bellMenu.innerHTML = total
     ? `<div class="bell-title">Comentaris pendents</div>` + byClass.filter(x => x.pending).map(x =>
         `<button type="button" data-id="${esc(x.id)}"><b>${esc(x.nom)}</b><small>${x.pending} alumne${x.pending === 1 ? '' : 's'} sense comentari</small></button>`).join('')
+    : noTutoria ? '<div class="bell-title">Comentaris</div><p class="muted" style="padding:.3rem .8rem .6rem">Tria la teva classe de tutoria a Configuració per veure els comentaris pendents.</p>'
     : '<div class="bell-title">Tot al dia 🎉</div><p class="muted" style="padding:.3rem .8rem .6rem">No tens comentaris pendents.</p>';
 });
 bellMenu.addEventListener('click', e => {

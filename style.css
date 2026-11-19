@@ -628,3 +628,27 @@ body select:focus, body textarea:focus { border-color: var(--c-blue); box-shadow
 /* Densitat compacta */
 body.dens-compact #notesTable tbody td { height: 34px; }
 body.dens-compact .stu-avatar { width: 24px; height: 24px; font-size: .6rem; }
+
+/* Primera vegada: cap classe creada */
+.first-run { grid-column: 1 / -1; text-align: center; background: #fff; border-radius: 28px; padding: 2.4rem 1.4rem; box-shadow: var(--shadow-sm); border: 1px solid var(--c-border); }
+.first-run .fr-ico { font-size: 2.6rem; }
+.first-run h2 { font-size: 1.7rem; margin: .4rem 0; }
+.first-run p { color: var(--c-muted); max-width: 30rem; margin: 0 auto 1.4rem; }
+.fr-btns { display: flex; flex-wrap: wrap; justify-content: center; gap: .8rem; }
+.fr-btn { display: inline-flex; align-items: center; justify-content: center; gap: .6rem; padding: .95rem 1.6rem !important; font-size: 1rem !important; border-radius: 999px; }
+.fr-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+.fr-btn .btn-logo { height: 22px; width: auto; }
+@media (max-width: 860px) {
+  #screen-classes.is-empty .action-row, #screen-classes.is-empty .classes-head, #screen-classes.is-empty .side-cards { display: none !important; }
+  .first-run { padding: 2rem 1.1rem; margin-top: .6rem; }
+  .fr-btns { flex-direction: column; }
+  .fr-btn { width: 100%; }
+}
+#classesGrid { min-width: 0; }
+.first-run { box-sizing: border-box; width: 100%; min-width: 0; }
+@media (max-width: 860px) { .classes-layout { display: block; } #screen-classes { max-width: 100%; } }
+/* Sense cap classe: mateixa vista simplificada a mòbil i escriptori (la cita es manté) */
+#screen-classes.is-empty .action-row, #screen-classes.is-empty .classes-head, #screen-classes.is-empty .side-cards .summary { display: none !important; }
+#screen-classes.is-empty .side-cards { display: block !important; }
+#screen-classes.is-empty .classes-layout { display: block; max-width: 46rem; margin: 1rem auto 0; }
+#screen-classes.is-empty .side-cards .quote { margin-top: 1.2rem; }
