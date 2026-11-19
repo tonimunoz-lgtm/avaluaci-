@@ -10,6 +10,7 @@ let _tutoriaUID = null;
 let _tutoriaDB = null;
 let _materiesExtra = { eso: [], batxillerat: [] }; // carregades de Firestore
 let _apartatsExtra = []; // [{id, nom, opcions:[{valor,label,color}]}]
+let _llistaAlumnes = []; // [{id, nom}] per al mode «triar alumne»
 let _ctx = null; // {studentId, studentName, classId} quan s'obre des d'una cel·la de comentari
 
 // ============================================================
@@ -116,6 +117,11 @@ async function guardarDadesUsuari() {
 // ============================================================
 async function openTutoriaModal(ctx) {
   _ctx = (ctx && ctx.studentId) ? ctx : null;
+  _llistaAlumnes = [];
+  if (!_ctx) {   // botó de dalt: es tria l'alumne d'una llista (si hi ha una classe oberta)
+    await carregarLlistaAlumnes();
+    if (_llistaAlumnes.length) _ctx = { studentId: '', studentName: '', classId: window.AvaluApp?.getClassId?.(), picker: true };
+  }
   document.getElementById('tutoriaModal')?.remove();
   await carregarDadesUsuari();
 
@@ -127,6 +133,16 @@ async function openTutoriaModal(ctx) {
   initModalInteractions(modal);
   { const sel = modal.querySelector('#tutoriaIdioma'); const l = window.AvaluConfig?.get().idioma; if (sel && l) sel.value = l; }
   omplirAlumnesDesar(modal);
+  wireNomParts(modal);
+  const pick = modal.querySelector('#tutoriaPickStudent');
+  pick?.addEventListener('change', () => {
+    const a = _llistaAlumnes.find(x => x.id === pick.value);
+    _ctx.studentId = a?.id || ''; _ctx.studentName = a?.nom || '';
+    modal.querySelector('#tutoriaSaveStudent').value = _ctx.studentId;
+    modal.querySelector('#tutoriaSaveName').textContent = _ctx.studentName;
+    modal.querySelector('#nomPartsBox').innerHTML = nomPartsHTML();
+    wireNomParts(modal);
+  });
 }
 window.openTutoriaModal = openTutoriaModal;
 
@@ -141,7 +157,7 @@ function buildModalHTML() {
     <div class="sticky top-0 bg-rose-500 text-white px-6 py-4 rounded-t-2xl flex justify-between items-center z-10">
       <div>
         <h2 class="text-xl font-bold">📋 Generador de comentaris de tutoria</h2>
-        <p class="text-rose-100 text-sm">${_ctx ? `Alumne/a: <b translate="no">${esc(_ctx.studentName || '')}</b>` : 'Omple el formulari i la IA crearà un comentari per al butlletí'}</p>
+        <p class="text-rose-100 text-sm">${_ctx && !_ctx.picker ? `Alumne/a: <b translate="no">${esc(_ctx.studentName || '')}</b>` : 'Omple el formulari i la IA crearà un comentari per al butlletí'}</p>
       </div>
       <button id="btnCloseTutoria" class="text-white hover:text-rose-200 text-3xl leading-none font-bold">✕</button>
     </div>
@@ -159,7 +175,8 @@ function buildModalHTML() {
             <input type="radio" name="genere" value="noia" class="sr-only">👧 Noia (La...)
           </label>
         </div>
-        ${_ctx ? nomPartsHTML() : `<input id="tutoriaNom" type="text" placeholder="Nom de l'alumne/a (ex: Toni, Júlia...)"
+        ${_ctx?.picker ? `<select id="tutoriaPickStudent" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-3" translate="no"><option value="">— Tria l'alumne —</option>${_llistaAlumnes.map(a => `<option value="${esc(a.id)}">${esc(a.nom)}</option>`).join('')}</select><div id="nomPartsBox"></div>`
+          : _ctx ? `<div id="nomPartsBox">${nomPartsHTML()}</div>` : `<input id="tutoriaNom" type="text" placeholder="Nom de l'alumne/a (ex: Toni, Júlia...)"
           class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-rose-400 focus:outline-none text-sm">`}
       </div>
 
@@ -362,7 +379,7 @@ function buildModalHTML() {
         <div class="mt-3 bg-white border border-rose-200 rounded-xl p-3">
           <label class="block text-xs font-bold text-gray-600 mb-2">💾 Desar com a comentari de l'alumne (al període d'avaluació triat)</label>
           <div class="flex gap-2">
-            ${_ctx ? '<div class="flex-1 text-sm text-gray-700 self-center" translate="no">' + esc(_ctx.studentName || '') + '</div><input type="hidden" id="tutoriaSaveStudent" value="' + esc(_ctx.studentId) + '">' : '<select id="tutoriaSaveStudent" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"></select>'}
+            ${_ctx ? '<div id="tutoriaSaveName" class="flex-1 text-sm text-gray-700 self-center" translate="no">' + esc(_ctx.studentName || '') + '</div><input type="hidden" id="tutoriaSaveStudent" value="' + esc(_ctx.studentId) + '">' : '<select id="tutoriaSaveStudent" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"></select>'}
             <button id="btnGuardarComentari" type="button" class="bg-rose-500 hover:bg-rose-600 text-white font-semibold px-4 py-2 rounded-lg text-sm">Desar</button>
           </div>
           <p id="tutoriaSaveInfo" class="text-xs text-gray-500 mt-2"></p>
@@ -520,6 +537,16 @@ function initModalInteractions(modal) {
 // ============================================================
 // DESAR EL COMENTARI A L'ALUMNE (al període d'avaluació triat)
 // ============================================================
+async function carregarLlistaAlumnes() {
+  const ids = window.AvaluApp?.getStudentIds?.() || [];
+  if (!ids.length || !_tutoriaDB) return;
+  try {
+    const docs = await Promise.all(ids.map(id => _tutoriaDB.collection('alumnes').doc(id).get()));
+    _llistaAlumnes = docs.filter(d => d.exists).map(d => ({ id: d.id, nom: d.data().nom || '' }))
+      .sort((a, b) => a.nom.localeCompare(b.nom, 'ca'));
+  } catch (e) { console.warn('tutoria: no s\'han pogut carregar els alumnes', e); }
+}
+
 async function omplirAlumnesDesar(modal) {
   const sel = modal.querySelector('#tutoriaSaveStudent');
   const ids = window.AvaluApp?.getStudentIds?.() || [];
@@ -568,8 +595,25 @@ async function guardarComentariAlumne(modal, btn) {
 // ============================================================
 const _cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 const _prefsNom = () => { try { return JSON.parse(localStorage.getItem('uc_nom_parts') || '{"nom":true,"cognom1":false,"cognom2":false}'); } catch { return { nom: true, cognom1: false, cognom2: false }; } };
+const _ordreNom = () => { try { return localStorage.getItem('uc_nom_order') || 'nc'; } catch { return 'nc'; } };
+// Separa el nom complet segons el format de la llista: 'nc' = «Nom Cognom1 Cognom2», 'cn' = «Cognom1 Cognom2 Nom»
+function parteixNom(full, ordre) {
+  full = (full || '').trim();
+  if (full.includes(',')) {                       // «Cognoms, Nom»
+    const [cog, nom] = full.split(',').map(x => x.trim());
+    const c = cog.split(/\s+/);
+    return { nom: nom || '', cognom1: c[0] || '', cognom2: c.slice(1).join(' ') };
+  }
+  const p = full.split(/\s+/).filter(Boolean);
+  if (ordre === 'cn' && p.length > 1) {
+    return { nom: p[p.length - 1], cognom1: p[0], cognom2: p.slice(1, -1).join(' ') };
+  }
+  return { nom: p[0] || '', cognom1: p[1] || '', cognom2: p.slice(2).join(' ') };
+}
 function nomPartsHTML() {
-  const p = (_ctx.studentName || '').trim().split(/\s+/);
+  if (!_ctx?.studentName) return '';
+  const ordre = _ordreNom();
+  const pt = parteixNom(_ctx.studentName, ordre);
   const prefs = _prefsNom();
   const mk = (key, label, val) => val ? `
     <label class="flex items-center gap-2 text-sm cursor-pointer">
@@ -578,8 +622,23 @@ function nomPartsHTML() {
       <span class="text-gray-400 text-xs">(${label})</span>
     </label>` : '';
   return `<div class="border-t border-gray-200 pt-3">
-    <div class="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-2">Mostrar al comentari</div>
-    <div class="flex gap-4 flex-wrap">${mk('nom', 'nom', p[0])}${mk('cognom1', '1r cognom', p[1])}${mk('cognom2', '2n cognom', p[2])}</div></div>`;
+    <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
+      <div class="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Mostrar al comentari</div>
+      <label class="text-xs text-gray-500 flex items-center gap-2">Format del nom a la llista
+        <select id="tutoriaNomOrdre" class="border border-gray-300 rounded-lg px-2 py-1 text-xs">
+          <option value="nc" ${ordre === 'nc' ? 'selected' : ''}>Nom Cognoms</option>
+          <option value="cn" ${ordre === 'cn' ? 'selected' : ''}>Cognoms Nom</option>
+        </select></label>
+    </div>
+    <div class="flex gap-4 flex-wrap">${mk('nom', 'nom', pt.nom)}${mk('cognom1', '1r cognom', pt.cognom1)}${mk('cognom2', '2n cognom', pt.cognom2)}</div></div>`;
+}
+function wireNomParts(modal) {
+  const box = modal.querySelector('#nomPartsBox');
+  const sel = box?.querySelector('#tutoriaNomOrdre');
+  sel?.addEventListener('change', () => {
+    try { localStorage.setItem('uc_nom_order', sel.value); } catch {}
+    box.innerHTML = nomPartsHTML(); wireNomParts(modal);
+  });
 }
 function nomSegonsChecks(modal) {
   const prefs = {};
@@ -896,6 +955,7 @@ Escriu NOMÉS el comentari final, sense títol ni explicació.`;
 // ============================================================
 async function generarComentari(modal) {
   const dades = recollidaDades(modal);
+  if (_ctx?.picker && !_ctx.studentId) { notify('Tria l\'alumne.'); return; }
   if (!_ctx && (!dades.nom || dades.nom === 'l\'alumne/a')) {
     notify('⚠️ Si us plau, escriu el nom de l\'alumne/a'); return;
   }

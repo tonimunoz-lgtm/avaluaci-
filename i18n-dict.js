@@ -2,6 +2,11 @@
 // classe = clase / class · alumne = alumno/a / student · nota = nota / grade · activitat = actividad / assignment
 // període (d'avaluació) = período (de evaluación) / grading period · butlletí = boletín / report card
 export const DICT = [
+["— Tria l'alumne —","— Elige el alumno —","— Choose a student —"],
+["Tria l'alumne.","Elige el alumno.","Choose a student."],
+["Format del nom a la llista","Formato del nombre en la lista","Name format in the list"],
+["Nom Cognoms","Nombre Apellidos","First name Surnames"],
+["Cognoms Nom","Apellidos Nombre","Surnames First name"],
 ["Següent: triar activitats","Siguiente: elegir actividades","Next: choose assignments"],
 ["← Enrere","← Atrás","← Back"],
 ["Importar","Importar","Import"],
