@@ -66,7 +66,7 @@
     <section id="loginScreen">
       <div class="login-card">
         <div class="login-logo">
-          <img src="img/logo.png" alt="" onerror="this.remove(); this.parentNode.textContent='🎓'">
+          <img src="img/logo.png" alt="" onerror="this.onerror=null;this.src='img/logo.svg'">
         </div>
         <h1>Gestor d'avaluació</h1>
         <p class="sub">Gestiona les teves classes, notes i comentaris de manera senzilla i visual.</p>
@@ -84,32 +84,52 @@
       <!-- SIDEBAR -->
       <aside class="sidebar">
         <div class="brand">
-          <div class="brand-logo"><img src="img/logo.png" alt="" onerror="this.remove(); this.parentNode.textContent='🎓'"></div>
-          <div>
-            <h2>Gestor d'avaluació</h2>
-            <p>Notes i comentaris</p>
-          </div>
+          <div class="brand-logo"><img src="img/logo.png" alt="" onerror="this.onerror=null;this.src='img/logo.svg'"></div>
+          <h2>Gestor d'avaluació</h2>
+          <p>Notes i comentaris</p>
         </div>
-        <button id="navHome" class="nav-item active" type="button"><span class="ico">🏠</span> Inici</button>
-        <button id="btnLogout" class="nav-item" type="button"><span class="ico">🚪</span> Sortir</button>
-        <div class="tip"><span class="bulb">💡</span>Un millor seguiment, una educació més propera!</div>
+        <nav class="nav">
+          <button id="navHome" class="nav-item active" type="button" data-screen="inici">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg>Inici</button>
+          <button id="navStudents" class="nav-item" type="button" data-screen="alumnes">
+            <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c.4-3.6 3.2-5.5 6.5-5.5s6.1 1.9 6.5 5.5z"/><circle cx="17.5" cy="9" r="2.4" opacity=".7"/><path d="M17 14.6c2.6.1 4.3 1.6 4.6 4.4h-4" opacity=".7"/></svg>Alumnes</button>
+          <button id="navReports" class="nav-item" type="button" data-screen="informes">
+            <svg viewBox="0 0 24 24"><rect x="4" y="12" width="3.4" height="8" rx="1"/><rect x="10.3" y="7" width="3.4" height="13" rx="1"/><rect x="16.6" y="3" width="3.4" height="17" rx="1"/></svg>Informes</button>
+          <button id="navSettings" class="nav-item" type="button" data-screen="config">
+            <svg viewBox="0 0 24 24"><path d="M12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8zm8.6 4.2v-1.6l-2-.7a6.6 6.6 0 0 0-.6-1.4l.9-1.9-1.1-1.1-1.9.9c-.4-.3-.9-.5-1.4-.6l-.7-2h-1.6l-.7 2c-.5.1-1 .3-1.4.6l-1.9-.9-1.1 1.1.9 1.9c-.3.4-.5.9-.6 1.4l-2 .7v1.6l2 .7c.1.5.3 1 .6 1.4l-.9 1.9 1.1 1.1 1.9-.9c.4.3.9.5 1.4.6l.7 2h1.6l.7-2c.5-.1 1-.3 1.4-.6l1.9.9 1.1-1.1-.9-1.9c.3-.4.5-.9.6-1.4z"/></svg>Configuració</button>
+        </nav>
+        <button id="btnLogout" class="hidden" type="button">Sortir</button>
+        <div class="tip">
+          <svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg>
+          <span>Un millor seguiment, una educació més propera!</span>
+        </div>
       </aside>
 
       <div class="app-main">
+        <div class="bg-blob b1"></div><div class="bg-blob b2"></div>
 
         <!-- HEADER -->
         <header class="topbar">
-          <div>
-            <h1>Hola, <span id="usuariNomTitle">professor/a</span>! 👋</h1>
+          <div class="greet">
+            <h1><span class="wave">👋</span> Hola, <span id="usuariNomTitle">professor/a</span>!</h1>
             <p class="lead">Gestiona les teves notes i comentaris de manera senzilla i visual.</p>
           </div>
-          <div id="userArea">
-            <div class="user-chip">
-              <div class="avatar" id="userAvatar">?</div>
-              <div class="who"><b id="usuariNom">usuari</b><small>Professor/a</small></div>
-              <button id="userMenuBtn" type="button" aria-label="Menú d'usuari">⌄</button>
+          <div class="topbar-right">
+            <div class="bell-wrap">
+              <button id="btnBell" class="bell" type="button" aria-label="Notificacions">
+                <svg viewBox="0 0 24 24"><path d="M6 9a6 6 0 1 1 12 0c0 5 2 6.5 2 6.5H4S6 14 6 9z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg>
+                <span id="bellDot" class="bell-dot hidden"></span>
+              </button>
+              <div id="bellMenu" class="app-dropdown hidden"></div>
             </div>
-            <div id="userMenu" class="hidden"></div>
+            <div id="userArea">
+              <div class="user-chip">
+                <div class="avatar" id="userAvatar">?</div>
+                <div class="who"><b id="usuariNom">usuari</b><small>Professor/a</small></div>
+                <button id="userMenuBtn" type="button" aria-label="Menú d'usuari"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
+              </div>
+              <div id="userMenu" class="hidden"></div>
+            </div>
           </div>
         </header>
 
@@ -117,42 +137,67 @@
 
           <!-- SCREEN: classes list -->
           <section id="screen-classes">
-            <div class="classes-head">
-              <h2 class="section-title">Les meves classes</h2>
-              <div class="toolbar">
+            <div class="action-row">
+              <div class="toolbar action-pill">
                 <div class="view-toggle" role="group" aria-label="Vista">
-                  <button id="viewCards" class="active" type="button">▦ Targetes</button>
-                  <button id="viewList" type="button">☰ Llista</button>
+                  <button id="viewCards" class="active" type="button"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/></svg>Vista de targetes</button>
+                  <button id="viewList" type="button"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/></svg>Vista de llista</button>
                 </div>
-                <button id="btnCreateClass" type="button">＋ Crear classe</button>
-                <button id="btnDeleteMode" type="button">🗑️ Eliminar classe</button>
+                <button id="btnCreateClass" type="button"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Crear classe</button>
+                <button id="btnDeleteMode" type="button"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>Eliminar classe</button>
               </div>
             </div>
-            <div class="search-box" style="max-width:380px;margin-bottom:1.2rem">
-              <span>🔍</span><input id="classSearch" type="search" placeholder="Cercar una classe…" aria-label="Cercar una classe">
+
+            <div class="classes-head">
+              <h2 class="section-title">Les meves classes</h2>
+              <div class="search-row">
+                <div class="search-box">
+                  <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>
+                  <input id="classSearch" type="search" placeholder="Cercar una classe..." aria-label="Cercar una classe">
+                </div>
+                <div class="relative-wrap">
+                  <button id="btnClassFilter" class="icon-btn" type="button" aria-label="Filtres"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg></button>
+                  <div id="classFilterMenu" class="app-dropdown hidden" style="right:0">
+                    <button type="button" data-sort="recent">Ordre original</button>
+                    <button type="button" data-sort="az">Nom A → Z</button>
+                    <button type="button" data-sort="za">Nom Z → A</button>
+                    <button type="button" data-sort="students">Més alumnes primer</button>
+                  </div>
+                </div>
+              </div>
             </div>
+
             <div class="classes-layout">
               <div id="classesGrid"></div>
               <aside class="side-cards">
                 <div class="panel summary">
-                  <h3>✨ Resum ràpid</h3>
+                  <h3><span class="spark"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg></span>Resum ràpid</h3>
                   <div class="stats">
-                    <div class="stat"><b id="sumClasses">0</b><small>Classes</small></div>
-                    <div class="stat"><b id="sumStudents">0</b><small>Alumnes</small></div>
-                    <div class="stat"><b id="sumActivities">0</b><small>Activitats</small></div>
+                    <div class="stat"><svg class="ic-purple" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c.4-3.6 3.2-5.5 6.5-5.5s6.1 1.9 6.5 5.5z"/><circle cx="17.5" cy="9" r="2.4" opacity=".6"/></svg><b id="sumStudents">0</b><small>Alumnes</small></div>
+                    <div class="stat"><svg class="ic-blue" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/></svg><b id="sumActivities">0</b><small>Activitats</small></div>
+                    <div class="stat"><svg class="ic-orange" viewBox="0 0 24 24"><path d="M4 5h16v11H11l-4 4v-4H4z"/></svg><b id="sumPending">–</b><small>Comentaris pendents</small></div>
                   </div>
+                  <span id="sumClasses" class="hidden">0</span>
                 </div>
                 <div class="panel quote">
                   <div class="qmark">“</div>
                   <p id="quoteText">La constància és la clau de l'aprenentatge.</p>
+                  <img class="quote-art" src="img/quote-books.png" alt="" onerror="this.onerror=null;this.src='img/quote-books.svg'">
                 </div>
               </aside>
             </div>
           </section>
 
+          <!-- SCREEN: alumnes (global) -->
+          <section id="screen-alumnes" class="hidden"></section>
+          <!-- SCREEN: informes -->
+          <section id="screen-informes" class="hidden"></section>
+          <!-- SCREEN: configuració -->
+          <section id="screen-config" class="hidden"></section>
+
           <!-- SCREEN: class view -->
           <section id="screen-class" class="hidden">
-            <button id="btnBack" type="button">← Totes les classes</button>
+            <button id="btnBack" type="button"><svg viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Totes les classes</button>
             <div class="class-head">
               <div class="class-title-wrap">
                 <div class="class-badge" id="classBadge">🎓</div>
@@ -162,10 +207,24 @@
                   <p id="classSub"></p>
                 </div>
               </div>
-              <div class="toolbar">
+              <div class="toolbar class-actions">
+                <button id="btnExportClass" type="button"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>Exportar</button>
+                <button id="btnPrintClass" type="button"><svg viewBox="0 0 24 24"><path d="M7 9V3h10v6M7 17H4v-7h16v7h-3M7 14h10v7H7z"/></svg>Imprimir</button>
+                <button id="btnAddActivity" type="button"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Afegir activitat</button>
+                <button id="btnAddStudent" type="button"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Alumne</button>
+              </div>
+            </div>
+
+            <div class="tabs-card">
+              <div class="tabs" role="tablist">
+                <button class="tab active" data-tab="notes" type="button"><svg viewBox="0 0 24 24"><rect x="4" y="12" width="3.4" height="8" rx="1"/><rect x="10.3" y="7" width="3.4" height="13" rx="1"/><rect x="16.6" y="3" width="3.4" height="17" rx="1"/></svg>Notes</button>
+                <button class="tab" data-tab="comentaris" type="button"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H11l-4 4v-4H4z"/></svg>Comentaris</button>
+                <button class="tab" data-tab="resum" type="button"><svg viewBox="0 0 24 24"><path d="M12 3v9h9A9 9 0 1 1 12 3z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></svg>Resum</button>
+              </div>
+              <div class="toolbar sub-actions">
                 <select id="termsDropdown" aria-label="Grup d'avaluació"></select>
                 <button id="btnAddTerm" type="button" title="Nou grup">＋</button>
-                <div class="relative" style="position:relative">
+                <div class="relative-wrap">
                   <button id="termMenuBtn" type="button" title="Opcions del grup">⋮</button>
                   <div id="termMenu" class="menu app-dropdown hidden">
                     <button class="edit-term-btn">Editar graella</button>
@@ -175,39 +234,12 @@
                     <button class="paste-structure-btn">Enganxar estructura</button>
                   </div>
                 </div>
-                <div class="sort-wrap"><button id="btnSortAlpha" type="button">⇅ Ordenar</button></div>
-                <button id="btnImportAL" type="button">⬆ Importar</button>
-                <button id="btnToggleStudentsMobile" type="button" class="md:hidden">👥 Alumnes</button>
-                <button id="btnAddStudent" type="button">＋ Alumne</button>
-                <button id="btnAddActivity" type="button">＋ Activitat</button>
+                <button id="btnStudentsMenu" type="button"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c.4-3.6 3.2-5.5 6.5-5.5s6.1 1.9 6.5 5.5z"/></svg>Alumnes <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
+                <button id="btnImportAL" type="button"><svg viewBox="0 0 24 24"><path d="M12 16V5M7 9l5-5 5 5M5 20h14"/></svg>Importar alumnes</button>
               </div>
             </div>
 
             <div id="classScreenWrapper">
-
-              <!-- students col -->
-              <aside id="studentsListContainer">
-                <div id="studentsListContent">
-                  <button id="closeStudentsMobile" type="button" style="position:absolute;top:8px;right:12px;color:#e11d48;font-size:1.8rem;border:0;background:none">&times;</button>
-
-                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
-                    <h3 style="font-size:1rem">Alumnes <span id="studentsCount" style="font-size:.8rem;color:var(--c-muted)"></span></h3>
-                    <div style="position:relative">
-                      <button id="cancelDeleteStudentsBtn" type="button" style="display:none;border:0;background:none">❌</button>
-                      <button id="studentsMenuBtn" type="button" style="border:0;background:none;font-size:1.2rem">⋮</button>
-                      <div id="studentsMenu" class="app-dropdown hidden" style="right:0">
-                        <button id="deleteStudentsModeBtn" type="button">Eliminar alumnes</button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <input id="studentSearch" type="text" placeholder="Cerca per nom…"
-                         style="width:100%;margin-bottom:.8rem;padding:.55rem .9rem;border:1px solid var(--c-border);border-radius:999px;background:#faf9ff;outline:none" />
-
-                  <ul id="studentsList" style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:.5rem"></ul>
-                  <p style="margin-top:.8rem;font-size:.75rem;color:var(--c-muted)">Arrossega per ordenar</p>
-                </div>
-              </aside>
 
               <!-- notes grid -->
               <div id="notesTable-wrapper">
@@ -218,14 +250,17 @@
                 </div>
 
                 <div class="filters-bar">
-                  <div class="search-box" style="flex:1;max-width:340px">
-                    <span>🔍</span><input id="gridStudentSearch" type="text" placeholder="Cercar alumne…" style="border:0 !important;box-shadow:none !important;background:transparent !important;padding:0 !important">
+                  <div class="search-box" style="flex:1;max-width:300px">
+                    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>
+                    <input id="gridStudentSearch" type="text" placeholder="Cercar alumne...">
                   </div>
+                  <select id="actFilter" class="pill-select" aria-label="Filtrar activitat"><option value="">Totes les activitats</option></select>
+                  <div class="sort-wrap"><button id="btnSortAlpha" type="button" class="pill-select">Ordenar per: Nom <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button></div>
                   <div class="legend" aria-label="Llegenda de colors">
-                    <span><i style="background:#86efac"></i>9–10</span>
-                    <span><i style="background:#d9f99d"></i>7–8,9</span>
-                    <span><i style="background:#fde68a"></i>5–6,9</span>
-                    <span><i style="background:#fecdd3"></i>&lt; 5</span>
+                    <span><i style="background:#34d399"></i>9–10</span>
+                    <span><i style="background:#86efac"></i>7–8,9</span>
+                    <span><i style="background:#fcd34d"></i>5–6,9</span>
+                    <span><i style="background:#fda4af"></i>&lt; 5</span>
                   </div>
                 </div>
 
@@ -240,6 +275,9 @@
               </div>
 
             </div>
+
+            <div id="tab-comentaris" class="tab-pane hidden"></div>
+            <div id="tab-resum" class="tab-pane hidden"></div>
 
           </section>
 
@@ -409,6 +447,8 @@
 <script type="module" src="./formula-info.js"></script> 
 <script type="module" src="tutoria.js"></script>
 <script type="module" src="tutoria-comentaris.js"></script>
+<!-- Pestanyes, Alumnes, Informes, Configuració, notificacions -->
+<script type="module" src="./vistes.js"></script>
 
 
 </body>

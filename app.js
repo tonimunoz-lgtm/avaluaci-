@@ -178,8 +178,6 @@ const btnAddActivity = document.getElementById('btnAddActivity');
 const btnSortAlpha = document.getElementById('btnSortAlpha');
 const btnExport = document.getElementById('btnExport');
 
-const studentsList = document.getElementById('studentsList');
-const studentsCount = document.getElementById('studentsCount');
 
 const notesThead = document.getElementById('notesThead');
 const notesTbody = document.getElementById('notesTbody');
@@ -195,54 +193,9 @@ btnImportAL.addEventListener('click', () => {
   openModal('modalImportAL');
 });
 
-// Mobile: toggle students overlay
-const btnToggleStudentsMobile = document.getElementById('btnToggleStudentsMobile');
-const btnCloseStudentsMobile = document.getElementById('btnCloseStudentsMobile');
-
-if (btnToggleStudentsMobile) {
-  btnToggleStudentsMobile.addEventListener('click', () => {
-    const cont = document.getElementById('studentsListContainer');
-    if (!cont) return;
-    cont.classList.add('mobile-open');
-  });
-}
-
-if (btnCloseStudentsMobile) {
-  btnCloseStudentsMobile.addEventListener('click', () => {
-    const cont = document.getElementById('studentsListContainer');
-    if (!cont) return;
-    cont.classList.remove('mobile-open');
-  });
-}
-
-// També tancar si cliques a fora del card (overlay)
-// detectem clicks al container però fora de .students-card
-document.getElementById('studentsListContainer')?.addEventListener('click', (e) => {
-  if (e.target.id === 'studentsListContainer') {
-    document.getElementById('studentsListContainer').classList.remove('mobile-open');
-  }
-});
-
-// MOBILE — OBRIR LLISTA ALUMNES
-const btnMobile = document.getElementById("btnToggleStudentsMobile");
-const cont = document.getElementById("studentsListContainer");
-
-if (btnMobile) {
-  btnMobile.addEventListener("click", () => {
-    cont.classList.add("mobile-open");
-  });
-}
-
-// TANCAR FENT CLIC FORA DEL PANELL BLANC
-cont?.addEventListener("click", (e) => {
-  if (e.target === cont) {
-    cont.classList.remove("mobile-open");
-  }
-});
-
 /* ---------- UTILS ---------- */
 function showLogin() {
-  loginScreen.style.display = 'block';
+  loginScreen.style.display = 'flex';
   loginScreen.classList.remove('hidden');
   appRoot.classList.add('hidden');
 }
@@ -416,19 +369,33 @@ btnCreateClass.addEventListener('click', ()=> openModal('modalCreateClass'));
 
 /* ---------------- Classes Screen (cont.) ---------------- */
 // Icona i il·lustració opcional segons el nom de la classe
+const _ic = p => `<svg viewBox="0 0 24 24" aria-hidden="true">${p}</svg>`;
+const ICON_DOC = _ic('<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M10 12h5M10 16h5"/>');
+const ICON_CHAT = _ic('<path d="M4 5h16v11H11l-4 4v-4H4z"/><path d="M8.5 10.5h.01M12 10.5h.01M15.5 10.5h.01"/>');
+const ICON_CHEV = _ic('<path d="m9 6 6 6-6 6"/>').replace('<svg', '<svg class="chev"');
+const CLASS_SVG = {
+  robot:   _ic('<rect x="5" y="8" width="14" height="10" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01M9.5 16h5M3 12v3M21 12v3"/>'),
+  compass: '<svg viewBox="0 0 24 24" aria-hidden="true"><text x="12" y="19" text-anchor="middle" font-size="20" font-weight="700" fill="currentColor" stroke="none" font-family="Georgia,serif">π</text></svg>',
+  flask:   _ic('<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-5-9V3M8 15h8"/>'),
+  book:    _ic('<path d="M3 5.5C5.5 4 9 4 12 6c3-2 6.5-2 9-.5V19c-2.5-1.5-6-1.5-9 .5-3-2-6.5-2-9-.5zM12 6v13.5"/>'),
+  chart:   _ic('<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2"/>'),
+  default: _ic('<path d="M12 3 2 8l10 5 10-5zM6 10.5v5c0 1.5 3 3 6 3s6-1.5 6-3v-5"/>')
+};
+// Icona i il·lustració opcional segons el nom de la classe
 function classVisual(name) {
   const n = String(name || '').toLowerCase();
   const rules = [
-    [/rob[oò]t|tecn|inform|program/, '🤖', 'robot'],
-    [/mat|fem\b|b2f|[ck]alcul|[àa]lgebra|geom/, 'π', 'compass'],
-    [/c[iì]en|qu[ií]m|f[ií]s|bio|lab|fem/, '🧪', 'flask'],
-    [/llen|catal|cast|angl|liter|tutor|hist|soci/, '📖', 'book'],
+    [/rob[oò]t|tecnol|inform[aà]t|program/, '🤖', 'robot'],
+    [/b2f3|mat[eè]m|[àa]lgebra|geom|c[aà]lcul|\bmat\b/, 'π', 'compass'],
+    [/b2f4|c[iì]en|qu[ií]m|f[ií]s|bio|lab|\bfem\b/, '🧪', 'flask'],
+    [/llen|catal|cast|angl|liter|tutor|hist|soci|comentar/, '📖', 'book'],
     [/empres|econ|comer|compta|bd\b|dades|f4/, '📊', 'chart']
   ];
-  for (const [re, ico, art] of rules) if (re.test(n)) return { ico, art };
-  return { ico: '🎓', art: 'default' };
+  for (const [re, ico, art] of rules) if (re.test(n)) return { ico, art, svg: CLASS_SVG[art] };
+  return { ico: '🎓', art: 'default', svg: CLASS_SVG.default };
 }
 
+const ART_TONE = { robot: 0, book: 1, flask: 2, compass: 3, chart: 4 };
 const QUOTES = [
   "La constància és la clau de l'aprenentatge.",
   "Educar no és omplir un got, sinó encendre un foc.",
@@ -437,12 +404,16 @@ const QUOTES = [
   "Avaluar és, abans de res, ajudar a créixer."
 ];
 
+let _classSort = 'recent';
 let _classCache = [];   // [{id, data}] de l'última càrrega, per a la cerca i el resum
 
 function renderClassCards() {
   const q = (document.getElementById('classSearch')?.value || '').trim().toLowerCase();
   classesGrid.innerHTML = '';
-  const list = _classCache.filter(c => !q || String(c.data.nom || '').toLowerCase().includes(q));
+  let list = _classCache.filter(c => !q || String(c.data.nom || '').toLowerCase().includes(q));
+  if (_classSort === 'az') list = [...list].sort((a, b) => String(a.data.nom).localeCompare(String(b.data.nom), 'ca'));
+  else if (_classSort === 'za') list = [...list].sort((a, b) => String(b.data.nom).localeCompare(String(a.data.nom), 'ca'));
+  else if (_classSort === 'students') list = [...list].sort((a, b) => (b.data.alumnes || []).length - (a.data.alumnes || []).length);
   if (_classCache.length === 0) {
     classesGrid.innerHTML = `<div class="panel" style="grid-column:1/-1;text-align:center">🔰 No tens cap classe activa. <strong>Crea la primera!</strong></div>`;
     return;
@@ -459,19 +430,22 @@ function renderClassCards() {
     Object.values(c.data.terms || {}).forEach(t => { totalActivities += (t.activities || []).length; });
 
     const card = document.createElement('div');
-    card.className = `class-card tone-${_classCache.indexOf(c) % 6}`;
+    card.className = `class-card tone-${ART_TONE[vis.art] ?? (_classCache.indexOf(c) % 6)}`;
     card.dataset.id = c.id;
     card.innerHTML = `
       ${deleteMode ? '<input type="checkbox" class="delete-checkbox" style="position:absolute;top:12px;right:14px;width:20px;height:20px;z-index:3">' : ''}
       <div class="card-top">
-        <div class="card-ico">${esc(vis.ico)}</div>
-        <div>
+        <div class="card-ico">${vis.svg}</div>
+        <div class="card-titles">
           <h3>${esc(c.data.nom || 'Sense nom')}</h3>
           <p class="meta">${(c.data.alumnes || []).length} alumnes · ${totalActivities} activitats</p>
         </div>
       </div>
-      <img class="card-art" src="img/card-${vis.art}.png" alt="" onerror="this.remove()">
-      <div class="card-link"><span>${deleteMode ? 'Selecciona per eliminar' : 'Obrir la graella de notes'}</span><span>›</span></div>
+      <img class="card-art" src="img/card-${vis.art}.png" alt="" onerror="this.onerror=null;this.src='img/card-${vis.art}.svg'">
+      <div class="card-links">
+        <button type="button" class="card-link" data-go="notes">${ICON_DOC}<span>${deleteMode ? 'Selecciona per eliminar' : 'Fes les correccions'}</span>${ICON_CHEV}</button>
+        <button type="button" class="card-link" data-go="comentaris">${ICON_CHAT}<span>Veure comentaris</span>${ICON_CHEV}</button>
+      </div>
     `;
 
     if (!deleteMode) {
@@ -498,7 +472,11 @@ function renderClassCards() {
           .then(() => loadClassesScreen())
           .catch(err => notify('Error editant classe: ' + err.message, 'error'));
       });
-      card.addEventListener('click', () => openClass(c.id));
+      card.querySelectorAll('.card-link').forEach(l => l.addEventListener('click', e => {
+        e.stopPropagation();
+        openClass(c.id, l.dataset.go);
+      }));
+      card.addEventListener('click', () => openClass(c.id, 'notes'));
     }
     classesGrid.appendChild(card);
   });
@@ -517,8 +495,30 @@ function updateClassSummary() {
   document.getElementById('sumClasses').textContent = _classCache.length;
   document.getElementById('sumStudents').textContent = students;
   document.getElementById('sumActivities').textContent = acts;
+  computePendingComments();
   const qt = document.getElementById('quoteText');
   if (qt) qt.textContent = QUOTES[Math.floor(Date.now() / 86400000) % QUOTES.length];
+}
+
+// Comentaris pendents = alumnes sense comentari a la seva classe (càrrega diferida)
+async function computePendingComments() {
+  const el = document.getElementById('sumPending');
+  if (!el) return;
+  try {
+    let pending = 0;
+    const byClass = [];
+    await Promise.all(_classCache.map(async c => {
+      let cp = 0;
+      const docs = await Promise.all((c.data.alumnes || []).map(id => db.collection('alumnes').doc(id).get()));
+      docs.forEach(d => {
+        const cm = d.exists ? ((d.data().comentarios || {})[c.id] || '') : '';
+        if (!String(cm).trim()) { pending++; cp++; }
+      });
+      byClass.push({ id: c.id, nom: c.data.nom || 'Sense nom', pending: cp });
+    }));
+    el.textContent = pending;
+    window.dispatchEvent(new CustomEvent('pending-comments', { detail: { total: pending, byClass } }));
+  } catch (e) { el.textContent = '–'; }
 }
 
 function loadClassesScreen() {
@@ -545,6 +545,23 @@ function loadClassesScreen() {
 }
 
 document.getElementById('classSearch').addEventListener('input', renderClassCards);
+(function setupClassFilter() {
+  const btn = document.getElementById('btnClassFilter');
+  const menu = document.getElementById('classFilterMenu');
+  btn.addEventListener('click', e => { e.stopPropagation(); menu.classList.toggle('hidden'); });
+  menu.addEventListener('click', e => {
+    const b = e.target.closest('button[data-sort]');
+    if (!b) return;
+    _classSort = b.dataset.sort;
+    menu.classList.add('hidden');
+    renderClassCards();
+  });
+  document.addEventListener('click', () => menu.classList.add('hidden'));
+})();
+
+// Exportar i imprimir la graella
+document.getElementById('btnExportClass').addEventListener('click', () => exportExcel());
+document.getElementById('btnPrintClass').addEventListener('click', () => window.print());
 document.getElementById('viewCards').addEventListener('click', () => {
   classesGrid.classList.remove('list-view');
   document.getElementById('viewCards').classList.add('active');
@@ -699,11 +716,12 @@ function createClassModal(){
 modalCreateClassBtn.addEventListener('click', createClassModal);
 
 /* ---------------- Open Class ---------------- */
-function openClass(id){
+function openClass(id, tab){
   currentClassId = id;
   screenClasses.classList.add('hidden');
   screenClass.classList.remove('hidden');
   loadClassData();
+  window.dispatchEvent(new CustomEvent('class-opened', { detail: { id, tab: tab || 'notes' } }));
 }
 
 btnBack.addEventListener('click', ()=> {
@@ -748,8 +766,6 @@ function loadClassData(){
       }
     });
 
-    // Render llista d'alumnes i altres UI
-    renderStudentsList();
   }).catch(e=> console.error(e));
 }
 
@@ -841,6 +857,7 @@ async function sortStudents(field, dir) {
     const b = e.target.closest('button[data-field]');
     if (!b) return;
     menu.classList.add('hidden');
+    btn.childNodes[0].nodeValue = `Ordenar per: ${b.dataset.field === 'cognom' ? 'Cognom' : 'Nom'} ${b.dataset.dir === 'desc' ? '↓' : '↑'} `;
     sortStudents(b.dataset.field, b.dataset.dir);
   });
   document.addEventListener('click', () => menu.classList.add('hidden'));
@@ -881,132 +898,190 @@ async function createActivityModal() {
    // }
 }
 
-/* ---------------- Render Students List amb menú ---------------- */
-function renderStudentsList() {
-  studentsList.innerHTML = '';
-  studentsCount.textContent = `(${classStudents.length})`;
+/* ================================================================
+   ALUMNES DINS DE LA GRAELLA
+   Cada fila de la graella permet: reordenar (arrossegar), editar el nom,
+   introduir l'email, enviar notes i eliminar. El menú de la capçalera
+   «Alumne» permet eliminar o enviar notes a diversos alumnes alhora.
+================================================================ */
+let _studentMode = null; // null | 'delete' | 'send'
 
-  // 🔎 Connectem la barra de cerca
-  const searchInput = document.getElementById('studentSearch');
-  if (searchInput && !searchInput.dataset.bound) {
-    searchInput.addEventListener('input', filterStudentsList);
-    searchInput.dataset.bound = "true"; // Evita duplicar el listener
+function avatarHue(name) {
+  let h = 0;
+  for (const ch of String(name || '')) h = (h * 31 + ch.charCodeAt(0)) % 360;
+  return h;
+}
+function studentInitials(name) {
+  return (String(name || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('') || '?').toUpperCase();
+}
+
+function buildStudentCell(tr, studentId, data) {
+  const name = data.nom || 'Desconegut';
+  const td = document.createElement('td');
+  td.className = 'stu-td';
+  td.innerHTML = `
+    <div class="stu-cell">
+      <span class="drag-handle" draggable="true" title="Arrossega per reordenar">⠿</span>
+      <span class="stu-avatar" style="--hue:${avatarHue(name)}">${esc(studentInitials(name))}</span>
+      <span class="stu-name">${esc(name)}</span>
+      <button class="stu-menu-btn" type="button" aria-label="Opcions de l'alumne">⋮</button>
+    </div>`;
+  tr.dataset.email = data.email || '';
+
+  td.querySelector('.stu-menu-btn').addEventListener('click', e => {
+    e.stopPropagation();
+    openStudentMenu(e.currentTarget, [
+      ['edit', 'Editar nom'],
+      ['email', tr.dataset.email ? 'Canviar email' : 'Introduir email'],
+      ['send', 'Enviar notes'],
+      ['delete', 'Eliminar', 'danger']
+    ], action => studentRowAction(action, studentId, tr));
+  });
+
+  const handle = td.querySelector('.drag-handle');
+  handle.addEventListener('dragstart', e => {
+    e.dataTransfer.setData('text/plain', studentId);
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setDragImage(tr, 20, 20); } catch (_) {}
+    tr.classList.add('dragging');
+  });
+  handle.addEventListener('dragend', () => {
+    tr.classList.remove('dragging');
+    notesTbody.querySelectorAll('.drop-target').forEach(r => r.classList.remove('drop-target'));
+  });
+  tr.addEventListener('dragover', e => { e.preventDefault(); tr.classList.add('drop-target'); });
+  tr.addEventListener('dragleave', () => tr.classList.remove('drop-target'));
+  tr.addEventListener('drop', e => {
+    e.preventDefault();
+    tr.classList.remove('drop-target');
+    const fromId = e.dataTransfer.getData('text/plain');
+    const fromIdx = classStudents.indexOf(fromId);
+    const toIdx = classStudents.indexOf(studentId);
+    if (fromIdx < 0 || toIdx < 0) return;
+    reorderStudents(fromIdx, toIdx);
+  });
+  return td;
+}
+
+// Menú desplegable únic (posició fixa perquè la taula té scroll i el retallaria)
+function openStudentMenu(anchor, items, onPick) {
+  let m = document.getElementById('stuRowMenu');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'stuRowMenu';
+    m.className = 'app-dropdown hidden';
+    document.body.appendChild(m);
+    document.addEventListener('click', () => m.classList.add('hidden'));
+    window.addEventListener('scroll', () => m.classList.add('hidden'), true);
   }
+  m.innerHTML = items.map(([k, label, cls]) =>
+    `<button type="button" data-act="${k}" class="${cls || ''}">${esc(label)}</button>`).join('');
+  m.onclick = e => {
+    const b = e.target.closest('button[data-act]');
+    if (!b) return;
+    m.classList.add('hidden');
+    onPick(b.dataset.act);
+  };
+  const r = anchor.getBoundingClientRect();
+  m.classList.remove('hidden');
+  m.style.position = 'fixed';
+  m.style.top = Math.min(r.bottom + 4, window.innerHeight - m.offsetHeight - 8) + 'px';
+  m.style.left = Math.max(8, Math.min(r.left, window.innerWidth - m.offsetWidth - 8)) + 'px';
+}
 
-  if (classStudents.length === 0) {
-    studentsList.innerHTML = '<li class="text-sm text-gray-400">No hi ha alumnes</li>';
-    return;
+async function studentRowAction(action, studentId, tr) {
+  const name = tr.querySelector('.stu-name')?.textContent || '';
+  if (action === 'edit') {
+    const newName = await promptDialog('Introdueix el nou nom:', name, { title: 'Editar alumne' });
+    if (!newName || newName.trim() === name) return;
+    db.collection('alumnes').doc(studentId).update({ nom: newName.trim() })
+      .then(() => loadClassData())
+      .catch(e => notify('Error editant alumne: ' + e.message, 'error'));
+  } else if (action === 'email') {
+    const newMail = await promptDialog('Introdueix l\'email de ' + name + ':', tr.dataset.email || '', { title: 'Email de l\'alumne' });
+    if (!newMail) return;
+    await db.collection('alumnes').doc(studentId).update({ email: newMail.trim() });
+    tr.dataset.email = newMail.trim();
+    notify('Email guardat.');
+  } else if (action === 'send') {
+    sendNotesTo([studentId]);
+  } else if (action === 'delete') {
+    removeStudent(studentId);
   }
+}
 
-  const ids = Array.from(classStudents);
-  Promise.all(ids.map(id => db.collection('alumnes').doc(id).get())).then(docs => {
-    studentsList.innerHTML = '';
-    docs.forEach((doc, idx) => {
-      const stuId = ids[idx];
-      const data = doc.data() || {};
-      const name = data.nom || 'Desconegut';
-      const email = data.email || '';
-
-      const li = document.createElement('li');
-      li.className = 'flex items-center justify-between bg-gray-50 dark:bg-gray-900 p-2 rounded';
-      li.dataset.studentId = stuId;
-      if (email) li.dataset.email = email;
-
-      li.innerHTML = `
-        <div class="flex items-center gap-3">
-          <span draggable="true" title="Arrossega per reordenar" class="cursor-move text-sm text-gray-500">☰</span>
-          <span class="stu-name font-medium">${esc(name)}</span>
-        </div>
-        <div class="relative">
-          <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white tooltip">⋮</button>
-          <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10">
-            <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
-            <button class="set-email-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700 whitespace-nowrap">Introduir email</button>          
-            <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>
-          </div>
-        </div>
-      `;
-
-      const menuBtn = li.querySelector('.menu-btn');
-      const menu = li.querySelector('.menu');
-
-      menuBtn.addEventListener('click', e => {
-        e.stopPropagation();
-        document.querySelectorAll('.menu').forEach(m => m.classList.add('hidden'));
-        menu.classList.toggle('hidden');
-      });
-
-      // EDITAR
-      li.querySelector('.edit-btn').addEventListener('click', async () => {
-        const newName = await promptDialog('Introdueix el nou nom:', name);
-        if (!newName || newName.trim() === name) return;
-        db.collection('alumnes').doc(stuId).update({ nom: newName.trim() })
-          .then(() => loadClassData())
-          .catch(e => notify('Error editant alumne: ' + e.message));
-      });
-
-      // INTRODUIR EMAIL
-      li.querySelector('.set-email-btn').addEventListener('click', async () => {
-        const current = li.dataset.email || '';
-        const newMail = await promptDialog("Introdueix email:", current);
-        if (!newMail) return;
-
-        await db.collection('alumnes').doc(stuId).update({ email: newMail.trim() });
-        li.dataset.email = newMail.trim();
-        notify("Email guardat.");
-      });
-
-      // ELIMINAR
-      li.querySelector('.delete-btn').addEventListener('click', () => removeStudent(stuId));
-
-      // DRAG
-      const dragHandle = li.querySelector('[draggable]');
-      dragHandle.addEventListener('dragstart', e => {
-        e.dataTransfer.setData('text/plain', idx);
-      });
-      li.addEventListener('dragover', e => e.preventDefault());
-      li.addEventListener('drop', e => {
-        e.preventDefault();
-        const fromIdx = Number(e.dataTransfer.getData('text/plain'));
-        reorderStudents(fromIdx, idx);
-      });
-
-      studentsList.appendChild(li);
-
-      // SI EL MODE ENVIAR NOTES ÉS ACTIU → AFEGIU CHECKBOXES
-      if (window.__sendNotesModeActive) {
-        showSendModeCheckboxes();
-        showExitSendNotesButton();
-      }
-    });
-  }).catch(e => {
-    console.error('Error carregant alumnes', e);
-    studentsList.innerHTML = '<li class="text-sm text-red-500">Error carregant alumnes</li>';
+// Menú de la capçalera «Alumne»
+function openStudentHeadMenu(anchor) {
+  openStudentMenu(anchor, [
+    ['add', 'Afegir alumne'],
+    ['send', 'Enviar notes (massiu)'],
+    ['delete', 'Eliminar alumnes (massiu)', 'danger']
+  ], a => {
+    if (a === 'add') openModal('modalAddStudent');
+    else setStudentMode(a);
   });
 }
 
-/* ================================
-   MENÚ GLOBAL D'ALUMNES
-================================= */
+document.getElementById('btnStudentsMenu')?.addEventListener('click', e => { e.stopPropagation(); openStudentHeadMenu(e.currentTarget); });
 
-const studentsMenuBtn = document.getElementById('studentsMenuBtn');
-const studentsMenu = document.getElementById('studentsMenu');
-const deleteStudentsModeBtn = document.getElementById('deleteStudentsModeBtn');
+function setStudentMode(mode) {
+  _studentMode = mode;
+  applyStudentMode();
+}
 
-studentsMenuBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    studentsMenu.classList.toggle('hidden');
-});
+// (Re)pinta checkboxes i barra d'accions segons el mode actiu
+function applyStudentMode() {
+  const rows = [...notesTbody.querySelectorAll('tr[data-student-id]')];
+  rows.forEach(tr => {
+    const cell = tr.querySelector('.stu-cell');
+    if (!cell) return;
+    let cb = cell.querySelector('.stu-check');
+    if (_studentMode && !cb) {
+      cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.className = 'stu-check';
+      cell.insertBefore(cb, cell.firstChild);
+    } else if (!_studentMode && cb) {
+      cb.remove();
+    }
+    const mb = cell.querySelector('.stu-menu-btn');
+    if (mb) mb.style.visibility = _studentMode ? 'hidden' : '';
+  });
 
-// Tancar menús quan es clica fora
-document.addEventListener('click', () => {
-    studentsMenu.classList.add('hidden');
-});
+  document.getElementById('studentsModeBar')?.remove();
+  if (!_studentMode) return;
 
-/* 🔥 Activar mode d'eliminació múltiple */
-// (un únic handler: veure activateDeleteStudentsMode al final del fitxer)
+  const bar = document.createElement('div');
+  bar.id = 'studentsModeBar';
+  bar.className = _studentMode === 'delete' ? 'mode-bar danger' : 'mode-bar';
+  bar.innerHTML = `
+    <label><input type="checkbox" id="stuCheckAll"> Tots</label>
+    <span class="mode-hint">${_studentMode === 'delete' ? 'Selecciona els alumnes a eliminar' : 'Selecciona els alumnes als quals enviar les notes'}</span>
+    <button type="button" id="stuModeGo" class="btn ${_studentMode === 'delete' ? 'btn-danger' : 'btn-primary'}">${_studentMode === 'delete' ? 'Eliminar' : 'Enviar notes'}</button>
+    <button type="button" id="stuModeCancel" class="btn btn-ghost">Cancel·lar</button>`;
+  document.getElementById('gridWrapper').before(bar);
 
-
+  bar.querySelector('#stuCheckAll').addEventListener('change', e => {
+    notesTbody.querySelectorAll('.stu-check').forEach(c => { c.checked = e.target.checked; });
+  });
+  bar.querySelector('#stuModeCancel').addEventListener('click', () => setStudentMode(null));
+  bar.querySelector('#stuModeGo').addEventListener('click', async () => {
+    const ids = [...notesTbody.querySelectorAll('.stu-check:checked')]
+      .map(c => c.closest('tr')?.dataset.studentId).filter(Boolean);
+    if (!ids.length) { notify('No hi ha alumnes seleccionats.'); return; }
+    if (_studentMode === 'delete') {
+      if (!await confirmDialog(`Eliminar ${ids.length} alumne${ids.length === 1 ? '' : 's'}? Aquesta acció no es pot desfer.`, { title: 'Eliminar alumnes', okText: 'Sí, eliminar', danger: true })) return;
+      try {
+        await deleteStudentsByIds(ids);
+        setStudentMode(null);
+        loadClassData();
+      } catch (e) { notify('Error eliminant alumnes: ' + e.message, 'error'); }
+    } else {
+      await sendNotesTo(ids);
+      setStudentMode(null);
+    }
+  });
+}
 
 /* ---------------- Notes Grid amb menú activitats ---------------- */
 let _gridCalculated = {};
@@ -1019,7 +1094,10 @@ async function renderNotesGrid() {
 
   // Capçalera alumne
   const headRow = document.createElement('tr');
-  headRow.appendChild(th('Alumne'));
+  const thName = th('');
+  thName.innerHTML = `<div class="th-student"><span>Alumne</span><small id="studentsCount"></small><button type="button" id="stuHeadMenuBtn" class="stu-menu-btn" aria-label="Opcions d'alumnes">⋮</button></div>`;
+  thName.querySelector('#stuHeadMenuBtn').addEventListener('click', e => { e.stopPropagation(); openStudentHeadMenu(e.currentTarget); });
+  headRow.appendChild(thName);
 
   // ⚡ OPTIMITZACIÓ: Llançar totes les lectures en paral·lel (classDoc + actDocs + studentDocs)
   // Abans: 3 rondes sequencials → ara: 1 sola ronda concurrent
@@ -1233,10 +1311,7 @@ menuDiv.querySelector('.delete-btn').addEventListener('click', () => {
     const tr = document.createElement('tr');
     tr.dataset.studentId = studentId;
 
-    const tdName = document.createElement('td');
-    tdName.className = 'border px-2 py-1';
-    tdName.textContent = studentData.nom;
-    tdName.dataset.initials = (String(studentData.nom || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('') || '?').toUpperCase();
+    const tdName = buildStudentCell(tr, studentId, studentData);
     tr.appendChild(tdName);
 
     // Per cada activitat afegim la cel·la i l'input
@@ -1370,10 +1445,10 @@ input.addEventListener('keydown', e => {
     
     // Obtener comentario guardado
     const comment = studentData.comentarios?.[currentClassId] || '';
-    const displayComment = comment ? comment.split(' ')[0] + (comment.split(' ').length > 1 ? '...' : '') : '(sense comentari)';
+    const displayComment = comment || 'Sense comentari';
     
     // Crear un contenedor para ocultar el cálculo pero mostrar el comentario
-    commentTd.innerHTML = `<span style="display: block;">${esc(displayComment)}</span>`;
+    commentTd.innerHTML = `<span class="cm-cell${comment ? '' : ' empty'}">${ICON_CHAT}<span>${esc(displayComment)}</span></span>`;
     commentTd.title = comment || 'Fes clic per afegir comentari';
     
     // Click para abrir modal de comentarios
@@ -1391,10 +1466,13 @@ input.addEventListener('keydown', e => {
  // Final: recalculs de mitjanes i fila fórmules (igual que abans)
   renderAverages();
   _gridCalculated = calculatedActs;
+  const cnt = document.getElementById('studentsCount');
+  if (cnt) cnt.textContent = `(${classStudents.length})`;
+  applyStudentMode();
   const meta = document.getElementById('classMeta');
   if (meta) meta.textContent = `${classStudents.length} alumnes · ${classActivities.length} activitats`;
   const badge = document.getElementById('classBadge');
-  if (badge) badge.textContent = classVisual(document.getElementById('classTitle').textContent).ico;
+  if (badge) badge.innerHTML = classVisual(document.getElementById('classTitle').textContent).svg;
   window.dispatchEvent(new CustomEvent('grid-rendered', { detail: { classId: currentClassId } }));
 }
 
@@ -1404,7 +1482,7 @@ const gridStudentSearch = document.getElementById('gridStudentSearch');
 gridStudentSearch.addEventListener('input', () => {
   const filter = gridStudentSearch.value.toLowerCase();
   notesTbody.querySelectorAll('tr').forEach(tr => {
-    const studentName = tr.children[0].textContent.toLowerCase();
+    const studentName = (tr.querySelector('.stu-name')?.textContent || tr.children[0].textContent).toLowerCase();
     tr.style.display = studentName.includes(filter) ? '' : 'none';
   });
 });
@@ -2384,15 +2462,6 @@ async function addImportedStudents(names) {
   }
 }
 
-// --------------Botó per tancar la llista d'alumnes mòbil
-const closeBtn = document.getElementById('closeStudentsMobile');
-if (closeBtn) {
-  closeBtn.addEventListener('click', () => {
-    const container = document.getElementById('studentsListContainer');
-    container.classList.remove('mobile-open');
-  });
-}
-
 // ----------------------Fer funcionar el botó + (afegir terme)
 const btnAddTerm = document.getElementById('btnAddTerm');
 btnAddTerm.addEventListener('click', async () => {
@@ -2536,248 +2605,9 @@ async function exportExcel(){
 }
 
 
-//----------------------activar eliminar estudiants--------------------
-function activateDeleteStudentsMode() {
-    studentsMenu.classList.add('hidden');
-    if (document.getElementById('studentsDeleteFooter')) return; // ja actiu
-    isDeleteMode = true;
-
-    document.querySelectorAll('#studentsList li').forEach(li => {
-        const menuContainer = li.querySelector('.relative');
-        const menuBtn = li.querySelector('.menu-btn');
-        if (menuBtn) menuBtn.style.display = 'none';
-        if (menuContainer && !li.querySelector('.stu-check')) {
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.className = 'stu-check ml-2';
-            menuContainer.appendChild(checkbox);
-        }
-    });
-
-    const footer = document.createElement('div');
-    footer.id = 'studentsDeleteFooter';
-    footer.className = 'mt-3 p-2 bg-red-50 border border-red-200 rounded flex justify-between items-center';
-    footer.innerHTML = `
-        <div>
-            <label><input type="checkbox" id="selectAllStudents"> Tots</label>
-        </div>
-        <button id="confirmDeleteStudents" class="bg-red-600 text-white px-3 py-1 rounded">
-            Eliminar
-        </button>
-    `;
-    document.getElementById('studentsList').after(footer);
-
-    document.getElementById('selectAllStudents').addEventListener('change', e => {
-        document.querySelectorAll('.stu-check').forEach(ch => ch.checked = e.target.checked);
-    });
-    document.getElementById('confirmDeleteStudents').addEventListener('click', deleteSelectedStudents);
-
-    const cancelBtn = document.getElementById('cancelDeleteStudentsBtn');
-    if (cancelBtn) cancelBtn.style.display = 'inline-block';
-}
-
-//----------------------funcio eliminar seleccionats (per ID, no per posició)--------------------
-async function deleteSelectedStudents() {
-    const ids = [...document.querySelectorAll('.stu-check:checked')]
-        .map(ch => ch.closest('li')?.dataset.studentId)
-        .filter(Boolean);
-
-    if (ids.length === 0) {
-        notify('No hi ha alumnes seleccionats.');
-        return;
-    }
-    if (!await confirmDialog(`Eliminar ${ids.length} alumnes?`)) return;
-
-    try {
-        await deleteStudentsByIds(ids);
-        exitDeleteStudentsMode();
-        loadClassData();
-    } catch (e) {
-        notify('Error eliminant alumnes: ' + e.message);
-    }
-}
-
-//---------------sortit mode eliminacio----------------------------
-function exitDeleteStudentsMode() {
-    isDeleteMode = false;
-    const footer = document.getElementById('studentsDeleteFooter');
-    if (footer) footer.remove();
-    document.querySelectorAll('.stu-check').forEach(ch => ch.remove());
-    document.querySelectorAll('#studentsList li .menu-btn').forEach(btn => {
-        btn.style.display = 'inline-block';
-    });
-    const cancelBtn = document.getElementById('cancelDeleteStudentsBtn');
-    if (cancelBtn) cancelBtn.style.display = 'none';
-}
-
-deleteStudentsModeBtn.addEventListener('click', activateDeleteStudentsMode);
-document.getElementById('cancelDeleteStudentsBtn').addEventListener('click', exitDeleteStudentsMode);
-
 // ----------- SCRIPT PER MARCAR USUARIS COM A ADMIN -----------
 // ELIMINAT: setAdmins() s'ha mogut al panell d'administrador (administrador.js)
 // ja que requeria permisos de 'list' sobre /professors que no tenen usuaris normals.
-
-//----------------nou
-function filterStudentsList() {
-  const text = studentSearch.value.toLowerCase();
-
-  document.querySelectorAll('#studentsList li').forEach(li => {
-    const name = li.querySelector('.stu-name')?.innerText.toLowerCase() || "";
-    li.style.display = name.includes(text) ? "" : "none";
-  });
-}
-
-/* ---------------------- MODE ENVIAR NOTES ---------------------- */
-window.__sendNotesModeActive = false;
-
-// Afegim l’opció al menú global dels alumnes
-(function attachGlobalStudentsMenuOption(){
-  const studentsMenu = document.getElementById('studentsMenu');
-  if (!studentsMenu) return;
-
-  if (!studentsMenu.querySelector('.send-notes-mode-btn')) {
-    const btn = document.createElement('button');
-    btn.className = 'send-notes-mode-btn px-3 py-1 w-full text-left hover:bg-gray-100';
-    btn.textContent = 'Enviar notes';
-    btn.addEventListener('click', () => {
-      toggleSendNotesMode();
-      studentsMenu.classList.add('hidden');
-    });
-    studentsMenu.appendChild(btn);
-  }
-})();
-
-// -------------------- FUNCIONS DE MODE ENVIAR NOTES --------------------
-function toggleSendNotesMode() {
-  window.__sendNotesModeActive = !window.__sendNotesModeActive;
-
-  if (window.__sendNotesModeActive) {
-    showSendModeCheckboxes();
-    showSendSelectedButton();
-    showExitSendNotesButton();
-  } else {
-    hideSendModeCheckboxes();
-    hideSendSelectedButton();
-    hideExitSendNotesButton();
-  }
-}
-
-// Mostrar checkboxes a la dreta (al lloc dels tres puntets) i amagar els tres puntets
-function showSendModeCheckboxes() {
-  document.querySelectorAll('#studentsList li').forEach(li => {
-    if (li.querySelector('.send-note-checkbox')) return;
-
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.className = 'send-note-checkbox';
-    cb.style.marginLeft = '8px';
-    cb.style.marginRight = '0';
-    cb.style.cursor = 'pointer';
-
-    // Amaguem els tres puntets
-    const menuBtn = li.querySelector('.menu-btn');
-    if (menuBtn) menuBtn.style.display = 'none';
-
-    // Afegim el checkbox a la dreta
-    const rightDiv = li.querySelector('div.relative');
-    rightDiv.insertBefore(cb, rightDiv.firstChild);
-  });
-}
-
-// Amagar checkboxes i tornar a mostrar els tres puntets
-function hideSendModeCheckboxes() {
-  document.querySelectorAll('.send-note-checkbox').forEach(cb => {
-    const li = cb.closest('li');
-    const menuBtn = li.querySelector('.menu-btn');
-    if (menuBtn) menuBtn.style.display = '';
-    cb.remove();
-  });
-}
-
-// Botó i checkbox "Enviar notes + Tots"
-function showSendSelectedButton() {
-  const container = document.getElementById('studentsListContent');
-  if (!container) return;
-  if (document.getElementById('sendNotesRow')) return; // evita duplicar
-
-  // Crear fila flexible
-  const row = document.createElement('div');
-  row.id = 'sendNotesRow';
-  row.style.display = 'flex';
-  row.style.gap = '0.5rem';
-  row.style.marginBottom = '0.5rem';
-
-  // Botó "Enviar notes"
-  const btn = document.createElement('button');
-  btn.textContent = 'Enviar notes';
-  btn.style.flex = '1';
-  btn.className = 'bg-blue-600 text-white px-3 py-2 rounded font-semibold';
-  btn.addEventListener('click', sendSelectedNotes);
-
-  // Checkbox "Tots"
-  const cbAllContainer = document.createElement('label');
-  cbAllContainer.style.flex = '1';
-  cbAllContainer.style.display = 'flex';
-  cbAllContainer.style.alignItems = 'center';
-  cbAllContainer.style.gap = '0.5rem';
-  cbAllContainer.style.cursor = 'pointer';
-
-  const cbAll = document.createElement('input');
-  cbAll.type = 'checkbox';
-  cbAll.id = 'checkAllStudents';
-
-  const cbAllText = document.createElement('span');
-  cbAllText.textContent = 'Tots';
-
-  cbAllContainer.appendChild(cbAll);
-  cbAllContainer.appendChild(cbAllText);
-
-  // Quan canviï el checkbox "Tots", marcar/desmarcar tots
-  cbAll.addEventListener('change', () => {
-    const allCheckboxes = document.querySelectorAll('.send-note-checkbox');
-    allCheckboxes.forEach(cb => cb.checked = cbAll.checked);
-  });
-
-  row.appendChild(btn);
-  row.appendChild(cbAllContainer);
-
-  // Inserim just abans de la llista d'alumnes
-  const studentsList = document.getElementById('studentsList');
-  container.insertBefore(row, studentsList);
-}
-
-// Amagar la fila quan sortim del mode
-function hideSendSelectedButton() {
-  document.getElementById('sendNotesRow')?.remove();
-}
-
-
-// Botó "X vermella" per sortir del mode enviar notes
-function showExitSendNotesButton() {
-  const menuContainer = document.querySelector('#studentsListContent .flex.items-center.justify-between .relative');
-  if (!menuContainer) return;
-  if (document.getElementById('btnExitSendNotes')) return;
-
-  // Assegura que el container sigui flex horitzontal
-  menuContainer.style.display = 'flex';
-  menuContainer.style.alignItems = 'center';
-  menuContainer.style.gap = '4px'; // una mica d'espai entre la X i els tres puntets
-
-  const btn = document.createElement('button');
-  btn.id = 'btnExitSendNotes';
-  btn.className = 'text-white bg-red-600 rounded-full w-6 h-6 flex items-center justify-center cursor-pointer';
-  btn.textContent = '×';
-  btn.title = 'Sortir del mode enviar notes';
-  btn.addEventListener('click', toggleSendNotesMode);
-
-  const menuBtn = menuContainer.querySelector('#studentsMenuBtn');
-  menuContainer.insertBefore(btn, menuBtn); // Ara quedarà just a l'esquerra dels tres puntets
-}
-
-
-function hideExitSendNotesButton() {
-  document.getElementById('btnExitSendNotes')?.remove();
-}
 
 // Funció per formatar les notes d’un alumne per enviar per mail------------------------------
 
@@ -2809,44 +2639,34 @@ async function formatStudentNotesForEmail(studentId) {
   return lines.join('\n');
 }
 
-//-------Enviar notes seleccionades
-async function sendSelectedNotes() {
-  const checked = [...document.querySelectorAll('.send-note-checkbox:checked')];
-  if (!checked.length) {
-    notify("Selecciona algun alumne.");
-    return;
-  }
-
+//-------Enviar notes (a un o diversos alumnes, per id)
+async function sendNotesTo(ids) {
+  if (!ids.length) { notify('Selecciona algun alumne.'); return; }
   let sent = 0;
   const failed = [];
-  for (const cb of checked) {
-    const li = cb.closest('li');
-    const studentId = li.dataset.studentId;
-
-    let email = li.dataset.email || '';
+  for (const studentId of ids) {
+    const tr = notesTbody.querySelector(`tr[data-student-id="${CSS.escape(studentId)}"]`);
+    if (!tr) continue;
+    const name = tr.querySelector('.stu-name')?.textContent || '';
+    let email = tr.dataset.email || '';
 
     // Si no hi ha email → demanar-lo
     if (!email) {
-      const newMail = await promptDialog(`Email per ${li.querySelector('.stu-name').textContent}:`);
+      const newMail = await promptDialog(`Email per ${name}:`, '', { title: 'Email de l\'alumne' });
       if (!newMail) continue;
-
       email = newMail.trim();
-      li.dataset.email = email;
-
+      tr.dataset.email = email;
       await db.collection('alumnes').doc(studentId).update({ email });
     }
 
     const body = await formatStudentNotesForEmail(studentId);
-    const subject = `Notes de ${li.querySelector('.stu-name').textContent}`;
-
     try {
-      await gmailSendEmail(email, subject, body);
+      await gmailSendEmail(email, `Notes de ${name}`, body);
       sent++;
     } catch (e) {
       console.error(e);
-      failed.push(`${li.querySelector('.stu-name').textContent}: ${e.message}`);
+      failed.push(`${name}: ${e.message}`);
     }
-
     await new Promise(r => setTimeout(r, 200));
   }
   notify(failed.length
@@ -2927,6 +2747,7 @@ window.showSaveError = showSaveError;
 // Substitueix els window.currentClassId & cia. que ningú assignava, i els
 // MutationObserver/setInterval: els mòduls escolten 'grid-rendered' i consulten aquesta API.
 window.AvaluApp = {
+  openClass: (id, tab) => openClass(id, tab),
   getClassId: () => currentClassId,
   getClassData: () => _classData,
   getCalculatedActivities: () => _gridCalculated,
