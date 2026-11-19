@@ -602,13 +602,13 @@ function parteixNom(full, ordre) {
   if (full.includes(',')) {                       // «Cognoms, Nom»
     const [cog, nom] = full.split(',').map(x => x.trim());
     const c = cog.split(/\s+/);
-    return { nom: nom || '', cognom1: c[0] || '', cognom2: c.slice(1).join(' ') };
+    return { nom: nom || '', cognom1: c.join(' ') };
   }
   const p = full.split(/\s+/).filter(Boolean);
   if (ordre === 'cn' && p.length > 1) {
-    return { nom: p[p.length - 1], cognom1: p[0], cognom2: p.slice(1, -1).join(' ') };
+    return { nom: p[p.length - 1], cognom1: p.slice(0, -1).join(' ') };
   }
-  return { nom: p[0] || '', cognom1: p[1] || '', cognom2: p.slice(2).join(' ') };
+  return { nom: p[0] || '', cognom1: p.slice(1).join(' ') };
 }
 function nomPartsHTML() {
   if (!_ctx?.studentName) return '';
@@ -616,21 +616,21 @@ function nomPartsHTML() {
   const pt = parteixNom(_ctx.studentName, ordre);
   const prefs = _prefsNom();
   const mk = (key, label, val) => val ? `
-    <label class="flex items-center gap-2 text-sm cursor-pointer">
+    <label class="nom-chip flex items-center gap-2 text-sm cursor-pointer">
       <input type="checkbox" class="nom-part-check w-4 h-4 accent-violet-600" data-key="${key}" data-val="${esc(_cap(val))}" ${prefs[key] ? 'checked' : ''}>
-      <span class="font-semibold text-violet-900" translate="no">${esc(_cap(val))}</span>
+      <span class="nm font-semibold" translate="no">${esc(_cap(val))}</span>
       <span class="text-gray-400 text-xs">(${label})</span>
     </label>` : '';
   return `<div class="border-t border-gray-200 pt-3">
     <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
       <div class="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Mostrar al comentari</div>
-      <label class="text-xs text-gray-500 flex items-center gap-2">Format del nom a la llista
+      <label class="nom-chip text-xs text-gray-500 flex items-center gap-2">Format del nom a la llista
         <select id="tutoriaNomOrdre" class="border border-gray-300 rounded-lg px-2 py-1 text-xs">
           <option value="nc" ${ordre === 'nc' ? 'selected' : ''}>Nom Cognoms</option>
           <option value="cn" ${ordre === 'cn' ? 'selected' : ''}>Cognoms Nom</option>
         </select></label>
     </div>
-    <div class="flex gap-4 flex-wrap">${mk('nom', 'nom', pt.nom)}${mk('cognom1', '1r cognom', pt.cognom1)}${mk('cognom2', '2n cognom', pt.cognom2)}</div></div>`;
+    <div class="flex gap-4 flex-wrap">${mk('nom', 'nom', pt.nom)}${mk('cognom1', 'cognoms', pt.cognom1)}</div></div>`;
 }
 function wireNomParts(modal) {
   const box = modal.querySelector('#nomPartsBox');

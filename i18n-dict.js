@@ -479,6 +479,7 @@ export const SUBJECTS = [
 
 /* Textos amb valors dins: $1, $2… són els grups capturats. */
 export const PATTERNS = [
+[/^\(cognoms\)$/, "(apellidos)", "(surnames)"],
 [/^(\d+) de (\d+) activitats$/, "$1 de $2 actividades", "$1 of $2 assignments"],
 [/^\(nom\)$/, "(nombre)", "(first name)"],
 [/^\(1r cognom\)$/, "(1.er apellido)", "(1st surname)"],
