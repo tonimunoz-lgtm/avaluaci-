@@ -10,6 +10,7 @@ let _tutoriaUID = null;
 let _tutoriaDB = null;
 let _materiesExtra = { eso: [], batxillerat: [] }; // carregades de Firestore
 let _apartatsExtra = []; // [{id, nom, opcions:[{valor,label,color}]}]
+let _ctx = null; // {studentId, studentName, classId} quan s'obre des d'una cel·la de comentari
 
 // ============================================================
 // ASSIGNATURES BASE (CURRICULUM CATALUNYA)
@@ -76,7 +77,7 @@ function injectTutoriaButton() {
   btn.className = 'bg-rose-500 hover:bg-rose-600 text-white px-3 py-1 rounded font-semibold text-sm flex items-center gap-1 transition-colors';
   btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M4 5h16v11H11l-4 4v-4H4z"/><path d="M8.5 10.5h.01M12 10.5h.01M15.5 10.5h.01"/></svg><span class="lbl">Comentaris</span>';
   btn.title = 'Generar comentaris de butlletí per a les famílies';
-  btn.addEventListener('click', openTutoriaModal);
+  btn.addEventListener('click', () => openTutoriaModal());
   btnAddActivity.parentNode.insertBefore(btn, btnAddActivity.nextSibling);
   
 }
@@ -113,19 +114,21 @@ async function guardarDadesUsuari() {
 // ============================================================
 // OBRIR MODAL
 // ============================================================
-async function openTutoriaModal() {
+async function openTutoriaModal(ctx) {
+  _ctx = (ctx && ctx.studentId) ? ctx : null;
   document.getElementById('tutoriaModal')?.remove();
   await carregarDadesUsuari();
 
   const modal = document.createElement('div');
   modal.id = 'tutoriaModal';
-  modal.className = 'fixed inset-0 flex items-center justify-center z-[9999] bg-black bg-opacity-60 p-4';
+  modal.className = 'fixed inset-0 flex items-center justify-center z-[10000] bg-black bg-opacity-60 p-4';
   modal.innerHTML = buildModalHTML();
   document.body.appendChild(modal);
   initModalInteractions(modal);
   { const sel = modal.querySelector('#tutoriaIdioma'); const l = window.AvaluConfig?.get().idioma; if (sel && l) sel.value = l; }
   omplirAlumnesDesar(modal);
 }
+window.openTutoriaModal = openTutoriaModal;
 
 // ============================================================
 // CONSTRUIR HTML DEL MODAL
@@ -138,7 +141,7 @@ function buildModalHTML() {
     <div class="sticky top-0 bg-rose-500 text-white px-6 py-4 rounded-t-2xl flex justify-between items-center z-10">
       <div>
         <h2 class="text-xl font-bold">📋 Generador de comentaris de tutoria</h2>
-        <p class="text-rose-100 text-sm">Omple el formulari i la IA crearà un comentari per al butlletí</p>
+        <p class="text-rose-100 text-sm">${_ctx ? `Alumne/a: <b translate="no">${esc(_ctx.studentName || '')}</b>` : 'Omple el formulari i la IA crearà un comentari per al butlletí'}</p>
       </div>
       <button id="btnCloseTutoria" class="text-white hover:text-rose-200 text-3xl leading-none font-bold">✕</button>
     </div>
@@ -156,8 +159,8 @@ function buildModalHTML() {
             <input type="radio" name="genere" value="noia" class="sr-only">👧 Noia (La...)
           </label>
         </div>
-        <input id="tutoriaNom" type="text" placeholder="Nom de l'alumne/a (ex: Toni, Júlia...)"
-          class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-rose-400 focus:outline-none text-sm">
+        ${_ctx ? nomPartsHTML() : `<input id="tutoriaNom" type="text" placeholder="Nom de l'alumne/a (ex: Toni, Júlia...)"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-rose-400 focus:outline-none text-sm">`}
       </div>
 
       <!-- TRIMESTRE -->
@@ -359,7 +362,7 @@ function buildModalHTML() {
         <div class="mt-3 bg-white border border-rose-200 rounded-xl p-3">
           <label class="block text-xs font-bold text-gray-600 mb-2">💾 Desar com a comentari de l'alumne (al període d'avaluació triat)</label>
           <div class="flex gap-2">
-            <select id="tutoriaSaveStudent" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"></select>
+            ${_ctx ? '<div class="flex-1 text-sm text-gray-700 self-center" translate="no">' + esc(_ctx.studentName || '') + '</div><input type="hidden" id="tutoriaSaveStudent" value="' + esc(_ctx.studentId) + '">' : '<select id="tutoriaSaveStudent" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"></select>'}
             <button id="btnGuardarComentari" type="button" class="bg-rose-500 hover:bg-rose-600 text-white font-semibold px-4 py-2 rounded-lg text-sm">Desar</button>
           </div>
           <p id="tutoriaSaveInfo" class="text-xs text-gray-500 mt-2"></p>
@@ -412,7 +415,7 @@ function renderApartatsExtra() {
 // Moment d'avaluació = grups creats a la classe (value = id del grup)
 function buildTrimOptions() {
   const terms = window.AvaluApp?.getTerms?.() || [];
-  const cur = window.AvaluApp?.getActiveTermId?.();
+  const cur = (_ctx && window.AvaluApp?.getCommentTermId?.()) || window.AvaluApp?.getActiveTermId?.();
   if (!terms.length) {
     return ['1r Trimestre', '2n Trimestre', '3r Trimestre', 'Final de curs']
       .map(n => buildOption('trimestre', n.toLowerCase(), n, 'blue')).join('');
@@ -520,7 +523,7 @@ function initModalInteractions(modal) {
 async function omplirAlumnesDesar(modal) {
   const sel = modal.querySelector('#tutoriaSaveStudent');
   const ids = window.AvaluApp?.getStudentIds?.() || [];
-  if (!sel) return;
+  if (!sel || _ctx) return;
   if (!ids.length || !_tutoriaDB) { sel.innerHTML = '<option value="">(obre una classe per poder desar)</option>'; return; }
   const docs = await Promise.all(ids.map(id => _tutoriaDB.collection('alumnes').doc(id).get()));
   sel.innerHTML = '<option value="">— Tria l\'alumne —</option>' +
@@ -539,7 +542,7 @@ async function guardarComentariAlumne(modal, btn) {
   const sid = modal.querySelector('#tutoriaSaveStudent')?.value;
   const text = modal.querySelector('#tutoriaComentariText')?.textContent?.trim();
   const info = modal.querySelector('#tutoriaSaveInfo');
-  const classId = window.AvaluApp?.getClassId?.();
+  const classId = _ctx?.classId || window.AvaluApp?.getClassId?.();
   if (!sid) { notify('Tria l\'alumne al qual vols desar el comentari.'); return; }
   if (!text || text.includes('La IA està') || text.startsWith('❌')) return;
   const terms = window.AvaluApp?.getTerms?.() || [];
@@ -551,10 +554,39 @@ async function guardarComentariAlumne(modal, btn) {
       termId ? { [`comentarisTrim.${classId}.${termId}`]: text } : { [`comentarios.${classId}`]: text });
     const tn = terms.find(t => t.id === termId)?.name;
     if (info) info.textContent = `✅ Desat${tn ? ' a «' + tn + '»' : ''}.`;
+    const ta = document.getElementById('commentTextarea');
+    if (_ctx && ta) { ta.value = text; ta.dispatchEvent(new Event('input')); }
     if (typeof window.renderNotesGrid === 'function') window.renderNotesGrid();
+    if (_ctx) setTimeout(() => modal.remove(), 700);
   } catch (e) {
     notify('Error desant el comentari: ' + e.message);
   } finally { btn.disabled = false; }
+}
+
+// ============================================================
+// NOM DE L'ALUMNE (mode cel·la): quines parts del nom es mostren al comentari
+// ============================================================
+const _cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+const _prefsNom = () => { try { return JSON.parse(localStorage.getItem('uc_nom_parts') || '{"nom":true,"cognom1":false,"cognom2":false}'); } catch { return { nom: true, cognom1: false, cognom2: false }; } };
+function nomPartsHTML() {
+  const p = (_ctx.studentName || '').trim().split(/\s+/);
+  const prefs = _prefsNom();
+  const mk = (key, label, val) => val ? `
+    <label class="flex items-center gap-2 text-sm cursor-pointer">
+      <input type="checkbox" class="nom-part-check w-4 h-4 accent-violet-600" data-key="${key}" data-val="${esc(_cap(val))}" ${prefs[key] ? 'checked' : ''}>
+      <span class="font-semibold text-violet-900" translate="no">${esc(_cap(val))}</span>
+      <span class="text-gray-400 text-xs">(${label})</span>
+    </label>` : '';
+  return `<div class="border-t border-gray-200 pt-3">
+    <div class="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-2">Mostrar al comentari</div>
+    <div class="flex gap-4 flex-wrap">${mk('nom', 'nom', p[0])}${mk('cognom1', '1r cognom', p[1])}${mk('cognom2', '2n cognom', p[2])}</div></div>`;
+}
+function nomSegonsChecks(modal) {
+  const prefs = {};
+  const parts = [];
+  modal.querySelectorAll('.nom-part-check').forEach(c => { prefs[c.dataset.key] = c.checked; if (c.checked) parts.push(c.dataset.val); });
+  try { localStorage.setItem('uc_nom_parts', JSON.stringify({ ..._prefsNom(), ...prefs })); } catch {}
+  return parts.join(' ');
 }
 
 // ============================================================
@@ -732,7 +764,7 @@ function recollidaDades(modal) {
     return el ? el.value : null;
   };
 
-  const nom   = modal.querySelector('#tutoriaNom').value.trim() || 'l\'alumne/a';
+  const nom   = (_ctx ? nomSegonsChecks(modal) : modal.querySelector('#tutoriaNom').value.trim()) || 'l\'alumne/a';
   const curs  = modal.querySelector('#tutoriaCurs').value.trim();
   const idioma = modal.querySelector('#tutoriaIdioma').value;
   const puntsForts    = modal.querySelector('#tutoriaPuntsForts').value.trim();
@@ -864,7 +896,7 @@ Escriu NOMÉS el comentari final, sense títol ni explicació.`;
 // ============================================================
 async function generarComentari(modal) {
   const dades = recollidaDades(modal);
-  if (!dades.nom || dades.nom === 'l\'alumne/a') {
+  if (!_ctx && (!dades.nom || dades.nom === 'l\'alumne/a')) {
     notify('⚠️ Si us plau, escriu el nom de l\'alumne/a'); return;
   }
 
@@ -878,9 +910,9 @@ async function generarComentari(modal) {
   comentariText.innerHTML = '<span class="text-gray-400 italic">La IA està escrivint el comentari...</span>';
 
   try {
-    const text = await window.aiGenerate(buildPrompt(dades), [dades.nom]);
+    const text = await window.aiGenerate(buildPrompt(dades), _ctx ? [_ctx.studentName, dades.nom] : [dades.nom]);
     comentariText.textContent = text || 'No s\'ha pogut generar el comentari.';
-    triaAlumneSegonsNom(modal);
+    if (!_ctx) triaAlumneSegonsNom(modal);
     resultatDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   } catch (err) {
     console.error('Error:', err);

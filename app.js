@@ -1239,15 +1239,8 @@ await renderNotesGrid();
 
 
 
-    // Icona refrescar (només si és calculada)
-    const refreshIcon = document.createElement('span');
-    refreshIcon.innerHTML = REFRESH_SVG;
-    refreshIcon.title = 'Refrescar columna';
-    refreshIcon.className = 'ml-2 cursor-pointer hidden';
-    if (calculatedActs[id]?.calculated) refreshIcon.classList.remove('hidden');
 
-    refreshIcon.addEventListener('click', async (e) => {
-      e.stopPropagation();
+    const recalcColumn = async () => {
       const formulasRow = formulaTfoot.querySelector('.formulas-row');
       if (!formulasRow) return;
       const idx = Array.from(headRow.children).indexOf(thEl);
@@ -1270,7 +1263,7 @@ await renderNotesGrid();
         console.error('Error recalculant fórmula:', err);
         notify('Error recalculant la fórmula: ' + err.message);
       }
-    });
+    };
 
     const menuDiv = document.createElement('div');
     menuDiv.className = 'relative';
@@ -1280,13 +1273,13 @@ await renderNotesGrid();
         <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
         <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>
         <button class="calc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Càlcul</button>
+        ${calculatedActs[id]?.calculated ? '<button class="recalc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Recalcular fórmula</button>' : ''}
         <button class="clear-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Netejar</button>
       </div>
     `;
 
     container.prepend(lockIcon);
     container.appendChild(spanName);
-    container.appendChild(refreshIcon);
     container.appendChild(menuDiv);
     thEl.appendChild(container);
     headRow.appendChild(thEl);
@@ -1312,6 +1305,8 @@ await renderNotesGrid();
       if (!newName || newName.trim() === name) return;
       db.collection('activitats').doc(id).update({ nom: newName.trim() }).then(() => renderNotesGrid());
     });
+
+    menuDiv.querySelector('.recalc-btn')?.addEventListener('click', () => { menu.classList.add('hidden'); recalcColumn(); });
 
     menuDiv.querySelector('.clear-btn').addEventListener('click', async () => {
       if (!await confirmDialog('Segur que vols esborrar totes les notes d’aquesta activitat?')) return;

@@ -2,6 +2,9 @@
 // classe = clase / class · alumne = alumno/a / student · nota = nota / grade · activitat = actividad / assignment
 // període (d'avaluació) = período (de evaluación) / grading period · butlletí = boletín / report card
 export const DICT = [
+["Alumne/a:","Alumno/a:","Student:"],
+["Mostrar al comentari","Mostrar en el comentario","Show in the comment"],
+["Recalcular fórmula","Recalcular fórmula","Recalculate formula"],
 ["Cap alumne en risc. 🎉","Ningún alumno en riesgo. 🎉","No students at risk. 🎉"],
 ["Cargando tus cursos de Classroom...","Cargando tus cursos de Classroom...","Loading your Classroom courses..."],
 ["Cargando tus cursos...","Cargando tus cursos...","Loading your courses..."],
@@ -463,6 +466,9 @@ export const SUBJECTS = [
 
 /* Textos amb valors dins: $1, $2… són els grups capturats. */
 export const PATTERNS = [
+[/^\(nom\)$/, "(nombre)", "(first name)"],
+[/^\(1r cognom\)$/, "(1.er apellido)", "(1st surname)"],
+[/^\(2n cognom\)$/, "(2.º apellido)", "(2nd surname)"],
 [/^(\d+) alumnes$/, "$1 alumnos", "$1 students"],
 [/^(\d+) alumne$/, "$1 alumno", "$1 student"],
 [/^(\d+) activitats$/, "$1 actividades", "$1 assignments"],
