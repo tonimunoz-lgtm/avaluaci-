@@ -62,6 +62,13 @@ async function loadUsers() {
   docs.forEach(doc => {
     const data = doc.data();
     const tr = document.createElement('tr');
+    if (data.deleted) tr.className = 'row-deleted';
+    const actions = data.deleted
+      ? `<button class="btn-restore px-2 py-1 bg-green-500 text-white rounded" data-id="${esc(doc.id)}">Restaurar</button>
+         <button class="btn-purge px-2 py-1 bg-red-500 text-white rounded" data-id="${esc(doc.id)}">Esborrar definitivament</button>`
+      : `<button class="btn-suspend-toggle px-2 py-1 bg-yellow-400 text-white rounded" data-id="${esc(doc.id)}">${data.suspended ? 'Reactivar' : 'Suspendre'}</button>
+         <button class="btn-admin-toggle px-2 py-1 bg-indigo-500 text-white rounded" data-id="${esc(doc.id)}">${data.isAdmin ? 'Treure admin' : 'Fer admin'}</button>
+         <button class="btn-delete px-2 py-1 bg-red-500 text-white rounded" data-id="${esc(doc.id)}">Eliminar</button>`;
     tr.innerHTML = `
       <td>${esc(data.nom || '-')}</td>
       <td>${esc(data.email || '-')}</td>
@@ -69,11 +76,7 @@ async function loadUsers() {
       <td><span class="badge ${data.isAdmin ? 'b-admin' : 'b-no'}">${data.isAdmin ? 'Sí' : 'No'}</span></td>
       <td><span class="badge ${data.suspended ? 'b-susp' : 'b-no'}">${data.suspended ? 'Sí' : 'No'}</span></td>
       <td><span class="badge ${data.deleted ? 'b-del' : 'b-no'}">${data.deleted ? 'Sí' : 'No'}</span></td>
-      <td>
-        <button class="btn-suspend-toggle px-2 py-1 bg-yellow-400 text-white rounded" data-id="${esc(doc.id)}">${data.suspended ? 'Reactivar' : 'Suspendre'}</button>
-        <button class="btn-admin-toggle px-2 py-1 bg-indigo-500 text-white rounded" data-id="${esc(doc.id)}">${data.isAdmin ? 'Treure admin' : 'Fer admin'}</button>
-        <button class="btn-delete px-2 py-1 bg-red-500 text-white rounded" data-id="${esc(doc.id)}">Eliminar</button>
-      </td>
+      <td>${actions}</td>
     `;
     usersTableBody.appendChild(tr);
   });
@@ -94,6 +97,34 @@ function attachUserButtons() {
   document.querySelectorAll('.btn-delete').forEach(btn => {
     btn.onclick = () => deleteUser(btn.dataset.id);
   });
+  document.querySelectorAll('.btn-restore').forEach(btn => {
+    btn.onclick = () => restoreUser(btn.dataset.id);
+  });
+  document.querySelectorAll('.btn-purge').forEach(btn => {
+    btn.onclick = () => purgeUser(btn.dataset.id);
+  });
+  const nDel = document.querySelectorAll('#usersTableBody tr.row-deleted').length;
+  const hint = document.getElementById('deletedHint');
+  if (hint) hint.textContent = nDel ? `${nDel} usuari${nDel > 1 ? 's' : ''} eliminat${nDel > 1 ? 's' : ''} amagat${nDel > 1 ? 's' : ''}. Els pots veure amb el filtre «Eliminats».` : '';
+}
+
+// Restaurar un usuari marcat com a eliminat
+async function restoreUser(uid) {
+  try {
+    await db.collection('professors').doc(uid).update({ deleted: false });
+    notify('Usuari restaurat.');
+    loadUsers();
+  } catch (e) { notify('Error: ' + e.message, 'error'); }
+}
+
+// Esborrar definitivament el document de Firestore (el compte d'Authentication s'elimina a la consola de Firebase)
+async function purgeUser(uid) {
+  if (!await confirmDialog('Esborrar definitivament aquest usuari? Desapareixerà de la llista i no es pot desfer.', { okText: 'Esborra' })) return;
+  try {
+    await db.collection('professors').doc(uid).delete();
+    notify('Usuari esborrat definitivament.');
+    loadUsers();
+  } catch (e) { notify('Error: ' + e.message, 'error'); }
 }
 
 // ---------------- ACCIONS ----------------
@@ -250,4 +281,4 @@ async function migrateOldProfessors() {
 
 
 // administrador-enhancements.js és un mòdul separat: li exposem el que necessita
-Object.assign(window, { db, auth, loadUsers, toggleSuspendUser, deleteUser, toggleAdmin });
+Object.assign(window, { restoreUser, purgeUser, db, auth, loadUsers, toggleSuspendUser, deleteUser, toggleAdmin });

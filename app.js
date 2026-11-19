@@ -109,7 +109,7 @@ window.openCommentsModal = function(studentId, studentName, currentComment, term
   textarea.focus();
 };
 
-/* ---- Comentaris per grup d'avaluació (trimestre) ----
+/* ---- Comentaris per període d'avaluació (trimestre) ----
    Nou camp: alumnes/{id}.comentarisTrim.{classId}.{termId}. El camp antic
    comentarios.{classId} (un únic comentari per classe) es mostra al primer grup. */
 function getStudentComment(sd, classId, termId, classData) {
@@ -1125,7 +1125,7 @@ async function renderNotesGrid() {
   // Capçalera alumne
   const headRow = document.createElement('tr');
   const thName = th('');
-  thName.innerHTML = `<div class="th-student"><span>Alumne</span><small id="studentsCount"></small><button type="button" id="stuHeadMenuBtn" class="stu-menu-btn" aria-label="Opcions d'alumnes">⋮</button></div>`;
+  thName.innerHTML = `<div class="th-student"><span>Alumne</span><small id="studentsCount"></small><button type="button" id="stuHeadMenuBtn" class="opt-btn" aria-label="Opcions d'alumnes">Opcions</button></div>`;
   thName.querySelector('#stuHeadMenuBtn').addEventListener('click', e => { e.stopPropagation(); openStudentHeadMenu(e.currentTarget); });
   headRow.appendChild(thName);
 
@@ -1256,7 +1256,7 @@ await renderNotesGrid();
     const menuDiv = document.createElement('div');
     menuDiv.className = 'relative';
     menuDiv.innerHTML = `
-      <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white tooltip">⋮</button>
+      <button class="menu-btn opt-btn tooltip" type="button" aria-label="Opcions de l'activitat">Opcions</button>
       <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10">
         <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
         <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>
@@ -1633,6 +1633,7 @@ function openCalcModal(activityId){
   currentCalcActivityId = activityId; 
   openModal('modalCalc');
   document.getElementById('calcType').value = 'numeric';
+  document.querySelectorAll('#calcSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === 'numeric'));
   document.getElementById('formulaInputs').classList.add('hidden');
   document.getElementById('numericInput').classList.remove('hidden');
   document.getElementById('numericField').value = '';
@@ -1645,6 +1646,14 @@ function openCalcModal(activityId){
 }
 
 const calcTypeSelect = document.getElementById('calcType');
+// Selector segmentat (Numèric / Fórmula / Arrodoniment) sincronitzat amb el select amagat
+function syncCalcSeg() {
+  document.querySelectorAll('#calcSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === calcTypeSelect.value));
+}
+document.querySelectorAll('#calcSeg button').forEach(b => b.addEventListener('click', () => {
+  calcTypeSelect.value = b.dataset.v;
+  calcTypeSelect.dispatchEvent(new Event('change'));
+}));
 const numericDiv = document.getElementById('numericInput');
 const numericField = document.getElementById('numericField');
 const formulaDiv = document.getElementById('formulaInputs');
@@ -1659,6 +1668,7 @@ let formulaPreviewDiv = null;
 
 // Cambio tipo cálculo
 calcTypeSelect.addEventListener('change', ()=>{
+  syncCalcSeg();
   if(calcTypeSelect.value==='numeric'){
     numericDiv.classList.remove('hidden');
     formulaDiv.classList.add('hidden');
@@ -1683,14 +1693,14 @@ function setupFormulaValidation() {
   if (!formulaValidationDiv) {
     formulaValidationDiv = document.createElement('div');
     formulaValidationDiv.id = 'formulaValidation';
-    formulaValidationDiv.className = 'mt-2 p-3 rounded text-sm';
+    formulaValidationDiv.className = 'calc-valid';
     formulaField.parentNode.insertBefore(formulaValidationDiv, formulaField.nextSibling);
   }
   
   if (!formulaPreviewDiv) {
     formulaPreviewDiv = document.createElement('div');
     formulaPreviewDiv.id = 'formulaPreview';
-    formulaPreviewDiv.className = 'mt-2 p-3 rounded bg-green-50 border border-green-200 text-sm hidden';
+    formulaPreviewDiv.className = 'calc-preview hidden';
     formulaValidationDiv.parentNode.insertBefore(formulaPreviewDiv, formulaValidationDiv.nextSibling);
   }
 
@@ -1749,15 +1759,15 @@ function validateFormula() {
   // Mostrar validación
   if (formulaValidationDiv) {
     if (validation.valid) {
-      formulaValidationDiv.innerHTML = `<span style="color: green; font-weight: bold;">✅ Fórmula vàlida</span>`;
-      formulaValidationDiv.className = 'mt-2 p-3 rounded text-sm bg-green-50 border border-green-200';
+      formulaValidationDiv.innerHTML = `<span>✓ Fórmula vàlida</span>`;
+      formulaValidationDiv.className = 'calc-valid ok';
       
       // Preview usa el camp ocult (amb IDs) que sí es pot avaluar
       const hidFormula = formulaFieldHidden ? formulaFieldHidden.value : formula;
       showFormulaPreview(hidFormula);
     } else {
-      formulaValidationDiv.innerHTML = `<span style="color: red; font-weight: bold;">❌ Error: ${esc(validation.error)}</span>`;
-      formulaValidationDiv.className = 'mt-2 p-3 rounded text-sm bg-red-50 border border-red-200';
+      formulaValidationDiv.innerHTML = `<span>${esc(validation.error)}</span>`;
+      formulaValidationDiv.className = 'calc-valid bad';
       
       if (formulaPreviewDiv) {
         formulaPreviewDiv.classList.add('hidden');
@@ -1814,9 +1824,7 @@ function showFormulaPreview(formula) {
   
   if (exampleResult !== null && !isNaN(exampleResult)) {
     formulaPreviewDiv.innerHTML = `
-      <strong>📊 Previsualización:</strong><br>
-      Si todos los alumnos tuvieran nota <strong>6</strong>:<br>
-      Resultado = <strong>${exampleResult.toFixed(2)}</strong>
+      Exemple: si tothom tingués un <strong>6</strong>, el resultat seria <strong>${exampleResult.toFixed(1)}</strong>
     `;
     formulaPreviewDiv.classList.remove('hidden');
   }
@@ -1947,15 +1955,15 @@ function buildFormulaButtons(){
 
   if (termIds.length > 1) {
     const selectorContainer = document.createElement('div');
-    selectorContainer.className = 'mb-3 p-2 bg-blue-50 rounded border border-blue-200';
-    selectorContainer.innerHTML = '<label class="text-sm font-semibold text-blue-800">Selecciona pestaña d\'activitats:</label>';
+    selectorContainer.className = 'calc-term-sel';
+    selectorContainer.innerHTML = '<label class="calc-label">Activitats de quin període?</label>';
 
     const termSelect = document.createElement('select');
-    termSelect.className = 'w-full mt-1 border rounded px-2 py-1 bg-white';
+    termSelect.className = 'pill-select';
 
     const optionAll = document.createElement('option');
     optionAll.value = '';
-    optionAll.textContent = 'Activitats de la pestaña actual';
+    optionAll.textContent = 'Període actual';
     termSelect.appendChild(optionAll);
 
     termIds.forEach(termId => {
@@ -1981,11 +1989,11 @@ function buildFormulaButtons(){
 
   // Operadores
   const operatorsContainer = document.createElement('div');
-  operatorsContainer.className = 'operators-container mb-2';
+  operatorsContainer.className = 'operators-container kb-row';
   ['+', '-', '*', '/', '(', ')'].forEach(op=>{
     const btn = document.createElement('button');
     btn.type='button';
-    btn.className='px-2 py-1 m-1 bg-gray-200 rounded hover:bg-gray-300';
+    btn.className='kb kb-op';
     btn.textContent = op;
     btn.addEventListener('click', ()=> insertAtCursor(op));
     operatorsContainer.appendChild(btn);
@@ -1994,11 +2002,11 @@ function buildFormulaButtons(){
 
   // Números
   const numbersContainer = document.createElement('div');
-  numbersContainer.className = 'numbers-container mb-2';
+  numbersContainer.className = 'numbers-container kb-row';
   for(let i=0;i<=10;i++){
     const btn = document.createElement('button');
     btn.type='button';
-    btn.className='px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300';
+    btn.className='kb kb-num';
     btn.textContent = i;
     btn.addEventListener('click', ()=> insertAtCursor(i));
     numbersContainer.appendChild(btn);
@@ -2007,11 +2015,11 @@ function buildFormulaButtons(){
 
   // Decimales
   const decimalsContainer = document.createElement('div');
-  decimalsContainer.className = 'decimals-container mb-2';
+  decimalsContainer.className = 'decimals-container kb-row';
   ['.', ','].forEach(dec=>{
     const btn = document.createElement('button');
     btn.type='button';
-    btn.className='px-2 py-1 m-1 bg-yellow-200 rounded hover:bg-yellow-300';
+    btn.className='kb kb-dec';
     btn.textContent = dec;
     btn.addEventListener('click', ()=> insertAtCursor('.'));
     decimalsContainer.appendChild(btn);
@@ -2021,7 +2029,7 @@ function buildFormulaButtons(){
   // Backspace
   const backBtn = document.createElement('button');
   backBtn.type='button';
-  backBtn.className='px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
+  backBtn.className='kb kb-back';
   backBtn.textContent = '⌫';
   backBtn.addEventListener('click', deleteAtCursor);
   formulaButtonsDiv.appendChild(backBtn);
@@ -2163,7 +2171,7 @@ function buildActivityButtons(){
         const name = doc.data().nom;
         const btn = document.createElement('button');
         btn.type='button';
-        btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300 font-semibold';
+        btn.className='chip-act';
         
         let buttonText = name;
         if (_selectedTermForFormula) {
@@ -2194,15 +2202,15 @@ function buildRoundingButtons(){
 
   if (termIds.length > 1) {
     const selectorContainer = document.createElement('div');
-    selectorContainer.className = 'mb-3 p-2 bg-blue-50 rounded border border-blue-200';
-    selectorContainer.innerHTML = '<label class="text-sm font-semibold text-blue-800">Selecciona pestaña d\'activitats:</label>';
+    selectorContainer.className = 'calc-term-sel';
+    selectorContainer.innerHTML = '<label class="calc-label">Activitats de quin període?</label>';
 
     const termSelect = document.createElement('select');
-    termSelect.className = 'w-full mt-1 border rounded px-2 py-1 bg-white';
+    termSelect.className = 'pill-select';
 
     const optionAll = document.createElement('option');
     optionAll.value = '';
-    optionAll.textContent = 'Activitats de la pestaña actual';
+    optionAll.textContent = 'Període actual';
     termSelect.appendChild(optionAll);
 
     termIds.forEach(termId => {
@@ -2226,11 +2234,11 @@ function buildRoundingButtons(){
   }
 
   const roundingValuesContainer = document.createElement('div');
-  roundingValuesContainer.className = 'rounding-values-container mb-2';
+  roundingValuesContainer.className = 'rounding-values-container kb-row';
   [0.5, 1].forEach(v => {
     const btn = document.createElement('button');
     btn.type='button';
-    btn.className='px-2 py-1 m-1 bg-green-200 rounded hover:bg-green-300 font-semibold';
+    btn.className='kb kb-num';
     btn.textContent = v;
     btn.addEventListener('click', () => insertAtCursor(v));
     roundingValuesContainer.appendChild(btn);
@@ -2239,7 +2247,7 @@ function buildRoundingButtons(){
 
   const backBtn = document.createElement('button');
   backBtn.type='button';
-  backBtn.className='px-2 py-1 m-1 bg-red-200 rounded hover:bg-red-300';
+  backBtn.className='kb kb-back';
   backBtn.textContent = '⌫';
   backBtn.addEventListener('click', deleteAtCursor);
   formulaButtonsDiv.appendChild(backBtn);
@@ -2249,7 +2257,7 @@ function buildRoundingButtons(){
 
 function buildRoundingActivityButtons(){
   const activitiesContainer = document.createElement('div');
-  activitiesContainer.className = 'rounding-activities-container mb-2 p-2 bg-indigo-50 rounded';
+  activitiesContainer.className = 'rounding-activities-container chip-box';
 
   let activitiesToShow = [];
 
@@ -2271,7 +2279,7 @@ function buildRoundingActivityButtons(){
         const name = doc.data().nom;
         const btn = document.createElement('button');
         btn.type='button';
-        btn.className='px-2 py-1 m-1 bg-indigo-200 rounded hover:bg-indigo-300 font-semibold';
+        btn.className='chip-act';
         
         let buttonText = name;
         if (_selectedTermForFormula) {
@@ -2499,7 +2507,7 @@ async function addImportedStudents(names) {
 // ----------------------Fer funcionar el botó + (afegir terme)
 const btnAddTerm = document.getElementById('btnAddTerm');
 btnAddTerm.addEventListener('click', async () => {
-  const name = await promptDialog('Nom del nou grup (p. ex. 2TRIM):');
+  const name = await promptDialog('Nom del nou període (p. ex. 2TRIM):');
   if(!name) return;
   try {
     const newId = await Terms.addNewTermWithName(name);
@@ -2512,7 +2520,7 @@ btnAddTerm.addEventListener('click', async () => {
 
 const btnAddTerm2 = document.getElementById('btnAddTerm2');
 btnAddTerm2.addEventListener('click', async () => {
-  const name = await promptDialog('Nom del nou grup (p. ex. 2TRIM):');
+  const name = await promptDialog('Nom del nou període (p. ex. 2TRIM):');
   if(!name) return;
   try {
     const newId = await Terms.addNewTermWithName(name);

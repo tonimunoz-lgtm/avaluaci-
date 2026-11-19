@@ -74,7 +74,7 @@ function injectTutoriaButton() {
   const btn = document.createElement('button');
   btn.id = 'btnTutoria';
   btn.className = 'bg-rose-500 hover:bg-rose-600 text-white px-3 py-1 rounded font-semibold text-sm flex items-center gap-1 transition-colors';
-  btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M4 5h16v11H11l-4 4v-4H4z"/><path d="M8.5 10.5h.01M12 10.5h.01M15.5 10.5h.01"/></svg>Comentaris';
+  btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M4 5h16v11H11l-4 4v-4H4z"/><path d="M8.5 10.5h.01M12 10.5h.01M15.5 10.5h.01"/></svg><span class="lbl">Comentaris</span>';
   btn.title = 'Generar comentaris de butlletí per a les famílies';
   btn.addEventListener('click', openTutoriaModal);
   btnAddActivity.parentNode.insertBefore(btn, btnAddActivity.nextSibling);
@@ -355,7 +355,7 @@ function buildModalHTML() {
           <div id="tutoriaComentariText" class="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap bg-white rounded-lg p-4 border border-rose-100 min-h-[100px]"></div>
         </div>
         <div class="mt-3 bg-white border border-rose-200 rounded-xl p-3">
-          <label class="block text-xs font-bold text-gray-600 mb-2">💾 Desar com a comentari de l'alumne (al grup d'avaluació triat)</label>
+          <label class="block text-xs font-bold text-gray-600 mb-2">💾 Desar com a comentari de l'alumne (al període d'avaluació triat)</label>
           <div class="flex gap-2">
             <select id="tutoriaSaveStudent" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"></select>
             <button id="btnGuardarComentari" type="button" class="bg-rose-500 hover:bg-rose-600 text-white font-semibold px-4 py-2 rounded-lg text-sm">Desar</button>
@@ -513,7 +513,7 @@ function initModalInteractions(modal) {
 }
 
 // ============================================================
-// DESAR EL COMENTARI A L'ALUMNE (al grup d'avaluació triat)
+// DESAR EL COMENTARI A L'ALUMNE (al període d'avaluació triat)
 // ============================================================
 async function omplirAlumnesDesar(modal) {
   const sel = modal.querySelector('#tutoriaSaveStudent');

@@ -444,3 +444,145 @@ table { width: 100%; border-collapse: collapse; }
 .lock-icon { color: #f59e0b; display: inline-flex; }
 .btn-logo { width: 20px; height: 17px; object-fit: contain; }
 #btnExportComentaris { display: inline-flex; align-items: center; gap: .25rem; white-space: nowrap; }
+
+/* =====================================================================
+   FASE 9 — controls arrodonits, hover blau, modal de càlcul, mòbil
+   ===================================================================== */
+:root { --c-blue: #3b5bdb; --c-blue-soft: #eef2ff; --c-blue-line: #b8c5ff; }
+
+/* ---- Camps de text, selectors i àrees de text ---- */
+body input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="range"]):not([type="file"]):not([type="color"]),
+body select, body textarea {
+  border: 1.5px solid var(--c-border); border-radius: 999px; background-color: #fff; color: var(--c-text);
+  padding: .6rem 1rem; font: inherit; font-size: .9rem; outline: none;
+  transition: border-color .15s, box-shadow .15s, background-color .15s;
+}
+body textarea { border-radius: 18px; padding: .75rem 1rem; }
+body input:hover:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="range"]):not([type="file"]),
+body select:hover, body textarea:hover { border-color: var(--c-blue-line); }
+body input:focus:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+body select:focus, body textarea:focus { border-color: var(--c-blue); box-shadow: 0 0 0 4px rgba(59, 91, 219, .15); }
+.search-box input { border: 0 !important; box-shadow: none !important; padding: .1rem 0 !important; background: transparent !important; }
+@supports not (appearance: base-select) {
+  body select { -webkit-appearance: none; appearance: none; padding-right: 2.3rem;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b6f8d' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
+    background-repeat: no-repeat; background-position: right .8rem center; background-size: 16px; }
+}
+/* Desplegable natiu personalitzable (Chrome/Edge recents); la resta mostren el natiu */
+@supports (appearance: base-select) {
+  body select, body select::picker(select) { appearance: base-select; }
+  body select::picker-icon { color: var(--c-muted); transition: rotate .15s; }
+  body select:open::picker-icon { rotate: 180deg; }
+  body select::picker(select) { border: 1px solid var(--c-border); border-radius: 18px; padding: .35rem; margin-top: .35rem;
+    background: #fff; box-shadow: 0 16px 40px rgba(50, 30, 140, .18); }
+  body select option { padding: .55rem .8rem; border-radius: 12px; font-weight: 600; font-size: .9rem; }
+  body select option:hover, body select option:focus-visible { background: var(--c-blue-soft); color: var(--c-blue); outline: none; }
+  body select option:checked { background: var(--c-blue-soft); color: var(--c-blue); }
+  body select option::checkmark { color: var(--c-blue); }
+}
+.app-dropdown, #notesThead .menu { border-radius: 20px; }
+.app-dropdown button, #notesThead .menu button { border-radius: 12px; }
+.app-dropdown button:hover, #notesThead .menu button:hover { background: var(--c-blue-soft); color: var(--c-blue); }
+.app-dropdown button.danger:hover { background: #ffe8ee; color: var(--c-danger); }
+
+/* ---- Botons: canvien cap al blau en passar-hi per sobre ---- */
+.btn, .toolbar > button, .toolbar button, .card-link, .opt-btn, .pill-select, #btnSortAlpha, #btnClassFilter, .action-pill button, .view-toggle button {
+  transition: background-color .15s, border-color .15s, color .15s, transform .15s, box-shadow .15s;
+}
+.btn:not(.btn-primary):not(.btn-danger):hover, .toolbar > button:hover, .toolbar button:not(.btn-primary):hover, .opt-btn:hover,
+.pill-select:hover, #btnSortAlpha:hover, #btnClassFilter:hover, .action-pill button:not(.btn-primary):not(#btnCreateClass):hover,
+.view-toggle button:hover, .card-link:hover {
+  background-color: var(--c-blue-soft) !important; border-color: var(--c-blue-line) !important; color: var(--c-blue) !important;
+}
+.btn-primary:hover, #btnCreateClass:hover { background: var(--c-blue) !important; border-color: var(--c-blue) !important; color: #fff !important; }
+.btn-danger:hover { background: #be123c !important; }
+.tab:hover { color: var(--c-blue); }
+.nav-item:hover { background: rgba(255, 255, 255, .18); }
+
+/* ---- Botó «Opcions» ---- */
+.opt-btn { display: inline-flex; align-items: center; gap: .3rem; border: 1px solid var(--c-border); background: #fff; color: var(--c-primary-dark);
+  border-radius: 999px; padding: .28rem .75rem; font-weight: 700; font-size: .78rem; line-height: 1.2; box-shadow: var(--shadow-sm); white-space: nowrap; }
+#notesThead .menu-btn.opt-btn { font-size: .7rem; padding: .18rem .6rem; color: var(--c-primary-dark); }
+#termMenuBtn { display: inline-flex; align-items: center; gap: .35rem; }
+#termMenuBtn .ic-dots { display: none; font-size: 1.2rem; line-height: 1; }
+.th-student .opt-btn { margin-left: auto; }
+
+/* ---- Modal de càlcul ---- */
+#modalCalc { background: rgba(30, 20, 90, .5); backdrop-filter: blur(4px); padding: 1rem; }
+.calc-modal { width: 100%; max-width: 30rem; max-height: 92vh; overflow-y: auto; background: #fff; border-radius: 28px; padding: 1.4rem; box-shadow: 0 30px 80px rgba(20, 10, 80, .35); display: flex; flex-direction: column; gap: .9rem; }
+.calc-head { display: flex; align-items: center; justify-content: space-between; }
+.calc-head h2 { font-size: 1.25rem; }
+.calc-head .modal-close { border: 0; background: var(--c-bg); width: 2.1rem; height: 2.1rem; border-radius: 50%; color: var(--c-muted); font-size: .9rem; }
+.calc-head .modal-close:hover { background: var(--c-blue-soft); color: var(--c-blue); }
+.calc-label { display: block; font-size: .78rem; font-weight: 700; color: var(--c-muted); margin-bottom: .3rem; }
+.seg { display: flex; background: var(--c-bg); border-radius: 999px; padding: .25rem; gap: .2rem; }
+.seg button { flex: 1; border: 1.5px solid transparent; background: transparent; border-radius: 999px; padding: .5rem .4rem; font-weight: 700; font-size: .82rem; color: var(--c-muted); }
+.seg button:hover { color: var(--c-blue); }
+.seg button.on { background: #fff; border-color: var(--c-blue-line); color: var(--c-blue); box-shadow: var(--shadow-sm); }
+#numericField, #formulaField { width: 100%; }
+#formulaField { font-family: ui-monospace, 'DM Sans', monospace; font-size: 1rem; padding: .85rem 1.1rem; border-radius: 18px; border-color: var(--c-blue-line); background: var(--c-blue-soft); }
+#formulaButtons { display: flex; flex-direction: column; gap: .55rem; margin-top: .7rem; }
+.kb-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: .35rem; }
+.kb { border: 1px solid var(--c-border); border-radius: 12px; padding: .55rem 0; font-weight: 700; font-size: .95rem; background: var(--c-bg); color: var(--c-text); }
+.kb:hover { transform: translateY(-1px); }
+.kb-op { background: var(--c-blue-soft); color: var(--c-blue); border-color: var(--c-blue-line); }
+.kb-num:hover { background: var(--c-blue-soft); border-color: var(--c-blue-line); color: var(--c-blue); }
+.kb-dec { background: #fff7d6; color: #92400e; border-color: #fde68a; }
+.kb-back { background: #ffe8ee; color: var(--c-danger); border-color: #fecdd6; width: 100%; }
+.kb-op:hover { background: var(--c-blue); color: #fff; }
+.chip-box { display: flex; flex-wrap: wrap; gap: .4rem; padding: .7rem; background: var(--c-bg); border-radius: 16px; }
+.chip-act { border: 1px solid var(--c-blue-line); background: #fff; color: var(--c-blue); border-radius: 999px; padding: .3rem .8rem; font-weight: 700; font-size: .8rem; }
+.chip-act:hover { background: var(--c-blue); color: #fff; }
+.calc-term-sel { background: var(--c-bg); border-radius: 16px; padding: .6rem .7rem; }
+.calc-term-sel select { width: 100%; }
+.calc-valid { font-size: .82rem; font-weight: 700; margin-top: .45rem; }
+.calc-valid.ok { color: #15803d; } .calc-valid.bad { color: var(--c-danger); }
+.calc-preview { font-size: .82rem; color: var(--c-muted); margin-top: .3rem; }
+.calc-preview strong { color: var(--c-text); }
+.calc-foot { display: flex; justify-content: flex-end; gap: .6rem; margin-top: .3rem; }
+
+/* ---- Mòbil ---- */
+@media (max-width: 860px) {
+  html, body { overflow-x: hidden; }
+  .sidebar { padding: .5rem .7rem; gap: .3rem; }
+  .sidebar .nav { flex: 1; justify-content: space-around; overflow: visible; }
+  .nav-item { padding: .55rem .65rem; font-size: 0; gap: 0; }
+  .nav-item svg { width: 22px; height: 22px; }
+  .app-main { padding: .8rem; }
+  .topbar { flex-direction: row; align-items: center; gap: .5rem; }
+  .topbar h1 { font-size: 1.25rem; }
+  .topbar p { display: none; }
+  .classes-grid, #classesGrid { grid-template-columns: 1fr !important; }
+  .action-pill { padding: .5rem; gap: .4rem; }
+  .class-head { flex-direction: column; align-items: flex-start; gap: .7rem; }
+  .class-head .toolbar { width: 100%; flex-wrap: wrap; }
+  /* Botons només amb icona */
+  .toolbar .lbl, #btnTutoria .lbl { display: none; }
+  .toolbar button { padding: .55rem .7rem; gap: .2rem; }
+  #btnAddActivity { padding: .55rem .8rem; }
+  #termMenuBtn .lbl { display: none; }
+  #termMenuBtn .ic-dots { display: inline; }
+  #btnClassFilter span, #btnCreateClass .lbl { display: none; }
+  .tabs-card { flex-direction: column; align-items: stretch; padding: .3rem .5rem .6rem; }
+  .tabs { justify-content: space-between; }
+  .tab { padding: .7rem .5rem; font-size: .85rem; flex: 1; justify-content: center; }
+  .sub-actions { flex-wrap: wrap !important; overflow: visible !important; gap: .4rem; }
+  #termsDropdown { flex: 1 1 130px; min-width: 0; }
+  .filters-bar { flex-direction: column; align-items: stretch; gap: .5rem; }
+  .filters-bar .search-box { max-width: none !important; width: 100%; }
+  .filters-bar .pill-select, .filters-bar .sort-wrap { width: 100%; }
+  .filters-bar .sort-wrap > .pill-select { justify-content: space-between; }
+  #notesTable-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  #notesTable thead th:first-child, #notesTable tbody td:first-child { position: sticky; left: 0; z-index: 2; background: #fff; min-width: 140px; }
+  .kpis { grid-template-columns: repeat(2, 1fr) !important; }
+  .app-modal, .calc-modal { max-width: 100%; border-radius: 22px; padding: 1.1rem; }
+  .app-modal { max-height: 94vh; }
+  #modalCalc { padding: 0; align-items: flex-end; }
+  .calc-modal { border-radius: 24px 24px 0 0; max-height: 96vh; }
+  .calc-foot .btn { flex: 1; }
+  .rep-table { display: block; overflow-x: auto; }
+}
+@media (max-width: 480px) {
+  .kb-row { gap: .3rem; }
+  .btn-logo { margin: 0; }
+}

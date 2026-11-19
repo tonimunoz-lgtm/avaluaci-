@@ -61,7 +61,7 @@ function renderDropdown() {
 
   if (termIds.length === 0) {
     const opt = document.createElement('option');
-    opt.textContent = 'Crea el teu primer grup';
+    opt.textContent = 'Crea el teu primer període';
     opt.disabled = true;
     opt.selected = true;
     sel.appendChild(opt);
@@ -86,7 +86,7 @@ function renderDropdown() {
     sel.value = _activeTermId;
     showEmptyMessage(false);
   } else {
-    sel.innerHTML = '<option value="" selected disabled>Selecciona o crea un grup</option>';
+    sel.innerHTML = '<option value="" selected disabled>Selecciona o crea un període</option>';
     showEmptyMessage(true);
   }
 }

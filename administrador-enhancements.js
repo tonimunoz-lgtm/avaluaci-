@@ -193,6 +193,7 @@ function applyFilters() {
 
     tr.style.display = show ? '' : 'none';
   });
+  document.body.classList.toggle('show-deleted', deletedVal === 'sí');
 }
 
 [adminSelect, suspendedSelect, deletedSelect].forEach(select => {
@@ -224,6 +225,7 @@ function createStatusButton(label, color, filterValue) {
   btn.onclick = () => {
     // Primer, treure active de tots els botons
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    document.body.classList.toggle('show-deleted', filterValue === 'deleted' || filterValue === 'all');
 
     // Marcar aquest com actiu
     btn.classList.add('active');
@@ -262,6 +264,11 @@ statusFilterContainer.appendChild(activeBtn);
 statusFilterContainer.appendChild(allBtn);
 
 usersSection.insertBefore(statusFilterContainer, usersSection.querySelector('table'));
+const deletedHint = document.createElement('p');
+deletedHint.id = 'deletedHint';
+deletedHint.className = 'text-sm mb-2';
+deletedHint.style.color = '#6b7280';
+usersSection.insertBefore(deletedHint, usersSection.querySelector('table'));
 
 // Inicialitzar badges, hover i wrap d’accions
 addBadges();

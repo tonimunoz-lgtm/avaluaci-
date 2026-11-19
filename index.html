@@ -208,9 +208,9 @@
                 </div>
               </div>
               <div class="toolbar class-actions">
-                <button id="btnExportClass" type="button"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>Exportar</button>
-                <button id="btnPrintClass" type="button"><svg viewBox="0 0 24 24"><path d="M7 9V3h10v6M7 17H4v-7h16v7h-3M7 14h10v7H7z"/></svg>Imprimir</button>
-                <button id="btnAddActivity" type="button"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Afegir activitat</button>
+                <button id="btnExportClass" type="button" aria-label="Exportar" title="Exportar"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg><span class="lbl">Exportar</span></button>
+                <button id="btnPrintClass" type="button" aria-label="Imprimir" title="Imprimir"><svg viewBox="0 0 24 24"><path d="M7 9V3h10v6M7 17H4v-7h16v7h-3M7 14h10v7H7z"/></svg><span class="lbl">Imprimir</span></button>
+                <button id="btnAddActivity" type="button" aria-label="Afegir activitat" title="Afegir activitat"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span class="lbl">Afegir activitat</span></button>
               </div>
             </div>
 
@@ -222,9 +222,9 @@
               </div>
               <div class="toolbar sub-actions">
                 <select id="termsDropdown" aria-label="Grup d'avaluació"></select>
-                <button id="btnAddTerm" type="button" title="Nou grup">＋</button>
+                <button id="btnAddTerm" type="button" title="Nou període" aria-label="Nou període">＋</button>
                 <div class="relative-wrap">
-                  <button id="termMenuBtn" type="button" title="Opcions del grup">⋮</button>
+                  <button id="termMenuBtn" type="button" title="Opcions del període" aria-label="Opcions"><span class="ic-dots" aria-hidden="true">⋯</span><span class="lbl">Opcions</span></button>
                   <div id="termMenu" class="menu app-dropdown hidden">
                     <button class="edit-term-btn">Editar graella</button>
                     <button class="delete-term-btn">Eliminar graella</button>
@@ -233,8 +233,8 @@
                     <button class="paste-structure-btn">Enganxar estructura</button>
                   </div>
                 </div>
-                <button id="btnStudentsMenu" type="button"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c.4-3.6 3.2-5.5 6.5-5.5s6.1 1.9 6.5 5.5z"/></svg>Alumnes <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
-                <button id="btnImportAL" type="button"><svg viewBox="0 0 24 24"><path d="M12 16V5M7 9l5-5 5 5M5 20h14"/></svg>Importar alumnes</button>
+                <button id="btnStudentsMenu" type="button" aria-label="Alumnes"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c.4-3.6 3.2-5.5 6.5-5.5s6.1 1.9 6.5 5.5z"/></svg><span class="lbl">Alumnes</span> <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
+                <button id="btnImportAL" type="button" aria-label="Importar alumnes" title="Importar alumnes"><svg viewBox="0 0 24 24"><path d="M12 16V5M7 9l5-5 5 5M5 20h14"/></svg><span class="lbl">Importar alumnes</span></button>
               </div>
             </div>
 
@@ -245,7 +245,7 @@
 
                 <div id="emptyInstructionMessage"
                      style="display:none; text-align:center; margin:50px 0; font-size:1.3rem; font-weight:700; color:var(--c-muted);">
-                  🔰 Prem el botó <button id="btnAddTerm2" type="button" class="btn btn-primary" style="margin:0 .3rem">＋</button> per crear un nou grup d'activitats (p. ex. «1r trimestre»)
+                  🔰 Prem el botó <button id="btnAddTerm2" type="button" class="btn btn-primary" style="margin:0 .3rem">＋</button> per crear un nou període d'avaluació (p. ex. «1r trimestre»)
                 </div>
 
                 <div class="filters-bar">
@@ -395,40 +395,46 @@
 
 <!-- Modal Calcul -->
 <div id="modalCalc" class="modal hidden fixed inset-0 items-center justify-center z-50">
- <div class="bg-white p-6 rounded shadow-lg w-96 max-w-full flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
-    <button class="modal-close self-end" data-modal-close="modalCalc">✖</button>
-    <h2 class="text-lg font-bold">Calcul activitat</h2>
+  <div class="calc-modal">
+     <div class="calc-head">
+       <h2>Càlcul d'activitat</h2>
+       <button class="modal-close" data-modal-close="modalCalc" aria-label="Tanca">✕</button>
+     </div>
 
-    <label for="calcType">Tipus de càlcul:</label>
-    <select id="calcType" class="border rounded p-1">
-      <option value="numeric">Numeric</option>
-      <option value="formula">Fórmula</option>
-      <option value="rounding">Redondeig</option>
-    </select>
+     <select id="calcType" style="display:none" aria-hidden="true">
+       <option value="numeric">Numèric</option>
+       <option value="formula">Fórmula</option>
+       <option value="rounding">Arrodoniment</option>
+     </select>
+     <div class="seg" id="calcSeg" role="tablist">
+       <button type="button" data-v="numeric" class="on">Numèric</button>
+       <button type="button" data-v="formula">Fórmula</button>
+       <button type="button" data-v="rounding">Arrodoniment</button>
+     </div>
 
-    <!-- Numeric -->
-    <div id="numericInput">
-      <label for="numericField">Valor:</label>
-      <input type="number" id="numericField" min="0" max="10" class="border rounded p-1 w-full">
-    </div>
+     <div id="numericInput">
+       <label class="calc-label" for="numericField">Valor (0 a 10)</label>
+       <input type="number" id="numericField" min="0" max="10" step="0.1" placeholder="7,5">
+     </div>
 
-    <!-- Fórmula -->
-    <div id="formulaInputs" class="hidden flex flex-col gap-2">
-      <!-- Camp visible amb noms llegibles -->
-      <input type="text" id="formulaField" readonly class="border rounded p-1 w-full bg-gray-50 font-mono text-sm" placeholder="Construeix la fórmula">
-      <!-- Camp ocult amb IDs reals per al càlcul -->
-      <input type="hidden" id="formulaFieldHidden">
-      <div id="formulaButtons" class="flex flex-wrap gap-1"></div>
-    </div>
-    
-    <button id="modalApplyCalcBtn" class="btn btn-primary">Aplica</button>
+     <div id="formulaInputs" class="hidden">
+       <label class="calc-label" for="formulaField">Fórmula</label>
+       <input type="text" id="formulaField" readonly placeholder="Construeix la fórmula amb els botons">
+       <input type="hidden" id="formulaFieldHidden">
+       <div id="formulaButtons"></div>
+     </div>
+
+     <div class="calc-foot">
+       <button type="button" class="btn modal-close" data-modal-close="modalCalc">Cancel·la</button>
+       <button id="modalApplyCalcBtn" class="btn btn-primary">Aplica</button>
+     </div>
   </div>
 </div>
 
 <div id="emptyGroupMessage"
      style="display:none; padding:1.5rem; text-align:center; font-size:1.1rem; color:#555;">
-  🔰 <strong>Crea el teu primer grup d'avaluació</strong><br>
-  Prem el botó <strong>+</strong> per afegir un grup (per exemple, "1r trimestre")
+  🔰 <strong>Crea el teu primer període d'avaluació</strong><br>
+  Prem el botó <strong>+</strong> per afegir un període (per exemple, "1r trimestre")
 </div>
 
 <!-- SCRIPTS PRINCIPALES -->

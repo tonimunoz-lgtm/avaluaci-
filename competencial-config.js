@@ -130,7 +130,7 @@ function injectConfigButton() {
     const btn = document.createElement('button');
     btn.id = 'btnCompConfig';
     btn.className = 'px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded font-semibold text-sm flex items-center gap-1';
-    btn.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".8" fill="currentColor"/></svg>Config Competencial';
+    btn.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".8" fill="currentColor"/></svg><span class="lbl">Config Competencial</span>';
     btn.title = 'Configura els trams NA/AS/AN/AE';
     btn.addEventListener('click', () => openConfigModal());
     toolbar.appendChild(btn);

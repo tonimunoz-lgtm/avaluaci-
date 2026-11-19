@@ -169,7 +169,7 @@ function observeCapcaleraComentaris() {
         const btn = document.createElement('button');
         btn.id = 'btnExportComentaris';
         btn.className = 'ml-2 text-xs bg-green-500 hover:bg-green-600 text-white px-2 py-0.5 rounded font-semibold';
-        btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:.9em;height:.9em;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-1px"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg> Excel';
+        btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:.9em;height:.9em;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-1px"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg> <span class="lbl">Excel</span>';
         btn.title = 'Exportar tots els comentaris a Excel';
         btn.addEventListener('click', e => { e.stopPropagation(); exportarComentarisExcel(); });
         th.appendChild(btn);

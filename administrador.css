@@ -39,3 +39,6 @@ body.admin-page .flex label { display: flex; align-items: center; gap: .4rem; fo
 body.admin-page .flex select { margin: 0; }
 body.admin-page td:last-child { display: table-cell; }
 body.admin-page td:last-child button { margin: .15rem .2rem .15rem 0; }
+
+/* Els usuaris eliminats s'amaguen per defecte */
+body:not(.show-deleted) #usersTableBody tr.row-deleted{display:none !important}

@@ -236,7 +236,7 @@ async function renderInformes() {
     <div class="classes-head"><h2 class="section-title">Informes</h2>
       <div class="toolbar">
         <select id="repClass" class="pill-select">${classes.map(c => `<option value="${esc(c.id)}" ${c.id === _repSel.cls ? 'selected' : ''}>${esc(c.nom || 'Sense nom')}</option>`).join('')}<option value="ALL" ${_repSel.cls === 'ALL' ? 'selected' : ''}>Totes les classes (comparativa)</option></select>
-        ${cur ? `<select id="repTerm" class="pill-select"><option value="">Tots els grups</option>${termOpts.map(([id, t]) => `<option value="${esc(id)}" ${id === _repSel.term ? 'selected' : ''}>${esc(t.name || t.nom || id)}</option>`).join('')}</select>
+        ${cur ? `<select id="repTerm" class="pill-select"><option value="">Tots els períodes</option>${termOpts.map(([id, t]) => `<option value="${esc(id)}" ${id === _repSel.term ? 'selected' : ''}>${esc(t.name || t.nom || id)}</option>`).join('')}</select>
         <button id="repCsv" type="button"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>Exportar CSV</button>` : ''}
         <button id="repPrint" type="button"><svg viewBox="0 0 24 24"><path d="M7 9V3h10v6M7 17H4v-7h16v7h-3M7 14h10v7H7z"/></svg>Imprimir</button>
       </div></div>
@@ -306,7 +306,7 @@ let _cmTerm = null;
 const termSelect = (c, id, sel, withAll) => {
   const ts = Object.entries(c.terms || {});
   if (!ts.length) return '';
-  return `<select id="${id}" class="pill-select">${withAll ? `<option value="">Tots els grups</option>` : ''}${ts.map(([k, t]) => `<option value="${esc(k)}" ${k === sel ? 'selected' : ''}>${esc(t.name || k)}</option>`).join('')}</select>`;
+  return `<select id="${id}" class="pill-select">${withAll ? `<option value="">Tots els períodes</option>` : ''}${ts.map(([k, t]) => `<option value="${esc(k)}" ${k === sel ? 'selected' : ''}>${esc(t.name || k)}</option>`).join('')}</select>`;
 };
 
 async function renderComentaris() {
