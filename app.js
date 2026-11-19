@@ -955,6 +955,7 @@ document.addEventListener('click', () => {
 
 
 /* ---------------- Notes Grid amb menú activitats ---------------- */
+let _gridCalculated = {};
 async function renderNotesGrid() {
   // Neteja taula
   notesThead.innerHTML = '';
@@ -1334,6 +1335,8 @@ input.addEventListener('keydown', e => {
 
  // Final: recalculs de mitjanes i fila fórmules (igual que abans)
   renderAverages();
+  _gridCalculated = calculatedActs;
+  window.dispatchEvent(new CustomEvent('grid-rendered', { detail: { classId: currentClassId } }));
 }
 
 // Funció per actualitzar cel·les calculades sense recrear tota la taula
@@ -2117,6 +2120,8 @@ function buildRoundingActivityButtons(){
 
 // Retorna un número finit, o null si la fórmula no es pot avaluar per a aquest alumne
 // (p. ex. divisió per zero). Llença error si la fórmula és sintàcticament invàlida.
+let _legacyNamesCache = null;
+window.addEventListener('grid-rendered', () => { _legacyNamesCache = null; });
 async function evalFormulaAsync(formula, studentId){
   const studentDoc = await db.collection('alumnes').doc(studentId).get();
   const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
@@ -2124,15 +2129,22 @@ async function evalFormulaAsync(formula, studentId){
   // Fórmules antigues escrites amb NOMS d'activitat: els convertim a marcadors __ACT__id
   let src = formula;
   if (!/__ACT__/.test(src)) {
-    const allIds = new Set();
-    Object.values(_classData?.terms || {}).forEach(t => (t.activities || []).forEach(a => allIds.add(a)));
-    classActivities.forEach(a => allIds.add(a));
-    const named = [];
-    for (const aid of allIds) {
-      const d = await db.collection('activitats').doc(aid).get();
-      if (d.exists && d.data().nom) named.push({ aid, nom: d.data().nom });
+    // Mapa nom→id calculat UNA vegada (abans: A lectures per CADA alumne)
+    if (!_legacyNamesCache || _legacyNamesCache.classId !== currentClassId) {
+      const classId = currentClassId;
+      const p = (async () => {
+        const allIds = new Set();
+        Object.values(_classData?.terms || {}).forEach(t => (t.activities || []).forEach(a => allIds.add(a)));
+        classActivities.forEach(a => allIds.add(a));
+        const docs = await Promise.all([...allIds].map(aid => db.collection('activitats').doc(aid).get()));
+        const list = [];
+        docs.forEach(d => { if (d.exists && d.data().nom) list.push({ aid: d.id, nom: d.data().nom }); });
+        list.sort((x, y) => y.nom.length - x.nom.length); // noms llargs primer
+        return list;
+      })();
+      _legacyNamesCache = { classId, p };   // es guarda la promesa: les crides concurrents la comparteixen
     }
-    named.sort((x, y) => y.nom.length - x.nom.length); // noms llargs primer
+    const named = await _legacyNamesCache.p;
     named.forEach(({ aid, nom }) => {
       src = src.split(nom).join('__ACT__' + aid);
     });
@@ -2841,3 +2853,14 @@ window.renderNotesGrid = renderNotesGrid;
 window.applyCellColor = applyCellColor;
 
 window.showSaveError = showSaveError;
+
+// ---------------- API pública per a la resta de mòduls ----------------
+// Substitueix els window.currentClassId & cia. que ningú assignava, i els
+// MutationObserver/setInterval: els mòduls escolten 'grid-rendered' i consulten aquesta API.
+window.AvaluApp = {
+  getClassId: () => currentClassId,
+  getClassData: () => _classData,
+  getCalculatedActivities: () => _gridCalculated,
+  getStudentIds: () => Array.from(classStudents),
+  getActivityIds: () => Array.from(classActivities)
+};
