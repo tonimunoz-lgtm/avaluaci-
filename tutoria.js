@@ -606,13 +606,13 @@ function parteixNom(full, ordre) {
   if (full.includes(',')) {                       // «Cognoms, Nom»
     const [cog, nom] = full.split(',').map(x => x.trim());
     const c = cog.split(/\s+/);
-    return { nom: nom || '', cognom1: c.join(' ') };
+    return { nom: nom || '', cognom1: c[0] || '' };
   }
   const p = full.split(/\s+/).filter(Boolean);
   if (ordre === 'cn' && p.length > 1) {
-    return { nom: p[p.length - 1], cognom1: p.slice(0, -1).join(' ') };
+    return { nom: p[p.length - 1], cognom1: p[0] };
   }
-  return { nom: p[0] || '', cognom1: p.slice(1).join(' ') };
+  return { nom: p[0] || '', cognom1: p[1] || '' };
 }
 function nomPartsHTML() {
   if (!_ctx?.studentName) return '';
@@ -634,7 +634,7 @@ function nomPartsHTML() {
           <option value="cn" ${ordre === 'cn' ? 'selected' : ''}>Cognoms Nom</option>
         </select></label>
     </div>
-    <div class="flex gap-4 flex-wrap">${mk('nom', 'nom', pt.nom)}${mk('cognom1', 'cognoms', pt.cognom1)}</div></div>`;
+    <div class="flex gap-4 flex-wrap">${mk('nom', 'nom', pt.nom)}${mk('cognom1', '1r cognom', pt.cognom1)}</div></div>`;
 }
 // Marca «Noi» / «Noia» segons el nom de pila (si el nom no es reconeix, es deixa la tria com està)
 function aplicaGenere(modal) {
