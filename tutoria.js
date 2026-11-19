@@ -1,3 +1,4 @@
+import { guessGender } from './gender-names.js';
 // tutoria.js - Injector: Generador de comentaris de tutoria amb IA
 // v3: matèries personalitzades + apartats personalitzats guardats a Firestore
 
@@ -134,6 +135,8 @@ async function openTutoriaModal(ctx) {
   { const sel = modal.querySelector('#tutoriaIdioma'); const l = window.AvaluConfig?.get().idioma; if (sel && l) sel.value = l; }
   omplirAlumnesDesar(modal);
   wireNomParts(modal);
+  aplicaGenere(modal);
+  modal.querySelector('#tutoriaNom')?.addEventListener('input', () => aplicaGenere(modal));
   const pick = modal.querySelector('#tutoriaPickStudent');
   pick?.addEventListener('change', () => {
     const a = _llistaAlumnes.find(x => x.id === pick.value);
@@ -142,6 +145,7 @@ async function openTutoriaModal(ctx) {
     modal.querySelector('#tutoriaSaveName').textContent = _ctx.studentName;
     modal.querySelector('#nomPartsBox').innerHTML = nomPartsHTML();
     wireNomParts(modal);
+    aplicaGenere(modal);
   });
 }
 window.openTutoriaModal = openTutoriaModal;
@@ -632,12 +636,20 @@ function nomPartsHTML() {
     </div>
     <div class="flex gap-4 flex-wrap">${mk('nom', 'nom', pt.nom)}${mk('cognom1', 'cognoms', pt.cognom1)}</div></div>`;
 }
+// Marca «Noi» / «Noia» segons el nom de pila (si el nom no es reconeix, es deixa la tria com està)
+function aplicaGenere(modal) {
+  const nom = _ctx ? parteixNom(_ctx.studentName, _ordreNom()).nom : modal.querySelector('#tutoriaNom')?.value;
+  const g = guessGender(nom);
+  if (!g) return;
+  const r = modal.querySelector(`input[name="genere"][value="${g}"]`);
+  if (r && !r.checked) { r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); }
+}
 function wireNomParts(modal) {
   const box = modal.querySelector('#nomPartsBox');
   const sel = box?.querySelector('#tutoriaNomOrdre');
   sel?.addEventListener('change', () => {
     try { localStorage.setItem('uc_nom_order', sel.value); } catch {}
-    box.innerHTML = nomPartsHTML(); wireNomParts(modal);
+    box.innerHTML = nomPartsHTML(); wireNomParts(modal); aplicaGenere(modal);
   });
 }
 function nomSegonsChecks(modal) {
