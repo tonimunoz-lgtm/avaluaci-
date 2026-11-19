@@ -193,7 +193,7 @@ function injectarBotoUC() {
     } else if (typeof window.openUltracomentatorModal === 'function') {
       window.openUltracomentatorModal();
     } else {
-      alert('Ultracomentator no disponible. Assegura\'t que ultracomentator.js està carregat.');
+      notify('Ultracomentator no disponible. Assegura\'t que ultracomentator.js està carregat.');
     }
   });
 
@@ -258,13 +258,13 @@ function _parsarComentariItems(text) {
 
 async function exportarComentarisExcel() {
   const classId = _tcClassId;
-  if (!classId || !_tcDB) { alert('Selecciona una classe primer'); return; }
+  if (!classId || !_tcDB) { notify('Selecciona una classe primer'); return; }
 
   try {
     const classDoc = await _tcDB.collection('classes').doc(classId).get();
-    if (!classDoc.exists) { alert('Classe no trobada'); return; }
+    if (!classDoc.exists) { notify('Classe no trobada'); return; }
     const alumnesIds = classDoc.data().alumnes || [];
-    if (alumnesIds.length === 0) { alert('No hi ha alumnes'); return; }
+    if (alumnesIds.length === 0) { notify('No hi ha alumnes'); return; }
 
     const docs = await Promise.all(alumnesIds.map(id => _tcDB.collection('alumnes').doc(id).get()));
     const alumnes = docs.filter(d => d.exists).map(d => {
@@ -281,7 +281,7 @@ async function exportarComentarisExcel() {
       return { nom: data.nom || 'Desconegut', items };
     });
 
-    if (!window.XLSX) { alert('La llibreria XLSX no està disponible'); return; }
+    if (!window.XLSX) { notify('La llibreria XLSX no està disponible'); return; }
 
     const maxItems = Math.max(1, ...alumnes.map(a => a.items.length));
 
@@ -324,7 +324,7 @@ async function exportarComentarisExcel() {
     window.XLSX.writeFile(wb, `comentaris_${data}.xlsx`);
   } catch(e) {
     console.error('Error exportant:', e);
-    alert('Error: ' + e.message);
+    notify('Error: ' + e.message);
   }
 }
 
@@ -812,7 +812,7 @@ async function tcGuardar(modal, btn) {
   console.log('💾 Guardar - studentId:', _tcStudentId, 'classId:', _tcClassId, 'db:', !!_tcDB);
 
   if (!_tcStudentId || !_tcClassId || !_tcDB) {
-    alert(`Error: no es pot identificar l'alumne o la classe.\nstudentId: ${_tcStudentId}\nclassId: ${_tcClassId}`);
+    notify(`Error: no es pot identificar l'alumne o la classe.\nstudentId: ${_tcStudentId}\nclassId: ${_tcClassId}`);
     return;
   }
 
@@ -844,6 +844,6 @@ async function tcGuardar(modal, btn) {
     console.error('Error guardant:', e);
     btn.disabled = false;
     btn.textContent = '💾 Guardar a l\'alumne';
-    alert('Error guardant: ' + e.message);
+    notify('Error guardant: ' + e.message);
   }
 }

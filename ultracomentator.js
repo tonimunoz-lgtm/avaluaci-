@@ -572,7 +572,7 @@ function recollirDadesPlantilla() {
   const desc = document.getElementById('ucPlantillaDesc').value.trim();
 
   if (!nom) {
-    alert('Cal introduir un nom per a la plantilla!');
+    notify('Cal introduir un nom per a la plantilla!');
     return null;
   }
 
@@ -602,7 +602,7 @@ function recollirDadesPlantilla() {
   });
 
   if (items.length === 0) {
-    alert('Cal afegir almenys un ítem amb comentaris!');
+    notify('Cal afegir almenys un ítem amb comentaris!');
     return null;
   }
 
@@ -619,7 +619,7 @@ async function actualitzarPlantilla() {
   const dades = recollirDadesPlantilla();
   if (!dades) return;
   const codi = window._ucCodiEdicio;
-  if (!codi) { alert("Error: codi d'edició no trobat."); return; }
+  if (!codi) { notify("Error: codi d'edició no trobat."); return; }
 
   const btn = document.getElementById('ucGuardarActualitzar');
   btn.innerHTML = '⏳ Actualitzant...';
@@ -641,7 +641,7 @@ async function actualitzarPlantilla() {
       openMevesPlantillesModal();
     }, 700);
   } catch (err) {
-    alert('Error actualitzant: ' + err.message);
+    notify('Error actualitzant: ' + err.message);
     btn.innerHTML = '✅ Actualitzar plantilla';
     btn.disabled = false;
   }
@@ -681,7 +681,7 @@ async function guardarPlantilla() {
 
   } catch (err) {
     console.error('Error guardant plantilla:', err);
-    alert('Error guardant la plantilla: ' + err.message);
+    notify('Error guardant la plantilla: ' + err.message);
     btn.innerHTML = '💾 Guardar plantilla';
     btn.disabled = false;
   }
@@ -876,7 +876,7 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
       if (doc.exists) plantillaData = doc.data();
     } catch (e) { console.error(e); }
   }
-  if (!plantillaData) { alert("No s'ha pogut carregar la plantilla."); return; }
+  if (!plantillaData) { notify("No s'ha pogut carregar la plantilla."); return; }
 
   window._ucPlantillaActiva = plantillaData;
 
@@ -1277,7 +1277,7 @@ async function generarAmbIA(modal) {
 
   // Cal almenys un assoliment O un comentari
   if (Object.keys(assoliments).length === 0 && Object.keys(seleccionats).length === 0) {
-    alert('Cal seleccionar almenys un assoliment o un comentari!');
+    notify('Cal seleccionar almenys un assoliment o un comentari!');
     return;
   }
   // alumne buit = mode neutre (sense nom al comentari), es valid
@@ -1412,7 +1412,7 @@ async function guardarComentariAlumne(comentari, modal, items = [], passarAlSegu
   console.log('[UC guardar] studentId:', studentIdActual, 'classId:', classIdActual, 'seguent:', passarAlSeguent);
 
   if (!studentIdActual || !classIdActual) {
-    alert('No hi ha cap alumne actiu. Obre primer el modal de comentaris d\'un alumne.');
+    notify('No hi ha cap alumne actiu. Obre primer el modal de comentaris d\'un alumne.');
     return;
   }
 
@@ -1492,7 +1492,7 @@ async function guardarComentariAlumne(comentari, modal, items = [], passarAlSegu
     }
 
   } catch (err) {
-    alert('Error guardant: ' + err.message);
+    notify('Error guardant: ' + err.message);
     if (btnActiu) { btnActiu.innerHTML = passarAlSeguent ? '💾 Guardar i següent ▶' : '💾 Guardar a l\'alumne'; btnActiu.disabled = false; }
   }
 }
@@ -1503,7 +1503,7 @@ async function guardarComentariAlumne(comentari, modal, items = [], passarAlSegu
 // ============================================================
 async function openMevesPlantillesModal() {
   const uid = window._tutoriaUID;
-  if (!uid) { alert("Has d'iniciar sessió per veure les teves plantilles."); return; }
+  if (!uid) { notify("Has d'iniciar sessió per veure les teves plantilles."); return; }
 
   const modal = document.createElement('div');
   modal.id = 'ucMevesModal';
@@ -1807,7 +1807,7 @@ async function carregarMembres(codi) {
           if (!profSnap.empty) updates.membres = firebase.firestore.FieldValue.arrayRemove(profSnap.docs[0].id);
           await docRef.update(updates);
           carregarMembres(btn.dataset.codi);
-        } catch (err) { alert('Error: ' + err.message); }
+        } catch (err) { notify('Error: ' + err.message); }
       });
     });
 
@@ -1823,13 +1823,13 @@ async function editarPlantilla(codi) {
   try {
     const db = window._tutoriaDB;
     const doc = await db.collection('ultracomentator_plantilles').doc(codi).get();
-    if (!doc.exists) { alert('Plantilla no trobada.'); return; }
+    if (!doc.exists) { notify('Plantilla no trobada.'); return; }
     const p = doc.data();
 
     // Obrir modal crear amb dades existents
     openCrearPlantillaModal(p, codi);
   } catch (err) {
-    alert('Error carregant plantilla: ' + err.message);
+    notify('Error carregant plantilla: ' + err.message);
   }
 }
 
@@ -1845,7 +1845,7 @@ Aquesta acció no es pot desfer.`)) return;
     mevesModal.remove();
     openMevesPlantillesModal();
   } catch (err) {
-    alert('Error esborrant: ' + err.message);
+    notify('Error esborrant: ' + err.message);
   }
 }
 
@@ -1908,7 +1908,7 @@ function importarExcelModal() {
     const script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
     script.onload = () => { _mostrarModalImport(); };
-    script.onerror = () => { alert('Error carregant la llibreria Excel. Comprova la connexió.'); };
+    script.onerror = () => { notify('Error carregant la llibreria Excel. Comprova la connexió.'); };
     document.head.appendChild(script);
   } else {
     _mostrarModalImport();
@@ -2102,7 +2102,7 @@ function descarregarPlantillaExcel() {
     const script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
     script.onload = () => _generarExcelPlantilla();
-    script.onerror = () => alert('Error carregant la llibreria Excel.');
+    script.onerror = () => notify('Error carregant la llibreria Excel.');
     document.head.appendChild(script);
   } else {
     _generarExcelPlantilla();

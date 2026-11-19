@@ -117,9 +117,9 @@ async function toggleSuspendUser(uid) {
 
     // Missatge a l'administrador
     if (newState) {
-      alert("🔹 Usuari suspès correctament. Rebrà un avís al login.");
+      notify("🔹 Usuari suspès correctament. Rebrà un avís al login.");
     } else {
-      alert("🔹 Usuari reactivat correctament.");
+      notify("🔹 Usuari reactivat correctament.");
     }
 
     // Recarregar llista d'usuaris si tens aquesta funció
@@ -127,7 +127,7 @@ async function toggleSuspendUser(uid) {
 
   } catch (e) {
     console.error("Error canviant estat de suspensió:", e);
-    alert("⚠️ Error canviant estat de suspensió.");
+    notify("⚠️ Error canviant estat de suspensió.");
   }
 }
 
@@ -138,10 +138,10 @@ async function resetPassword(uid) {
   const doc = await db.collection('professors').doc(uid).get();
   if (!doc.exists) return;
   const email = doc.data().email;
-  if (!email) return alert('No hi ha email associat a aquest usuari.');
+  if (!email) return notify('No hi ha email associat a aquest usuari.');
   auth.sendPasswordResetEmail(email)
-      .then(() => alert('Email de reseteig enviat a ' + email))
-      .catch(e => alert('Error: ' + e.message));
+      .then(() => notify('Email de reseteig enviat a ' + email))
+      .catch(e => notify('Error: ' + e.message));
 }
 
 // Toggle admin
@@ -160,12 +160,12 @@ async function deleteUser(uid) {
 
   try {
     await db.collection('professors').doc(uid).update({ deleted: true, suspended: false });
-    alert("Usuari marcat com a eliminat. Ja no podrà entrar a l'app. (El seu compte d'autenticació continua existint; per restaurar-lo, edita deleted=false a Firestore.)");
+    notify("Usuari marcat com a eliminat. Ja no podrà entrar a l'app. (El seu compte d'autenticació continua existint; per restaurar-lo, edita deleted=false a Firestore.)");
     loadUsers(); // Recarregar llista d'usuaris
     return true;
   } catch (e) {
     console.error("Error eliminant usuari:", e);
-    alert("⚠️ Error eliminant usuari: " + e.message);
+    notify("⚠️ Error eliminant usuari: " + e.message);
     return false;
   }
 }
@@ -197,7 +197,7 @@ btnAddAdmin.addEventListener('click', async () => {
       classes: [],
       createdAt: firebase.firestore.Timestamp.now()
     });
-    alert('Nou usuari creat!');
+    notify('Nou usuari creat!');
     loadUsers();
   } catch (e) {
     if (e.code === 'auth/email-already-in-use') {
@@ -205,14 +205,14 @@ btnAddAdmin.addEventListener('click', async () => {
       const snap = await db.collection('professors').where('email', '==', email).get();
       if (!snap.empty && makeAdmin && confirm('Aquest email ja existeix. Convertir-lo en administrador?')) {
         await db.collection('professors').doc(snap.docs[0].id).update({ isAdmin: true });
-        alert('L’usuari ja existia, ara és administrador!');
+        notify('L’usuari ja existia, ara és administrador!');
         loadUsers();
       } else {
-        alert('Aquest email ja està registrat.');
+        notify('Aquest email ja està registrat.');
       }
     } else {
       console.error(e);
-      alert('Error creant l’usuari: ' + e.message);
+      notify('Error creant l’usuari: ' + e.message);
     }
   }
 });
@@ -282,10 +282,10 @@ async function migrateOldProfessors() {
       }
     }
 
-    alert(`Migració completada! S'han actualitzat ${migratedCount} usuaris antics.`);
+    notify(`Migració completada! S'han actualitzat ${migratedCount} usuaris antics.`);
   } catch (e) {
     console.error('Error migració:', e);
-    alert('Error durant la migració: ' + e.message);
+    notify('Error durant la migració: ' + e.message);
   }
 }
 

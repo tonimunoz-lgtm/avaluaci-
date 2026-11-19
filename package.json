@@ -1,0 +1,10 @@
+{
+  "name": "avaluapp",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "check": "node scripts/check-syntax.js",
+    "test": "node --test tests/formula-engine.test.mjs",
+    "ci": "npm run check && npm test"
+  }
+}

@@ -539,10 +539,10 @@ function openAfegirMateriaModal(parentModal) {
   m.querySelector('#btnConfirmMateria').addEventListener('click', async () => {
     const nom = m.querySelector('#inputNovaMateria').value.trim();
     const nivell = m.querySelector('input[name="nivell_nova"]:checked').value;
-    if (!nom) { alert('Escriu el nom de la matèria'); return; }
+    if (!nom) { notify('Escriu el nom de la matèria'); return; }
     if (!_materiesExtra[nivell]) _materiesExtra[nivell] = [];
     if (_materiesExtra[nivell].includes(nom) || ASSIGNATURES[nivell].includes(nom)) {
-      alert('Aquesta matèria ja existeix'); return;
+      notify('Aquesta matèria ja existeix'); return;
     }
     _materiesExtra[nivell].push(nom);
     await guardarDadesUsuari();
@@ -630,8 +630,8 @@ function openAfegirApartatModal(parentModal) {
 
   m.querySelector('#btnConfirmApartat').addEventListener('click', async () => {
     const nom = m.querySelector('#inputNomApartat').value.trim();
-    if (!nom) { alert('Escriu el nom de l\'apartat'); return; }
-    if (opcions.length === 0) { alert('Afegeix almenys una opció'); return; }
+    if (!nom) { notify('Escriu el nom de l\'apartat'); return; }
+    if (opcions.length === 0) { notify('Afegeix almenys una opció'); return; }
 
     const nouApartat = {
       id: 'ap_' + Date.now(),
@@ -800,7 +800,7 @@ Escriu NOMÉS el comentari final, sense títol ni explicació.`;
 async function generarComentari(modal) {
   const dades = recollidaDades(modal);
   if (!dades.nom || dades.nom === 'l\'alumne/a') {
-    alert('⚠️ Si us plau, escriu el nom de l\'alumne/a'); return;
+    notify('⚠️ Si us plau, escriu el nom de l\'alumne/a'); return;
   }
 
   const btnGenerar    = modal.querySelector('#btnGenerarComentari');

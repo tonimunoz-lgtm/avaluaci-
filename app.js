@@ -127,7 +127,7 @@ window.updateCommentChars = function() {
 
 window.saveComment = async function() {
   if (!currentCommentStudentId) {
-    alert('Error: No hi ha estudiant seleccionat');
+    notify('Error: No hi ha estudiant seleccionat');
     return;
   }
   
@@ -154,7 +154,7 @@ window.saveComment = async function() {
     
   } catch (e) {
     console.error('Error guardant comentari:', e);
-    alert('Error guardant comentari: ' + e.message);
+    notify('Error guardant comentari: ' + e.message);
   }
 };
 
@@ -273,24 +273,24 @@ async function enterApp(user, { logLogin = false } = {}) {
     console.error('No s\'ha pogut verificar el compte:', e);
     _enteredUid = null;
     await auth.signOut();
-    return alert('⚠️ No s\'ha pogut verificar el compte: ' + e.message);
+    return notify('⚠️ No s\'ha pogut verificar el compte: ' + e.message);
   }
 
   if (!snap.exists) {
     _enteredUid = null;
     await auth.signOut();
-    return alert('⚠️ Usuari no trobat. Contacta amb l\'administrador.');
+    return notify('⚠️ Usuari no trobat. Contacta amb l\'administrador.');
   }
   const data = snap.data() || {};
   if (data.deleted) {
     _enteredUid = null;
     await auth.signOut();
-    return alert('⚠️ El teu compte ha estat eliminat. Contacta amb l\'administrador.');
+    return notify('⚠️ El teu compte ha estat eliminat. Contacta amb l\'administrador.');
   }
   if (data.suspended) {
     _enteredUid = null;
     await auth.signOut();
-    return alert('⚠️ El teu compte està suspès.\nContacta amb l\'administrador.');
+    return notify('⚠️ El teu compte està suspès.\nContacta amb l\'administrador.');
   }
 
   professorUID = user.uid;
@@ -305,7 +305,7 @@ async function enterApp(user, { logLogin = false } = {}) {
 btnLogin.addEventListener('click', async () => {
   const email = document.getElementById('loginEmail').value.trim();
   const pw = document.getElementById('loginPassword').value;
-  if (!email || !pw) return alert('Introdueix email i contrasenya');
+  if (!email || !pw) return notify('Introdueix email i contrasenya');
 
   _explicitLogin = true;
   try {
@@ -313,20 +313,18 @@ btnLogin.addEventListener('click', async () => {
     // La resta la fa onAuthStateChanged -> enterApp
   } catch (e) {
     _explicitLogin = false;
-    alert('Error login: ' + e.message);
+    notify('Error login: ' + e.message);
   }
 });
 
 // ---------------- LOGIN AMB GOOGLE I REGISTRE AUTOMÀTIC ----------------
 async function signInWithGoogleGmail() {
   const provider = new firebase.auth.GoogleAuthProvider();
-  provider.addScope('https://www.googleapis.com/auth/gmail.send');
 
   _creatingProfile = true;
   _explicitLogin = true;
   try {
     const result = await firebase.auth().signInWithPopup(provider);
-    window._googleAccessToken = result.credential && result.credential.accessToken;
 
     const profRef = db.collection('professors').doc(result.user.uid);
     const docSnap = await profRef.get();
@@ -348,7 +346,7 @@ async function signInWithGoogleGmail() {
   } catch (error) {
     console.error(error);
     _explicitLogin = false;
-    alert("Error iniciant sessió amb Google: " + error.message);
+    notify("Error iniciant sessió amb Google: " + error.message);
   } finally {
     _creatingProfile = false;
   }
@@ -360,7 +358,7 @@ document.getElementById("googleLoginBtn").addEventListener("click", signInWithGo
 btnRegister.addEventListener('click', async () => {
   const email = document.getElementById('loginEmail').value.trim();
   const pw    = document.getElementById('loginPassword').value;
-  if (!email || !pw) return alert('Introdueix email i contrasenya');
+  if (!email || !pw) return notify('Introdueix email i contrasenya');
 
   _creatingProfile = true;
   try {
@@ -376,16 +374,16 @@ btnRegister.addEventListener('click', async () => {
     });
     _creatingProfile = false;
     await enterApp(u.user, { logLogin: true });
-    alert("Compte creat correctament!");
+    notify("Compte creat correctament!");
   } catch (e) {
     if (e.code === 'auth/email-already-in-use') {
-      alert("Aquest email ja està registrat. Utilitza el botó d'inici de sessió.");
+      notify("Aquest email ja està registrat. Utilitza el botó d'inici de sessió.");
     } else if (e.code === 'auth/weak-password') {
-      alert("La contrasenya ha de tenir mínim 6 caràcters.");
+      notify("La contrasenya ha de tenir mínim 6 caràcters.");
     } else if (e.code === 'auth/invalid-email') {
-      alert("L'email no és vàlid.");
+      notify("L'email no és vàlid.");
     } else {
-      alert('Error registre: ' + e.message);
+      notify('Error registre: ' + e.message);
     }
   } finally {
     _creatingProfile = false;
@@ -395,10 +393,10 @@ btnRegister.addEventListener('click', async () => {
 
 btnRecover.addEventListener('click', () => {
   const email = document.getElementById('loginEmail').value.trim();
-  if(!email) return alert('Introdueix el teu email per recuperar la contrasenya');
+  if(!email) return notify('Introdueix el teu email per recuperar la contrasenya');
   auth.sendPasswordResetEmail(email)
-    .then(()=> alert('Email de recuperació enviat!'))
-    .catch(e=> alert('Error: ' + e.message));
+    .then(()=> notify('Email de recuperació enviat!'))
+    .catch(e=> notify('Error: ' + e.message));
 });
 
 btnLogout.addEventListener('click', ()=> {
@@ -452,7 +450,7 @@ btnCreateClass.addEventListener('click', ()=> openModal('modalCreateClass'));
 
 /* ---------------- Classes Screen (cont.) ---------------- */
 function loadClassesScreen() {
-  if(!professorUID) { alert('Fes login primer.'); return; }
+  if(!professorUID) { notify('Fes login primer.'); return; }
   screenClass.classList.add('hidden');
   screenClasses.classList.remove('hidden');
   classesGrid.innerHTML = '<div class="col-span-full text-sm text-gray-500">Carregant...</div>';
@@ -526,7 +524,7 @@ function loadClassesScreen() {
               if(!newName || newName.trim() === d.data().nom) return;
               db.collection('classes').doc(d.id).update({ nom: newName.trim() })
                 .then(() => loadClassesScreen())
-                .catch(e => alert('Error editant classe: ' + e.message));
+                .catch(e => notify('Error editant classe: ' + e.message));
             });
 
             card.addEventListener('click', () => openClass(d.id));
@@ -653,7 +651,7 @@ function confirmDeleteSelected(){
     .filter(chk => chk.checked)
     .map(chk => chk.closest('.class-card'));
 
-  if(selected.length === 0) return alert('Selecciona almenys una classe!');
+  if(selected.length === 0) return notify('Selecciona almenys una classe!');
 
   confirmAction(
     'Confirmació d\'eliminació',
@@ -663,7 +661,7 @@ function confirmDeleteSelected(){
       try {
         for (const id of ids) await deleteClassCascade(id);
       } catch (e) {
-        alert('Error eliminant classe: ' + e.message);
+        notify('Error eliminant classe: ' + e.message);
       }
       deleteMode = false;
       btnDeleteMode.textContent = '🗑️ Eliminar classe';
@@ -675,7 +673,7 @@ function confirmDeleteSelected(){
 /* ---------------- Create Class ---------------- */
 function createClassModal(){
   const name = document.getElementById('modalClassName').value.trim();
-  if(!name) return alert('Posa un nom');
+  if(!name) return notify('Posa un nom');
   const ref = db.collection('classes').doc();
   ref.set({ nom: name, alumnes: [], activitats: [], ownerUid: professorUID })
     .then(()=> db.collection('professors').doc(professorUID).update({ classes: firebase.firestore.FieldValue.arrayUnion(ref.id) }))
@@ -683,7 +681,7 @@ function createClassModal(){
       closeModal('modalCreateClass');
       document.getElementById('modalClassName').value = '';
       loadClassesScreen();
-    }).catch(e=> alert('Error: ' + e.message));
+    }).catch(e=> notify('Error: ' + e.message));
 }
 modalCreateClassBtn.addEventListener('click', createClassModal);
 
@@ -706,7 +704,7 @@ btnBack.addEventListener('click', ()=> {
 function loadClassData(){
   if(!currentClassId) return;
   db.collection('classes').doc(currentClassId).get().then(doc=>{
-    if(!doc.exists) { alert('Classe no trobada'); return; }
+    if(!doc.exists) { notify('Classe no trobada'); return; }
     const data = doc.data();
     _classData = data; // 🔥 ASEGURATE QUE ESTO ESTÉ AQUÍ
 
@@ -748,7 +746,7 @@ modalAddStudentBtn.addEventListener('click', createStudentModal);
 
 function createStudentModal(){
   const name = document.getElementById('modalStudentName').value.trim();
-  if(!name) return alert('Posa un nom');
+  if(!name) return notify('Posa un nom');
   const ref = db.collection('alumnes').doc();
   ref.set({ nom: name, notes: {}, ownerUid: professorUID })
     .then(()=> db.collection('classes').doc(currentClassId).update({ alumnes: firebase.firestore.FieldValue.arrayUnion(ref.id) }))
@@ -756,7 +754,7 @@ function createStudentModal(){
       closeModal('modalAddStudent');
       document.getElementById('modalStudentName').value = '';
       loadClassData();
-    }).catch(e=> alert('Error: '+e.message));
+    }).catch(e=> notify('Error: '+e.message));
 }
 
 function removeStudent(studentId) {
@@ -766,7 +764,7 @@ function removeStudent(studentId) {
     () => {
       deleteStudentsByIds([studentId])
         .then(() => loadClassData())
-        .catch(e => alert('Error eliminant alumne: ' + e.message));
+        .catch(e => notify('Error eliminant alumne: ' + e.message));
     }
   );
 }
@@ -888,7 +886,7 @@ function renderStudentsList() {
         if (!newName || newName.trim() === name) return;
         db.collection('alumnes').doc(stuId).update({ nom: newName.trim() })
           .then(() => loadClassData())
-          .catch(e => alert('Error editant alumne: ' + e.message));
+          .catch(e => notify('Error editant alumne: ' + e.message));
       });
 
       // INTRODUIR EMAIL
@@ -899,7 +897,7 @@ function renderStudentsList() {
 
         await db.collection('alumnes').doc(stuId).update({ email: newMail.trim() });
         li.dataset.email = newMail.trim();
-        alert("Email guardat.");
+        notify("Email guardat.");
       });
 
       // ELIMINAR
@@ -1052,7 +1050,7 @@ await renderNotesGrid();
     // renderNotesGrid();
   } catch (e) {
     console.error('Error canviant bloqueig:', e);
-    alert('Error canviant bloqueig: ' + e.message);
+    notify('Error canviant bloqueig: ' + e.message);
   }
 });
 
@@ -1073,7 +1071,7 @@ await renderNotesGrid();
       const formulaTd = formulasRow.children[idx];
       if (!formulaTd) return;
       const formulaText = formulaTd.textContent.trim();
-      if (!formulaText) return alert('No hi ha cap fórmula aplicada a aquesta activitat.');
+      if (!formulaText) return notify('No hi ha cap fórmula aplicada a aquesta activitat.');
 
       try {
         // Aplicar fórmula a tots els alumnes i esperar que es guardi
@@ -1087,7 +1085,7 @@ await renderNotesGrid();
         await renderNotesGrid();
       } catch(err) {
         console.error('Error recalculant fórmula:', err);
-        alert('Error recalculant la fórmula: ' + err.message);
+        notify('Error recalculant la fórmula: ' + err.message);
       }
     });
 
@@ -1142,7 +1140,7 @@ await renderNotesGrid();
         renderNotesGrid();
       } catch(e) {
         console.error('Error netejant notes:', e);
-        alert('Error netejant les notes: ' + e.message);
+        notify('Error netejant les notes: ' + e.message);
       }
     });
 
@@ -1152,7 +1150,7 @@ menuDiv.querySelector('.delete-btn').addEventListener('click', () => {
       await deleteActivityCascade(id);
       loadClassData();
     } catch(e) {
-      alert('Error esborrant activitat: ' + e.message);
+      notify('Error esborrant activitat: ' + e.message);
     }
   });
 });
@@ -1244,7 +1242,7 @@ if (isLocked) {
 
           } catch (err) {
             console.error('Error guardant nota:', err);
-            alert('Error guardant la nota: ' + err.message);
+            notify('Error guardant la nota: ' + err.message);
           } finally {
             // Tornem a aplicar disabled si la columna està bloquejada ara
             const nowLocked = !!(calculatedActs[actId]?.locked) || !!(calculatedActs[actId]?.calculated);
@@ -1759,7 +1757,7 @@ modalApplyCalcBtn.addEventListener('click', async () => {
     renderNotesGrid();
   } catch (e) {
     console.error(e);
-    alert('Error en aplicar el càlcul: ' + e.message);
+    notify('Error en aplicar el càlcul: ' + e.message);
   }
 });
 
@@ -2240,19 +2238,19 @@ document.addEventListener('click', () => {
 // Canviar contrasenya
 changePasswordBtn.addEventListener('click', () => {
   const email = auth.currentUser?.email;
-  if(!email) return alert('No hi ha usuari actiu.');
+  if(!email) return notify('No hi ha usuari actiu.');
   const newPw = prompt('Introdueix la nova contrasenya:');
   if(!newPw) return;
   auth.currentUser.updatePassword(newPw)
-    .then(()=> alert('Contrasenya canviada correctament!'))
-    .catch(e=> alert('Error: ' + e.message));
+    .then(()=> notify('Contrasenya canviada correctament!'))
+    .catch(e=> notify('Error: ' + e.message));
 });
 
 // ---------------------- Importar alumnes ------------------------
 document.getElementById('btnImportALConfirm').addEventListener('click', () => {
   const fileInput = document.getElementById('fileImport');
   const file = fileInput.files[0];
-  if (!file) return alert("Selecciona un fitxer!");
+  if (!file) return notify("Selecciona un fitxer!");
 
   const reader = new FileReader();
   reader.onload = async (e) => {
@@ -2278,7 +2276,7 @@ document.getElementById('btnImportALConfirm').addEventListener('click', () => {
       });
     }
 
-    if(studentNames.length === 0) return alert('No s’ha trobat cap alumne al fitxer.');
+    if(studentNames.length === 0) return notify('No s’ha trobat cap alumne al fitxer.');
 
     // Cridar funció per afegir alumnes a Firestore i classe
     await addImportedStudents(studentNames);
@@ -2295,7 +2293,7 @@ document.getElementById('btnImportALConfirm').addEventListener('click', () => {
 // Abans: 2 crides Firestore per alumne (set + update) en sèrie → N*2 rondes
 // Ara: 1 batch.commit() per tots els alumnes + 1 update de la classe = 2 crides totals
 async function addImportedStudents(names) {
-  if (!currentClassId) return alert('No hi ha cap classe seleccionada.');
+  if (!currentClassId) return notify('No hi ha cap classe seleccionada.');
 
   const classRef = db.collection('classes').doc(currentClassId);
 
@@ -2333,10 +2331,10 @@ async function addImportedStudents(names) {
     // Recarregar la graella perquè apareguin amb menú i drag & drop
     loadClassData();
 
-    alert(`${names.length} alumne(s) importat(s) correctament!`);
+    notify(`${names.length} alumne(s) importat(s) correctament!`);
   } catch(e) {
     console.error(e);
-    alert('Error afegint alumnes: ' + e.message);
+    notify('Error afegint alumnes: ' + e.message);
   }
 }
 
@@ -2359,7 +2357,7 @@ btnAddTerm.addEventListener('click', async () => {
     // Quan acaba, Terms ja cridarà l'onChange que actualitza la graella i el dropdown
   } catch(e) {
     console.error('Error creant terme:', e);
-    alert('Error creant terme: ' + e.message);
+    notify('Error creant terme: ' + e.message);
   }
 });
 
@@ -2372,7 +2370,7 @@ btnAddTerm2.addEventListener('click', async () => {
     // Quan acaba, Terms ja cridarà l'onChange que actualitza la graella i el dropdown
   } catch(e) {
     console.error('Error creant terme:', e);
-    alert('Error creant terme: ' + e.message);
+    notify('Error creant terme: ' + e.message);
   }
 });
 
@@ -2410,7 +2408,7 @@ termMenu.querySelector('.delete-term-btn').addEventListener('click', async () =>
   try {
     await Terms.deleteTerm(currentTermId); // <-- Aquí utilitzem la funció de terms.js
   } catch(e) {
-    alert('Error eliminant graella: ' + e.message);
+    notify('Error eliminant graella: ' + e.message);
   }
 
   termMenu.classList.add('hidden');
@@ -2421,7 +2419,7 @@ termMenu.querySelector('.copy-structure-btn').addEventListener('click', () => {
   const currentTermId = Terms.getActiveTermId();
   if (!currentTermId) return;
   Terms.copyGridStructure(currentTermId);
-  alert('Estructura copiada!');
+  notify('Estructura copiada!');
   termMenu.classList.add('hidden');
 });
 
@@ -2431,19 +2429,19 @@ termMenu.querySelector('.paste-structure-btn').addEventListener('click', async (
   if (!currentTermId) return;
 
   await Terms.pasteGridStructure(currentTermId);
-  alert('Estructura enganxada a la graella!');
+  notify('Estructura enganxada a la graella!');
   termMenu.classList.add('hidden');
 });
 
 // Exportar graella
 termMenu.querySelector('.export-structure-btn').addEventListener('click', exportExcel);
 async function exportExcel(){
-  if(!currentClassId) return alert('No hi ha cap classe seleccionada.');
+  if(!currentClassId) return notify('No hi ha cap classe seleccionada.');
 
   try {
     // Carregar informació de la classe
     const classDoc = await db.collection('classes').doc(currentClassId).get();
-    if(!classDoc.exists) return alert('Classe no trobada.');
+    if(!classDoc.exists) return notify('Classe no trobada.');
     const classData = classDoc.data();
 
     // Carregar activitats
@@ -2487,7 +2485,7 @@ async function exportExcel(){
 
   } catch(e){
     console.error(e);
-    alert('Error exportant Excel: ' + e.message);
+    notify('Error exportant Excel: ' + e.message);
   }
 }
 
@@ -2539,7 +2537,7 @@ async function deleteSelectedStudents() {
         .filter(Boolean);
 
     if (ids.length === 0) {
-        alert('No hi ha alumnes seleccionats.');
+        notify('No hi ha alumnes seleccionats.');
         return;
     }
     if (!confirm(`Eliminar ${ids.length} alumnes?`)) return;
@@ -2549,7 +2547,7 @@ async function deleteSelectedStudents() {
         exitDeleteStudentsMode();
         loadClassData();
     } catch (e) {
-        alert('Error eliminant alumnes: ' + e.message);
+        notify('Error eliminant alumnes: ' + e.message);
     }
 }
 
@@ -2769,10 +2767,12 @@ async function formatStudentNotesForEmail(studentId) {
 async function sendSelectedNotes() {
   const checked = [...document.querySelectorAll('.send-note-checkbox:checked')];
   if (!checked.length) {
-    alert("Selecciona algun alumne.");
+    notify("Selecciona algun alumne.");
     return;
   }
 
+  let sent = 0;
+  const failed = [];
   for (const cb of checked) {
     const li = cb.closest('li');
     const studentId = li.dataset.studentId;
@@ -2793,58 +2793,81 @@ async function sendSelectedNotes() {
     const body = await formatStudentNotesForEmail(studentId);
     const subject = `Notes de ${li.querySelector('.stu-name').textContent}`;
 
-    await gmailSendEmail(email, subject, body);
-
+    try {
+      await gmailSendEmail(email, subject, body);
+      sent++;
+    } catch (e) {
+      console.error(e);
+      failed.push(`${li.querySelector('.stu-name').textContent}: ${e.message}`);
+    }
 
     await new Promise(r => setTimeout(r, 200));
   }
+  notify(failed.length
+    ? `⚠️ Enviats: ${sent}. Han fallat ${failed.length}:\n` + failed.join('\n')
+    : `Correus enviats correctament: ${sent}`);
 }
 
 //-----------Funció per ENVIAR MAIL directament des del Gmail de l’usuari----------------
-async function gmailSendEmail(to, subject, message) {
-  if (!window._googleAccessToken) {
-    alert("Cal iniciar sessió amb Google per enviar mails.");
-    return;
-  }
+// El permís de Gmail es demana NOMÉS quan s'envia (no a cada login) i el token es renova
+// automàticament quan caduca. Token separat del de Classroom.
+const GMAIL_CLIENT_ID = '324570393360-2ib4925pbobfbggu8t0nnj14q5n414nv.apps.googleusercontent.com';
+let _gmailToken = null;      // { token, expiresAt }
 
-  const email = [
-    `To: ${to}`,
-    `Subject: ${subject}`,
-    "",
-    message
-  ].join("\n");
-
-  const base64Email = btoa(unescape(encodeURIComponent(email)))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-
-  try {
-    const response = await fetch(
-      "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${window._googleAccessToken}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ raw: base64Email })
-      }
-    );
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(errorText);
-      alert("Error enviant el correu: " + errorText);
-      return;
+function getGmailToken() {
+  if (_gmailToken && Date.now() < _gmailToken.expiresAt - 60000) return Promise.resolve(_gmailToken.token);
+  return new Promise((resolve, reject) => {
+    if (!window.google || !google.accounts || !google.accounts.oauth2) {
+      return reject(new Error('Google Identity Services no està carregat'));
     }
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id: GMAIL_CLIENT_ID,
+      scope: 'https://www.googleapis.com/auth/gmail.send',
+      callback: (r) => {
+        if (r && r.access_token) {
+          _gmailToken = { token: r.access_token, expiresAt: Date.now() + (Number(r.expires_in) || 3600) * 1000 };
+          resolve(_gmailToken.token);
+        } else {
+          reject(new Error((r && r.error) || 'No s\'ha obtingut permís per enviar correus'));
+        }
+      },
+      error_callback: (e) => reject(new Error((e && e.message) || 'Permís de Gmail cancel·lat'))
+    });
+    client.requestAccessToken({ prompt: _gmailToken ? '' : 'consent' });
+  });
+}
 
-    alert(`Correu enviat a ${to} correctament!`);
-    return true;
-  } catch (err) {
-    console.error(err);
-    alert("Error enviant el correu: " + err.message);
-  }
+const _b64 = (str) => btoa(unescape(encodeURIComponent(str)));
+const _b64url = (str) => _b64(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+// Retorna true si s'ha enviat; llença Error si no (sense alert: ho gestiona qui crida)
+async function gmailSendEmail(to, subject, message) {
+  to = String(to || '').trim();
+  subject = String(subject || '');
+  // Evitar injecció de capçaleres (salts de línia) i adreces invàlides
+  if (/[\r\n]/.test(to) || /[\r\n]/.test(subject)) throw new Error('Capçalera invàlida');
+  if (!/^[^\s@<>,;]+@[^\s@<>,;]+\.[^\s@<>,;]+$/.test(to)) throw new Error(`Email invàlid: ${to}`);
+
+  const token = await getGmailToken();
+
+  const mime = [
+    `To: ${to}`,
+    `Subject: =?UTF-8?B?${_b64(subject)}?=`,       // assumpte codificat (accents, ç, ·...)
+    'MIME-Version: 1.0',
+    'Content-Type: text/plain; charset="UTF-8"',
+    'Content-Transfer-Encoding: base64',
+    '',
+    _b64(String(message || '')).replace(/(.{76})/g, '$1\r\n')
+  ].join('\r\n');
+
+  const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ raw: _b64url(mime) })
+  });
+  if (response.status === 401) { _gmailToken = null; throw new Error('Permís de Gmail caducat, torna-ho a provar'); }
+  if (!response.ok) throw new Error('Gmail ha respost ' + response.status + ': ' + (await response.text()));
+  return true;
 }
 
 // Globals que altres mòduls ja esperaven (abans mai s'assignaven)

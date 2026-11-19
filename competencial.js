@@ -60,7 +60,7 @@ async function handleActivityCreation(e) {
   const name = inputName?.value.trim();
 
   if (!name) {
-    alert('Posa un nom');
+    notify('Posa un nom');
     return;
   }
 
@@ -156,7 +156,7 @@ async function createActivityWithType(name, evaluationType) {
     const db = window.firebase?.firestore?.();
     if (!db) {
       console.error('❌ Firebase no disponible');
-      alert('Error: Firebase no disponible');
+      notify('Error: Firebase no disponible');
       return;
     }
 
@@ -198,11 +198,11 @@ async function createActivityWithType(name, evaluationType) {
       setTimeout(() => window.loadClassData(), 500);
     }
 
-    alert(`✅ Activitat '${name}' creada`);
+    notify(`✅ Activitat '${name}' creada`);
 
   } catch (err) {
     console.error('❌ Error creant activitat:', err);
-    alert('Error: ' + err.message);
+    notify('Error: ' + err.message);
   }
 }
 

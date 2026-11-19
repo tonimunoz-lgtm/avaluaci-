@@ -165,7 +165,7 @@ function setupClassroomButton() {
     console.log('🎓 Botón Classroom clickeado');
     
     if (!currentProfessorUID || !currentDB) {
-      alert('❌ Necessites iniciar sessió primer');
+      notify('❌ Necessites iniciar sessió primer');
       return;
     }
     
@@ -185,7 +185,7 @@ async function openClassroomImportModal() {
   console.log('🔓 Abriendo modal de Classroom...');
   
   if (!currentDB || !currentProfessorUID) {
-    alert('❌ Error: Necessites iniciar sessió primer');
+    notify('❌ Error: Necessites iniciar sessió primer');
     return;
   }
   
@@ -306,11 +306,11 @@ function setupImportListener() {
   
   btnImport.addEventListener('click', async (event) => {
     if (selectedCourses.length === 0) {
-      return alert('Selecciona almenys un curs');
+      return notify('Selecciona almenys un curs');
     }
 
     if (!currentDB || !currentProfessorUID) {
-      return alert('❌ Necessites iniciar sessió primer');
+      return notify('❌ Necessites iniciar sessió primer');
     }
 
     try {
@@ -341,7 +341,7 @@ function setupImportListener() {
       
       setTimeout(() => {
         progressModal.remove();
-        alert('✅ Cursos importats correctament');
+        notify('✅ Cursos importats correctament');
         closeModal('modalClassroomImport');
         
         // Recargar página
@@ -353,7 +353,7 @@ function setupImportListener() {
 
     } catch (err) {
       console.error('Error important:', err);
-      alert('❌ Error important els cursos: ' + err.message);
+      notify('❌ Error important els cursos: ' + err.message);
       const progressModal = document.getElementById('classroomProgressModal');
       if (progressModal) progressModal.remove();
     } finally {

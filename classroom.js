@@ -25,7 +25,6 @@ export function initClassroomAPI() {
         callback: (tokenResponse) => {
           if (tokenResponse && tokenResponse.access_token) {
             classroomAccessToken = tokenResponse.access_token;
-            window._googleAccessToken = classroomAccessToken;
             console.log('✅ Token obtenido con éxito');
             resolve(true);
           } else {

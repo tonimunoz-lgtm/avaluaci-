@@ -83,7 +83,7 @@ async function saveTrams(trams) {
     console.log('✅ Trams guardats');
   } catch (e) {
     console.error('Error guardant trams:', e);
-    alert('Error guardant configuració: ' + e.message);
+    notify('Error guardant configuració: ' + e.message);
   }
 }
 

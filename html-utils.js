@@ -48,6 +48,39 @@
     return text;
   }
 
+
+  // Avís no bloquejant (substitueix alert). Errors en vermell, la resta en blau.
+  function notify(msg, type) {
+    const text = String(msg == null ? '' : msg);
+    const isErr = type === 'error' || (!type && /^(⚠|❌|error|no s'ha|no hi ha cap)/i.test(text.trim()));
+    let box = document.getElementById('toastBox');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'toastBox';
+      box.style.cssText = 'position:fixed;top:16px;right:16px;z-index:100000;display:flex;flex-direction:column;gap:8px;max-width:360px';
+      document.body.appendChild(box);
+    }
+    const t = document.createElement('div');
+    t.setAttribute('role', 'status');
+    t.style.cssText = 'color:#fff;padding:10px 14px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.3);font-size:14px;white-space:pre-line;cursor:pointer;background:' + (isErr ? '#dc2626' : '#2563eb');
+    t.textContent = text;
+    t.addEventListener('click', () => t.remove());
+    box.appendChild(t);
+    setTimeout(() => t.remove(), isErr ? 9000 : 5000);
+  }
+
+  // Xarxa de seguretat: errors no capturats -> avís visible + consola
+  window.addEventListener('unhandledrejection', e => {
+    console.error('Promesa rebutjada:', e.reason);
+    notify('⚠️ Error inesperat: ' + ((e.reason && e.reason.message) || e.reason), 'error');
+  });
+  window.addEventListener('error', e => {
+    if (e.message && /ResizeObserver/.test(e.message)) return;
+    console.error('Error no capturat:', e.error || e.message);
+  });
+
+  window.notify = notify;
+
   window.esc = esc;
   window.aiGenerate = aiGenerate;
 })();
