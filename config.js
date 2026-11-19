@@ -5,7 +5,7 @@ const DEFAULTS = {
   nom: '', centre: '', curs: '', signatura: '',
   terms: ['1r trimestre', '2n trimestre', '3r trimestre'],
   th: { red: 5, yellow: 7, green: 9 },
-  idioma: 'catala', tutoriaClassId: '',
+  idioma: 'catala', tutoriaClassId: '', ordreNom: '',
   assumpte: 'Notes de {nom}', intro: 'Hola {nom},\n\nAquestes són les teves notes:',
   densitat: 'normal', avisos: true
 };
@@ -100,6 +100,7 @@ export function renderConfigScreen(el) {
       row('Signatura', `<textarea id="cf_signatura" rows="2" placeholder="Cordialment,&#10;Toni Muñoz">${esc(c.signatura)}</textarea>`))}
     ${card('🎨', 'Aparença i avisos',
       row('Densitat de la graella', `<select id="cf_densitat"><option value="normal" ${c.densitat === 'normal' ? 'selected' : ''}>Còmoda</option><option value="compact" ${c.densitat === 'compact' ? 'selected' : ''}>Compacta</option></select>`) +
+      row('Format del nom dels alumnes', `<select id="cf_ordre"><option value="nc" ${(c.ordreNom || localStorage.getItem('uc_nom_order') || 'nc') === 'nc' ? 'selected' : ''}>Nom Cognoms</option><option value="cn" ${(c.ordreNom || localStorage.getItem('uc_nom_order') || 'nc') === 'cn' ? 'selected' : ''}>Cognoms Nom</option></select>`, 'Com surten escrits a la llista. Serveix per separar nom i cognoms als comentaris.') +
       row('Avís de comentaris pendents', `<select id="cf_avisos"><option value="1" ${c.avisos ? 'selected' : ''}>Activat</option><option value="0" ${!c.avisos ? 'selected' : ''}>Desactivat</option></select>`))}
     ${card('🔌', 'Connexions',
       `<p class="muted" style="font-size:.85rem">Compte: <b>${esc(firebase.auth().currentUser?.email || '—')}</b></p>
@@ -116,8 +117,9 @@ export function renderConfigScreen(el) {
       terms: n('cf_terms').value.split(',').map(s => s.trim()).filter(Boolean),
       th: { red: +n('cf_th_red').value || 5, yellow: +n('cf_th_yellow').value || 7, green: +n('cf_th_green').value || 9 },
       tutoriaClassId: n('cf_tut').value, idioma: n('cf_idioma').value, assumpte: n('cf_assumpte').value, intro: n('cf_intro').value,
-      signatura: n('cf_signatura').value, densitat: n('cf_densitat').value, avisos: n('cf_avisos').value === '1'
+      signatura: n('cf_signatura').value, ordreNom: n('cf_ordre').value, densitat: n('cf_densitat').value, avisos: n('cf_avisos').value === '1'
     });
+    try { localStorage.setItem('uc_nom_order', cfg.ordreNom); } catch {}
     const nl = n('cf_lang').value;
     if (nl !== getLang()) {
       cfg = localize(cfg, nl); cfg.lang = nl;

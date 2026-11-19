@@ -599,7 +599,8 @@ async function guardarComentariAlumne(modal, btn) {
 // ============================================================
 const _cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 const _prefsNom = () => { try { return JSON.parse(localStorage.getItem('uc_nom_parts') || '{"nom":true,"cognom1":false,"cognom2":false}'); } catch { return { nom: true, cognom1: false, cognom2: false }; } };
-const _ordreNom = () => { try { return localStorage.getItem('uc_nom_order') || 'nc'; } catch { return 'nc'; } };
+// Format dels noms de la llista: es desa al perfil (segueix l'usuari entre dispositius) i a localStorage
+const _ordreNom = () => { try { return window.AvaluConfig?.get().ordreNom || localStorage.getItem('uc_nom_order') || 'nc'; } catch { return 'nc'; } };
 // Separa el nom complet segons el format de la llista: 'nc' = «Nom Cognom1 Cognom2», 'cn' = «Cognom1 Cognom2 Nom»
 function parteixNom(full, ordre) {
   full = (full || '').trim();
@@ -649,6 +650,7 @@ function wireNomParts(modal) {
   const sel = box?.querySelector('#tutoriaNomOrdre');
   sel?.addEventListener('change', () => {
     try { localStorage.setItem('uc_nom_order', sel.value); } catch {}
+    try { window.AvaluConfig?.set({ ordreNom: sel.value }); } catch {}
     box.innerHTML = nomPartsHTML(); wireNomParts(modal); aplicaGenere(modal);
   });
 }
