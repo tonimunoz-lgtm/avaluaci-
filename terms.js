@@ -5,6 +5,7 @@ let _db = null;
 let _currentClassId = null;
 let _classData = null;
 let _activeTermId = null;
+let _lastClassId = null;
 let _onChangeCallback = null;
 let _copiedGridStructure = null;
 
@@ -20,8 +21,13 @@ export function setup(db, classId, classData, opts = {}) {
   _classData = classData || {};
   _onChangeCallback = opts.onChange || null;
 
+  // En canviar de classe, el període actiu de l'anterior no val: si no, el desplegable queda
+  // en blanc i la graella sense activitats (les dades continuen intactes a Firestore).
+  if (_lastClassId !== classId || !_classData.terms?.[_activeTermId]) _activeTermId = null;
+  _lastClassId = classId;
+
   // Si no hi ha termes, deixem tot buit i mostrem missatge
-  if (!_classData.terms) {
+  if (!_classData.terms || Object.keys(_classData.terms).length === 0) {
     _classData.terms = {};   // sense terme inicial
     _activeTermId = null;    // cap terme actiu
     renderDropdown();        // desplegable buit
