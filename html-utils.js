@@ -81,6 +81,85 @@
 
   window.notify = notify;
 
+
+  // ---------- Diàlegs propis (substitueixen confirm() i prompt() del navegador) ----------
+  function _dialog(build) {
+    return new Promise(resolve => {
+      const overlay = document.createElement('div');
+      overlay.className = 'app-dialog-overlay';
+      const box = document.createElement('div');
+      box.className = 'app-dialog';
+      box.setAttribute('role', 'dialog');
+      box.setAttribute('aria-modal', 'true');
+      overlay.appendChild(box);
+      const prevFocus = document.activeElement;
+      const close = (val) => {
+        overlay.remove();
+        document.removeEventListener('keydown', onKey, true);
+        if (prevFocus && prevFocus.focus) try { prevFocus.focus(); } catch (_) {}
+        resolve(val);
+      };
+      let onKey;
+      build(box, close, (fn) => { onKey = fn; document.addEventListener('keydown', onKey, true); });
+      overlay.addEventListener('mousedown', e => { if (e.target === overlay) box.dispatchEvent(new CustomEvent('dismiss')); });
+      document.body.appendChild(overlay);
+    });
+  }
+
+  // confirmDialog('Segur?', { title, okText, cancelText, danger }) -> Promise<boolean>
+  function confirmDialog(message, opts) {
+    opts = opts || {};
+    return _dialog((box, close, setKey) => {
+      box.innerHTML =
+        '<h3 class="app-dialog-title">' + esc(opts.title || 'Confirmació') + '</h3>' +
+        '<p class="app-dialog-msg">' + esc(message) + '</p>' +
+        '<div class="app-dialog-actions">' +
+          '<button type="button" class="btn btn-ghost" data-act="no">' + esc(opts.cancelText || 'Cancel·lar') + '</button>' +
+          '<button type="button" class="btn ' + (opts.danger === false ? 'btn-primary' : 'btn-danger') + '" data-act="yes">' + esc(opts.okText || 'Acceptar') + '</button>' +
+        '</div>';
+      box.addEventListener('click', e => {
+        const a = e.target.closest('[data-act]');
+        if (a) close(a.dataset.act === 'yes');
+      });
+      box.addEventListener('dismiss', () => close(false));
+      setKey(e => {
+        if (e.key === 'Escape') { e.preventDefault(); close(false); }
+        if (e.key === 'Enter') { e.preventDefault(); close(true); }
+      });
+      box.querySelector('[data-act="yes"]').focus();
+    });
+  }
+
+  // promptDialog('Nom:', 'valor inicial', { title, type, okText, placeholder }) -> Promise<string|null>
+  function promptDialog(message, defaultValue, opts) {
+    opts = opts || {};
+    return _dialog((box, close, setKey) => {
+      box.innerHTML =
+        '<h3 class="app-dialog-title">' + esc(opts.title || 'Introdueix un valor') + '</h3>' +
+        '<label class="app-dialog-msg" for="appDialogInput">' + esc(message) + '</label>' +
+        '<input id="appDialogInput" class="app-dialog-input" type="' + esc(opts.type || 'text') + '" placeholder="' + esc(opts.placeholder || '') + '">' +
+        '<div class="app-dialog-actions">' +
+          '<button type="button" class="btn btn-ghost" data-act="no">Cancel·lar</button>' +
+          '<button type="button" class="btn btn-primary" data-act="yes">' + esc(opts.okText || 'Acceptar') + '</button>' +
+        '</div>';
+      const input = box.querySelector('input');
+      input.value = defaultValue == null ? '' : String(defaultValue);
+      box.addEventListener('click', e => {
+        const a = e.target.closest('[data-act]');
+        if (a) close(a.dataset.act === 'yes' ? input.value : null);
+      });
+      box.addEventListener('dismiss', () => close(null));
+      setKey(e => {
+        if (e.key === 'Escape') { e.preventDefault(); close(null); }
+        if (e.key === 'Enter') { e.preventDefault(); close(input.value); }
+      });
+      input.focus(); input.select();
+    });
+  }
+
+  window.confirmDialog = confirmDialog;
+  window.promptDialog = promptDialog;
+
   window.esc = esc;
   window.aiGenerate = aiGenerate;
 })();

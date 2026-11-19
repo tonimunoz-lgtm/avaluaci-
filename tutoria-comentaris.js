@@ -115,7 +115,7 @@ function interceptarOpenCommentsModal() {
       // Capturar SEMPRE que s'obre el modal
       _tcStudentId   = studentId;
       _tcStudentName = studentName;
-      // Exposar a window perquè ultracomentator.js hi pugui accedir
+      // Exposat a window (el fa servir aiGenerate per pseudonimitzar el nom)
       window._tcStudentId   = studentId;
       window._tcStudentName = studentName;
       // _tcClassId ja s'ha capturat via el click a la targeta
@@ -126,7 +126,6 @@ function interceptarOpenCommentsModal() {
       // Injectar botó IA al modal (amb delay per assegurar que el DOM existeix)
       setTimeout(() => {
         injectarBotoIA();
-        injectarBotoUC();
       }, 100);
     };
     console.log('✅ openCommentsModal interceptat');
@@ -158,46 +157,6 @@ function injectarBotoIA() {
     console.log('🔍 Obrint formulari - studentId:', _tcStudentId, 'classId:', _tcClassId, 'nom:', _tcStudentName);
     await openTCFormulari();
   });
-}
-
-// ============================================================
-// INJECTAR BOTÓ "⚡ Ultracomentator" AL MODAL DE COMENTARIS
-// ============================================================
-function injectarBotoUC() {
-  const modal = document.getElementById('modalComments');
-  if (!modal) return;
-  if (modal.querySelector('#tcBtnUltracomentator')) return;
-
-  const botoesDiv = modal.querySelector('.flex.gap-2');
-  if (!botoesDiv) return;
-
-  // Fer que el contenidor permeti wrap i afegir el botó com a element de ple ample
-  botoesDiv.style.flexWrap = 'wrap';
-
-  const btn = document.createElement('button');
-  btn.id = 'tcBtnUltracomentator';
-  btn.className = 'flex-1 px-3 py-2 rounded border-none cursor-pointer font-semibold text-sm text-white';
-  btn.style.cssText = `
-    flex-basis:100%;background:linear-gradient(135deg,#7c3aed,#a855f7);
-    color:#fff;border:none;cursor:pointer;font-weight:700;font-size:0.875rem;
-    font-family:inherit;padding:0.5rem 0.75rem;border-radius:0.25rem;
-    transition:opacity .2s;
-  `;
-  btn.innerHTML = '⚡ Ultracomentator';
-  btn.addEventListener('mouseenter', () => { btn.style.opacity = '.85'; });
-  btn.addEventListener('mouseleave', () => { btn.style.opacity = '1'; });
-
-  btn.addEventListener('click', () => {
-    if (typeof window.openMevesPlantillesModal === 'function') {
-      window.openMevesPlantillesModal();
-    } else if (typeof window.openUltracomentatorModal === 'function') {
-      window.openUltracomentatorModal();
-    } else {
-      notify('Ultracomentator no disponible. Assegura\'t que ultracomentator.js està carregat.');
-    }
-  });
-
-  botoesDiv.appendChild(btn);
 }
 
 // ============================================================

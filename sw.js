@@ -1,5 +1,5 @@
 // sw.js — Service Worker per a AvaluApp
-const CACHE_NAME = 'avaluapp-v3-fase3';
+const CACHE_NAME = 'avaluapp-v4-disseny';
 
 // Fitxers principals a cachear per funcionar offline
 const STATIC_ASSETS = [
@@ -19,7 +19,6 @@ const STATIC_ASSETS = [
   '/terms.js',
   '/tutoria.js',
   '/tutoria-comentaris.js',
-  '/ultracomentator.js',
   '/administrador.js',
   '/administrador-enhancements.js',
   '/icon-192.png',

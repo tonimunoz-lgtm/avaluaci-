@@ -71,7 +71,6 @@ async function loadUsers() {
      <td>${data.deleted ? 'Sí' : 'No'}</td>
       <td>
         <button class="btn-suspend-toggle px-2 py-1 bg-yellow-400 text-white rounded" data-id="${esc(doc.id)}">${data.suspended ? 'Reactivar' : 'Suspendre'}</button>
-        <button class="btn-reset px-2 py-1 bg-blue-400 text-white rounded" data-id="${esc(doc.id)}">Reset PW</button>
         <button class="btn-admin-toggle px-2 py-1 bg-indigo-500 text-white rounded" data-id="${esc(doc.id)}">${data.isAdmin ? 'Treure admin' : 'Fer admin'}</button>
         <button class="btn-delete px-2 py-1 bg-red-500 text-white rounded" data-id="${esc(doc.id)}">Eliminar</button>
       </td>
@@ -88,9 +87,6 @@ function attachUserButtons() {
   // --- TOGGLE SUSPENSIÓ ---
   document.querySelectorAll('.btn-suspend-toggle').forEach(btn => {
     btn.onclick = () => toggleSuspendUser(btn.dataset.id);
-  });
- document.querySelectorAll('.btn-reset').forEach(btn => {
-    btn.addEventListener('click', () => resetPassword(btn.dataset.id));
   });
   document.querySelectorAll('.btn-admin-toggle').forEach(btn => {
     btn.addEventListener('click', () => toggleAdmin(btn.dataset.id));
@@ -133,17 +129,6 @@ async function toggleSuspendUser(uid) {
 
 
 
-// Reset contrasenya
-async function resetPassword(uid) {
-  const doc = await db.collection('professors').doc(uid).get();
-  if (!doc.exists) return;
-  const email = doc.data().email;
-  if (!email) return notify('No hi ha email associat a aquest usuari.');
-  auth.sendPasswordResetEmail(email)
-      .then(() => notify('Email de reseteig enviat a ' + email))
-      .catch(e => notify('Error: ' + e.message));
-}
-
 // Toggle admin
 async function toggleAdmin(uid) {
   const doc = await db.collection('professors').doc(uid).get();
@@ -156,7 +141,7 @@ async function toggleAdmin(uid) {
 // Eliminar usuari
 // Marcar usuari com a eliminat, sense esborrar document
 async function deleteUser(uid) {
-  if (!confirm('Estàs segur que vols eliminar aquest usuari?')) return;
+  if (!await confirmDialog('Estàs segur que vols eliminar aquest usuari?')) return;
 
   try {
     await db.collection('professors').doc(uid).update({ deleted: true, suspended: false });
@@ -171,49 +156,23 @@ async function deleteUser(uid) {
 }
 
 
-// Crear nou usuari (amb una app secundària perquè l'admin NO perdi la seva sessió)
+// Només hi ha accés amb Google: els usuaris es creen sols en el primer login.
+// Aquest botó converteix en administrador un usuari que ja hagi entrat alguna vegada.
 btnAddAdmin.addEventListener('click', async () => {
-  const email = (prompt('Introdueix email del nou usuari:') || '').trim();
+  const email = ((await promptDialog('Email (Google) de l’usuari que vols fer administrador:', '', { title: 'Nou administrador', type: 'email' })) || '').trim().toLowerCase();
   if (!email) return;
-  const password = prompt('Introdueix contrasenya (mínim 6 caràcters):');
-  if (!password) return;
-  const nom = prompt('Nom de l’usuari:') || email.split('@')[0];
-  const makeAdmin = confirm('Vols que sigui administrador?\n(Acceptar = admin, Cancel·lar = usuari normal)');
-
-  let secondary = null;
   try {
-    secondary = firebase.apps.find(a => a.name === 'secondary') || firebase.initializeApp(firebaseConfig, 'secondary');
-    const cred = await secondary.auth().createUserWithEmailAndPassword(email, password);
-    const newUid = cred.user.uid;
-    await secondary.auth().signOut();
-
-    // El document el crea l'admin (sessió principal), que té permís per fer-ho
-    await db.collection('professors').doc(newUid).set({
-      email,
-      nom,
-      isAdmin: makeAdmin,
-      suspended: false,
-      deleted: false,
-      classes: [],
-      createdAt: firebase.firestore.Timestamp.now()
-    });
-    notify('Nou usuari creat!');
+    const snap = await db.collection('professors').where('email', '==', email).get();
+    if (snap.empty) {
+      return notify('Aquest usuari encara no ha entrat mai a l’aplicació. Demana-li que iniciï sessió amb Google i torna-ho a provar.', 'error');
+    }
+    if (!await confirmDialog(`Convertir ${email} en administrador?`, { okText: 'Fer admin', danger: false })) return;
+    await db.collection('professors').doc(snap.docs[0].id).update({ isAdmin: true });
+    notify('Ara és administrador.');
     loadUsers();
   } catch (e) {
-    if (e.code === 'auth/email-already-in-use') {
-      // Ja existeix a Authentication: només el promocionem si tenim el seu perfil
-      const snap = await db.collection('professors').where('email', '==', email).get();
-      if (!snap.empty && makeAdmin && confirm('Aquest email ja existeix. Convertir-lo en administrador?')) {
-        await db.collection('professors').doc(snap.docs[0].id).update({ isAdmin: true });
-        notify('L’usuari ja existia, ara és administrador!');
-        loadUsers();
-      } else {
-        notify('Aquest email ja està registrat.');
-      }
-    } else {
-      console.error(e);
-      notify('Error creant l’usuari: ' + e.message);
-    }
+    console.error(e);
+    notify('Error: ' + e.message, 'error');
   }
 });
 
@@ -260,7 +219,7 @@ btnMigrateOldUsers?.addEventListener('click', migrateOldProfessors);
 
 
 async function migrateOldProfessors() {
-  if (!confirm('Segur que vols migrar els usuaris antics? Afegirà nom, isAdmin, suspended i createdAt.')) return;
+  if (!await confirmDialog('Segur que vols migrar els usuaris antics? Afegirà nom, isAdmin, suspended i createdAt.', { danger: false })) return;
 
   try {
     const snapshot = await db.collection('professors').get();
@@ -291,4 +250,4 @@ async function migrateOldProfessors() {
 
 
 // administrador-enhancements.js és un mòdul separat: li exposem el que necessita
-Object.assign(window, { db, auth, loadUsers, toggleSuspendUser, deleteUser, toggleAdmin, resetPassword });
+Object.assign(window, { db, auth, loadUsers, toggleSuspendUser, deleteUser, toggleAdmin });

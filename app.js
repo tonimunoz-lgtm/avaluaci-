@@ -165,9 +165,6 @@ const loginScreen = document.getElementById('loginScreen');
 const appRoot = document.getElementById('appRoot');
 const usuariNom = document.getElementById('usuariNom');
 
-const btnLogin = document.getElementById('btnLogin');
-const btnRegister = document.getElementById('btnRegister');
-const btnRecover = document.getElementById('btnRecover');
 const btnLogout = document.getElementById('btnLogout');
 const btnCreateClass = document.getElementById('btnCreateClass');
 
@@ -302,21 +299,6 @@ async function enterApp(user, { logLogin = false } = {}) {
   setupAfterAuth(user, data);
 }
 
-btnLogin.addEventListener('click', async () => {
-  const email = document.getElementById('loginEmail').value.trim();
-  const pw = document.getElementById('loginPassword').value;
-  if (!email || !pw) return notify('Introdueix email i contrasenya');
-
-  _explicitLogin = true;
-  try {
-    await auth.signInWithEmailAndPassword(email, pw);
-    // La resta la fa onAuthStateChanged -> enterApp
-  } catch (e) {
-    _explicitLogin = false;
-    notify('Error login: ' + e.message);
-  }
-});
-
 // ---------------- LOGIN AMB GOOGLE I REGISTRE AUTOMÀTIC ----------------
 async function signInWithGoogleGmail() {
   const provider = new firebase.auth.GoogleAuthProvider();
@@ -355,50 +337,6 @@ async function signInWithGoogleGmail() {
 document.getElementById("googleLoginBtn").addEventListener("click", signInWithGoogleGmail);
 
 
-btnRegister.addEventListener('click', async () => {
-  const email = document.getElementById('loginEmail').value.trim();
-  const pw    = document.getElementById('loginPassword').value;
-  if (!email || !pw) return notify('Introdueix email i contrasenya');
-
-  _creatingProfile = true;
-  try {
-    const u = await auth.createUserWithEmailAndPassword(email, pw);
-    await db.collection('professors').doc(u.user.uid).set({
-      email,
-      nom: email.split('@')[0],
-      isAdmin: false,
-      suspended: false,
-      deleted: false,
-      createdAt: firebase.firestore.Timestamp.now(),
-      classes: []
-    });
-    _creatingProfile = false;
-    await enterApp(u.user, { logLogin: true });
-    notify("Compte creat correctament!");
-  } catch (e) {
-    if (e.code === 'auth/email-already-in-use') {
-      notify("Aquest email ja està registrat. Utilitza el botó d'inici de sessió.");
-    } else if (e.code === 'auth/weak-password') {
-      notify("La contrasenya ha de tenir mínim 6 caràcters.");
-    } else if (e.code === 'auth/invalid-email') {
-      notify("L'email no és vàlid.");
-    } else {
-      notify('Error registre: ' + e.message);
-    }
-  } finally {
-    _creatingProfile = false;
-  }
-});
-
-
-btnRecover.addEventListener('click', () => {
-  const email = document.getElementById('loginEmail').value.trim();
-  if(!email) return notify('Introdueix el teu email per recuperar la contrasenya');
-  auth.sendPasswordResetEmail(email)
-    .then(()=> notify('Email de recuperació enviat!'))
-    .catch(e=> notify('Error: ' + e.message));
-});
-
 btnLogout.addEventListener('click', ()=> {
   auth.signOut().then(()=> {
     professorUID = null;
@@ -424,15 +362,29 @@ auth.onAuthStateChanged(user => {
 async function setupAfterAuth(user, profData) {
   showApp();
   const email = user.email || '';
-  usuariNom.textContent = email.split('@')[0] || email;
+  const displayName = user.displayName || email.split('@')[0] || email;
+  usuariNom.textContent = displayName;
+  const titleName = document.getElementById('usuariNomTitle');
+  if (titleName) titleName.textContent = displayName.split(' ')[0];
+  const avatar = document.getElementById('userAvatar');
+  if (avatar) {
+    avatar.innerHTML = '';
+    if (user.photoURL) {
+      const img = document.createElement('img');
+      img.src = user.photoURL; img.alt = ''; img.referrerPolicy = 'no-referrer';
+      img.onerror = () => { avatar.textContent = (displayName[0] || '?').toUpperCase(); };
+      avatar.appendChild(img);
+    } else {
+      avatar.textContent = (displayName[0] || '?').toUpperCase();
+    }
+  }
 
   // ----------------- AFEGIR OPCIÓ ADMIN -----------------
   if (profData && profData.isAdmin) {
     if (!document.getElementById('btnAdminPanel')) {
       const adminBtn = document.createElement('button');
       adminBtn.id = 'btnAdminPanel';
-      adminBtn.className = 'w-full text-left px-2 py-1 hover:bg-gray-100';
-      adminBtn.textContent = 'Administrar';
+      adminBtn.textContent = '⚙️ Administrar';
       adminBtn.addEventListener('click', () => {
         window.location.href = 'administrador.html';
       });
@@ -440,108 +392,169 @@ async function setupAfterAuth(user, profData) {
     }
   }
 
+  // Menú d'usuari: sempre té l'opció de sortir
+  const um = document.getElementById('userMenu');
+  if (um && !document.getElementById('btnLogoutMenu')) {
+    const out = document.createElement('button');
+    out.id = 'btnLogoutMenu';
+    out.textContent = '🚪 Sortir';
+    out.addEventListener('click', () => btnLogout.click());
+    um.appendChild(out);
+  }
+
   loadClassesScreen();
 }
 
-
+document.getElementById('navHome').addEventListener('click', () => {
+  if (!professorUID) return;
+  currentClassId = null;
+  loadClassesScreen();
+});
 
 /* ---------------- Classes screen ---------------- */
 btnCreateClass.addEventListener('click', ()=> openModal('modalCreateClass'));
 
 /* ---------------- Classes Screen (cont.) ---------------- */
+// Icona i il·lustració opcional segons el nom de la classe
+function classVisual(name) {
+  const n = String(name || '').toLowerCase();
+  const rules = [
+    [/rob[oò]t|tecn|inform|program/, '🤖', 'robot'],
+    [/mat|fem\b|b2f|[ck]alcul|[àa]lgebra|geom/, 'π', 'compass'],
+    [/c[iì]en|qu[ií]m|f[ií]s|bio|lab|fem/, '🧪', 'flask'],
+    [/llen|catal|cast|angl|liter|tutor|hist|soci/, '📖', 'book'],
+    [/empres|econ|comer|compta|bd\b|dades|f4/, '📊', 'chart']
+  ];
+  for (const [re, ico, art] of rules) if (re.test(n)) return { ico, art };
+  return { ico: '🎓', art: 'default' };
+}
+
+const QUOTES = [
+  "La constància és la clau de l'aprenentatge.",
+  "Educar no és omplir un got, sinó encendre un foc.",
+  "Cada alumne té un camí; el nostre paper és il·luminar-lo.",
+  "Els petits progressos d'avui són els grans èxits de demà.",
+  "Avaluar és, abans de res, ajudar a créixer."
+];
+
+let _classCache = [];   // [{id, data}] de l'última càrrega, per a la cerca i el resum
+
+function renderClassCards() {
+  const q = (document.getElementById('classSearch')?.value || '').trim().toLowerCase();
+  classesGrid.innerHTML = '';
+  const list = _classCache.filter(c => !q || String(c.data.nom || '').toLowerCase().includes(q));
+  if (_classCache.length === 0) {
+    classesGrid.innerHTML = `<div class="panel" style="grid-column:1/-1;text-align:center">🔰 No tens cap classe activa. <strong>Crea la primera!</strong></div>`;
+    return;
+  }
+  if (list.length === 0) {
+    classesGrid.innerHTML = `<div class="panel" style="grid-column:1/-1;text-align:center;color:var(--c-muted)">Cap classe coincideix amb la cerca.</div>`;
+    return;
+  }
+
+  list.forEach((c, i) => {
+    const d = { id: c.id, data: () => c.data };
+    const vis = classVisual(c.data.nom);
+    let totalActivities = 0;
+    Object.values(c.data.terms || {}).forEach(t => { totalActivities += (t.activities || []).length; });
+
+    const card = document.createElement('div');
+    card.className = `class-card tone-${_classCache.indexOf(c) % 6}`;
+    card.dataset.id = c.id;
+    card.innerHTML = `
+      ${deleteMode ? '<input type="checkbox" class="delete-checkbox" style="position:absolute;top:12px;right:14px;width:20px;height:20px;z-index:3">' : ''}
+      <div class="card-top">
+        <div class="card-ico">${esc(vis.ico)}</div>
+        <div>
+          <h3>${esc(c.data.nom || 'Sense nom')}</h3>
+          <p class="meta">${(c.data.alumnes || []).length} alumnes · ${totalActivities} activitats</p>
+        </div>
+      </div>
+      <img class="card-art" src="img/card-${vis.art}.png" alt="" onerror="this.remove()">
+      <div class="card-link"><span>${deleteMode ? 'Selecciona per eliminar' : 'Obrir la graella de notes'}</span><span>›</span></div>
+    `;
+
+    if (!deleteMode) {
+      const menuDiv = document.createElement('div');
+      menuDiv.style.cssText = 'position:absolute;top:10px;right:12px;z-index:3';
+      menuDiv.innerHTML = `
+        <button class="menu-btn" type="button" aria-label="Opcions">⋮</button>
+        <div class="menu hidden"><button class="edit-btn" type="button">Editar nom</button></div>
+      `;
+      card.appendChild(menuDiv);
+      const menuBtn = menuDiv.querySelector('.menu-btn');
+      const menu = menuDiv.querySelector('.menu');
+      menuBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        document.querySelectorAll('.menu').forEach(m => { if (m !== menu) m.classList.add('hidden'); });
+        menu.classList.toggle('hidden');
+      });
+      menuDiv.querySelector('.edit-btn').addEventListener('click', async (e) => {
+        e.stopPropagation();
+        menu.classList.add('hidden');
+        const newName = await promptDialog('Introdueix el nou nom de la classe:', c.data.nom || '', { title: 'Editar classe' });
+        if (!newName || newName.trim() === c.data.nom) return;
+        db.collection('classes').doc(c.id).update({ nom: newName.trim() })
+          .then(() => loadClassesScreen())
+          .catch(err => notify('Error editant classe: ' + err.message, 'error'));
+      });
+      card.addEventListener('click', () => openClass(c.id));
+    }
+    classesGrid.appendChild(card);
+  });
+
+  const existingBtn = document.querySelector('#classesGrid + .delete-selected-btn');
+  if (existingBtn) existingBtn.remove();
+  if (deleteMode) addDeleteSelectedButton();
+}
+
+function updateClassSummary() {
+  let students = 0, acts = 0;
+  _classCache.forEach(c => {
+    students += (c.data.alumnes || []).length;
+    Object.values(c.data.terms || {}).forEach(t => { acts += (t.activities || []).length; });
+  });
+  document.getElementById('sumClasses').textContent = _classCache.length;
+  document.getElementById('sumStudents').textContent = students;
+  document.getElementById('sumActivities').textContent = acts;
+  const qt = document.getElementById('quoteText');
+  if (qt) qt.textContent = QUOTES[Math.floor(Date.now() / 86400000) % QUOTES.length];
+}
+
 function loadClassesScreen() {
   if(!professorUID) { notify('Fes login primer.'); return; }
   screenClass.classList.add('hidden');
   screenClasses.classList.remove('hidden');
-  classesGrid.innerHTML = '<div class="col-span-full text-sm text-gray-500">Carregant...</div>';
-
-  const classColors = [
-    'from-indigo-600 to-purple-600',
-    'from-pink-500 to-red-500',
-    'from-yellow-400 to-orange-500',
-    'from-green-500 to-teal-500',
-    'from-blue-500 to-indigo-600',
-    'from-purple-500 to-pink-500'
-  ];
+  classesGrid.innerHTML = '<div style="grid-column:1/-1;color:var(--c-muted)">Carregant...</div>';
 
   db.collection('professors').doc(professorUID).get().then(doc => {
-    if(!doc.exists) { 
-      classesGrid.innerHTML = '<div class="text-sm text-red-500">Professor no trobat</div>'; 
-      return; 
-    }
-    const ids = doc.data().classes || [];
-    if(ids.length === 0){
-      classesGrid.innerHTML = `<div class="col-span-full p-6 bg-white dark:bg-gray-800 rounded shadow text-center text-lg">🔰 No tens cap classe activa. <strong class="font-bold">Crea la primera!</strong></div>`;         
+    if(!doc.exists) {
+      classesGrid.innerHTML = '<div class="panel" style="color:#e11d48">Professor no trobat</div>';
       return;
     }
-
-    Promise.all(ids.map(id => db.collection('classes').doc(id).get()))
-      .then(docs => {
-        classesGrid.innerHTML = '';
-        docs.forEach((d, i) => {
-          if(!d.exists) return;
-          const color = classColors[i % classColors.length];
-          const card = document.createElement('div');
-          card.className = `class-card bg-gradient-to-br ${color} text-white relative p-4 rounded-lg`;
-          card.dataset.id = d.id;
-
-          // Comptar activitats totals sumant totes les activitats de tots els termes
-          let totalActivities = 0;
-          const terms = d.data().terms || {};
-          Object.values(terms).forEach(term => {
-            totalActivities += (term.activities || []).length;
-          });
-
-          card.innerHTML = `
-            ${deleteMode ? '<input type="checkbox" class="delete-checkbox absolute top-2 right-2 w-5 h-5">' : ''}
-            <h3 class="text-lg font-bold">${esc(d.data().nom||'Sense nom')}</h3>
-            <p class="text-sm mt-2">${(d.data().alumnes||[]).length} alumnes · ${totalActivities} activitats</p>
-            <div class="click-hint">${deleteMode ? 'Selecciona per eliminar' : 'Fes clic per obrir'}</div>
-          `;
-
-          if(!deleteMode){
-            const menuDiv = document.createElement('div');
-            menuDiv.className = 'absolute top-2 right-2';
-            menuDiv.innerHTML = `
-              <button class="menu-btn text-white font-bold text-xl">⋮</button>
-              <div class="menu hidden absolute right-0 mt-1 bg-white text-black border rounded shadow z-10 transition-opacity duration-200 opacity-0">
-                <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100">Editar</button>
-              </div>
-            `;
-            card.appendChild(menuDiv);
-
-            const menuBtn = menuDiv.querySelector('.menu-btn');
-            const menu = menuDiv.querySelector('.menu');
-
-            menuBtn.addEventListener('click', e => {
-              e.stopPropagation();
-              document.querySelectorAll('.menu').forEach(m => m.classList.add('hidden'));
-              menu.classList.toggle('hidden');
-            });
-
-            menuDiv.querySelector('.edit-btn').addEventListener('click', () => {
-              const newName = prompt('Introdueix el nou nom de la classe:', d.data().nom || '');
-              if(!newName || newName.trim() === d.data().nom) return;
-              db.collection('classes').doc(d.id).update({ nom: newName.trim() })
-                .then(() => loadClassesScreen())
-                .catch(e => notify('Error editant classe: ' + e.message));
-            });
-
-            card.addEventListener('click', () => openClass(d.id));
-          }
-
-          classesGrid.appendChild(card);
-        });
-
-        const existingBtn = document.querySelector('#classesGrid + .delete-selected-btn');
-        if(existingBtn) existingBtn.remove();
-        if(deleteMode) addDeleteSelectedButton();
-      });
-  }).catch(e=> {
-    classesGrid.innerHTML = `<div class="text-sm text-red-500">Error carregant classes</div>`;
+    const ids = doc.data().classes || [];
+    return Promise.all(ids.map(id => db.collection('classes').doc(id).get())).then(docs => {
+      _classCache = docs.filter(d => d.exists).map(d => ({ id: d.id, data: d.data() }));
+      renderClassCards();
+      updateClassSummary();
+    });
+  }).catch(e => {
+    classesGrid.innerHTML = `<div class="panel" style="color:#e11d48">Error carregant classes</div>`;
     console.error(e);
   });
 }
+
+document.getElementById('classSearch').addEventListener('input', renderClassCards);
+document.getElementById('viewCards').addEventListener('click', () => {
+  classesGrid.classList.remove('list-view');
+  document.getElementById('viewCards').classList.add('active');
+  document.getElementById('viewList').classList.remove('active');
+});
+document.getElementById('viewList').addEventListener('click', () => {
+  classesGrid.classList.add('list-view');
+  document.getElementById('viewList').classList.add('active');
+  document.getElementById('viewCards').classList.remove('active');
+});
 
 /* ---------------- Delete Mode Classes ---------------- */
 const btnDeleteMode = document.getElementById('btnDeleteMode');
@@ -779,17 +792,60 @@ function reorderStudents(fromIdx, toIdx){
     .catch(e=> console.error('Error reordenant', e));
 }
 
-btnSortAlpha.addEventListener('click', sortStudentsAlpha);
-function sortStudentsAlpha(){
-  Promise.all(classStudents.map(id => db.collection('alumnes').doc(id).get()))
-    .then(docs=>{
-      const pairs = docs.map(d=> ({ id: d.id, name: d.exists? (d.data().nom||'') : '' }));
-      pairs.sort((a,b)=> a.name.localeCompare(b.name, 'ca'));
-      const newOrder = pairs.map(p=> p.id);
-      return db.collection('classes').doc(currentClassId).update({ alumnes: newOrder });
-    }).then(()=> loadClassData())
-    .catch(e=> console.error(e));
+/* ---------------- Ordenar alumnes (nom/cognom, A→Z / Z→A) ---------------- */
+// Separa "Nom Cognom1 Cognom2" o "Cognoms, Nom"
+function splitStudentName(full) {
+  const t = String(full || '').trim();
+  if (t.includes(',')) {
+    const [cog, ...rest] = t.split(',');
+    return { nom: rest.join(',').trim(), cognom: cog.trim() };
+  }
+  const parts = t.split(/\s+/);
+  return { nom: parts[0] || '', cognom: parts.slice(1).join(' ') };
 }
+
+async function sortStudents(field, dir) {
+  try {
+    const docs = await Promise.all(classStudents.map(id => db.collection('alumnes').doc(id).get()));
+    const rows = docs.map(d => {
+      const n = splitStudentName(d.exists ? d.data().nom : '');
+      return { id: d.id, key: field === 'cognom' ? (n.cognom || n.nom) : n.nom, tie: n.nom + ' ' + n.cognom };
+    });
+    const sign = dir === 'desc' ? -1 : 1;
+    rows.sort((a, b) =>
+      sign * a.key.localeCompare(b.key, 'ca', { sensitivity: 'base' }) ||
+      sign * a.tie.localeCompare(b.tie, 'ca', { sensitivity: 'base' }));
+    await db.collection('classes').doc(currentClassId).update({ alumnes: rows.map(r => r.id) });
+    loadClassData();
+  } catch (e) {
+    notify('Error ordenant alumnes: ' + e.message, 'error');
+  }
+}
+
+(function setupSortMenu() {
+  const btn = document.getElementById('btnSortAlpha');
+  if (!btn) return;
+  const menu = document.createElement('div');
+  menu.id = 'sortMenu';
+  menu.className = 'app-dropdown hidden';
+  menu.innerHTML = [
+    ['nom', 'asc',  'Nom (A → Z)'],
+    ['nom', 'desc', 'Nom (Z → A)'],
+    ['cognom', 'asc',  'Cognom (A → Z)'],
+    ['cognom', 'desc', 'Cognom (Z → A)']
+  ].map(([f, d, l]) => `<button type="button" data-field="${f}" data-dir="${d}">${l}</button>`).join('');
+  btn.parentNode.style.position = btn.parentNode.style.position || 'relative';
+  btn.insertAdjacentElement('afterend', menu);
+  btn.addEventListener('click', e => { e.stopPropagation(); menu.classList.toggle('hidden'); });
+  menu.addEventListener('click', e => {
+    const b = e.target.closest('button[data-field]');
+    if (!b) return;
+    menu.classList.add('hidden');
+    sortStudents(b.dataset.field, b.dataset.dir);
+  });
+  document.addEventListener('click', () => menu.classList.add('hidden'));
+})();
+
 /* ---------------- Activities ---------------- */
 btnAddActivity.addEventListener('click', ()=> openModal('modalAddActivity'));
 modalAddActivityBtn.addEventListener('click', createActivityModal);
@@ -881,8 +937,8 @@ function renderStudentsList() {
       });
 
       // EDITAR
-      li.querySelector('.edit-btn').addEventListener('click', () => {
-        const newName = prompt('Introdueix el nou nom:', name);
+      li.querySelector('.edit-btn').addEventListener('click', async () => {
+        const newName = await promptDialog('Introdueix el nou nom:', name);
         if (!newName || newName.trim() === name) return;
         db.collection('alumnes').doc(stuId).update({ nom: newName.trim() })
           .then(() => loadClassData())
@@ -892,7 +948,7 @@ function renderStudentsList() {
       // INTRODUIR EMAIL
       li.querySelector('.set-email-btn').addEventListener('click', async () => {
         const current = li.dataset.email || '';
-        const newMail = prompt("Introdueix email:", current);
+        const newMail = await promptDialog("Introdueix email:", current);
         if (!newMail) return;
 
         await db.collection('alumnes').doc(stuId).update({ email: newMail.trim() });
@@ -1124,14 +1180,14 @@ await renderNotesGrid();
       menu.classList.toggle('hidden');
     });
 
-    menuDiv.querySelector('.edit-btn').addEventListener('click', () => {
-      const newName = prompt('Nou nom activitat:', name);
+    menuDiv.querySelector('.edit-btn').addEventListener('click', async () => {
+      const newName = await promptDialog('Nou nom activitat:', name);
       if (!newName || newName.trim() === name) return;
       db.collection('activitats').doc(id).update({ nom: newName.trim() }).then(() => renderNotesGrid());
     });
 
     menuDiv.querySelector('.clear-btn').addEventListener('click', async () => {
-      if (!confirm('Segur que vols esborrar totes les notes d’aquesta activitat?')) return;
+      if (!await confirmDialog('Segur que vols esborrar totes les notes d’aquesta activitat?')) return;
       try {
         await Promise.all(classStudents.map(sid => saveNote(sid, id, '')));
         await db.collection('classes').doc(currentClassId).update({
@@ -1180,6 +1236,7 @@ menuDiv.querySelector('.delete-btn').addEventListener('click', () => {
     const tdName = document.createElement('td');
     tdName.className = 'border px-2 py-1';
     tdName.textContent = studentData.nom;
+    tdName.dataset.initials = (String(studentData.nom || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('') || '?').toUpperCase();
     tr.appendChild(tdName);
 
     // Per cada activitat afegim la cel·la i l'input
@@ -1334,6 +1391,10 @@ input.addEventListener('keydown', e => {
  // Final: recalculs de mitjanes i fila fórmules (igual que abans)
   renderAverages();
   _gridCalculated = calculatedActs;
+  const meta = document.getElementById('classMeta');
+  if (meta) meta.textContent = `${classStudents.length} alumnes · ${classActivities.length} activitats`;
+  const badge = document.getElementById('classBadge');
+  if (badge) badge.textContent = classVisual(document.getElementById('classTitle').textContent).ico;
   window.dispatchEvent(new CustomEvent('grid-rendered', { detail: { classId: currentClassId } }));
 }
 
@@ -1372,12 +1433,12 @@ function saveNote(studentId, activityId, value){
 
 function applyCellColor(inputEl){
   const v = Number(inputEl.value);
-  inputEl.classList.remove('bg-purple-100','bg-red-100','bg-yellow-100','bg-green-100');
+  inputEl.classList.remove('cell-red','cell-yellow','cell-lgreen','cell-green');
   if(inputEl.value === '' || isNaN(v)) return;
-  if(v < 2.5) inputEl.classList.add('bg-red-100');
-  else if(v < 5) inputEl.classList.add('bg-yellow-100');  
-  else if(v < 7) inputEl.classList.add('bg-purple-100');
-  else inputEl.classList.add('bg-green-100');
+  if(v < 5) inputEl.classList.add('cell-red');
+  else if(v < 7) inputEl.classList.add('cell-yellow');
+  else if(v < 9) inputEl.classList.add('cell-lgreen');
+  else inputEl.classList.add('cell-green');
 }
 
 // 🔥 CORRECCIÓN EN renderAverages() - Ignorar columna de comentarios
@@ -2222,28 +2283,13 @@ document.addEventListener('click', function(e) {
 });
 const userMenuBtn = document.getElementById('userMenuBtn');
 const userMenu = document.getElementById('userMenu');
-const changePasswordBtn = document.getElementById('changePasswordBtn');
-
-// Toggle menú
+// Menú d'usuari
 userMenuBtn.addEventListener('click', e => {
   e.stopPropagation();
   userMenu.classList.toggle('hidden');
 });
-
-// Tancar menú si clics fora
 document.addEventListener('click', () => {
   userMenu.classList.add('hidden');
-});
-
-// Canviar contrasenya
-changePasswordBtn.addEventListener('click', () => {
-  const email = auth.currentUser?.email;
-  if(!email) return notify('No hi ha usuari actiu.');
-  const newPw = prompt('Introdueix la nova contrasenya:');
-  if(!newPw) return;
-  auth.currentUser.updatePassword(newPw)
-    .then(()=> notify('Contrasenya canviada correctament!'))
-    .catch(e=> notify('Error: ' + e.message));
 });
 
 // ---------------------- Importar alumnes ------------------------
@@ -2350,7 +2396,7 @@ if (closeBtn) {
 // ----------------------Fer funcionar el botó + (afegir terme)
 const btnAddTerm = document.getElementById('btnAddTerm');
 btnAddTerm.addEventListener('click', async () => {
-  const name = prompt('Nom del nou grup (p. ex. 2TRIM):');
+  const name = await promptDialog('Nom del nou grup (p. ex. 2TRIM):');
   if(!name) return;
   try {
     const newId = await Terms.addNewTermWithName(name);
@@ -2363,7 +2409,7 @@ btnAddTerm.addEventListener('click', async () => {
 
 const btnAddTerm2 = document.getElementById('btnAddTerm2');
 btnAddTerm2.addEventListener('click', async () => {
-  const name = prompt('Nom del nou grup (p. ex. 2TRIM):');
+  const name = await promptDialog('Nom del nou grup (p. ex. 2TRIM):');
   if(!name) return;
   try {
     const newId = await Terms.addNewTermWithName(name);
@@ -2392,7 +2438,7 @@ document.addEventListener('click', () => {
 termMenu.querySelector('.edit-term-btn').addEventListener('click', async () => {
   const currentTermId = Terms.getActiveTermId();
   const currentName = Terms.getActiveTermName();
-  const newName = prompt('Nou nom de la graella:', currentName);
+  const newName = await promptDialog('Nou nom de la graella:', currentName);
   if (newName && newName.trim() !== '') {
     await Terms.renameTerm(currentTermId, newName.trim());
   }
@@ -2403,7 +2449,7 @@ termMenu.querySelector('.edit-term-btn').addEventListener('click', async () => {
 termMenu.querySelector('.delete-term-btn').addEventListener('click', async () => {
   const currentTermId = Terms.getActiveTermId();
   if (!currentTermId) return;
-  if (!confirm('Segur que vols eliminar aquesta graella i totes les seves activitats?')) return;
+  if (!await confirmDialog('Segur que vols eliminar aquesta graella i totes les seves activitats?')) return;
 
   try {
     await Terms.deleteTerm(currentTermId); // <-- Aquí utilitzem la funció de terms.js
@@ -2540,7 +2586,7 @@ async function deleteSelectedStudents() {
         notify('No hi ha alumnes seleccionats.');
         return;
     }
-    if (!confirm(`Eliminar ${ids.length} alumnes?`)) return;
+    if (!await confirmDialog(`Eliminar ${ids.length} alumnes?`)) return;
 
     try {
         await deleteStudentsByIds(ids);
@@ -2781,7 +2827,7 @@ async function sendSelectedNotes() {
 
     // Si no hi ha email → demanar-lo
     if (!email) {
-      const newMail = prompt(`Email per ${li.querySelector('.stu-name').textContent}:`);
+      const newMail = await promptDialog(`Email per ${li.querySelector('.stu-name').textContent}:`);
       if (!newMail) continue;
 
       email = newMail.trim();

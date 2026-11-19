@@ -74,11 +74,11 @@ function injectTutoriaButton() {
   const btn = document.createElement('button');
   btn.id = 'btnTutoria';
   btn.className = 'bg-rose-500 hover:bg-rose-600 text-white px-3 py-1 rounded font-semibold text-sm flex items-center gap-1 transition-colors';
-  btn.innerHTML = '📋 Tutoria';
+  btn.innerHTML = '💬 Comentaris';
   btn.title = 'Generar comentaris de butlletí per a les famílies';
   btn.addEventListener('click', openTutoriaModal);
   btnAddActivity.parentNode.insertBefore(btn, btnAddActivity.nextSibling);
-  console.log('✅ Botó Tutoria injectat');
+  
 }
 
 // ============================================================
@@ -456,7 +456,7 @@ function initModalInteractions(modal) {
     if (btn) {
       const nivell  = btn.dataset.nivell;
       const materia = btn.dataset.materia;
-      if (!confirm(`Eliminar "${materia}" de la llista?`)) return;
+      if (!await confirmDialog(`Eliminar "${materia}" de la llista?`)) return;
       _materiesExtra[nivell] = (_materiesExtra[nivell] || []).filter(m => m !== materia);
       await guardarDadesUsuari();
       refreshMateriesCheckboxes(modal, nivell);
@@ -473,7 +473,7 @@ function initModalInteractions(modal) {
     const btn = e.target.closest('.btn-delete-apartat');
     if (btn) {
       const id = btn.dataset.id;
-      if (!confirm('Eliminar aquest apartat?')) return;
+      if (!await confirmDialog('Eliminar aquest apartat?')) return;
       _apartatsExtra = _apartatsExtra.filter(a => a.id !== id);
       await guardarDadesUsuari();
       modal.querySelector('#apartatsPersonalitzatsContainer').innerHTML = renderApartatsExtra();
@@ -650,7 +650,7 @@ function openAfegirApartatModal(parentModal) {
     parentModal.querySelectorAll('.btn-delete-apartat').forEach(btn => {
       btn.addEventListener('click', async () => {
         const id = btn.dataset.id;
-        if (!confirm('Eliminar aquest apartat?')) return;
+        if (!await confirmDialog('Eliminar aquest apartat?')) return;
         _apartatsExtra = _apartatsExtra.filter(a => a.id !== id);
         await guardarDadesUsuari();
         parentModal.querySelector('#apartatsPersonalitzatsContainer').innerHTML = renderApartatsExtra();

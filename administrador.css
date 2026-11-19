@@ -1,156 +1,29 @@
-/* ---------------- Administració d'usuaris ---------------- */
-body.admin-page {
-  background: #f0f4ff; /* suau blau clar de fons de pàgina */
-  font-family: 'Inter', sans-serif;
-  color: #1f2937;
-}
+/* Administració — usa les variables de style.css */
+body.admin-page { background: var(--c-bg); }
+.admin-shell { max-width: 1200px; margin: 0 auto; padding: 1.6rem 1.2rem 3rem; }
+.table-scroll { overflow-x: auto; border-radius: 16px; border: 1px solid var(--c-border); }
 
-body.admin-page #appRoot {
-  background: linear-gradient(135deg, #eef2ff 0%, #ffffff 100%);
-  padding: 2rem;
-  border-radius: 1rem;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.1);
-}
+body.admin-page table { width: 100%; border-collapse: separate; border-spacing: 0; background: #fff; }
+body.admin-page th { background: #f6f4ff; color: var(--c-primary-dark); font-size: .85rem; padding: .8rem .9rem; text-align: left; white-space: nowrap; }
+body.admin-page td { padding: .7rem .9rem; border-top: 1px solid var(--c-border); color: var(--c-text); font-size: .9rem; vertical-align: middle; }
+body.admin-page tbody tr:hover td { background: #faf9ff; }
 
-/* Titols */
-body.admin-page h1 {
-  color: #1e40af; /* blau fosc */
-  font-weight: 700;
-}
-body.admin-page h2 {
-  color: #2563eb; /* blau vibrant */
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-}
-
-/* Taula usuaris */
-body.admin-page table {
-  width: 100%;
-  border-collapse: collapse;
-  border-radius: 0.75rem;
-  overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-body.admin-page th {
-  background-color: #93c5fd; /* blau suau */
-  color: #1e3a8a;
-  padding: 0.75rem;
-  text-align: left;
-}
-
-body.admin-page td {
-  padding: 0.5rem;
-  border-bottom: 1px solid #d1d5db;
-  color: #1f2937;
-}
-
-/* Botons dins la taula */
-body.admin-page .btn-suspend-toggle {
-  background: #facc15; /* groc */
-  color: #1f2937;
-}
-
-body.admin-page .btn-reset {
-  background: #3b82f6; /* blau intens */
-  color: white;
-}
-
-body.admin-page .btn-admin-toggle {
-  background: #8b5cf6; /* morat */
-  color: white;
-}
-
-body.admin-page .btn-delete {
-  background: #ef4444; /* vermell */
-  color: white;
-}
-
-body.admin-page button {
-  padding: 0.4rem 0.75rem;
-  border-radius: 0.5rem;
-  font-weight: 600;
-  transition: transform 0.2s ease, background 0.2s ease;
-}
-
-body.admin-page button:hover {
-  transform: scale(1.05);
-  filter: brightness(1.1);
-}
-
-/* Inputs de correu i textarea */
-body.admin-page input,
-body.admin-page textarea {
-  border: 1px solid #93c5fd;
-  border-radius: 0.5rem;
-  padding: 0.5rem;
-  width: 100%;
-}
-
-/* Botons crear usuari / migrar usuaris / enviar correu */
-body.admin-page #btnAddAdmin {
-  background: #10b981; /* verd vibrant */
-  color: white;
-  margin-top: 1rem;
-}
-body.admin-page #btnMigrateOldUsers {
-  background: #6366f1; /* blau morat */
-  color: white;
-  margin-top: 1rem;
-}
-body.admin-page #btnSendEmail {
-  background: #3b82f6; /* blau intens */
-  color: white;
-}
-
-/* Últims accessos */
-body.admin-page #lastLoginsContainer div {
-  background: #e0f2fe; /* blau clar */
-  padding: 0.5rem;
-  border-radius: 0.5rem;
-  margin-bottom: 0.25rem;
-}
-
-/* Contenidor de botons globals */
-#tableButtonsContainer {
-  display: flex;
-  flex-wrap: wrap;       /* Fa saltar a la següent fila si cal */
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-/* Botons dins del contenidor */
-#tableButtonsContainer button {
-  flex: 1 1 auto;        /* Creixen per ocupar espai disponible */
-  min-width: 140px;      /* Amplada mínima */
-  margin-bottom: 0.25rem;
-}
-
-/* Botons dins de la columna Accions */
-body.admin-page td:last-child {
-  display: flex;
-  flex-wrap: wrap;        /* Permet posar els botons en 1-2 files */
-  gap: 0.25rem;           /* Espai entre botons */
-  justify-content: flex-start;
-}
-
+/* Botons de la columna d'accions */
+body.admin-page td:last-child { display: flex; flex-wrap: wrap; gap: .35rem; }
 body.admin-page td:last-child button {
-  flex: 1 0 70px;        /* Amplada mínima, creix si hi ha espai */
-  padding: 0.25rem 0.5rem;
-  font-size: 0.85rem;
-  white-space: nowrap;
+  border: 0; border-radius: 999px; padding: .4rem .8rem; font-size: .78rem; font-weight: 700; color: #fff; white-space: nowrap;
 }
+body.admin-page .btn-suspend-toggle { background: #f59e0b; }
+body.admin-page .btn-admin-toggle { background: var(--c-primary); }
+body.admin-page .btn-delete { background: var(--c-danger); }
 
-/* Botons de filtre */
-.filter-btn {
-  transition: transform 0.2s, box-shadow 0.2s;
+/* Insígnies, filtres i cercador (els crea administrador-enhancements.js) */
+body.admin-page .badge { display: inline-block; padding: .15rem .6rem; border-radius: 999px; font-size: .75rem; font-weight: 700; color: #fff; }
+body.admin-page input, body.admin-page select {
+  border: 1.5px solid var(--c-border); border-radius: 999px; padding: .55rem 1rem; background: #faf9ff; font: inherit; outline: none;
 }
-
-
-/* Estil quan el botó està actiu */
-.filter-btn.active {
-  box-shadow: 0 0 0 3px rgba(255,255,255,0.5) inset, 0 4px 10px rgba(0,0,0,0.2);
-  transform: scale(1.05);
-  filter: brightness(1.2);
-}
-
+body.admin-page input[type="text"], body.admin-page input[type="search"] { width: 100%; max-width: 360px; margin-bottom: .8rem; }
+body.admin-page input:focus, body.admin-page select:focus { border-color: var(--c-primary-2); box-shadow: 0 0 0 3px rgba(124, 92, 255, .18); }
+body.admin-page .filter-btn { border: 0; border-radius: 999px; padding: .45rem .9rem; font-weight: 700; color: #fff; background: var(--c-primary); transition: transform .15s, box-shadow .15s; }
+body.admin-page .filter-btn.active { box-shadow: 0 0 0 3px rgba(124, 92, 255, .35); transform: translateY(-1px); }
+body.admin-page #lastLoginsContainer div { background: #f6f4ff; padding: .6rem .9rem; border-radius: 12px; margin-bottom: .4rem; font-size: .88rem; }
