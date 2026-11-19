@@ -46,7 +46,7 @@ button:disabled { cursor: not-allowed; opacity: .55; }
   transition: transform .15s ease, box-shadow .15s ease; white-space: nowrap;
 }
 .btn:hover, .toolbar > button:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
-.btn-primary, #btnAddActivity, #btnCreateClass {
+.btn-primary, #btnCreateClass {
   background: linear-gradient(135deg, var(--c-primary), var(--c-primary-2)) !important;
   color: #fff !important; border-color: transparent !important; box-shadow: 0 8px 20px rgba(79, 47, 224, .35);
 }
@@ -434,3 +434,13 @@ table { width: 100%; border-collapse: collapse; }
 .cm-cell span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cm-cell.empty { color: var(--c-muted); font-style: italic; }
 #tutoriaModal .bg-gray-50 { padding-block: .15rem !important; }
+
+/* Menús per damunt de tot el contingut (campana, perfil) */
+.topbar { z-index: 50 !important; }
+.app-main > main { z-index: 1 !important; }
+
+/* Icones petites i logos dins dels botons */
+.ic-sm { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vertical-align: -2px; }
+.lock-icon { color: #f59e0b; display: inline-flex; }
+.btn-logo { width: 20px; height: 17px; object-fit: contain; }
+#btnExportComentaris { display: inline-flex; align-items: center; gap: .25rem; white-space: nowrap; }

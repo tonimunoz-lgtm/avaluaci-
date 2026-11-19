@@ -74,7 +74,7 @@ function injectTutoriaButton() {
   const btn = document.createElement('button');
   btn.id = 'btnTutoria';
   btn.className = 'bg-rose-500 hover:bg-rose-600 text-white px-3 py-1 rounded font-semibold text-sm flex items-center gap-1 transition-colors';
-  btn.innerHTML = '💬 Comentaris';
+  btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M4 5h16v11H11l-4 4v-4H4z"/><path d="M8.5 10.5h.01M12 10.5h.01M15.5 10.5h.01"/></svg>Comentaris';
   btn.title = 'Generar comentaris de butlletí per a les famílies';
   btn.addEventListener('click', openTutoriaModal);
   btnAddActivity.parentNode.insertBefore(btn, btnAddActivity.nextSibling);
@@ -123,6 +123,7 @@ async function openTutoriaModal() {
   modal.innerHTML = buildModalHTML();
   document.body.appendChild(modal);
   initModalInteractions(modal);
+  omplirAlumnesDesar(modal);
 }
 
 // ============================================================
@@ -162,10 +163,7 @@ function buildModalHTML() {
       <div class="bg-gray-50 rounded-xl p-4">
         <label class="block text-sm font-bold text-gray-700 mb-3">📅 Moment d'avaluació</label>
         <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          ${buildOption('trimestre','1r trimestre','1r Trimestre','blue')}
-          ${buildOption('trimestre','2n trimestre','2n Trimestre','blue')}
-          ${buildOption('trimestre','3r trimestre','3r Trimestre','blue')}
-          ${buildOption('trimestre','final de curs','Final de curs','blue')}
+          ${buildTrimOptions()}
         </div>
       </div>
 
@@ -356,6 +354,14 @@ function buildModalHTML() {
           </div>
           <div id="tutoriaComentariText" class="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap bg-white rounded-lg p-4 border border-rose-100 min-h-[100px]"></div>
         </div>
+        <div class="mt-3 bg-white border border-rose-200 rounded-xl p-3">
+          <label class="block text-xs font-bold text-gray-600 mb-2">💾 Desar com a comentari de l'alumne (al grup d'avaluació triat)</label>
+          <div class="flex gap-2">
+            <select id="tutoriaSaveStudent" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"></select>
+            <button id="btnGuardarComentari" type="button" class="bg-rose-500 hover:bg-rose-600 text-white font-semibold px-4 py-2 rounded-lg text-sm">Desar</button>
+          </div>
+          <p id="tutoriaSaveInfo" class="text-xs text-gray-500 mt-2"></p>
+        </div>
         <button id="btnRegenerarComentari"
           class="w-full mt-3 border-2 border-rose-300 text-rose-600 hover:bg-rose-50 font-semibold py-2 rounded-xl text-sm transition-colors">
           🔄 Generar altra versió
@@ -401,7 +407,18 @@ function renderApartatsExtra() {
 // ============================================================
 // HELPERS HTML
 // ============================================================
-function buildOption(grup, valor, label, color) {
+// Moment d'avaluació = grups creats a la classe (value = id del grup)
+function buildTrimOptions() {
+  const terms = window.AvaluApp?.getTerms?.() || [];
+  const cur = window.AvaluApp?.getActiveTermId?.();
+  if (!terms.length) {
+    return ['1r Trimestre', '2n Trimestre', '3r Trimestre', 'Final de curs']
+      .map(n => buildOption('trimestre', n.toLowerCase(), n, 'blue')).join('');
+  }
+  return terms.map(t => buildOption('trimestre', t.id, t.name, 'blue', t.id === cur)).join('');
+}
+
+function buildOption(grup, valor, label, color, checked) {
   const colors = {
     blue:   'border-blue-300 hover:bg-blue-100 has-[:checked]:bg-blue-500 has-[:checked]:text-white has-[:checked]:border-blue-500',
     green:  'border-green-300 hover:bg-green-100 has-[:checked]:bg-green-500 has-[:checked]:text-white has-[:checked]:border-green-500',
@@ -412,7 +429,7 @@ function buildOption(grup, valor, label, color) {
   };
   return `
     <label class="flex items-center gap-1 cursor-pointer border-2 rounded-lg px-2 py-1.5 text-xs font-medium transition-all ${colors[color] || colors.green}">
-      <input type="radio" name="${esc(grup)}" value="${esc(valor)}" class="sr-only">${esc(label)}
+      <input type="radio" name="${esc(grup)}" value="${esc(valor)}" data-name="${esc(label)}" ${checked ? 'checked' : ''} class="sr-only">${esc(label)}
     </label>`;
 }
 
@@ -484,6 +501,7 @@ function initModalInteractions(modal) {
   modal.querySelector('#btnGenerarComentari').addEventListener('click', () => generarComentari(modal));
   modal.addEventListener('click', e => {
     if (e.target.id === 'btnRegenerarComentari') generarComentari(modal);
+    if (e.target.id === 'btnGuardarComentari') guardarComentariAlumne(modal, e.target);
     if (e.target.id === 'btnCopiarComentari') {
       const text = modal.querySelector('#tutoriaComentariText').textContent;
       navigator.clipboard.writeText(text).then(() => {
@@ -492,6 +510,49 @@ function initModalInteractions(modal) {
       });
     }
   });
+}
+
+// ============================================================
+// DESAR EL COMENTARI A L'ALUMNE (al grup d'avaluació triat)
+// ============================================================
+async function omplirAlumnesDesar(modal) {
+  const sel = modal.querySelector('#tutoriaSaveStudent');
+  const ids = window.AvaluApp?.getStudentIds?.() || [];
+  if (!sel) return;
+  if (!ids.length || !_tutoriaDB) { sel.innerHTML = '<option value="">(obre una classe per poder desar)</option>'; return; }
+  const docs = await Promise.all(ids.map(id => _tutoriaDB.collection('alumnes').doc(id).get()));
+  sel.innerHTML = '<option value="">— Tria l\'alumne —</option>' +
+    docs.filter(d => d.exists).map(d => `<option value="${esc(d.id)}">${esc(d.data().nom || '')}</option>`).join('');
+}
+
+function triaAlumneSegonsNom(modal) {
+  const nom = (modal.querySelector('#tutoriaNom')?.value || '').trim().toLowerCase();
+  const sel = modal.querySelector('#tutoriaSaveStudent');
+  if (!nom || !sel) return;
+  const opt = [...sel.options].find(o => o.value && o.textContent.toLowerCase().includes(nom));
+  if (opt) sel.value = opt.value;
+}
+
+async function guardarComentariAlumne(modal, btn) {
+  const sid = modal.querySelector('#tutoriaSaveStudent')?.value;
+  const text = modal.querySelector('#tutoriaComentariText')?.textContent?.trim();
+  const info = modal.querySelector('#tutoriaSaveInfo');
+  const classId = window.AvaluApp?.getClassId?.();
+  if (!sid) { notify('Tria l\'alumne al qual vols desar el comentari.'); return; }
+  if (!text || text.includes('La IA està') || text.startsWith('❌')) return;
+  const terms = window.AvaluApp?.getTerms?.() || [];
+  const sel = modal.querySelector('input[name="trimestre"]:checked')?.value;
+  const termId = terms.some(t => t.id === sel) ? sel : window.AvaluApp?.getActiveTermId?.();
+  try {
+    btn.disabled = true;
+    await _tutoriaDB.collection('alumnes').doc(sid).update(
+      termId ? { [`comentarisTrim.${classId}.${termId}`]: text } : { [`comentarios.${classId}`]: text });
+    const tn = terms.find(t => t.id === termId)?.name;
+    if (info) info.textContent = `✅ Desat${tn ? ' a «' + tn + '»' : ''}.`;
+    if (typeof window.renderNotesGrid === 'function') window.renderNotesGrid();
+  } catch (e) {
+    notify('Error desant el comentari: ' + e.message);
+  } finally { btn.disabled = false; }
 }
 
 // ============================================================
@@ -693,7 +754,7 @@ function recollidaDades(modal) {
   return {
     nom, nomAmbArticle,
     genere, article, curs, idioma,
-    trimestre: getValue('trimestre'),
+    trimestre: modal.querySelector('input[name="trimestre"]:checked')?.dataset.name || null,
     suspeses,
     comportament: getValue('comportament'),
     esforc:       getValue('esforc'),
@@ -767,7 +828,7 @@ function buildPrompt(dades) {
     : `Escriu en català. Usa "${nomAmbArticle}". Omet el pronom subjecte ell/ella quan el subjecte és conegut (pro-drop).`;
 
   const trimestreCtx = dades.trimestre
-    ? `És el ${dades.trimestre}: ${dades.trimestre === 'final de curs' ? 'reflexiona sobre tot el curs' : 'anima a millorar de cara als propers trimestres'}.`
+    ? `És el ${dades.trimestre}: ${/final/i.test(dades.trimestre) ? 'reflexiona sobre tot el curs' : 'anima a millorar de cara als propers trimestres'}.`
     : '';
 
   const toInstr = toInstruccio(dades.to, situacioGreu);
@@ -815,6 +876,7 @@ async function generarComentari(modal) {
   try {
     const text = await window.aiGenerate(buildPrompt(dades), [dades.nom]);
     comentariText.textContent = text || 'No s\'ha pogut generar el comentari.';
+    triaAlumneSegonsNom(modal);
     resultatDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   } catch (err) {
     console.error('Error:', err);

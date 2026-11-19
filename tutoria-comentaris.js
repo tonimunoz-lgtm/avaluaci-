@@ -169,7 +169,7 @@ function observeCapcaleraComentaris() {
         const btn = document.createElement('button');
         btn.id = 'btnExportComentaris';
         btn.className = 'ml-2 text-xs bg-green-500 hover:bg-green-600 text-white px-2 py-0.5 rounded font-semibold';
-        btn.innerHTML = '⬇ Excel';
+        btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:.9em;height:.9em;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-1px"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg> Excel';
         btn.title = 'Exportar tots els comentaris a Excel';
         btn.addEventListener('click', e => { e.stopPropagation(); exportarComentarisExcel(); });
         th.appendChild(btn);
@@ -228,7 +228,7 @@ async function exportarComentarisExcel() {
     const docs = await Promise.all(alumnesIds.map(id => _tcDB.collection('alumnes').doc(id).get()));
     const alumnes = docs.filter(d => d.exists).map(d => {
       const data = d.data();
-      const comentari = data.comentarios?.[classId] || '';
+      const comentari = (window.AvaluApp?.getComment ? window.AvaluApp.getComment(data, classId, window.AvaluApp.getActiveTermId()) : data.comentarios?.[classId]) || '';
       const metadades = data.comentarisItems?.[classId] || []; // títols + assoliments guardats
       const blocs = _parsarComentariItems(comentari);
       // Combinar blocs de text amb metadades (títol real + assoliment)
@@ -396,10 +396,7 @@ function tcBuildHTML() {
       <div class="bg-gray-50 rounded-xl p-4">
         <label class="block text-sm font-bold text-gray-700 mb-3">📅 Moment d'avaluació</label>
         <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          ${tcOpcio('tc_trim','1r trimestre','1r Trimestre','blue')}
-          ${tcOpcio('tc_trim','2n trimestre','2n Trimestre','blue')}
-          ${tcOpcio('tc_trim','3r trimestre','3r Trimestre','blue')}
-          ${tcOpcio('tc_trim','final de curs','Final de curs','blue')}
+          ${_tcTrimOptions()}
         </div>
       </div>
 
@@ -567,7 +564,19 @@ function tcBuildHTML() {
   </div>`;
 }
 
-function tcOpcio(grup, valor, label, color) {
+// Opcions «Moment d'avaluació»: els grups creats a la classe (value = id del grup).
+// Si la classe encara no en té, es mostren les opcions genèriques.
+function _tcTrimOptions() {
+  const terms = window.AvaluApp?.getTerms?.() || [];
+  const cur = window.AvaluApp?.getCommentTermId?.();
+  if (!terms.length) {
+    return ['1r Trimestre', '2n Trimestre', '3r Trimestre', 'Final de curs']
+      .map(n => tcOpcio('tc_trim', n.toLowerCase(), n, 'blue')).join('');
+  }
+  return terms.map(t => tcOpcio('tc_trim', t.id, t.name, 'blue', t.id === cur)).join('');
+}
+
+function tcOpcio(grup, valor, label, color, checked) {
   const cls = {
     blue:   'border-blue-300 hover:bg-blue-100 has-[:checked]:bg-blue-500 has-[:checked]:text-white has-[:checked]:border-blue-500',
     green:  'border-green-300 hover:bg-green-100 has-[:checked]:bg-green-500 has-[:checked]:text-white has-[:checked]:border-green-500',
@@ -577,7 +586,7 @@ function tcOpcio(grup, valor, label, color) {
     violet: 'border-violet-300 hover:bg-violet-100 has-[:checked]:bg-violet-500 has-[:checked]:text-white has-[:checked]:border-violet-500',
   };
   return `<label class="flex items-center gap-1 cursor-pointer border-2 rounded-lg px-2 py-1.5 text-xs font-medium transition-all ${cls[color]||cls.green}">
-    <input type="radio" name="${esc(grup)}" value="${esc(valor)}" class="sr-only">${esc(label)}</label>`;
+    <input type="radio" name="${esc(grup)}" value="${esc(valor)}" data-name="${esc(label)}" ${checked ? 'checked' : ''} class="sr-only">${esc(label)}</label>`;
 }
 
 // ============================================================
@@ -644,7 +653,7 @@ function tcDades(modal) {
     idioma:    modal.querySelector('#tcIdioma').value,
     llargada:  modal.querySelector('input[name="tc_llarg"]:checked')?.value || 'mitja',
     to:        modal.querySelector('input[name="tc_to"]:checked')?.value || 'neutre',
-    trimestre: g('tc_trim'),
+    trimestre: modal.querySelector('input[name="tc_trim"]:checked')?.dataset.name || null,
     suspeses:  [...modal.querySelectorAll('.tc-check:checked')].map(c => c.value),
     comportament: g('tc_comp'),
     esforc:       g('tc_esf'),
@@ -712,7 +721,7 @@ INSTRUCCIONS:
 - ${idioma}
 - Comença SEMPRE amb "${d.nomAmbArticle}". Mai amb "Estimada família".
 - ${d.llargada === 'curt' ? '50-80 paraules (molt concís)' : d.llargada === 'llarg' ? '150-250 paraules (desenvolupat)' : '80-150 paraules'}. Paràgrafs fluids, sense llistes, sense notes numèriques.
-- ${d.trimestre === 'final de curs' ? 'Reflexiona sobre tot el curs.' : d.trimestre ? `Anima a millorar de cara als propers trimestres.` : ''}
+- ${/final/i.test(d.trimestre || '') ? 'Reflexiona sobre tot el curs.' : d.trimestre ? `Anima a millorar de cara als propers trimestres.` : ''}
 - ${greu ? 'Sigues honest/a: menciona les mancances clarament però de forma constructiva.' : 'Tracta els aspectes a millorar com a reptes.'}
 - Si hi ha suspeses, menciona-les i explica les carències concretes.
 - Integra recomanacions i apartats personalitzats de forma natural.
@@ -779,9 +788,14 @@ async function tcGuardar(modal, btn) {
     btn.disabled = true;
     btn.textContent = '⏳ Guardant...';
 
-    await _tcDB.collection('alumnes').doc(_tcStudentId).update({
-      [`comentarios.${_tcClassId}`]: text,
-    });
+    // El comentari es desa al grup d'avaluació triat al formulari (o al del modal)
+    const _sel = modal.querySelector('input[name="tc_trim"]:checked')?.value;
+    const _terms = window.AvaluApp?.getTerms?.() || [];
+    const _termId = _terms.some(t => t.id === _sel) ? _sel : window.AvaluApp?.getCommentTermId?.();
+    await _tcDB.collection('alumnes').doc(_tcStudentId).update(
+      _termId ? { [`comentarisTrim.${_tcClassId}.${_termId}`]: text }
+              : { [`comentarios.${_tcClassId}`]: text }
+    );
 
     // Posar el text al textarea del modal de comentaris
     const textarea = document.getElementById('commentTextarea');

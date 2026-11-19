@@ -132,7 +132,7 @@ async function doRecalcWithStudents(formulas, students, db) {
           const finalResult = result !== null ? result : await evalFormulaFromFirestore(formula, sid, db);
 
           if (finalResult === null || isNaN(finalResult)) return;
-          const rounded = Math.round(finalResult * 100) / 100;
+          const rounded = Math.round(finalResult * 10) / 10;
 
           // ⚡ Actualitzar DOM immediatament (sense esperar Firestore)
           flashCell(sid, calcActId, rounded);

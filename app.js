@@ -27,11 +27,13 @@ let currentCalcActivityId = null; // Activitat actual per fer càlculs
 let isDeleteMode = false;
 let currentCommentStudentId = null;
 let currentCommentStudentName = null;
+let currentCommentTermId = null;
 
 // 🔥 FUNCIONES GLOBALES - Asignadas a window
-window.openCommentsModal = function(studentId, studentName, currentComment) {
+window.openCommentsModal = function(studentId, studentName, currentComment, termId) {
   currentCommentStudentId = studentId;
   currentCommentStudentName = studentName;
+  currentCommentTermId = termId || Terms.getActiveTermId() || null;
   
   // Crear modal dinámicamente si no existe
   let modal = document.getElementById('modalComments');
@@ -95,7 +97,8 @@ window.openCommentsModal = function(studentId, studentName, currentComment) {
   }
   
   // Poblar modal
-  document.getElementById('modalCommentsTitle').textContent = `Comentaris: ${studentName}`;
+  const _tn = termName(currentCommentTermId);
+  document.getElementById('modalCommentsTitle').textContent = `Comentaris: ${studentName}` + (_tn ? ` · ${_tn}` : '');
   const textarea = document.getElementById('commentTextarea');
   textarea.value = currentComment;
   window.updateCommentChars();
@@ -105,6 +108,23 @@ window.openCommentsModal = function(studentId, studentName, currentComment) {
   modal.style.display = 'flex';
   textarea.focus();
 };
+
+/* ---- Comentaris per grup d'avaluació (trimestre) ----
+   Nou camp: alumnes/{id}.comentarisTrim.{classId}.{termId}. El camp antic
+   comentarios.{classId} (un únic comentari per classe) es mostra al primer grup. */
+function getStudentComment(sd, classId, termId, classData) {
+  const nou = sd?.comentarisTrim?.[classId]?.[termId];
+  if (typeof nou === 'string') return nou;
+  const legacy = sd?.comentarios?.[classId];
+  if (legacy) {
+    const ids = Object.keys((classData || _classData)?.terms || {});
+    if (!ids.length || !termId || termId === ids[0]) return legacy;
+  }
+  return '';
+}
+function termName(termId) {
+  return (_classData?.terms?.[termId]?.name) || '';
+}
 
 window.closeCommentsModal = function() {
   const modal = document.getElementById('modalComments');
@@ -138,9 +158,11 @@ window.saveComment = async function() {
   
   try {
     // Guardar en Firestore
-    await db.collection('alumnes').doc(currentCommentStudentId).update({
-      [`comentarios.${currentClassId}`]: comment
-    });
+    const _tid = currentCommentTermId || Terms.getActiveTermId();
+    await db.collection('alumnes').doc(currentCommentStudentId).update(
+      _tid ? { [`comentarisTrim.${currentClassId}.${_tid}`]: comment }
+           : { [`comentarios.${currentClassId}`]: comment }
+    );
     
     console.log('Comentari guardat per:', currentCommentStudentName);
     
@@ -369,6 +391,9 @@ btnCreateClass.addEventListener('click', ()=> openModal('modalCreateClass'));
 
 /* ---------------- Classes Screen (cont.) ---------------- */
 // Icona i il·lustració opcional segons el nom de la classe
+const LOCK_SVG = '<svg viewBox="0 0 24 24" class="ic-sm"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+const UNLOCK_SVG = '<svg viewBox="0 0 24 24" class="ic-sm"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.5-2"/></svg>';
+const REFRESH_SVG = '<svg viewBox="0 0 24 24" class="ic-sm"><path d="M20 11a8 8 0 0 0-14-4L4 9M4 4v5h5M4 13a8 8 0 0 0 14 4l2-2M20 20v-5h-5"/></svg>';
 const _ic = p => `<svg viewBox="0 0 24 24" aria-hidden="true">${p}</svg>`;
 const ICON_DOC = _ic('<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M10 12h5M10 16h5"/>');
 const ICON_CHAT = _ic('<path d="M4 5h16v11H11l-4 4v-4H4z"/><path d="M8.5 10.5h.01M12 10.5h.01M15.5 10.5h.01"/>');
@@ -510,9 +535,14 @@ async function computePendingComments() {
     await Promise.all(_classCache.map(async c => {
       let cp = 0;
       const docs = await Promise.all((c.data.alumnes || []).map(id => db.collection('alumnes').doc(id).get()));
+      // Un comentari pendent = alumne sense comentari en un grup amb activitats
+      const termIds = Object.entries(c.data.terms || {}).filter(([, t]) => (t.activities || []).length).map(([id]) => id);
+      const checkIds = termIds.length ? termIds : [Object.keys(c.data.terms || {})[0]];
       docs.forEach(d => {
-        const cm = d.exists ? ((d.data().comentarios || {})[c.id] || '') : '';
-        if (!String(cm).trim()) { pending++; cp++; }
+        checkIds.forEach(tid => {
+          const cm = d.exists ? getStudentComment(d.data(), c.id, tid, c.data) : '';
+          if (!String(cm).trim()) { pending++; cp++; }
+        });
       });
       byClass.push({ id: c.id, nom: c.data.nom || 'Sense nom', pending: cp });
     }));
@@ -770,7 +800,7 @@ function loadClassData(){
 }
 
 /* ---------------- Students ---------------- */
-btnAddStudent.addEventListener('click', ()=> openModal('modalAddStudent'));
+btnAddStudent?.addEventListener('click', ()=> openModal('modalAddStudent'));
 modalAddStudentBtn.addEventListener('click', createStudentModal);
 
 function createStudentModal(){
@@ -1126,7 +1156,7 @@ async function renderNotesGrid() {
    // Candau
 const lockIcon = document.createElement('span');
 lockIcon.className = 'lock-icon cursor-pointer mr-1';
-lockIcon.innerHTML = calculatedActs[id]?.locked ? '🔒' : '🔓';
+lockIcon.innerHTML = calculatedActs[id]?.locked ? LOCK_SVG : UNLOCK_SVG;
 lockIcon.title = calculatedActs[id]?.locked ? 'Activitat bloquejada' : 'Activitat desbloquejada';
 
 // Amaguem el candau si és una activitat calculada
@@ -1152,7 +1182,7 @@ lockIcon.addEventListener('click', async () => {
 await renderNotesGrid();
 
     // Actualitzar icona
-    lockIcon.innerHTML = newLockState ? '🔒' : '🔓';
+    lockIcon.innerHTML = newLockState ? LOCK_SVG : UNLOCK_SVG;
     lockIcon.title = newLockState ? 'Activitat bloquejada' : 'Activitat desbloquejada';
 
     // Estat de bloqueig real (si és calculada, també bloquejada)
@@ -1192,7 +1222,7 @@ await renderNotesGrid();
 
     // Icona refrescar (només si és calculada)
     const refreshIcon = document.createElement('span');
-    refreshIcon.innerHTML = '🔄';
+    refreshIcon.innerHTML = REFRESH_SVG;
     refreshIcon.title = 'Refrescar columna';
     refreshIcon.className = 'ml-2 cursor-pointer hidden';
     if (calculatedActs[id]?.calculated) refreshIcon.classList.remove('hidden');
@@ -1317,7 +1347,8 @@ menuDiv.querySelector('.delete-btn').addEventListener('click', () => {
     // Per cada activitat afegim la cel·la i l'input
     actDocs.forEach(actDoc => {
       const actId = actDoc.id;
-      const val = (studentData.notes && studentData.notes[actId] !== undefined) ? studentData.notes[actId] : '';
+      const rawVal = (studentData.notes && studentData.notes[actId] !== undefined) ? studentData.notes[actId] : '';
+      const val = (rawVal !== '' && !isNaN(Number(rawVal))) ? Math.round(Number(rawVal) * 10) / 10 : rawVal;
 
       const td = document.createElement('td');
       td.className = 'border px-2 py-1';
@@ -1330,6 +1361,7 @@ menuDiv.querySelector('.delete-btn').addEventListener('click', () => {
       input.type = 'number';
       input.min = 0;
       input.max = 10;
+      input.step = 0.1;
       input.value = val;
       input.dataset.activityId = actId;
       input.className = 'table-input text-center rounded border p-1';
@@ -1444,7 +1476,8 @@ input.addEventListener('keydown', e => {
     commentTd.style.whiteSpace = 'nowrap';
     
     // Obtener comentario guardado
-    const comment = studentData.comentarios?.[currentClassId] || '';
+    const activeTermId = Terms.getActiveTermId();
+    const comment = getStudentComment(studentData, currentClassId, activeTermId);
     const displayComment = comment || 'Sense comentari';
     
     // Crear un contenedor para ocultar el cálculo pero mostrar el comentario
@@ -1453,7 +1486,7 @@ input.addEventListener('keydown', e => {
     
     // Click para abrir modal de comentarios
     commentTd.addEventListener('click', () => {
-      openCommentsModal(studentId, studentData.nom, comment);
+      openCommentsModal(studentId, studentData.nom, comment, activeTermId);
     });
     
     tr.appendChild(commentTd);
@@ -1499,7 +1532,8 @@ function th(txt, cls=''){
 
 // Canvia saveNote perquè NO re-renderitzi la taula
 function saveNote(studentId, activityId, value){
-  const num = value === '' ? null : Number(value);
+  let num = value === '' ? null : Number(value);
+  if (num !== null && !isNaN(num)) num = Math.round(num * 10) / 10; // màxim 1 decimal
   const updateObj = {};
   if(num === null || isNaN(num)) updateObj[`notes.${activityId}`] = firebase.firestore.FieldValue.delete();
   else updateObj[`notes.${activityId}`] = num;
@@ -1544,7 +1578,7 @@ function renderAverages(){
   for(let i=0;i<actCount;i++){
     const inputs = Array.from(notesTbody.querySelectorAll('tr')).map(r => r.querySelectorAll('input')[i]).filter(Boolean);
     const vals = inputs.map(inp => Number(inp.value)).filter(v=> !isNaN(v));
-    const avg = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2) : '';
+    const avg = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) : '';
     const td = document.createElement('td');
     td.className = 'border px-2 py-1 text-center font-semibold';
     td.textContent = avg;
@@ -2585,7 +2619,7 @@ async function exportExcel(){
         if(val !== '') { sum += val; count++; }
       });
 
-      row.push(count ? (sum/count).toFixed(2) : '');
+      row.push(count ? (sum/count).toFixed(1) : '');
       ws_data.push(row);
     });
 
@@ -2747,6 +2781,11 @@ window.showSaveError = showSaveError;
 // Substitueix els window.currentClassId & cia. que ningú assignava, i els
 // MutationObserver/setInterval: els mòduls escolten 'grid-rendered' i consulten aquesta API.
 window.AvaluApp = {
+  getActiveTermId: () => Terms.getActiveTermId(),
+  getTerms: () => Object.entries(_classData?.terms || {}).map(([id, t]) => ({ id, name: t.name || id })),
+  getTermName: termName,
+  getComment: (sd, classId, termId) => getStudentComment(sd, classId, termId),
+  getCommentTermId: () => currentCommentTermId || Terms.getActiveTermId() || null,
   openClass: (id, tab) => openClass(id, tab),
   getClassId: () => currentClassId,
   getClassData: () => _classData,

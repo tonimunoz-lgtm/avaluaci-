@@ -41,6 +41,24 @@ async function loadAll(force) {
 }
 const invalidate = () => { _cache = null; };
 
+// Comentari d'un alumne en un grup d'avaluació (camp nou comentarisTrim; el camp antic
+// comentarios[classe] compta com a comentari del primer grup)
+function commentOf(s, c, termId) {
+  const trim = (s.comentarisTrim || {})[c.id] || {};
+  const legacy = String((s.comentarios || {})[c.id] || '');
+  const first = Object.keys(c.terms || {})[0];
+  const v = typeof trim[termId] === 'string' ? trim[termId] : (legacy && (!first || termId === first) ? legacy : '');
+  return String(v).trim();
+}
+// Grups on té sentit demanar comentari: els que tenen activitats (o tots si cap en té)
+function commentTerms(c, termId) {
+  const ids = Object.keys(c.terms || {});
+  if (!ids.length) return [null];
+  if (termId) return [termId];
+  const withActs = ids.filter(id => (c.terms[id].activities || []).length);
+  return withActs.length ? withActs : ids;
+}
+
 // Estadístiques d'una classe (opcionalment per a un sol grup d'avaluació)
 function analyse(c, termId) {
   const terms = c.terms || {};
@@ -53,9 +71,12 @@ function analyse(c, termId) {
       id: s.id, nom: s.nom || '?', email: s.email || '',
       avg: avg(done), failed: done.filter(v => v < PASS).length,
       missing: actIds.length - done.length, vals,
-      comment: String((s.comentarios || {})[c.id] || '').trim()
+      comment: termId || !Object.keys(terms).length ? commentOf(s, c, termId || null) : ''
     };
   });
+  const cmTerms = commentTerms(c, termId);
+  const cmTotal = rows.length * cmTerms.length;
+  const cmDone = (c.students || []).reduce((n, s) => n + cmTerms.filter(t => commentOf(s, c, t)).length, 0);
   const acts = actIds.map((a, i) => {
     const v = rows.map(r => r.vals[i]).filter(x => x != null);
     return {
@@ -79,7 +100,7 @@ function analyse(c, termId) {
     noGrades: rows.length - withAvg.length,
     risk: rows.filter(r => r.avg != null && (r.avg < PASS || r.failed >= 2)),
     top: [...withAvg].sort((a, b) => b.avg - a.avg).slice(0, 5),
-    commented: rows.filter(r => r.comment).length
+    commented: cmDone, cmTotal
   };
 }
 
@@ -105,7 +126,7 @@ function reportHTML(c, termId) {
     ${kpi('Mitjana de la classe', fmt(a.mean), `mediana ${fmt(a.median)} · σ ${fmt(a.sd)}`, 'tone-' + toneOf(a.mean))}
     ${kpi('Aprovats', pct(a.passN, graded), `${a.passN} alumnes`, 'tone-green')}
     ${kpi('Suspesos', pct(a.failN, graded), `${a.failN} alumnes`, a.failN ? 'tone-red' : '')}
-    ${kpi('Comentaris fets', pct(a.commented, a.rows.length), `${a.rows.length - a.commented} pendents`)}
+    ${kpi('Comentaris fets', pct(a.commented, a.cmTotal), `${a.cmTotal - a.commented} pendents`)}
   </div>
 
   <div class="rep-grid">
@@ -281,16 +302,27 @@ async function currentClass() {
   return (await loadAll(true)).find(c => c.id === id) || null;
 }
 
+let _cmTerm = null;
+const termSelect = (c, id, sel, withAll) => {
+  const ts = Object.entries(c.terms || {});
+  if (!ts.length) return '';
+  return `<select id="${id}" class="pill-select">${withAll ? `<option value="">Tots els grups</option>` : ''}${ts.map(([k, t]) => `<option value="${esc(k)}" ${k === sel ? 'selected' : ''}>${esc(t.name || k)}</option>`).join('')}</select>`;
+};
+
 async function renderComentaris() {
   const root = $('tab-comentaris');
   root.innerHTML = '<p class="muted" style="padding:1rem">Carregant…</p>';
   const c = await currentClass();
   if (!c) { root.innerHTML = ''; return; }
-  const a = analyse(c);
+  const ids = Object.keys(c.terms || {});
+  if (!_cmTerm || !ids.includes(_cmTerm)) _cmTerm = window.AvaluApp?.getActiveTermId?.() || ids[0] || null;
+  const a = analyse(c, _cmTerm);
+  const done = a.rows.filter(r => r.comment).length;
   root.innerHTML = `
     <div class="panel">
-      <div class="classes-head" style="margin-bottom:.8rem"><h3>Comentaris dels alumnes <small class="muted">(${a.commented}/${a.rows.length})</small></h3>
-        <label class="chk"><input type="checkbox" id="onlyPending"> Només pendents</label></div>
+      <div class="classes-head" style="margin-bottom:.8rem"><h3>Comentaris dels alumnes <small class="muted">(${done}/${a.rows.length})</small></h3>
+        <div class="toolbar">${termSelect(c, 'cmTermSel', _cmTerm, false)}
+        <label class="chk"><input type="checkbox" id="onlyPending"> Només pendents</label></div></div>
       <ul class="comments-list">${a.rows.map(r => `
         <li data-id="${esc(r.id)}" data-pending="${r.comment ? 0 : 1}">
           <span class="stu-avatar" style="--hue:${hue(r.nom)}">${esc(initials(r.nom))}</span>
@@ -300,20 +332,24 @@ async function renderComentaris() {
         </li>`).join('') || '<li class="muted">No hi ha alumnes.</li>'}</ul>
     </div>`;
   const comments = Object.fromEntries(a.rows.map(r => [r.id, r.comment]));
+  $('cmTermSel')?.addEventListener('change', e => { _cmTerm = e.target.value; renderComentaris(); });
   root.querySelector('#onlyPending').addEventListener('change', e => {
     root.querySelectorAll('.comments-list li[data-id]').forEach(li => { li.style.display = e.target.checked && li.dataset.pending === '0' ? 'none' : ''; });
   });
   root.querySelector('.comments-list').addEventListener('click', e => {
     const b = e.target.closest('.cm-edit'); if (!b) return;
-    window.openCommentsModal?.(b.dataset.id, b.dataset.name, comments[b.dataset.id] || '');
+    window.openCommentsModal?.(b.dataset.id, b.dataset.name, comments[b.dataset.id] || '', _cmTerm);
   });
 }
 
+let _resTerm = '';
 async function renderResum() {
   const root = $('tab-resum');
   root.innerHTML = '<p class="muted" style="padding:1rem">Carregant…</p>';
   const c = await currentClass();
-  root.innerHTML = c ? reportHTML(c, '') : '';
+  if (!c) { root.innerHTML = ''; return; }
+  root.innerHTML = `<div class="toolbar" style="margin-top:.8rem">${termSelect(c, 'resTermSel', _resTerm, true)}</div>` + reportHTML(c, _resTerm);
+  $('resTermSel')?.addEventListener('change', e => { _resTerm = e.target.value; renderResum(); });
 }
 
 /* ------------------------------------------------------------ filtre d'activitat */

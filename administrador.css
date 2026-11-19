@@ -27,3 +27,15 @@ body.admin-page input:focus, body.admin-page select:focus { border-color: var(--
 body.admin-page .filter-btn { border: 0; border-radius: 999px; padding: .45rem .9rem; font-weight: 700; color: #fff; background: var(--c-primary); transition: transform .15s, box-shadow .15s; }
 body.admin-page .filter-btn.active { box-shadow: 0 0 0 3px rgba(124, 92, 255, .35); transform: translateY(-1px); }
 body.admin-page #lastLoginsContainer div { background: #f6f4ff; padding: .6rem .9rem; border-radius: 12px; margin-bottom: .4rem; font-size: .88rem; }
+
+/* Estats (Admin / Suspès / Eliminat) */
+body.admin-page .badge.b-no { background: #eceaf8; color: #6b6f8d; }
+body.admin-page .badge.b-admin { background: var(--c-primary); color: #fff; }
+body.admin-page .badge.b-susp { background: #f59e0b; color: #fff; }
+body.admin-page .badge.b-del { background: var(--c-danger); color: #fff; }
+/* Filtres creats per administrador-enhancements.js (sense Tailwind) */
+body.admin-page .flex { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin-bottom: .8rem; }
+body.admin-page .flex label { display: flex; align-items: center; gap: .4rem; font-weight: 600; font-size: .85rem; }
+body.admin-page .flex select { margin: 0; }
+body.admin-page td:last-child { display: table-cell; }
+body.admin-page td:last-child button { margin: .15rem .2rem .15rem 0; }

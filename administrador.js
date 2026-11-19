@@ -66,9 +66,9 @@ async function loadUsers() {
       <td>${esc(data.nom || '-')}</td>
       <td>${esc(data.email || '-')}</td>
       <td>${data.createdAt ? data.createdAt.toDate().toLocaleString() : '-'}</td>
-      <td>${data.isAdmin ? 'Sí' : 'No'}</td>
-     <td>${data.suspended ? 'Sí' : 'No'}</td>
-     <td>${data.deleted ? 'Sí' : 'No'}</td>
+      <td><span class="badge ${data.isAdmin ? 'b-admin' : 'b-no'}">${data.isAdmin ? 'Sí' : 'No'}</span></td>
+      <td><span class="badge ${data.suspended ? 'b-susp' : 'b-no'}">${data.suspended ? 'Sí' : 'No'}</span></td>
+      <td><span class="badge ${data.deleted ? 'b-del' : 'b-no'}">${data.deleted ? 'Sí' : 'No'}</span></td>
       <td>
         <button class="btn-suspend-toggle px-2 py-1 bg-yellow-400 text-white rounded" data-id="${esc(doc.id)}">${data.suspended ? 'Reactivar' : 'Suspendre'}</button>
         <button class="btn-admin-toggle px-2 py-1 bg-indigo-500 text-white rounded" data-id="${esc(doc.id)}">${data.isAdmin ? 'Treure admin' : 'Fer admin'}</button>
