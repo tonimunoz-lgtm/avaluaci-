@@ -1,5 +1,6 @@
 // config.js — pantalla Configuració i preferències de l'usuari.
 // Es desen a localStorage (immediat) i al perfil de Firestore (professors/{uid}.config) per seguir-lo entre dispositius.
+import { getLang, setLang } from './i18n.js';
 const DEFAULTS = {
   nom: '', centre: '', curs: '', signatura: '',
   terms: ['1r trimestre', '2n trimestre', '3r trimestre'],
@@ -9,8 +10,21 @@ const DEFAULTS = {
   densitat: 'normal', avisos: true
 };
 const KEY = 'avaluapp.config';
+// Textos per defecte segons l'idioma de l'aplicació (només se substitueixen si l'usuari no els ha personalitzat)
+const LOC = {
+  ca: { terms: ['1r trimestre', '2n trimestre', '3r trimestre'], assumpte: 'Notes de {nom}', intro: 'Hola {nom},\n\nAquestes són les teves notes:' },
+  es: { terms: ['1.er trimestre', '2.º trimestre', '3.er trimestre'], assumpte: 'Notas de {nom}', intro: 'Hola {nom}:\n\nEstas son tus notas:' },
+  en: { terms: ['Term 1', 'Term 2', 'Term 3'], assumpte: '{nom}\'s grades', intro: 'Hello {nom},\n\nHere are your grades:' }
+};
+function localize(c, to) {
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  for (const k of ['terms', 'assumpte', 'intro']) {
+    if (Object.values(LOC).some(l => same(l[k], c[k]))) c[k] = LOC[to][k];
+  }
+  return c;
+}
 const esc = window.esc || (s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])));
-let cfg = load();
+let cfg = localize(load(), getLang());
 function load() {
   try { return merge(DEFAULTS, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch { return merge(DEFAULTS, {}); }
 }
@@ -75,8 +89,11 @@ export function renderConfigScreen(el) {
     ${card('🏫', 'Classe de tutoria',
       row('La meva tutoria', `<select id="cf_tut"><option value="">— Cap —</option>${(window.AvaluApp?.getClasses?.() || []).map(k => `<option value="${esc(k.id)}" ${c.tutoriaClassId === k.id ? 'selected' : ''}>${esc(k.nom)}</option>`).join('')}</select>`,
         'Els comentaris i els avisos de comentaris pendents només es calculen per a aquesta classe.'))}
-    ${card('✨', 'Comentaris amb IA',
-      row('Idioma per defecte', `<select id="cf_idioma"><option value="catala" ${c.idioma === 'catala' ? 'selected' : ''}>Català</option><option value="castella" ${c.idioma === 'castella' ? 'selected' : ''}>Castellano</option></select>`))}
+    ${card('🌐', 'Idioma',
+      row('Idioma dels comentaris amb IA', `<select id="cf_idioma"><option value="catala" ${c.idioma === 'catala' ? 'selected' : ''}>Català</option><option value="castella" ${c.idioma === 'castella' ? 'selected' : ''}>Castellà</option><option value="angles" ${c.idioma === 'angles' ? 'selected' : ''}>Anglès</option></select>`,
+        'Els comentaris generats amb la IA s\'escriuran en aquest idioma per defecte.') +
+      row('Idioma de l\'aplicació', `<select id="cf_lang" translate="no"><option value="ca" ${getLang() === 'ca' ? 'selected' : ''}>Català</option><option value="es" ${getLang() === 'es' ? 'selected' : ''}>Castellano</option><option value="en" ${getLang() === 'en' ? 'selected' : ''}>English</option></select>`,
+        'Tot el text de l\'aplicació es mostrarà en aquest idioma. La pàgina es recarregarà en canviar-lo.'))}
     ${card('✉️', 'Correu de notes',
       row('Assumpte', `<input id="cf_assumpte" type="text" value="${esc(c.assumpte)}">`, 'Pots usar {nom} i {classe}.') +
       row('Text d\'inici', `<textarea id="cf_intro" rows="3">${esc(c.intro)}</textarea>`) +
@@ -101,6 +118,13 @@ export function renderConfigScreen(el) {
       tutoriaClassId: n('cf_tut').value, idioma: n('cf_idioma').value, assumpte: n('cf_assumpte').value, intro: n('cf_intro').value,
       signatura: n('cf_signatura').value, densitat: n('cf_densitat').value, avisos: n('cf_avisos').value === '1'
     });
+    const nl = n('cf_lang').value;
+    if (nl !== getLang()) {
+      cfg = localize(cfg, nl); cfg.lang = nl;
+      apply();
+      Promise.resolve(persist()).finally(() => { setLang(nl); location.reload(); });
+      return;
+    }
     apply(); persist(); window.AvaluApp?.refreshPending?.();
   };
   let t; el.querySelectorAll('input, select, textarea').forEach(i => i.addEventListener('input', () => { clearTimeout(t); t = setTimeout(save, 500); }));

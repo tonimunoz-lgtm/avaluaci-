@@ -537,6 +537,7 @@ function tcBuildHTML() {
         <select id="tcIdioma" class="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full">
           <option value="catala">Català</option>
           <option value="castella">Castellano</option>
+          <option value="angles">English</option>
         </select>
       </div>
 
@@ -708,7 +709,9 @@ function tcPrompt(d) {
     c('Punts forts', d.puntsForts), c('Recomanacions', d.recomanacions),
   ].filter(Boolean).join('\n');
 
-  const idioma = d.idioma === 'castella'
+  const idioma = d.idioma === 'angles'
+    ? `Write the comment in English. Refer to the student as "${d.nomAmbArticle.replace(/^(l'|El |La )/, '')}" and use the pronouns ${d.genere === 'noia' ? 'she/her' : 'he/him'}.`
+    : d.idioma === 'castella'
     ? `Escriu en castellano. Usa "${d.nomAmbArticle}" i pronoms él/ella.`
     : `Escriu en català. Usa "${d.nomAmbArticle}". Omet el pronom subjecte ell/ella quan el subjecte és conegut (pro-drop).`;
 

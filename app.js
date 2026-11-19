@@ -58,7 +58,7 @@ window.openCommentsModal = function(studentId, studentName, currentComment, term
         ></textarea>
         
         <div class="text-xs text-gray-500">
-          <span id="commentChars">0</span>/500 caracteres
+          <span id="commentChars">0</span>/500 caràcters
         </div>
         
         <div class="flex gap-2">
@@ -475,7 +475,7 @@ function renderClassCards() {
       <div class="card-top">
         <div class="card-ico">${vis.svg}</div>
         <div class="card-titles">
-          <h3>${esc(c.data.nom || 'Sense nom')}</h3>
+          <h3 translate="no">${esc(c.data.nom || 'Sense nom')}</h3>
           <p class="meta">${(c.data.alumnes || []).length} alumnes · ${totalActivities} activitats</p>
         </div>
       </div>
@@ -972,7 +972,7 @@ function buildStudentCell(tr, studentId, data) {
     <div class="stu-cell">
       <span class="drag-handle" draggable="true" title="Arrossega per reordenar">⠿</span>
       <span class="stu-avatar" style="--hue:${avatarHue(name)}">${esc(studentInitials(name))}</span>
-      <span class="stu-name">${esc(name)}</span>
+      <span class="stu-name" translate="no">${esc(name)}</span>
       <button class="stu-menu-btn" type="button" aria-label="Opcions de l'alumne">⋮</button>
     </div>`;
   tr.dataset.email = data.email || '';

@@ -337,6 +337,7 @@ function buildModalHTML() {
         <select id="tutoriaIdioma" class="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-rose-400 focus:outline-none text-sm w-full">
           <option value="catala">Català</option>
           <option value="castella">Castellano</option>
+          <option value="angles">English</option>
         </select>
       </div>
 
@@ -824,7 +825,9 @@ function buildPrompt(dades) {
     campOpcional('Recomanacions', dades.recomanacions),
   ].filter(Boolean).join('\n');
 
-  const idiomaInstruccio = dades.idioma === 'castella'
+  const idiomaInstruccio = dades.idioma === 'angles'
+    ? `Write the comment in English. Refer to the student as "${nom}" and use the pronouns ${article === 'El' ? 'he/him' : 'she/her'}.`
+    : dades.idioma === 'castella'
     ? `Escriu en castellano. Usa "${article === 'El' ? 'El' : 'La'} ${nom}" i pronoms él/ella.`
     : `Escriu en català. Usa "${nomAmbArticle}". Omet el pronom subjecte ell/ella quan el subjecte és conegut (pro-drop).`;
 
