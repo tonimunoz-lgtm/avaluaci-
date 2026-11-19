@@ -1,5 +1,5 @@
 // sw.js — Service Worker per a AvaluApp
-const CACHE_NAME = 'avaluapp-v1';
+const CACHE_NAME = 'avaluapp-v2-fase1';
 
 // Fitxers principals a cachear per funcionar offline
 const STATIC_ASSETS = [
@@ -7,6 +7,7 @@ const STATIC_ASSETS = [
   '/index.html',
   '/style.css',
   '/app.js',
+  '/html-utils.js',
   '/classroom.js',
   '/classroom-ui.js',
   '/competencial.js',
@@ -53,6 +54,9 @@ self.addEventListener('activate', event => {
 // (per Firebase i Google APIs sempre va a la xarxa)
 self.addEventListener('fetch', event => {
   const url = event.request.url;
+
+  // Ignorar extensions del navegador, POST, etc. (cache.put només admet http/https GET)
+  if (event.request.method !== 'GET' || !url.startsWith('http')) return;
 
   // Deixar passar sempre les peticions externes (Firebase, Google, CDNs)
   if (

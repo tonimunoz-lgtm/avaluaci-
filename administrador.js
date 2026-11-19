@@ -5,7 +5,7 @@ const firebaseConfig = {
   projectId: "gestornotes-cc6d0",
   storageBucket: "gestornotes-cc6d0.firebasestorage.app",
   messagingSenderId: "324570393360",
-  appId: "1:324570393360:web:13a65fc948813805c5395"
+  appId: "1:324570393360:web:13a65fcf948813805c5395"
 };
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
@@ -15,7 +15,6 @@ const db = firebase.firestore();
 const usersTableBody = document.getElementById('usersTableBody');
 const btnAddAdmin = document.getElementById('btnAddAdmin');
 const btnLogout = document.getElementById('btnLogout');
-const btnSendEmail = document.getElementById('btnSendEmail');
 const lastLoginsContainer = document.getElementById('lastLoginsContainer');
 const btnBackToApp = document.getElementById('btnBackToApp');
 
@@ -26,7 +25,12 @@ async function loadUsers() {
   usersTableBody.innerHTML = '';
 
   // Obtenim tots els documents de professors
-  const snapshot = await db.collection('professors').orderBy('createdAt', 'desc').get();
+  const snapshot = await db.collection('professors').get();
+  const docs = snapshot.docs.slice().sort((a, b) => {
+    const ta = a.data().createdAt ? a.data().createdAt.toMillis() : 0;
+    const tb = b.data().createdAt ? b.data().createdAt.toMillis() : 0;
+    return tb - ta; // més nous primer; els antics sense createdAt al final
+  });
 
   // Si no hi ha cap document, podem provar de carregar logs com fallback
   if (snapshot.empty) {
@@ -43,7 +47,7 @@ async function loadUsers() {
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>-</td>
-        <td>${email}</td>
+        <td>${esc(email)}</td>
         <td>-</td>
         <td>No</td>
         <td>No</td>
@@ -55,21 +59,21 @@ async function loadUsers() {
     return;
   }
 
-  snapshot.forEach(doc => {
+  docs.forEach(doc => {
     const data = doc.data();
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${data.nom || '-'}</td>
-      <td>${data.email || '-'}</td>
+      <td>${esc(data.nom || '-')}</td>
+      <td>${esc(data.email || '-')}</td>
       <td>${data.createdAt ? data.createdAt.toDate().toLocaleString() : '-'}</td>
       <td>${data.isAdmin ? 'Sí' : 'No'}</td>
      <td>${data.suspended ? 'Sí' : 'No'}</td>
      <td>${data.deleted ? 'Sí' : 'No'}</td>
       <td>
-        <button class="btn-suspend-toggle px-2 py-1 bg-yellow-400 text-white rounded"data-id="${doc.id}">${data.suspended ? 'Reactivar' : 'Suspendre'}</button>
-        <button class="btn-reset px-2 py-1 bg-blue-400 text-white rounded" data-id="${doc.id}">Reset PW</button>
-        <button class="btn-admin-toggle px-2 py-1 bg-indigo-500 text-white rounded" data-id="${doc.id}">${data.isAdmin ? 'Treure admin' : 'Fer admin'}</button>
-        <button class="btn-delete px-2 py-1 bg-red-500 text-white rounded" data-id="${doc.id}">Eliminar</button>
+        <button class="btn-suspend-toggle px-2 py-1 bg-yellow-400 text-white rounded" data-id="${esc(doc.id)}">${data.suspended ? 'Reactivar' : 'Suspendre'}</button>
+        <button class="btn-reset px-2 py-1 bg-blue-400 text-white rounded" data-id="${esc(doc.id)}">Reset PW</button>
+        <button class="btn-admin-toggle px-2 py-1 bg-indigo-500 text-white rounded" data-id="${esc(doc.id)}">${data.isAdmin ? 'Treure admin' : 'Fer admin'}</button>
+        <button class="btn-delete px-2 py-1 bg-red-500 text-white rounded" data-id="${esc(doc.id)}">Eliminar</button>
       </td>
     `;
     usersTableBody.appendChild(tr);
@@ -83,7 +87,7 @@ function attachUserButtons() {
   
   // --- TOGGLE SUSPENSIÓ ---
   document.querySelectorAll('.btn-suspend-toggle').forEach(btn => {
-    btn.addEventListener('click', () => toggleSuspendUser(btn.dataset.id));
+    btn.onclick = () => toggleSuspendUser(btn.dataset.id);
   });
  document.querySelectorAll('.btn-reset').forEach(btn => {
     btn.addEventListener('click', () => resetPassword(btn.dataset.id));
@@ -92,7 +96,7 @@ function attachUserButtons() {
     btn.addEventListener('click', () => toggleAdmin(btn.dataset.id));
   });
   document.querySelectorAll('.btn-delete').forEach(btn => {
-    btn.addEventListener('click', () => deleteUser(btn.dataset.id));
+    btn.onclick = () => deleteUser(btn.dataset.id);
   });
 }
 
@@ -156,57 +160,61 @@ async function deleteUser(uid) {
 
   try {
     await db.collection('professors').doc(uid).update({ deleted: true, suspended: false });
-    alert("Usuari eliminat correctament. Podrà tornar a registrar-se amb aquest email.");
+    alert("Usuari marcat com a eliminat. Ja no podrà entrar a l'app. (El seu compte d'autenticació continua existint; per restaurar-lo, edita deleted=false a Firestore.)");
     loadUsers(); // Recarregar llista d'usuaris
+    return true;
   } catch (e) {
     console.error("Error eliminant usuari:", e);
-    alert("⚠️ Error eliminant usuari.");
+    alert("⚠️ Error eliminant usuari: " + e.message);
+    return false;
   }
 }
 
 
-// Crear nou usuari o admin
+// Crear nou usuari (amb una app secundària perquè l'admin NO perdi la seva sessió)
 btnAddAdmin.addEventListener('click', async () => {
-  const email = prompt('Introdueix email del nou usuari:');
+  const email = (prompt('Introdueix email del nou usuari:') || '').trim();
   if (!email) return;
-  const password = prompt('Introdueix contrasenya:');
+  const password = prompt('Introdueix contrasenya (mínim 6 caràcters):');
   if (!password) return;
-  const nom = prompt('Nom de l’usuari:') || '';
+  const nom = prompt('Nom de l’usuari:') || email.split('@')[0];
+  const makeAdmin = confirm('Vols que sigui administrador?\n(Acceptar = admin, Cancel·lar = usuari normal)');
 
+  let secondary = null;
   try {
-    // Creem usuari a Firebase Auth
-    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-    await db.collection('professors').doc(userCredential.user.uid).set({
+    secondary = firebase.apps.find(a => a.name === 'secondary') || firebase.initializeApp(firebaseConfig, 'secondary');
+    const cred = await secondary.auth().createUserWithEmailAndPassword(email, password);
+    const newUid = cred.user.uid;
+    await secondary.auth().signOut();
+
+    // El document el crea l'admin (sessió principal), que té permís per fer-ho
+    await db.collection('professors').doc(newUid).set({
       email,
       nom,
-      isAdmin: false,
+      isAdmin: makeAdmin,
       suspended: false,
+      deleted: false,
+      classes: [],
       createdAt: firebase.firestore.Timestamp.now()
     });
     alert('Nou usuari creat!');
     loadUsers();
-  } catch(e) {
-    // Si l'usuari ja existeix, fem update a isAdmin
-    const snapshot = await db.collection('professors').where('email', '==', email).get();
-    if (!snapshot.empty) {
-      const doc = snapshot.docs[0];
-      await db.collection('professors').doc(doc.id).update({ isAdmin: true });
-      alert('L’usuari ja existia, ara és administrador!');
-      loadUsers();
+  } catch (e) {
+    if (e.code === 'auth/email-already-in-use') {
+      // Ja existeix a Authentication: només el promocionem si tenim el seu perfil
+      const snap = await db.collection('professors').where('email', '==', email).get();
+      if (!snap.empty && makeAdmin && confirm('Aquest email ja existeix. Convertir-lo en administrador?')) {
+        await db.collection('professors').doc(snap.docs[0].id).update({ isAdmin: true });
+        alert('L’usuari ja existia, ara és administrador!');
+        loadUsers();
+      } else {
+        alert('Aquest email ja està registrat.');
+      }
     } else {
+      console.error(e);
       alert('Error creant l’usuari: ' + e.message);
     }
   }
-});
-
-// Enviar correu (mock)
-btnSendEmail.addEventListener('click', () => {
-  const recipient = document.getElementById('emailRecipient').value.trim();
-  const message = document.getElementById('emailMessage').value.trim();
-  if (!recipient || !message) return alert('Omple usuari i missatge');
-  alert(`Missatge enviat a ${recipient}:\n\n${message}`);
-  document.getElementById('emailRecipient').value = '';
-  document.getElementById('emailMessage').value = '';
 });
 
 // Últims 10 accessos per usuari
@@ -280,3 +288,7 @@ async function migrateOldProfessors() {
     alert('Error durant la migració: ' + e.message);
   }
 }
+
+
+// administrador-enhancements.js és un mòdul separat: li exposem el que necessita
+Object.assign(window, { db, auth, loadUsers, toggleSuspendUser, deleteUser, toggleAdmin, resetPassword });

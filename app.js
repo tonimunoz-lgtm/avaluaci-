@@ -256,37 +256,63 @@ function showApp() {
 }
 
 /* ---------- AUTH ---------- */
+// Un únic punt d'entrada a l'app: onAuthStateChanged -> enterApp().
+// Els botons només fan signIn/registre; la comprovació d'estat (eliminat/suspès)
+// i la càrrega de la UI es fa sempre a enterApp().
+let _creatingProfile = false; // mentre es crea el doc professors/{uid}, el listener espera
+let _explicitLogin = false;   // només registrem a `logins` quan l'usuari fa login de debò
+let _enteredUid = null;       // evita carregar l'app dues vegades per al mateix usuari
+
+async function enterApp(user, { logLogin = false } = {}) {
+  if (_enteredUid === user.uid) return;
+  _enteredUid = user.uid;
+  let snap;
+  try {
+    snap = await db.collection('professors').doc(user.uid).get();
+  } catch (e) {
+    console.error('No s\'ha pogut verificar el compte:', e);
+    _enteredUid = null;
+    await auth.signOut();
+    return alert('⚠️ No s\'ha pogut verificar el compte: ' + e.message);
+  }
+
+  if (!snap.exists) {
+    _enteredUid = null;
+    await auth.signOut();
+    return alert('⚠️ Usuari no trobat. Contacta amb l\'administrador.');
+  }
+  const data = snap.data() || {};
+  if (data.deleted) {
+    _enteredUid = null;
+    await auth.signOut();
+    return alert('⚠️ El teu compte ha estat eliminat. Contacta amb l\'administrador.');
+  }
+  if (data.suspended) {
+    _enteredUid = null;
+    await auth.signOut();
+    return alert('⚠️ El teu compte està suspès.\nContacta amb l\'administrador.');
+  }
+
+  professorUID = user.uid;
+  if (logLogin) {
+    db.collection('professors').doc(user.uid).collection('logins')
+      .add({ timestamp: firebase.firestore.Timestamp.now() })
+      .catch(e => console.error('Error registrant login:', e));
+  }
+  setupAfterAuth(user, data);
+}
+
 btnLogin.addEventListener('click', async () => {
   const email = document.getElementById('loginEmail').value.trim();
   const pw = document.getElementById('loginPassword').value;
   if (!email || !pw) return alert('Introdueix email i contrasenya');
 
+  _explicitLogin = true;
   try {
-    const u = await auth.signInWithEmailAndPassword(email, pw);
-
-    const userDoc = await db.collection('professors').doc(u.user.uid).get();
-
-    if (!userDoc.exists) {
-      await auth.signOut();
-      return alert("⚠️ Usuari no trobat. Contacta amb l’administrador.");
-    }
-
-    // 🔹 Comprovació eliminat
-    if (userDoc.data().deleted) {
-      await auth.signOut();
-      return alert("⚠️ El teu compte ha estat eliminat. Pots registrar-te de nou amb aquest email.");
-    }
-
-    // 🔹 Comprovació suspès
-    if (userDoc.data().suspended) {
-      await auth.signOut();
-      return alert("⚠️ El teu compte està suspès.\nContacta amb l’administrador.");
-    }
-
-    professorUID = u.user.uid;
-    setupAfterAuth(u.user);
-
+    await auth.signInWithEmailAndPassword(email, pw);
+    // La resta la fa onAuthStateChanged -> enterApp
   } catch (e) {
+    _explicitLogin = false;
     alert('Error login: ' + e.message);
   }
 });
@@ -296,16 +322,15 @@ async function signInWithGoogleGmail() {
   const provider = new firebase.auth.GoogleAuthProvider();
   provider.addScope('https://www.googleapis.com/auth/gmail.send');
 
+  _creatingProfile = true;
+  _explicitLogin = true;
   try {
     const result = await firebase.auth().signInWithPopup(provider);
-    const credential = result.credential;
-    window._googleAccessToken = credential.accessToken;
+    window._googleAccessToken = result.credential && result.credential.accessToken;
 
     const profRef = db.collection('professors').doc(result.user.uid);
     const docSnap = await profRef.get();
-
     if (!docSnap.exists) {
-      // Crear usuari nou si no existeix
       await profRef.set({
         email: result.user.email,
         name: result.user.displayName || result.user.email.split('@')[0],
@@ -317,33 +342,18 @@ async function signInWithGoogleGmail() {
         createdAt: firebase.firestore.Timestamp.now()
       });
     }
-
-    // 🔹 DESPRÉS DE CREAR/OBTENIR EL DOC: COMPROVAR ESTATS
-    const profDoc = await profRef.get();
-    const profData = profDoc.data();
-
-    if (profData.deleted) {
-      await auth.signOut();
-      return alert("⚠️ El teu compte ha estat eliminat. Pots registrar-te de nou amb aquest email.");
-    }
-
-    if (profData.suspended) {
-      await auth.signOut();
-      return alert("⚠️ El teu compte està suspès.\nContacta amb l’administrador.");
-    }
-
-    // ✅ Tot correcte: assignar UID i carregar UI
-    professorUID = result.user.uid;
-    setupAfterAuth(result.user);
-    alert("Sessió iniciada correctament!");
-
+    _creatingProfile = false;
+    await enterApp(result.user, { logLogin: true });
+    _explicitLogin = false;
   } catch (error) {
     console.error(error);
+    _explicitLogin = false;
     alert("Error iniciant sessió amb Google: " + error.message);
+  } finally {
+    _creatingProfile = false;
   }
 }
 
-// ---------------- BOTÓ LOGIN ----------------
 document.getElementById("googleLoginBtn").addEventListener("click", signInWithGoogleGmail);
 
 
@@ -352,13 +362,10 @@ btnRegister.addEventListener('click', async () => {
   const pw    = document.getElementById('loginPassword').value;
   if (!email || !pw) return alert('Introdueix email i contrasenya');
 
+  _creatingProfile = true;
   try {
-    // Crear usuari a Firebase Auth — sense tocar Firestore abans d'autenticar-se
     const u = await auth.createUserWithEmailAndPassword(email, pw);
-    professorUID = u.user.uid;
-
-    // Ara ja estem autenticats, les rules permeten escriure el propi document
-    await db.collection('professors').doc(professorUID).set({
+    await db.collection('professors').doc(u.user.uid).set({
       email,
       nom: email.split('@')[0],
       isAdmin: false,
@@ -367,10 +374,9 @@ btnRegister.addEventListener('click', async () => {
       createdAt: firebase.firestore.Timestamp.now(),
       classes: []
     });
-
-    setupAfterAuth(u.user);
+    _creatingProfile = false;
+    await enterApp(u.user, { logLogin: true });
     alert("Compte creat correctament!");
-
   } catch (e) {
     if (e.code === 'auth/email-already-in-use') {
       alert("Aquest email ja està registrat. Utilitza el botó d'inici de sessió.");
@@ -381,6 +387,8 @@ btnRegister.addEventListener('click', async () => {
     } else {
       alert('Error registre: ' + e.message);
     }
+  } finally {
+    _creatingProfile = false;
   }
 });
 
@@ -397,35 +405,31 @@ btnLogout.addEventListener('click', ()=> {
   auth.signOut().then(()=> {
     professorUID = null;
     currentClassId = null;
+    _enteredUid = null;
     showLogin();
   });
 });
 
 auth.onAuthStateChanged(user => {
   if (user) {
-    professorUID = user.uid;
-
-    // ---------- REGISTRAR LOGIN ----------
-    db.collection('professors').doc(user.uid).collection('logins')
-      .add({ timestamp: firebase.firestore.Timestamp.now() })
-      .catch(e => console.error('Error registrant login:', e));
-
-    setupAfterAuth(user);
+    if (_creatingProfile) return; // el handler cridarà enterApp quan el perfil existeixi
+    const log = _explicitLogin;
+    _explicitLogin = false;
+    enterApp(user, { logLogin: log });
   } else {
     professorUID = null;
+    _enteredUid = null;
     showLogin();
   }
 });
- 
-async function setupAfterAuth(user) {
+
+async function setupAfterAuth(user, profData) {
   showApp();
   const email = user.email || '';
   usuariNom.textContent = email.split('@')[0] || email;
 
   // ----------------- AFEGIR OPCIÓ ADMIN -----------------
-  const userDoc = await db.collection('professors').doc(user.uid).get();
-  if (userDoc.exists && userDoc.data().isAdmin) {
-    // Comprovem que encara no hi ha el botó
+  if (profData && profData.isAdmin) {
     if (!document.getElementById('btnAdminPanel')) {
       const adminBtn = document.createElement('button');
       adminBtn.id = 'btnAdminPanel';
@@ -438,7 +442,6 @@ async function setupAfterAuth(user) {
     }
   }
 
-  // Crida automàtica per carregar la graella de classes
   loadClassesScreen();
 }
 
@@ -493,7 +496,7 @@ function loadClassesScreen() {
 
           card.innerHTML = `
             ${deleteMode ? '<input type="checkbox" class="delete-checkbox absolute top-2 right-2 w-5 h-5">' : ''}
-            <h3 class="text-lg font-bold">${d.data().nom||'Sense nom'}</h3>
+            <h3 class="text-lg font-bold">${esc(d.data().nom||'Sense nom')}</h3>
             <p class="text-sm mt-2">${(d.data().alumnes||[]).length} alumnes · ${totalActivities} activitats</p>
             <div class="click-hint">${deleteMode ? 'Selecciona per eliminar' : 'Fes clic per obrir'}</div>
           `;
@@ -558,6 +561,93 @@ function addDeleteSelectedButton(){
   classesGrid.parentNode.insertBefore(delBtn, classesGrid.nextSibling);
 }
 
+/* ---------------- Helpers d'esborrat en cascada ---------------- */
+async function batchDeleteRefs(refs){
+  for (let i = 0; i < refs.length; i += 400) {
+    const chunk = refs.slice(i, i + 400);
+    try {
+      const b = db.batch();
+      chunk.forEach(r => b.delete(r));
+      await b.commit();
+    } catch (e) {
+      console.warn('Lot fallit, reintentant doc a doc', e);
+      for (const r of chunk) {
+        try { await r.delete(); } catch (e2) { console.error('No s\'ha pogut esborrar', r.path, e2); }
+      }
+    }
+  }
+}
+
+// Esborra una classe amb tot el que penja: alumnes, activitats i la referència del professor.
+// Ordre: dades fills -> doc de la classe -> referència al professor (les rules necessiten
+// que la classe encara sigui a professor.classes mentre s'esborra).
+async function deleteClassCascade(classId){
+  const ref = db.collection('classes').doc(classId);
+  const snap = await ref.get();
+  if (snap.exists) {
+    const c = snap.data() || {};
+    const alumnes = c.alumnes || [];
+    const actIds = new Set(c.activitats || []);
+    Object.values(c.terms || {}).forEach(t => (t.activities || []).forEach(a => actIds.add(a)));
+    await batchDeleteRefs(alumnes.map(id => db.collection('alumnes').doc(id)));
+    await batchDeleteRefs([...actIds].map(id => db.collection('activitats').doc(id)));
+    await ref.delete();
+  }
+  await db.collection('professors').doc(professorUID).update({
+    classes: firebase.firestore.FieldValue.arrayRemove(classId)
+  });
+}
+
+// Esborra una activitat de TOTS els grups de la classe, el seu doc, els càlculs i les notes.
+async function deleteActivityCascade(actId){
+  const classRef = db.collection('classes').doc(currentClassId);
+  const snap = await classRef.get();
+  const c = snap.exists ? snap.data() : {};
+  const upd = {
+    activitats: firebase.firestore.FieldValue.arrayRemove(actId),
+    [`calculatedActivities.${actId}`]: firebase.firestore.FieldValue.delete()
+  };
+  Object.entries(c.terms || {}).forEach(([tid, t]) => {
+    if ((t.activities || []).includes(actId)) {
+      upd[`terms.${tid}.activities`] = firebase.firestore.FieldValue.arrayRemove(actId);
+    }
+  });
+  await classRef.update(upd);
+
+  const alumnes = c.alumnes || classStudents || [];
+  for (let i = 0; i < alumnes.length; i += 400) {
+    const b = db.batch();
+    alumnes.slice(i, i + 400).forEach(sid => {
+      b.update(db.collection('alumnes').doc(sid), { [`notes.${actId}`]: firebase.firestore.FieldValue.delete() });
+    });
+    await b.commit();
+  }
+  await db.collection('activitats').doc(actId).delete();
+}
+
+// Esborra alumnes per ID (de la classe + doc de l'alumne)
+async function deleteStudentsByIds(ids){
+  if (!ids.length) return;
+  await db.collection('classes').doc(currentClassId).update({
+    alumnes: firebase.firestore.FieldValue.arrayRemove(...ids)
+  });
+  await batchDeleteRefs(ids.map(id => db.collection('alumnes').doc(id)));
+}
+
+function showSaveError(e){
+  console.error('Error desant:', e);
+  let t = document.getElementById('saveErrorToast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'saveErrorToast';
+    t.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:99999;background:#dc2626;color:#fff;padding:10px 14px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.3);max-width:320px;font-size:14px';
+    document.body.appendChild(t);
+  }
+  t.textContent = '⚠️ No s\'ha pogut desar: ' + (e && e.message ? e.message : e);
+  clearTimeout(t._h);
+  t._h = setTimeout(() => t.remove(), 6000);
+}
+
 function confirmDeleteSelected(){
   const selected = [...document.querySelectorAll('.delete-checkbox')]
     .filter(chk => chk.checked)
@@ -568,17 +658,13 @@ function confirmDeleteSelected(){
   confirmAction(
     'Confirmació d\'eliminació',
     `Estàs segur que vols eliminar ${selected.length} classe(s)? Aquesta acció no té marxa enrere.`,
-    () => {
-      selected.forEach(card => {
-        const classIdToRemove = card.dataset.id;
-        card.remove();
-        if(classIdToRemove){
-          db.collection('professors').doc(professorUID).update({
-            classes: firebase.firestore.FieldValue.arrayRemove(classIdToRemove)
-          });
-          db.collection('classes').doc(classIdToRemove).delete();
-        }
-      });
+    async () => {
+      const ids = selected.map(c => c.dataset.id).filter(Boolean);
+      try {
+        for (const id of ids) await deleteClassCascade(id);
+      } catch (e) {
+        alert('Error eliminant classe: ' + e.message);
+      }
       deleteMode = false;
       btnDeleteMode.textContent = '🗑️ Eliminar classe';
       loadClassesScreen();
@@ -678,9 +764,7 @@ function removeStudent(studentId) {
     'Eliminar alumne',
     'Estàs segur que vols eliminar aquest alumne?',
     () => {
-      db.collection('classes').doc(currentClassId)
-        .update({ alumnes: firebase.firestore.FieldValue.arrayRemove(studentId) })
-        .then(() => db.collection('alumnes').doc(studentId).delete())
+      deleteStudentsByIds([studentId])
         .then(() => loadClassData())
         .catch(e => alert('Error eliminant alumne: ' + e.message));
     }
@@ -746,25 +830,8 @@ async function createActivityModal() {
 function removeActivity(actId){
   confirmAction('Eliminar activitat', 'Esborrar activitat i totes les notes relacionades?', async ()=> {
     try {
-      const termId = Terms.getActiveTermId(); // obtenir terme actiu
-
-      // Eliminar activitat del llistat general i del terme actiu
-      await db.collection('classes').doc(currentClassId).update({
-        activitats: firebase.firestore.FieldValue.arrayRemove(actId),
-        [`terms.${termId}.activities`]: firebase.firestore.FieldValue.arrayRemove(actId)
-      });
-
-      // Eliminar notes dels alumnes
-      const batch = db.batch();
-      classStudents.forEach(sid => {
-        const ref = db.collection('alumnes').doc(sid);
-        batch.update(ref, { [`notes.${actId}`]: firebase.firestore.FieldValue.delete() });
-      });
-      await batch.commit();
-
-      // Refrescar dades
+      await deleteActivityCascade(actId);
       loadClassData();
-
     } catch(e) {
       alert('Error esborrant activitat: ' + e.message);
     }
@@ -788,8 +855,11 @@ function renderStudentsList() {
     return;
   }
 
-  classStudents.forEach((stuId, idx) => {
-    db.collection('alumnes').doc(stuId).get().then(doc => {
+  const ids = Array.from(classStudents);
+  Promise.all(ids.map(id => db.collection('alumnes').doc(id).get())).then(docs => {
+    studentsList.innerHTML = '';
+    docs.forEach((doc, idx) => {
+      const stuId = ids[idx];
       const data = doc.data() || {};
       const name = data.nom || 'Desconegut';
       const email = data.email || '';
@@ -802,7 +872,7 @@ function renderStudentsList() {
       li.innerHTML = `
         <div class="flex items-center gap-3">
           <span draggable="true" title="Arrossega per reordenar" class="cursor-move text-sm text-gray-500">☰</span>
-          <span class="stu-name font-medium">${name}</span>
+          <span class="stu-name font-medium">${esc(name)}</span>
         </div>
         <div class="relative">
           <button class="menu-btn text-gray-500 hover:text-gray-700 dark:hover:text-white tooltip">⋮</button>
@@ -866,6 +936,9 @@ function renderStudentsList() {
         showExitSendNotesButton();
       }
     });
+  }).catch(e => {
+    console.error('Error carregant alumnes', e);
+    studentsList.innerHTML = '<li class="text-sm text-red-500">Error carregant alumnes</li>';
   });
 }
 
@@ -888,9 +961,7 @@ document.addEventListener('click', () => {
 });
 
 /* 🔥 Activar mode d'eliminació múltiple */
-deleteStudentsModeBtn.addEventListener('click', () => {
-    activateDeleteStudentsMode();
-});
+// (un únic handler: veure activateDeleteStudentsMode al final del fitxer)
 
 
 
@@ -1087,23 +1158,8 @@ await renderNotesGrid();
 menuDiv.querySelector('.delete-btn').addEventListener('click', () => {
   confirmAction('Eliminar activitat', 'Esborrar activitat i totes les notes relacionades?', async () => {
     try {
-      // Eliminar del terme actiu
-      await Terms.removeActivityFromActiveTerm(id);
-
-      // Eliminar de la llista general d’activitats de la classe
-      await db.collection('classes').doc(currentClassId)
-              .update({ activitats: firebase.firestore.FieldValue.arrayRemove(id) });
-
-      // Esborrar les notes dels alumnes
-      const batch = db.batch();
-      classStudents.forEach(sid => {
-        const ref = db.collection('alumnes').doc(sid);
-        batch.update(ref, { [`notes.${id}`]: firebase.firestore.FieldValue.delete() });
-      });
-      await batch.commit();
-
-      // Refrescar graella i capçaleres
-      renderNotesGrid();
+      await deleteActivityCascade(id);
+      loadClassData();
     } catch(e) {
       alert('Error esborrant activitat: ' + e.message);
     }
@@ -1271,7 +1327,7 @@ input.addEventListener('keydown', e => {
     const displayComment = comment ? comment.split(' ')[0] + (comment.split(' ').length > 1 ? '...' : '') : '(sense comentari)';
     
     // Crear un contenedor para ocultar el cálculo pero mostrar el comentario
-    commentTd.innerHTML = `<span style="display: block;">${displayComment}</span>`;
+    commentTd.innerHTML = `<span style="display: block;">${esc(displayComment)}</span>`;
     commentTd.title = comment || 'Fes clic per afegir comentari';
     
     // Click para abrir modal de comentarios
@@ -1342,7 +1398,7 @@ function saveNote(studentId, activityId, value){
   else updateObj[`notes.${activityId}`] = num;
 
   return db.collection('alumnes').doc(studentId).update(updateObj)
-    .catch(e=> console.error('Error saving note', e));
+    .catch(e=> { showSaveError(e); throw e; });
 }
 
 
@@ -1566,7 +1622,7 @@ function validateFormula() {
       const hidFormula = formulaFieldHidden ? formulaFieldHidden.value : formula;
       showFormulaPreview(hidFormula);
     } else {
-      formulaValidationDiv.innerHTML = `<span style="color: red; font-weight: bold;">❌ Error: ${validation.error}</span>`;
+      formulaValidationDiv.innerHTML = `<span style="color: red; font-weight: bold;">❌ Error: ${esc(validation.error)}</span>`;
       formulaValidationDiv.className = 'mt-2 p-3 rounded text-sm bg-red-50 border border-red-200';
       
       if (formulaPreviewDiv) {
@@ -2603,28 +2659,24 @@ async function exportExcel(){
 //----------------------activar eliminar estudiants--------------------
 function activateDeleteStudentsMode() {
     studentsMenu.classList.add('hidden');
+    if (document.getElementById('studentsDeleteFooter')) return; // ja actiu
+    isDeleteMode = true;
 
-    // Afegim el checkbox a cada alumne
     document.querySelectorAll('#studentsList li').forEach(li => {
-        // Agafem la columna on hi ha el menú ⋮
         const menuContainer = li.querySelector('.relative');
-
-        // Amaguem el menú ⋮
         const menuBtn = li.querySelector('.menu-btn');
         if (menuBtn) menuBtn.style.display = 'none';
-
-        // Creem el checkbox i l’afegim DINS del mateix container a la dreta
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.className = 'stu-check ml-2'; // ml-2: marge a l’esquerra del checkbox
-        menuContainer.appendChild(checkbox);
+        if (menuContainer && !li.querySelector('.stu-check')) {
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'stu-check ml-2';
+            menuContainer.appendChild(checkbox);
+        }
     });
 
-    // Afegim menú inferior
     const footer = document.createElement('div');
     footer.id = 'studentsDeleteFooter';
     footer.className = 'mt-3 p-2 bg-red-50 border border-red-200 rounded flex justify-between items-center';
-
     footer.innerHTML = `
         <div>
             <label><input type="checkbox" id="selectAllStudents"> Tots</label>
@@ -2633,117 +2685,53 @@ function activateDeleteStudentsMode() {
             Eliminar
         </button>
     `;
-
     document.getElementById('studentsList').after(footer);
 
-    // Select all
     document.getElementById('selectAllStudents').addEventListener('change', e => {
         document.querySelectorAll('.stu-check').forEach(ch => ch.checked = e.target.checked);
     });
+    document.getElementById('confirmDeleteStudents').addEventListener('click', deleteSelectedStudents);
 
-    // Botó eliminar seleccionats
-    document.getElementById('confirmDeleteStudents').addEventListener('click', () => {
-        deleteSelectedStudents();
-    });
+    const cancelBtn = document.getElementById('cancelDeleteStudentsBtn');
+    if (cancelBtn) cancelBtn.style.display = 'inline-block';
 }
 
-//----------------------funcio eliminar seleccionats--------------------
-function deleteSelectedStudents() {
-    const selected = [...document.querySelectorAll('.stu-check:checked')];
+//----------------------funcio eliminar seleccionats (per ID, no per posició)--------------------
+async function deleteSelectedStudents() {
+    const ids = [...document.querySelectorAll('.stu-check:checked')]
+        .map(ch => ch.closest('li')?.dataset.studentId)
+        .filter(Boolean);
 
-    if (selected.length === 0) {
+    if (ids.length === 0) {
         alert('No hi ha alumnes seleccionats.');
         return;
     }
+    if (!confirm(`Eliminar ${ids.length} alumnes?`)) return;
 
-    if (!confirm(`Eliminar ${selected.length} alumnes?`)) return;
-
-    const ids = [];
-
-    selected.forEach(ch => {
-        const li = ch.closest('li');
-        const stuName = li.querySelector('.stu-name').textContent;
-
-        // Agafem ID per eliminar-lo de la classe
-        const index = [...studentsList.children].indexOf(li);
-        const stuId = classStudents[index];
-
-        ids.push(stuId);
-    });
-
-    // Actualitzar Firestore
-    const classRef = db.collection('classes').doc(currentClassId);
-
-    classRef.update({
-        alumnes: firebase.firestore.FieldValue.arrayRemove(...ids)
-    }).then(() => {
-        // Tornem a carregar
-        loadClassData();
+    try {
+        await deleteStudentsByIds(ids);
         exitDeleteStudentsMode();
-    });
+        loadClassData();
+    } catch (e) {
+        alert('Error eliminant alumnes: ' + e.message);
+    }
 }
 
 //---------------sortit mode eliminacio----------------------------
 function exitDeleteStudentsMode() {
+    isDeleteMode = false;
     const footer = document.getElementById('studentsDeleteFooter');
     if (footer) footer.remove();
-
-    // Treure els checkbox del costat dels alumnes
     document.querySelectorAll('.stu-check').forEach(ch => ch.remove());
-
-    // Mostrar els ⋮ de cada alumne
     document.querySelectorAll('#studentsList li .menu-btn').forEach(btn => {
         btn.style.display = 'inline-block';
     });
-}
-
-//-----------------------control del mode eliminar
-function toggleDeleteStudentsMode() {
-    isDeleteMode = !isDeleteMode;
-
-    classStudents.forEach(stuId => {
-        const li = document.querySelector(`li[data-student-id="${stuId}"]`);
-        if (!li) return;
-
-        const menuBtn = li.querySelector('.menu-btn');
-
-        if (isDeleteMode) {
-            // Amaga ⋮ individuals
-            if (menuBtn) menuBtn.style.display = 'none';
-
-            // Afegir checkbox si no existeix
-            if (!li.querySelector('.stu-check')) {
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.className = 'stu-check ml-2';
-                li.querySelector('.relative').appendChild(checkbox);
-            }
-        } else {
-            // Tornar a mostrar ⋮
-            if (menuBtn) menuBtn.style.display = 'inline-block';
-
-            // Eliminar checkboxes
-            const checkbox = li.querySelector('.stu-check');
-            if (checkbox) checkbox.remove();
-        }
-    });
-
-    // Mostrar/Amagar botó Cancel·lar a la capçalera
     const cancelBtn = document.getElementById('cancelDeleteStudentsBtn');
-    if (cancelBtn) cancelBtn.style.display = isDeleteMode ? 'inline-block' : 'none';
+    if (cancelBtn) cancelBtn.style.display = 'none';
 }
 
-// Premem els tres puntets → mode eliminar
-document.getElementById('deleteStudentsModeBtn').addEventListener('click', () => {
-    toggleDeleteStudentsMode(); // aquí entres al mode eliminar
-});
-
-// Premem Cancel·lar → surt del mode
-document.getElementById('cancelDeleteStudentsBtn').addEventListener('click', () => {
-    exitDeleteStudentsMode();
-    isDeleteMode = false; // actualitza l'estat del mode
-    document.getElementById('cancelDeleteStudentsBtn').style.display = 'none'; // amaga el botó
-});
+deleteStudentsModeBtn.addEventListener('click', activateDeleteStudentsMode);
+document.getElementById('cancelDeleteStudentsBtn').addEventListener('click', exitDeleteStudentsMode);
 
 // ----------- SCRIPT PER MARCAR USUARIS COM A ADMIN -----------
 // ELIMINAT: setAdmins() s'ha mogut al panell d'administrador (administrador.js)

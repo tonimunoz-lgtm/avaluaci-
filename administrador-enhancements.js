@@ -73,7 +73,7 @@ document.body.appendChild(toastContainer);
 function showToast(message, undoCallback) {
   const toast = document.createElement('div');
   toast.className = 'bg-gray-800 text-white p-3 rounded shadow-md mb-2 flex justify-between items-center';
-  toast.innerHTML = `<span>${message}</span>`;
+  toast.innerHTML = `<span>${(window.esc||String)(message)}</span>`;
   
   if (undoCallback) {
     const undoBtn = document.createElement('button');
@@ -119,7 +119,8 @@ function wrapActionsWithUndo() {
       const doc = await db.collection('professors').doc(uid).get();
       const prevState = doc.data().deleted || false;
 
-      await deleteUser(uid);
+      const ok = await deleteUser(uid);
+      if (!ok) return;
       showToast(`Usuari eliminat`, async () => {
         await db.collection('professors').doc(uid).update({ deleted: prevState });
         loadUsers();

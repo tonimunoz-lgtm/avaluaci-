@@ -355,10 +355,10 @@ function afegirItemUI(itemData = null) {
           <span style="color:#7c3aed;font-size:14px;">🧩</span>
           <input 
             class="ucItemTitol"
-            data-item-id="${itemId}"
+            data-item-id="${esc(itemId)}"
             type="text" 
             placeholder="Títol de l'ítem (ex: Mètode científic)" 
-            value="${titol}"
+            value="${esc(titol)}"
             style="
               flex:1;border:none;background:transparent;font-size:15px;font-weight:700;
               color:#374151;font-family:inherit;outline:none;
@@ -366,11 +366,11 @@ function afegirItemUI(itemData = null) {
           >
         </div>
         <div style="display:flex;gap:8px;">
-          <button class="ucBtnAfegirCom" data-item-id="${itemId}" style="
+          <button class="ucBtnAfegirCom" data-item-id="${esc(itemId)}" style="
             background:#7c3aed;color:#fff;border:none;border-radius:6px;
             padding:5px 10px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600;
           ">+ Comentari</button>
-          <button class="ucBtnEliminarItem" data-item-id="${itemId}" style="
+          <button class="ucBtnEliminarItem" data-item-id="${esc(itemId)}" style="
             background:#fee2e2;color:#ef4444;border:none;border-radius:6px;
             padding:5px 10px;font-size:12px;cursor:pointer;font-family:inherit;
           ">🗑</button>
@@ -380,10 +380,10 @@ function afegirItemUI(itemData = null) {
         <span style="font-size:11px;font-weight:700;color:#7c3aed;white-space:nowrap;">Capçalera:</span>
         <input
           class="ucItemCapcelera"
-          data-item-id="${itemId}"
+          data-item-id="${esc(itemId)}"
           type="text"
           placeholder="Ex: Pel que fa al mètode científic:"
-          value="${capcelera.replace(/"/g, '&quot;')}"
+          value="${esc(capcelera)}"
           style="
             flex:1;border:1px solid #ddd6fe;border-radius:6px;background:rgba(255,255,255,0.7);
             font-size:12px;font-style:italic;color:#5b21b6;font-family:inherit;
@@ -468,13 +468,13 @@ function afegirComentariUI(itemId, comData = null) {
       cursor:grab;color:#d1d5db;font-size:14px;padding:4px 2px;flex-shrink:0;
       display:flex;flex-direction:column;gap:2px;align-self:center;line-height:1;user-select:none;
     ">⠿</div>
-    <select class="ucNivellSel" data-com-id="${comId}" style="
+    <select class="ucNivellSel" data-com-id="${esc(comId)}" style="
       border:1.5px solid ${nivellInfo.color}33;border-radius:6px;padding:4px 8px;
       font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;
       background:${nivellInfo.bg};color:${nivellInfo.color};outline:none;
       white-space:nowrap;min-width:130px;
     ">${nivellOptions}</select>
-    <textarea class="ucComText" data-com-id="${comId}" data-item-id="${itemId}" 
+    <textarea class="ucComText" data-com-id="${esc(comId)}" data-item-id="${esc(itemId)}" 
       placeholder="Escriu el comentari per a aquest nivell..."
       rows="2"
       style="
@@ -482,8 +482,8 @@ function afegirComentariUI(itemId, comData = null) {
         font-size:13px;font-family:inherit;resize:vertical;outline:none;
         transition:border-color .2s;line-height:1.5;
       "
-    >${text}</textarea>
-    <button class="ucBtnEliminarCom" data-com-id="${comId}" style="
+    >${esc(text)}</textarea>
+    <button class="ucBtnEliminarCom" data-com-id="${esc(comId)}" style="
       background:none;border:none;cursor:pointer;color:#d1d5db;font-size:16px;
       padding:4px;line-height:1;transition:color .2s;flex-shrink:0;
     ">✕</button>
@@ -712,14 +712,14 @@ function mostrarCodiModal(codi, nomPlantilla) {
     ">
       <div style="font-size:48px;margin-bottom:16px;">🎉</div>
       <h2 style="font-size:22px;font-weight:800;margin:0 0 8px;color:#1a1a2e;">Plantilla guardada!</h2>
-      <p style="color:#6b7280;font-size:14px;margin:0 0 28px;">${nomPlantilla}</p>
+      <p style="color:#6b7280;font-size:14px;margin:0 0 28px;">${esc(nomPlantilla)}</p>
 
       <div style="background:linear-gradient(135deg,#7c3aed,#a855f7);border-radius:16px;padding:28px;margin-bottom:24px;">
         <div style="color:rgba(255,255,255,.7);font-size:12px;font-weight:600;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">CODI D'ACCÉS</div>
         <div id="ucCodiText" style="
           font-size:42px;font-weight:900;color:#fff;letter-spacing:8px;
           font-family:'Courier New',monospace;cursor:pointer;
-        ">${codi}</div>
+        ">${esc(codi)}</div>
         <div style="color:rgba(255,255,255,.6);font-size:12px;margin-top:8px;">Clica per copiar</div>
       </div>
 
@@ -900,7 +900,7 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
           <input type="checkbox" class="ucComCheck"
             data-item-id="${item.id}"
             data-item-titol="${item.titol.replace(/"/g,'&quot;')}"
-            data-com-text="${com.text.replace(/"/g,'&quot;')}"
+            data-com-text="${esc(com.text)}"
             data-assol-auto="${posIdx < _posToAssol.length ? _posToAssol[posIdx] : ''}"
             style="margin-top:3px;accent-color:#7c3aed;width:16px;height:16px;flex-shrink:0;">
           <div style="flex:1;">
@@ -914,7 +914,7 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
                 background:${assocLabel.bg};color:${assocLabel.color};opacity:.8;
               ">→ ${assocLabel.label}</span>` : ''}
             </div>
-            <div style="font-size:13px;line-height:1.5;color:#374151;">${com.text}</div>
+            <div style="font-size:13px;line-height:1.5;color:#374151;">${esc(com.text)}</div>
           </div>
         </label>
       `;
@@ -928,7 +928,7 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
           border-bottom:1px solid #e5e7eb;
         ">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:${item.capcelera ? '6px' : '4px'};">
-            <div style="font-weight:700;font-size:14px;color:#374151;">🧩 ${item.titol}</div>
+            <div style="font-weight:700;font-size:14px;color:#374151;">🧩 ${esc(item.titol)}</div>
             <div style="display:flex;align-items:center;gap:8px;">
               <label style="font-size:11px;font-weight:700;color:#7c3aed;white-space:nowrap;">Assoliment:</label>
               <select class="ucAssolimentSel" data-item-id="${item.id}" style="
@@ -941,7 +941,7 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
               </select>
             </div>
           </div>
-          ${item.capcelera ? `<div style="font-size:12px;font-style:italic;color:#5b21b6;padding:2px 0 0;">"${item.capcelera}"</div>` : ''}
+          ${item.capcelera ? `<div style="font-size:12px;font-style:italic;color:#5b21b6;padding:2px 0 0;">"${esc(item.capcelera)}"</div>` : ''}
         </div>
 
         <!-- Comentaris seleccionables -->
@@ -973,9 +973,9 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
       <div style="background:linear-gradient(135deg,#7c3aed,#a855f7);padding:20px 28px;color:#fff;">
         <div style="display:flex;align-items:center;justify-content:space-between;">
           <div>
-            <div style="font-size:12px;opacity:.7;margin-bottom:2px;">⚡ ULTRACOMENTATOR · ${codi}</div>
-            <h2 style="margin:0;font-size:20px;font-weight:800;">${plantillaData.nom}</h2>
-            ${plantillaData.descripcio ? `<div style="font-size:13px;opacity:.75;margin-top:2px;">${plantillaData.descripcio}</div>` : ''}
+            <div style="font-size:12px;opacity:.7;margin-bottom:2px;">⚡ ULTRACOMENTATOR · ${esc(codi)}</div>
+            <h2 style="margin:0;font-size:20px;font-weight:800;">${esc(plantillaData.nom)}</h2>
+            ${plantillaData.descripcio ? `<div style="font-size:13px;opacity:.75;margin-top:2px;">${esc(plantillaData.descripcio)}</div>` : ''}
           </div>
           <button id="ucUsarClose" style="background:rgba(255,255,255,.2);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px;">✕</button>
         </div>
@@ -1054,7 +1054,7 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
           <span style="font-size:20px;margin-top:2px;">👤</span>
           <div style="min-width:0;">
             <div style="font-size:11px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.5px;">Alumne/a actiu/va</div>
-            <div id="ucNomDisplay" style="font-size:16px;font-weight:800;color:#4c1d95;margin-bottom:8px;">${_ucNomDisplay(nomActiu) || nomActiu}</div>
+            <div id="ucNomDisplay" style="font-size:16px;font-weight:800;color:#4c1d95;margin-bottom:8px;">${esc(_ucNomDisplay(nomActiu) || nomActiu)}</div>
             <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">Mostrar al comentari</div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;">
               ${mkCheck('nom', 'nom', _ucNom)}
@@ -1079,7 +1079,7 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
           </select>
         </div>
       </div>
-      <input id="ucAlumneNom" type="hidden" value="${nomActiu}">
+      <input id="ucAlumneNom" type="hidden" value="${esc(nomActiu)}">
     `;
     // Events gènere
     infoWrap.querySelectorAll('input[name="ucGenere"]').forEach(radio => {
@@ -1175,7 +1175,7 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
       // Auto-assoliment per posició
       const itemId = chk.dataset.itemId;
       const assolAuto = chk.dataset.assolAuto;  // data-assol-auto → dataset.assolAuto
-      const sel = modal.querySelector(`.ucAssolimentSel[data-item-id="${itemId}"]`);
+      const sel = modal.querySelector(`.ucAssolimentSel[data-item-id="${esc(itemId)}"]`);
       if (!sel || !assolAuto) return;
 
       if (chk.checked) {
@@ -1188,7 +1188,7 @@ async function carregarIUsarPlantilla(codi, plantillaData = null) {
         // Si es desmarca i el valor actual era l'automàtic, mirar si hi ha altres checks marcats per aquest ítem
         if (!sel._manuallySet && sel.value === assolAuto) {
           // Buscar si hi ha algun altre check marcat per aquest ítem
-          const altresChecks = modal.querySelectorAll(`.ucComCheck[data-item-id="${itemId}"]`);
+          const altresChecks = modal.querySelectorAll(`.ucComCheck[data-item-id="${esc(itemId)}"]`);
           let altreMarcat = false;
           altresChecks.forEach(c2 => { if (c2 !== chk && c2.checked && c2.dataset.assolAuto) altreMarcat = true; });
           if (!altreMarcat) {
@@ -1350,18 +1350,8 @@ ${instrNom}
 Escriu ÚNICAMENT els blocs de comentari, res més.`;
 
   try {
-    const _tk = await firebase.auth().currentUser?.getIdToken();
-    if (!_tk) throw new Error('Cal iniciar sessió');
-    const response = await fetch('/api/tutoria', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_tk}` },
-      body: JSON.stringify({ prompt })
-    });
-
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Error API');
-
-    const comentari = (data.text || '').trim();
+    const aiText = await window.aiGenerate(prompt, [nomComplet, alumne]);
+    const comentari = (aiText || '').trim();
     resultText.textContent = comentari;
 
     // Mostrar botó guardar si hi ha alumne actiu (modal comentaris obert)
@@ -1582,25 +1572,25 @@ async function openMevesPlantillesModal() {
       card.innerHTML = `
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-            <span style="font-weight:700;font-size:15px;color:#1a1a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.nom}</span>
+            <span style="font-weight:700;font-size:15px;color:#1a1a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.nom)}</span>
             <span style="background:${esPropi ? '#ede9fe' : '#f0f9ff'};color:${esPropi ? '#7c3aed' : '#0369a1'};font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;white-space:nowrap;">
               ${esPropi ? '👑 Propietari' : '👤 Membre'}
             </span>
           </div>
           <div style="font-size:12px;color:#6b7280;">
-            ${p.descripcio ? p.descripcio + ' · ' : ''}
-            Codi: <strong style="font-family:monospace;letter-spacing:1px;">${p.codi}</strong> · 
+            ${p.descripcio ? esc(p.descripcio) + ' · ' : ''}
+            Codi: <strong style="font-family:monospace;letter-spacing:1px;">${esc(p.codi)}</strong> · 
             ${p.items ? p.items.length : 0} ítems · 
             ${(p.membresEmail || []).length} membre${(p.membresEmail || []).length !== 1 ? 's' : ''}
           </div>
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0;">
-          <button class="ucMevesUsar" data-codi="${p.codi}" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">▶ Usar</button>
-          <button class="ucMevesCodiBtn" data-codi="${p.codi}" data-nom="${p.nom.replace(/"/g,'&quot;')}" style="background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:7px 10px;font-size:12px;cursor:pointer;font-family:inherit;" title="Veure codi">🔑</button>
+          <button class="ucMevesUsar" data-codi="${esc(p.codi)}" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">▶ Usar</button>
+          <button class="ucMevesCodiBtn" data-codi="${esc(p.codi)}" data-nom="${esc(p.nom)}" style="background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:7px 10px;font-size:12px;cursor:pointer;font-family:inherit;" title="Veure codi">🔑</button>
           ${esPropi ? `
-            <button class="ucMevesConvidar" data-codi="${p.codi}" data-nom="${p.nom.replace(/"/g,'&quot;')}" style="background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;border-radius:8px;padding:7px 10px;font-size:12px;cursor:pointer;font-family:inherit;" title="Convidar usuaris">👥</button>
-            <button class="ucMevesEditar" data-codi="${p.codi}" style="background:#fef3c7;color:#92400e;border:none;border-radius:8px;padding:7px 10px;font-size:12px;cursor:pointer;font-family:inherit;" title="Editar">✏️</button>
-            <button class="ucMevesEsborrar" data-codi="${p.codi}" data-nom="${p.nom.replace(/"/g,'&quot;')}" style="background:#fee2e2;color:#ef4444;border:none;border-radius:8px;padding:7px 10px;font-size:12px;cursor:pointer;font-family:inherit;" title="Esborrar">🗑</button>
+            <button class="ucMevesConvidar" data-codi="${esc(p.codi)}" data-nom="${esc(p.nom)}" style="background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;border-radius:8px;padding:7px 10px;font-size:12px;cursor:pointer;font-family:inherit;" title="Convidar usuaris">👥</button>
+            <button class="ucMevesEditar" data-codi="${esc(p.codi)}" style="background:#fef3c7;color:#92400e;border:none;border-radius:8px;padding:7px 10px;font-size:12px;cursor:pointer;font-family:inherit;" title="Editar">✏️</button>
+            <button class="ucMevesEsborrar" data-codi="${esc(p.codi)}" data-nom="${esc(p.nom)}" style="background:#fee2e2;color:#ef4444;border:none;border-radius:8px;padding:7px 10px;font-size:12px;cursor:pointer;font-family:inherit;" title="Esborrar">🗑</button>
           ` : ''}
         </div>
       `;
@@ -1625,7 +1615,7 @@ async function openMevesPlantillesModal() {
     });
 
   } catch (err) {
-    document.getElementById('ucMevesLlista').innerHTML = `<div style="color:#ef4444;padding:16px;">Error: ${err.message}</div>`;
+    document.getElementById('ucMevesLlista').innerHTML = `<div style="color:#ef4444;padding:16px;">Error: ${esc(err.message)}</div>`;
     console.error(err);
   }
 }
@@ -1647,13 +1637,13 @@ function openConvidarModal(codi, nomPlantilla) {
       box-shadow:0 24px 64px rgba(0,0,0,0.2);
     ">
       <h2 style="margin:0 0 4px;font-size:20px;font-weight:800;color:#1a1a2e;">👥 Convidar a la plantilla</h2>
-      <p style="margin:0 0 6px;color:#6b7280;font-size:13px;">${nomPlantilla}</p>
+      <p style="margin:0 0 6px;color:#6b7280;font-size:13px;">${esc(nomPlantilla)}</p>
 
       <!-- CODI PER COMPARTIR -->
       <div style="background:#f5f3ff;border-radius:10px;padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;">
         <div>
           <div style="font-size:11px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.5px;">Codi d'accés</div>
-          <div style="font-size:22px;font-weight:900;font-family:monospace;letter-spacing:4px;color:#4c1d95;">${codi}</div>
+          <div style="font-size:22px;font-weight:900;font-family:monospace;letter-spacing:4px;color:#4c1d95;">${esc(codi)}</div>
         </div>
         <button id="ucCopiarCodi" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">📋 Copiar</button>
       </div>
@@ -1781,14 +1771,14 @@ async function carregarMembres(codi) {
       return `
         <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
           <div>
-            <span style="font-size:13px;font-weight:600;color:#374151;">${email}</span>
+            <span style="font-size:13px;font-weight:600;color:#374151;">${esc(email)}</span>
             <span style="margin-left:8px;font-size:11px;padding:2px 7px;border-radius:12px;font-weight:600;
               background:${esPropietari ? '#ede9fe' : esPendent ? '#fef3c7' : '#dcfce7'};
               color:${esPropietari ? '#7c3aed' : esPendent ? '#92400e' : '#166534'};">
               ${esPropietari ? '👑 Propietari' : esPendent ? '⏳ Pendent' : '✅ Membre'}
             </span>
           </div>
-          ${!esPropietari ? `<button class="ucEliminarMembre" data-email="${email}" data-codi="${codi}"
+          ${!esPropietari ? `<button class="ucEliminarMembre" data-email="${esc(email)}" data-codi="${esc(codi)}"
             style="background:none;border:none;color:#d1d5db;cursor:pointer;font-size:14px;padding:2px 6px;"
             title="Eliminar membre">✕</button>` : ''}
         </div>
@@ -1822,7 +1812,7 @@ async function carregarMembres(codi) {
     });
 
   } catch (err) {
-    el.innerHTML = `<div style="color:#ef4444;font-size:13px;">Error carregant membres: ${err.message}</div>`;
+    el.innerHTML = `<div style="color:#ef4444;font-size:13px;">Error carregant membres: ${esc(err.message)}</div>`;
   }
 }
 
@@ -2036,7 +2026,7 @@ function _mostrarModalImport() {
               plantillaImportada = plantilla;
               mostrarPreview(plantillaImportada);
               document.getElementById('ucImportOk').style.display = 'inline-block';
-              dropZone.innerHTML = `<div style="font-size:28px;margin-bottom:8px;">✅</div><div style="color:#059669;font-weight:700;">${file.name}</div><div style="color:#6b7280;font-size:12px;margin-top:4px;">${plantillaImportada.items.length} ítems detectats manualment</div>`;
+              dropZone.innerHTML = `<div style="font-size:28px;margin-bottom:8px;">✅</div><div style="color:#059669;font-weight:700;">${esc(file.name)}</div><div style="color:#6b7280;font-size:12px;margin-top:4px;">${plantillaImportada.items.length} ítems detectats manualment</div>`;
               dropZone.style.borderColor = '#34d399';
               dropZone.style.background = '#f0fdf4';
             }
@@ -2046,7 +2036,7 @@ function _mostrarModalImport() {
 
         mostrarPreview(plantillaImportada);
         document.getElementById('ucImportOk').style.display = 'inline-block';
-        dropZone.innerHTML = `<div style="font-size:28px;margin-bottom:8px;">✅</div><div style="color:#059669;font-weight:700;">${file.name}</div><div style="color:#6b7280;font-size:12px;margin-top:4px;">${plantillaImportada.items.length} ítems trobats</div>`;
+        dropZone.innerHTML = `<div style="font-size:28px;margin-bottom:8px;">✅</div><div style="color:#059669;font-weight:700;">${esc(file.name)}</div><div style="color:#6b7280;font-size:12px;margin-top:4px;">${plantillaImportada.items.length} ítems trobats</div>`;
         dropZone.style.borderColor = '#34d399';
         dropZone.style.background = '#f0fdf4';
 
@@ -2072,7 +2062,7 @@ function _mostrarModalImport() {
         <div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Previsualització (${plantilla.items.length} ítems):</div>
         ${plantilla.items.map(item => `
           <div style="margin-bottom:8px;">
-            <div style="font-weight:600;font-size:13px;color:#374151;">🧩 ${item.titol}</div>
+            <div style="font-weight:600;font-size:13px;color:#374151;">🧩 ${esc(item.titol)}</div>
             <div style="font-size:12px;color:#6b7280;margin-left:16px;">${item.comentaris.length} comentaris</div>
           </div>
         `).join('')}
@@ -2262,7 +2252,7 @@ function _mostrarAssistentImport(wb, nomFitxer, dropZone, mostrarError, onSucces
         const v = cel(r, c);
         const short = v.length > 28 ? v.substring(0, 26) + '…' : v;
         const bg = isHL && v ? '#fde047' : '';
-        html += `<td style="padding:3px 8px;border:1px solid #e5e7eb;max-width:180px;overflow:hidden;white-space:nowrap;${bg ? 'background:' + bg + ';font-weight:600;' : ''}" title="${v.replace(/"/g,"'")}">${short || '<span style="color:#e5e7eb;">·</span>'}</td>`;
+        html += `<td style="padding:3px 8px;border:1px solid #e5e7eb;max-width:180px;overflow:hidden;white-space:nowrap;${bg ? 'background:' + bg + ';font-weight:600;' : ''}" title="${esc(v)}">${esc(short) || '<span style="color:#e5e7eb;">·</span>'}</td>`;
       }
       html += `</tr>`;
     }
@@ -2297,15 +2287,15 @@ function _mostrarAssistentImport(wb, nomFitxer, dropZone, mostrarError, onSucces
           </label>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             ${wb.SheetNames.map(s => `
-              <button onclick="document.getElementById('ucAssistentImport')._selFull('${s.replace(/'/g,"\\'")}')"
+              <button onclick="document.getElementById('ucAssistentImport')._selFull(${esc(JSON.stringify(s))})"
                 style="padding:6px 14px;border-radius:8px;border:2px solid ${s === estat.fullNom ? '#7c3aed' : '#e5e7eb'};
                 background:${s === estat.fullNom ? '#7c3aed' : '#fff'};color:${s === estat.fullNom ? '#fff' : '#374151'};
-                font-size:13px;cursor:pointer;font-weight:600;">${s}</button>
+                font-size:13px;cursor:pointer;font-weight:600;">${esc(s)}</button>
             `).join('')}
           </div>
         </div>
         <div style="margin-bottom:10px;">
-          <label style="font-weight:600;color:#374151;font-size:12px;display:block;margin-bottom:4px;">Previsualització del full <strong>${estat.fullNom}</strong>:</label>
+          <label style="font-weight:600;color:#374151;font-size:12px;display:block;margin-bottom:4px;">Previsualització del full <strong>${esc(estat.fullNom)}</strong>:</label>
           ${renderPreview(wb.Sheets[estat.fullNom])}
         </div>
         <button onclick="document.getElementById('ucAssistentImport')._next()"
@@ -2402,7 +2392,7 @@ function _mostrarAssistentImport(wb, nomFitxer, dropZone, mostrarError, onSucces
         <div style="margin-bottom:12px;max-height:200px;overflow-y:auto;">
           ${estat.items.map((it, i) => `
             <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;margin-bottom:6px;">
-              <div style="font-weight:700;color:#7c3aed;font-size:13px;margin-bottom:2px;">Ítem ${i+1}: ${it.titol}</div>
+              <div style="font-weight:700;color:#7c3aed;font-size:13px;margin-bottom:2px;">Ítem ${i+1}: ${esc(it.titol)}</div>
               <div style="font-size:11px;color:#6b7280;">${it.comentaris.length} comentari${it.comentaris.length !== 1 ? 's' : ''} detectat${it.comentaris.length !== 1 ? 's' : ''}</div>
               ${it.comentaris.slice(0,2).map(c => `<div style="font-size:11px;color:#374151;margin-top:2px;padding-left:8px;border-left:2px solid #e5e7eb;">• ${c.text.substring(0,80)}${c.text.length>80?'…':''}</div>`).join('')}
               ${it.comentaris.length > 2 ? `<div style="font-size:11px;color:#9ca3af;padding-left:8px;">… i ${it.comentaris.length - 2} més</div>` : ''}

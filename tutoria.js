@@ -375,9 +375,9 @@ function renderMateriesCheckboxes(nivell) {
   const totes = [...base, ...extra];
   return totes.map(m => `
     <label class="flex items-center gap-2 text-sm cursor-pointer hover:bg-rose-50 px-2 py-1 rounded group">
-      <input type="checkbox" class="assignatura-check w-4 h-4 accent-rose-500" value="${m}">
-      <span class="flex-1">${m}</span>
-      ${extra.includes(m) ? `<button type="button" class="btn-delete-materia hidden group-hover:inline text-red-400 hover:text-red-600 text-xs" data-nivell="${nivell}" data-materia="${m}">✕</button>` : ''}
+      <input type="checkbox" class="assignatura-check w-4 h-4 accent-rose-500" value="${esc(m)}">
+      <span class="flex-1">${esc(m)}</span>
+      ${extra.includes(m) ? `<button type="button" class="btn-delete-materia hidden group-hover:inline text-red-400 hover:text-red-600 text-xs" data-nivell="${esc(nivell)}" data-materia="${esc(m)}">✕</button>` : ''}
     </label>`).join('');
 }
 
@@ -387,10 +387,10 @@ function renderMateriesCheckboxes(nivell) {
 function renderApartatsExtra() {
   if (_apartatsExtra.length === 0) return '';
   return _apartatsExtra.map(ap => `
-    <div class="bg-violet-50 border border-violet-200 rounded-xl p-4" id="apartat-${ap.id}">
+    <div class="bg-violet-50 border border-violet-200 rounded-xl p-4" id="apartat-${esc(ap.id)}">
       <div class="flex items-center justify-between mb-3">
-        <label class="text-sm font-bold text-violet-700">🔧 ${ap.nom}</label>
-        <button type="button" class="btn-delete-apartat text-xs text-gray-400 hover:text-red-500 underline" data-id="${ap.id}">Eliminar apartat</button>
+        <label class="text-sm font-bold text-violet-700">🔧 ${esc(ap.nom)}</label>
+        <button type="button" class="btn-delete-apartat text-xs text-gray-400 hover:text-red-500 underline" data-id="${esc(ap.id)}">Eliminar apartat</button>
       </div>
       <div class="grid grid-cols-3 gap-2">
         ${ap.opcions.map(op => buildOption(`apartat_${ap.id}`, op.valor, op.label, op.color)).join('')}
@@ -412,7 +412,7 @@ function buildOption(grup, valor, label, color) {
   };
   return `
     <label class="flex items-center gap-1 cursor-pointer border-2 rounded-lg px-2 py-1.5 text-xs font-medium transition-all ${colors[color] || colors.green}">
-      <input type="radio" name="${grup}" value="${valor}" class="sr-only">${label}
+      <input type="radio" name="${esc(grup)}" value="${esc(valor)}" class="sr-only">${esc(label)}
     </label>`;
 }
 
@@ -593,9 +593,9 @@ function openAfegirApartatModal(parentModal) {
     const cont = m.querySelector('#opcionsContainer');
     cont.innerHTML = opcions.map((op, i) => `
       <div class="flex items-center gap-2 bg-gray-50 rounded-lg p-2">
-        <input type="text" value="${op.label}" placeholder="Etiqueta (ex: ⭐ Molt bé)"
+        <input type="text" value="${esc(op.label)}" placeholder="Etiqueta (ex: ⭐ Molt bé)"
           class="flex-1 border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-violet-400 opcio-label" data-i="${i}">
-        <input type="text" value="${op.valor}" placeholder="Valor intern"
+        <input type="text" value="${esc(op.valor)}" placeholder="Valor intern"
           class="w-28 border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-violet-400 opcio-valor" data-i="${i}">
         <select class="border border-gray-200 rounded px-1 py-1 text-xs opcio-color" data-i="${i}">
           ${COLORS_OPCIO.map(c => `<option value="${c}" ${op.color === c ? 'selected' : ''}>${c}</option>`).join('')}
@@ -813,20 +813,12 @@ async function generarComentari(modal) {
   comentariText.innerHTML = '<span class="text-gray-400 italic">La IA està escrivint el comentari...</span>';
 
   try {
-    const _tk = await firebase.auth().currentUser?.getIdToken();
-    if (!_tk) throw new Error('Cal iniciar sessió');
-    const response = await fetch('/api/tutoria', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_tk}` },
-      body: JSON.stringify({ prompt: buildPrompt(dades) }),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || `Error API: ${response.status}`);
-    comentariText.textContent = data.text || 'No s\'ha pogut generar el comentari.';
+    const text = await window.aiGenerate(buildPrompt(dades), [dades.nom]);
+    comentariText.textContent = text || 'No s\'ha pogut generar el comentari.';
     resultatDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   } catch (err) {
     console.error('Error:', err);
-    comentariText.innerHTML = `<span class="text-red-500">❌ Error: ${err.message}</span>`;
+    comentariText.innerHTML = `<span class="text-red-500">❌ Error: ${esc(err.message)}</span>`;
   } finally {
     btnGenerar.disabled = false;
     btnGenerar.innerHTML = '✨ Generar comentari amb IA';

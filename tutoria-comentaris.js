@@ -374,7 +374,7 @@ function _tcNomPartsHTML() {
       <input type="checkbox" class="tc-nom-check" data-key="${key}"
         style="accent-color:#7c3aed;width:14px;height:14px;"
         ${prefs[key] ? 'checked' : ''}>
-      <span style="font-weight:600;color:#4c1d95;">${val}</span>
+      <span style="font-weight:600;color:#4c1d95;">${esc(val)}</span>
       <span style="color:#9ca3af;">(${label})</span>
     </label>` : '';
   return `
@@ -396,14 +396,14 @@ function tcBuildHTML() {
     const extra = _tcMateriesExtra[nivell] || [];
     return [...base, ...extra].map(m => `
       <label class="flex items-center gap-2 text-sm cursor-pointer hover:bg-rose-50 px-2 py-1 rounded">
-        <input type="checkbox" class="tc-check w-4 h-4 accent-rose-500" value="${m}">
-        <span>${m}</span>
+        <input type="checkbox" class="tc-check w-4 h-4 accent-rose-500" value="${esc(m)}">
+        <span>${esc(m)}</span>
       </label>`).join('');
   };
 
   const apartatsHTML = _tcApartatsExtra.map(ap => `
     <div class="bg-violet-50 border border-violet-200 rounded-xl p-4">
-      <label class="block text-sm font-bold text-violet-700 mb-3">🔧 ${ap.nom}</label>
+      <label class="block text-sm font-bold text-violet-700 mb-3">🔧 ${esc(ap.nom)}</label>
       <div class="grid grid-cols-3 gap-2">
         ${ap.opcions.map(op => tcOpcio(`tc_ap_${ap.id}`, op.valor, op.label, op.color)).join('')}
       </div>
@@ -414,7 +414,7 @@ function tcBuildHTML() {
     <div class="sticky top-0 bg-rose-500 text-white px-6 py-4 rounded-t-2xl flex justify-between items-center z-10">
       <div>
         <h2 class="text-xl font-bold">✨ Generar comentari per IA</h2>
-        <p class="text-rose-100 text-sm">Alumne/a: <strong>${nom}</strong></p>
+        <p class="text-rose-100 text-sm">Alumne/a: <strong>${esc(nom)}</strong></p>
       </div>
       <button id="tcBtnTancar" class="text-white hover:text-rose-200 text-3xl font-bold leading-none">✕</button>
     </div>
@@ -618,7 +618,7 @@ function tcOpcio(grup, valor, label, color) {
     violet: 'border-violet-300 hover:bg-violet-100 has-[:checked]:bg-violet-500 has-[:checked]:text-white has-[:checked]:border-violet-500',
   };
   return `<label class="flex items-center gap-1 cursor-pointer border-2 rounded-lg px-2 py-1.5 text-xs font-medium transition-all ${cls[color]||cls.green}">
-    <input type="radio" name="${grup}" value="${valor}" class="sr-only">${label}</label>`;
+    <input type="radio" name="${esc(grup)}" value="${esc(valor)}" class="sr-only">${esc(label)}</label>`;
 }
 
 // ============================================================
@@ -779,20 +779,12 @@ async function tcGenerar(modal) {
   textDiv.innerHTML = '<span class="text-gray-400 italic">La IA està escrivint...</span>';
 
   try {
-    const _tk = await firebase.auth().currentUser?.getIdToken();
-    if (!_tk) throw new Error('Cal iniciar sessió');
-    const res = await fetch('/api/tutoria', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_tk}` },
-      body: JSON.stringify({ prompt: tcPrompt(dades) }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || `Error API: ${res.status}`);
-    textDiv.textContent = data.text || 'No s\'ha pogut generar.';
+    const aiText = await window.aiGenerate(tcPrompt(dades), [window._tcStudentName, dades.nom]);
+    textDiv.textContent = aiText || 'No s\'ha pogut generar.';
     resultat.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     btnGu.classList.remove('hidden');
   } catch(e) {
-    textDiv.innerHTML = `<span class="text-red-500">❌ ${e.message}</span>`;
+    textDiv.innerHTML = `<span class="text-red-500">❌ ${esc(e.message)}</span>`;
   } finally {
     btnGen.disabled = false;
     btnGen.innerHTML = '✨ Generar comentari amb IA';

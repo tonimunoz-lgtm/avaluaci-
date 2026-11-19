@@ -177,12 +177,48 @@ export async function renameTerm(termId, newName) {
   renderDropdown();
 }
 
+// Esborra documents en lots de 400 (límit Firestore: 500). Si un lot falla, reintenta doc a doc.
+async function _deleteDocs(refs) {
+  for (let i = 0; i < refs.length; i += 400) {
+    const chunk = refs.slice(i, i + 400);
+    try {
+      const batch = _db.batch();
+      chunk.forEach(r => batch.delete(r));
+      await batch.commit();
+    } catch (e) {
+      console.warn('Lot d\'esborrat fallit, reintentant un a un', e);
+      for (const r of chunk) {
+        try { await r.delete(); } catch (e2) { console.error('No s\'ha pogut esborrar', r.path, e2); }
+      }
+    }
+  }
+}
+
 export async function deleteTerm(termId) {
   if (!_db || !_currentClassId || !_classData?.terms?.[termId]) return;
 
+  // Cascada: activitats del grup, notes dels alumnes i càlculs associats
+  const actIds = [...(_classData.terms[termId].activities || [])];
+  const alumnes = _classData.alumnes || [];
   const updateObj = {};
   updateObj[`terms.${termId}`] = firebase.firestore.FieldValue.delete();
+  actIds.forEach(id => {
+    updateObj[`calculatedActivities.${id}`] = firebase.firestore.FieldValue.delete();
+    updateObj['activitats'] = firebase.firestore.FieldValue.arrayRemove(...actIds);
+  });
   await _db.collection('classes').doc(_currentClassId).update(updateObj);
+
+  // Notes dels alumnes (en lots)
+  for (let i = 0; i < alumnes.length; i += 400) {
+    const batch = _db.batch();
+    alumnes.slice(i, i + 400).forEach(sid => {
+      const upd = {};
+      actIds.forEach(id => { upd[`notes.${id}`] = firebase.firestore.FieldValue.delete(); });
+      if (actIds.length) batch.update(_db.collection('alumnes').doc(sid), upd);
+    });
+    if (actIds.length) await batch.commit();
+  }
+  await _deleteDocs(actIds.map(id => _db.collection('activitats').doc(id)));
 
   const doc = await _db.collection('classes').doc(_currentClassId).get();
   _classData = doc.exists ? doc.data() : _classData;
@@ -212,31 +248,52 @@ export function copyGridStructure(termId) {
 export async function pasteGridStructure(termId) {
   if (!termId || !_copiedGridStructure) return;
 
-  const newActivityIds = [];
+  const uid = firebase.auth().currentUser.uid;
+  const idMap = {};            // id antic -> id nou
+  const clones = [];           // [{ref, data}]
 
+  // 1. Llegim originals i reservem ids nous (així podem remapejar fórmules entre elles)
   for (const actId of _copiedGridStructure) {
-    // 1. Carregar activitat original
     const doc = await _db.collection('activitats').doc(actId).get();
     if (!doc.exists) continue;
+    const ref = _db.collection('activitats').doc();
+    idMap[actId] = ref.id;
+    clones.push({ oldId: actId, ref, data: doc.data() });
+  }
+  if (!clones.length) return;
 
-    const data = doc.data();
+  const remap = (str) => {
+    if (typeof str !== 'string') return str;
+    let out = str;
+    Object.keys(idMap).forEach(o => { out = out.split(o).join(idMap[o]); });
+    return out;
+  };
 
-    // 2. Crear nova activitat duplicada
-    const newActRef = await _db.collection('activitats').add({
+  // 2. Escrivim les còpies amb fórmules remapejades
+  const srcCalc = _classData.calculatedActivities || {};
+  const classUpdate = {};
+  for (const c of clones) {
+    const data = { ...c.data };
+    if (data.formula) data.formula = remap(data.formula);
+    await c.ref.set({
       ...data,
-      ownerUid: firebase.auth().currentUser.uid,
-      originalCloneOf: actId,         // opcional: rastrejar d'on ve
+      ownerUid: uid,
+      originalCloneOf: c.oldId,
       createdAt: Date.now()
     });
-
-    newActivityIds.push(newActRef.id);
+    const calc = srcCalc[c.oldId];
+    if (calc) {
+      const copy = { ...calc };
+      if (copy.formula) copy.formula = remap(copy.formula);
+      if (copy.displayFormula) copy.displayFormula = remap(copy.displayFormula);
+      classUpdate[`calculatedActivities.${c.ref.id}`] = copy;
+    }
   }
 
-  // 3. Associar els nous IDs a la graella
-  const path = `terms.${termId}.activities`;
-  await _db.collection('classes').doc(_currentClassId).update({
-    [path]: newActivityIds
-  });
+  // 3. AFEGIM (no substituïm) les noves activitats al grup destí
+  classUpdate[`terms.${termId}.activities`] =
+    firebase.firestore.FieldValue.arrayUnion(...clones.map(c => c.ref.id));
+  await _db.collection('classes').doc(_currentClassId).update(classUpdate);
 
   // 4. Refrescar dades internes i UI
   const doc = await _db.collection('classes').doc(_currentClassId).get();
