@@ -172,11 +172,17 @@ export async function getStudentSubmissions(courseId, courseWorkId) {
   }
 }
 
+// {year, month, day} de Classroom → 'AAAA-MM-DD'
+export function formatDueDate(d) {
+  if (!d || !d.year || !d.month || !d.day) return '';
+  return `${d.year}-${String(d.month).padStart(2, '0')}-${String(d.day).padStart(2, '0')}`;
+}
+
 // Importar un curso completo
 // - Escriptures en lots de 400 (límit Firestore: 500)
 // - Notes escalades a 0–10 segons maxPoints
 // - Si falla a mig camí, s'esborra el que s'havia creat (no queden documents orfes)
-export async function importClassroomCourse(courseData, db, professorUID) {
+export async function importClassroomCourse(courseData, db, professorUID, opts = {}) {
   const created = [];   // refs creades, per poder fer rollback
   try {
     console.log('📚 Iniciando importación de:', courseData.name);
@@ -184,10 +190,13 @@ export async function importClassroomCourse(courseData, db, professorUID) {
     const classRef = db.collection('classes').doc();
     const classId = classRef.id;
 
-    const [students, courseworks] = await Promise.all([
+    // opts.workIds: només s'importen aquestes activitats (si no es passa, totes)
+    const only = opts.workIds ? new Set(opts.workIds) : null;
+    const [students, allWorks] = await Promise.all([
       getClassroomStudents(courseData.id),
       getClassroomCoursework(courseData.id)
     ]);
+    const courseworks = only ? allWorks.filter(w => only.has(w.id)) : allWorks;
     console.log(`👥 ${students.length} estudiantes, 📝 ${courseworks.length} actividades`);
 
     // Notes de totes les activitats en paral·lel (abans: una darrere l'altra)
@@ -230,7 +239,7 @@ export async function importClassroomCourse(courseData, db, professorUID) {
       writes.push([actRefs[idx], {
         nom: cw.title,
         description: cw.description,
-        data: cw.dueDate || new Date().toISOString().split('T')[0],
+        data: formatDueDate(cw.dueDate) || new Date().toISOString().split('T')[0],
         calcType: 'numeric',
         formula: '',
         googleClassroomId: cw.id,

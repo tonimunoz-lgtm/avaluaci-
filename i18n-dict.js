@@ -2,6 +2,14 @@
 // classe = clase / class · alumne = alumno/a / student · nota = nota / grade · activitat = actividad / assignment
 // període (d'avaluació) = período (de evaluación) / grading period · butlletí = boletín / report card
 export const DICT = [
+["Següent: triar activitats","Siguiente: elegir actividades","Next: choose assignments"],
+["← Enrere","← Atrás","← Back"],
+["Importar","Importar","Import"],
+["Tria les activitats que vols importar de cada curs. Els alumnes s'importen sempre.","Elige las actividades que quieres importar de cada curso. Los alumnos se importan siempre.","Choose the assignments you want to import from each course. Students are always imported."],
+["Totes","Todas","All"],["Cap","Ninguna","None"],
+["Aquest curs no té activitats.","Este curso no tiene actividades.","This course has no assignments."],
+["(sense títol)","(sin título)","(untitled)"],
+["Error carregant les activitats:","Error al cargar las actividades:","Error loading the assignments:"],
 ["Alumne/a:","Alumno/a:","Student:"],
 ["Mostrar al comentari","Mostrar en el comentario","Show in the comment"],
 ["Recalcular fórmula","Recalcular fórmula","Recalculate formula"],
@@ -466,6 +474,7 @@ export const SUBJECTS = [
 
 /* Textos amb valors dins: $1, $2… són els grups capturats. */
 export const PATTERNS = [
+[/^(\d+) de (\d+) activitats$/, "$1 de $2 actividades", "$1 of $2 assignments"],
 [/^\(nom\)$/, "(nombre)", "(first name)"],
 [/^\(1r cognom\)$/, "(1.er apellido)", "(1st surname)"],
 [/^\(2n cognom\)$/, "(2.º apellido)", "(2nd surname)"],

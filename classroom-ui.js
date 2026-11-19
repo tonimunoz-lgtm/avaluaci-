@@ -1,12 +1,15 @@
 // classroom-ui.js - Manejador de interfaz para importación de Classroom (optimizado)
 // Funciona de forma independiente sin necesidad de modificar app.js
 
-import { initClassroomAPI, getClassroomCourses, importClassroomCourse } from './classroom.js';
+import { initClassroomAPI, getClassroomCourses, getClassroomCoursework, importClassroomCourse, formatDueDate } from './classroom.js';
 import { openModal, closeModal } from './modals.js';
 
 let selectedCourses = [];
 let currentProfessorUID = null;
 let currentDB = null;
+let step = 'courses';          // 'courses' | 'works'
+let worksByCourse = {};        // courseId → [activitats de Classroom]
+let pickedWorks = {};          // courseId → Set(ids triats)
 
 console.log('✅ classroom-ui.js cargado');
 
@@ -214,6 +217,8 @@ async function loadClassroomCourses() {
   coursesList.classList.add('hidden');
   errorState.classList.add('hidden');
   selectedCourses = [];
+  worksByCourse = {}; pickedWorks = {};
+  setStep('courses');
   document.getElementById('btnImportSelectedCourse').disabled = true;
 
   try {
@@ -273,6 +278,83 @@ async function loadClassroomCourses() {
   }
 }
 
+// Pas 1: triar cursos · Pas 2: triar activitats de cada curs
+function setStep(s) {
+  step = s;
+  const btn = document.getElementById('btnImportSelectedCourse');
+  const back = document.getElementById('btnClassroomBack');
+  document.getElementById('classroomCoursesList')?.classList.toggle('hidden', s !== 'courses');
+  document.getElementById('classroomWorksList')?.classList.toggle('hidden', s !== 'works');
+  back?.classList.toggle('hidden', s !== 'works');
+  if (btn) btn.textContent = s === 'works' ? 'Importar' : 'Següent: triar activitats';
+}
+
+async function loadWorksStep() {
+  const box = document.getElementById('classroomWorksList');
+  const btn = document.getElementById('btnImportSelectedCourse');
+  const loading = document.getElementById('classroomLoadingState');
+  btn.disabled = true;
+  document.getElementById('classroomCoursesList').classList.add('hidden');
+  loading.classList.remove('hidden');
+  try {
+    for (const c of selectedCourses) {
+      if (!worksByCourse[c.id]) {
+        worksByCourse[c.id] = await getClassroomCoursework(c.id);
+        pickedWorks[c.id] = new Set(worksByCourse[c.id].map(w => w.id));   // per defecte, totes marcades
+      }
+    }
+  } catch (err) {
+    loading.classList.add('hidden');
+    setStep('courses');
+    document.getElementById('classroomCoursesList').classList.remove('hidden');
+    notify('❌ Error carregant les activitats: ' + err.message);
+    btn.disabled = false;
+    return;
+  }
+  loading.classList.add('hidden');
+  renderWorks(box);
+  setStep('works');
+  btn.disabled = false;
+}
+
+function renderWorks(box) {
+  box.innerHTML = '<p class="text-sm text-gray-600 mb-3">Tria les activitats que vols importar de cada curs. Els alumnes s\'importen sempre.</p>';
+  selectedCourses.forEach(course => {
+    const works = worksByCourse[course.id] || [];
+    const picked = pickedWorks[course.id];
+    const sec = document.createElement('div');
+    sec.className = 'mb-4 border rounded';
+    const count = () => `${picked.size} de ${works.length} activitats`;
+    sec.innerHTML = `
+      <div class="flex items-center justify-between gap-2 px-3 py-2 bg-gray-50 border-b">
+        <div class="font-semibold text-gray-900" translate="no">${escapeHtml(course.name)}</div>
+        <div class="text-xs text-gray-600"><span class="cw-count">${count()}</span> ·
+          <button type="button" class="cw-all underline text-indigo-600">Totes</button> ·
+          <button type="button" class="cw-none underline text-indigo-600">Cap</button></div>
+      </div>
+      <div class="cw-rows divide-y"></div>`;
+    const rows = sec.querySelector('.cw-rows');
+    if (!works.length) rows.innerHTML = '<p class="px-3 py-3 text-sm text-gray-500">Aquest curs no té activitats.</p>';
+    const refresh = () => { sec.querySelector('.cw-count').textContent = count(); };
+    works.forEach(w => {
+      const due = formatDueDate(w.dueDate);
+      const lab = document.createElement('label');
+      lab.className = 'flex items-center gap-3 px-3 py-2 hover:bg-indigo-50 cursor-pointer';
+      lab.innerHTML = `<input type="checkbox" class="w-4 h-4" ${picked.has(w.id) ? 'checked' : ''}>
+        <span class="flex-1 text-sm text-gray-900" translate="no">${escapeHtml(w.title || '(sense títol)')}</span>
+        <span class="text-xs text-gray-500">${due ? escapeHtml(due) + ' · ' : ''}${escapeHtml(String(w.maxPoints))} pts</span>`;
+      lab.querySelector('input').addEventListener('change', e => {
+        e.target.checked ? picked.add(w.id) : picked.delete(w.id); refresh();
+      });
+      rows.appendChild(lab);
+    });
+    const setAll = on => { works.forEach(w => on ? picked.add(w.id) : picked.delete(w.id)); rows.querySelectorAll('input').forEach(i => i.checked = on); refresh(); };
+    sec.querySelector('.cw-all').addEventListener('click', () => setAll(true));
+    sec.querySelector('.cw-none').addEventListener('click', () => setAll(false));
+    box.appendChild(sec);
+  });
+}
+
 function showClassroomError(message) {
   const errorState = document.getElementById('classroomErrorState');
   const loadingState = document.getElementById('classroomLoadingState');
@@ -289,6 +371,11 @@ function showClassroomError(message) {
 // ============================================================
 
 function setupImportListener() {
+  const back = document.getElementById('btnClassroomBack');
+  if (back && !back.dataset.listenerAdded) {
+    back.dataset.listenerAdded = 'true';
+    back.addEventListener('click', () => { setStep('courses'); document.getElementById('btnImportSelectedCourse').disabled = selectedCourses.length === 0; });
+  }
   const btnImport = document.getElementById('btnImportSelectedCourse');
   
   if (!btnImport) {
@@ -308,6 +395,7 @@ function setupImportListener() {
     if (selectedCourses.length === 0) {
       return notify('Selecciona almenys un curs');
     }
+    if (step === 'courses') { await loadWorksStep(); return; }
 
     if (!currentDB || !currentProfessorUID) {
       return notify('❌ Necessites iniciar sessió primer');
@@ -331,7 +419,7 @@ function setupImportListener() {
         console.log('📚 Importando curso:', course.name);
         updateProgressModal(progressModal, course.name, i + 1, totalCourses, progress);
         
-        await importClassroomCourse(course, currentDB, currentProfessorUID);
+        await importClassroomCourse(course, currentDB, currentProfessorUID, { workIds: [...(pickedWorks[course.id] || [])] });
       }
 
       console.log('✅ Cursos importats correctament');
@@ -359,7 +447,7 @@ function setupImportListener() {
     } finally {
       const btn = event.target;
       btn.disabled = false;
-      btn.innerHTML = 'Importar seleccionats';
+      btn.textContent = step === 'works' ? 'Importar' : 'Següent: triar activitats';
     }
   });
 }
