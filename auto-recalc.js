@@ -24,16 +24,13 @@ function getDb() {
 }
 
 // ── Interceptar console.log per detectar canvis de classe ────
-// app.js fa: console.log('_classData actualizado:', _classData)
-const _origLog = console.log.bind(console);
-console.log = function(...args) {
-  _origLog(...args);
-  if (typeof args[0] === 'string' && args[0].includes('_classData actualizado')) {
-    _cache = {};
-    _lastClassId = null;
-    _origLog('🔄 auto-recalc: cache invalidada per canvi de classe');
-  }
-};
+// app.js dispara l'esdeveniment 'classdata-updated' quan canvien les dades de la classe
+// Log només en mode debug: localStorage.autoRecalcDebug = '1'
+const _origLog = (...a) => { try { if (localStorage.getItem('autoRecalcDebug') === '1') console.log(...a); } catch (_) {} };
+window.addEventListener('classdata-updated', () => {
+  _cache = {};
+  _lastClassId = null;
+});
 
 // ── Escolta GLOBAL de canvis (capture phase, mai es perd) ────
 document.addEventListener('change', handleAnyChange, true);
@@ -63,7 +60,28 @@ async function scheduleRecalc(changedActId) {
     Object.fromEntries(Object.entries(_cache).map(([k,v]) => [k, {formula: v.formula, dependsOn: [...v.dependsOn]}]))
   ));
 
-  const affected = Object.entries(_cache).filter(([, d]) => d.dependsOn.has(changedActId));
+  // Fórmules afectades, incloent-hi les que depenen d'altres fórmules afectades
+  const dirty = new Set([changedActId]);
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const [id, d] of Object.entries(_cache)) {
+      if (!dirty.has(id) && [...d.dependsOn].some(x => dirty.has(x))) { dirty.add(id); grew = true; }
+    }
+  }
+  dirty.delete(changedActId);
+  // Ordre topològic: una fórmula va després de les fórmules de les quals depèn
+  const affected = [];
+  const pendingIds = new Set([...dirty].filter(id => _cache[id]));
+  let guard = pendingIds.size + 1;
+  while (pendingIds.size && guard-- > 0) {
+    for (const id of [...pendingIds]) {
+      if (![..._cache[id].dependsOn].some(x => pendingIds.has(x) && x !== id)) {
+        affected.push([id, _cache[id]]); pendingIds.delete(id);
+      }
+    }
+  }
+  pendingIds.forEach(id => affected.push([id, _cache[id]])); // cicles: es calculen igualment una vegada
   if (affected.length === 0) {
     _origLog(`ℹ️ auto-recalc: cap fórmula depèn de ${changedActId}`);
     return;
@@ -121,7 +139,7 @@ async function doRecalcWithStudents(formulas, students, db) {
 
           // Guardar a Firestore en background (no bloqueja UI)
           db.collection('alumnes').doc(sid).update({ [`notes.${calcActId}`]: rounded })
-            .catch(err => _origLog('auto-recalc: error guardant a Firestore:', err));
+            .catch(err => { if (window.showSaveError) window.showSaveError(err); else console.error(err); });
 
         } catch(err) { _origLog('auto-recalc error alumne:', err); }
       }));
@@ -150,26 +168,14 @@ function evalFormulaFromDOM(formula, studentId) {
     const tr = document.querySelector(`tr[data-student-id="${studentId}"]`);
     if (!tr) return null; // Alumne no al DOM → fallback Firestore
 
-    let expr = formula;
-    let allFound = true;
-
-    for (const m of [...formula.matchAll(/__ACT__([a-zA-Z0-9_]+)/g)]) {
-      const actId = m[1];
-      const input = tr.querySelector(`input[data-activity-id="${actId}"]`);
-      if (!input) {
-        // Activitat no trobada al DOM (pot ser d'un altre terme)
-        allFound = false;
-        break;
-      }
+    const values = {};
+    for (const m of formula.matchAll(/__ACT__([a-zA-Z0-9_]+)/g)) {
+      const input = tr.querySelector(`input[data-activity-id="${m[1]}"]`);
+      if (!input) return null; // activitat d'un altre grup → fallback a Firestore
       const val = parseFloat(input.value);
-      const safeVal = isNaN(val) ? 0 : val;
-      expr = expr.replace(new RegExp(m[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), safeVal);
+      values[m[1]] = isNaN(val) ? 0 : val;
     }
-
-    if (!allFound) return null; // Fallback a Firestore si falta alguna activitat
-
-    const result = Function('"use strict"; return (' + expr + ')')();
-    return typeof result === 'number' ? result : null;
+    return window.FormulaEngine.evalSafe(formula, id => values[id]);
   } catch(e) {
     return null;
   }
@@ -181,13 +187,7 @@ async function evalFormulaFromFirestore(formula, studentId, db) {
   try {
     const sdoc = await db.collection('alumnes').doc(studentId).get();
     const notes = sdoc.exists ? (sdoc.data().notes || {}) : {};
-    let expr = formula;
-    for (const m of [...formula.matchAll(/__ACT__([a-zA-Z0-9_]+)/g)]) {
-      const val = Number(notes[m[1]]);
-      expr = expr.replace(new RegExp(m[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), isNaN(val) ? 0 : val);
-    }
-    const result = Function('"use strict"; return (' + expr + ')')();
-    return typeof result === 'number' ? result : null;
+    return window.FormulaEngine.evalSafe(formula, id => { const v = Number(notes[id]); return isNaN(v) ? 0 : v; });
   } catch(e) { return null; }
 }
 

@@ -722,7 +722,7 @@ function loadClassData(){
         db.collection('classes').doc(currentClassId).get().then(updatedDoc => {
           if(updatedDoc.exists) {
             _classData = updatedDoc.data(); // Actualizar con datos frescos
-            console.log('_classData actualizado:', _classData);
+            window.dispatchEvent(new CustomEvent('classdata-updated', { detail: { classId: currentClassId } }));
           }
         });
 
@@ -1078,6 +1078,7 @@ await renderNotesGrid();
         // Aplicar fórmula a tots els alumnes i esperar que es guardi
         await Promise.all(classStudents.map(async sid => {
           const result = await evalFormulaAsync(formulaText, sid);
+          if (result === null) return; // no es pot calcular per a aquest alumne
           await saveNote(sid, id, result);
         }));
 
@@ -1648,31 +1649,8 @@ function showFormulaPreview(formula) {
 }
 
 function simulateFormulaWithExamples(formula) {
-  try {
-    let evalStr = formula;
-    
-    // 🔥 FIX: Substituir __ACT__id per 6 (exemple)
-    evalStr = evalStr.replace(/__ACT__[a-zA-Z0-9_]+/g, '6');
-    
-    // Fallback: substituir noms d'activitats antics per 6
-    const allTerms = _classData?.terms || {};
-    Object.values(allTerms).forEach(term => {
-      const activities = term.activities || [];
-      activities.forEach(actId => {
-        db.collection('activitats').doc(actId).get().then(doc => {
-          if (doc.exists) {
-            const actName = doc.data().nom;
-            const regex = new RegExp(actName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-            evalStr = evalStr.replace(regex, '6');
-          }
-        });
-      });
-    });
-    
-    return Function('"use strict"; return (' + evalStr + ')')();
-  } catch(e) {
-    return null;
-  }
+  // Totes les activitats valen 6 (només per a la previsualització)
+  return window.FormulaEngine.evalSafe(formula, () => 6);
 }
 
 // ============================================================
@@ -1695,6 +1673,7 @@ async function applyFormula(formula) {
   
   await Promise.all(classStudents.map(async sid => {
     const result = await evalFormulaAsync(formula, sid);
+    if (result === null) return; // no es pot calcular per a aquest alumne
     await saveNote(sid, currentCalcActivityId, result);
   }));
 }
@@ -2136,50 +2115,32 @@ function buildRoundingActivityButtons(){
   formulaButtonsDiv.appendChild(activitiesContainer);
 }
 
+// Retorna un número finit, o null si la fórmula no es pot avaluar per a aquest alumne
+// (p. ex. divisió per zero). Llença error si la fórmula és sintàcticament invàlida.
 async function evalFormulaAsync(formula, studentId){
-  let evalStr = formula;
-
   const studentDoc = await db.collection('alumnes').doc(studentId).get();
   const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
 
-  const allTerms = _classData?.terms || {};
-  const allActivityIds = new Set();
-  
-  Object.values(allTerms).forEach(term => {
-    const activities = term.activities || [];
-    activities.forEach(actId => allActivityIds.add(actId));
-  });
-  
-  classActivities.forEach(actId => allActivityIds.add(actId));
-
-  for(const aid of allActivityIds){
-    const marker = `__ACT__${aid}`;
-    const val = Number(notes[aid]);
-    const safeVal = isNaN(val) ? 0 : val;
-    const reMarker = new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-    evalStr = evalStr.replace(reMarker, safeVal);
+  // Fórmules antigues escrites amb NOMS d'activitat: els convertim a marcadors __ACT__id
+  let src = formula;
+  if (!/__ACT__/.test(src)) {
+    const allIds = new Set();
+    Object.values(_classData?.terms || {}).forEach(t => (t.activities || []).forEach(a => allIds.add(a)));
+    classActivities.forEach(a => allIds.add(a));
+    const named = [];
+    for (const aid of allIds) {
+      const d = await db.collection('activitats').doc(aid).get();
+      if (d.exists && d.data().nom) named.push({ aid, nom: d.data().nom });
+    }
+    named.sort((x, y) => y.nom.length - x.nom.length); // noms llargs primer
+    named.forEach(({ aid, nom }) => {
+      src = src.split(nom).join('__ACT__' + aid);
+    });
   }
 
-  for(const aid of allActivityIds){
-    const actDoc = await db.collection('activitats').doc(aid).get();
-    const actName = actDoc.exists ? actDoc.data().nom : '';
-    
-    if(!actName) continue;
-    
-    const val = Number(notes[aid]);
-    const safeVal = isNaN(val) ? 0 : val;
-    
-    const regex = new RegExp(actName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-    evalStr = evalStr.replace(regex, safeVal);
-  }
-
-  try {
-    const result = Function('"use strict"; return (' + evalStr + ')')();
-    return result;
-  } catch(e){
-    console.error('Error evaluating formula:', formula, e);
-    return 0;
-  }
+  const resolve = id => { const v = Number(notes[id]); return isNaN(v) ? 0 : v; };
+  window.FormulaEngine.evaluate(src, resolve); // llença si és invàlida
+  return window.FormulaEngine.evalSafe(src, resolve);
 }
 
 // ============================================================
@@ -2878,3 +2839,5 @@ async function gmailSendEmail(to, subject, message) {
 window.loadClassData = loadClassData;
 window.renderNotesGrid = renderNotesGrid;
 window.applyCellColor = applyCellColor;
+
+window.showSaveError = showSaveError;
