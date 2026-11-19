@@ -19,7 +19,7 @@ const STATIC_ASSETS = [
   '/terms.js',
   '/tutoria.js',
   '/tutoria-comentaris.js',
-  '/vistes.js',
+  '/vistes.js', '/config.js',
   '/administrador.js',
   '/administrador-enhancements.js',
   '/icon-192.png',

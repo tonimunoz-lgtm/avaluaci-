@@ -123,6 +123,7 @@ async function openTutoriaModal() {
   modal.innerHTML = buildModalHTML();
   document.body.appendChild(modal);
   initModalInteractions(modal);
+  { const sel = modal.querySelector('#tutoriaIdioma'); const l = window.AvaluConfig?.get().idioma; if (sel && l) sel.value = l; }
   omplirAlumnesDesar(modal);
 }
 

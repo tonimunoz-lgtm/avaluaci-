@@ -1125,7 +1125,7 @@ async function renderNotesGrid() {
   // Capçalera alumne
   const headRow = document.createElement('tr');
   const thName = th('');
-  thName.innerHTML = `<div class="th-student"><span>Alumne</span><small id="studentsCount"></small><button type="button" id="stuHeadMenuBtn" class="opt-btn" aria-label="Opcions d'alumnes">Opcions</button></div>`;
+  thName.innerHTML = `<div class="th-student"><span>Alumne</span><small id="studentsCount"></small><button type="button" id="stuHeadMenuBtn" class="opt-btn" aria-label="Opcions d'alumnes"><span class="lbl">Opcions</span><span class="ic-dots" aria-hidden="true">⋯</span></button></div>`;
   thName.querySelector('#stuHeadMenuBtn').addEventListener('click', e => { e.stopPropagation(); openStudentHeadMenu(e.currentTarget); });
   headRow.appendChild(thName);
 
@@ -1256,7 +1256,7 @@ await renderNotesGrid();
     const menuDiv = document.createElement('div');
     menuDiv.className = 'relative';
     menuDiv.innerHTML = `
-      <button class="menu-btn opt-btn tooltip" type="button" aria-label="Opcions de l'activitat">Opcions</button>
+      <button class="menu-btn opt-btn tooltip" type="button" aria-label="Opcions de l'activitat"><span class="lbl">Opcions</span><span class="ic-dots" aria-hidden="true">⋯</span></button>
       <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10">
         <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
         <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>
@@ -1547,9 +1547,10 @@ function applyCellColor(inputEl){
   const v = Number(inputEl.value);
   inputEl.classList.remove('cell-red','cell-yellow','cell-lgreen','cell-green');
   if(inputEl.value === '' || isNaN(v)) return;
-  if(v < 5) inputEl.classList.add('cell-red');
-  else if(v < 7) inputEl.classList.add('cell-yellow');
-  else if(v < 9) inputEl.classList.add('cell-lgreen');
+  const th = window.AvaluConfig?.get().th || { red: 5, yellow: 7, green: 9 };
+  if(v < th.red) inputEl.classList.add('cell-red');
+  else if(v < th.yellow) inputEl.classList.add('cell-yellow');
+  else if(v < th.green) inputEl.classList.add('cell-lgreen');
   else inputEl.classList.add('cell-green');
 }
 
@@ -2507,7 +2508,7 @@ async function addImportedStudents(names) {
 // ----------------------Fer funcionar el botó + (afegir terme)
 const btnAddTerm = document.getElementById('btnAddTerm');
 btnAddTerm.addEventListener('click', async () => {
-  const name = await promptDialog('Nom del nou període (p. ex. 2TRIM):');
+  const name = await promptDialog('Nom del nou període (p. ex. 2TRIM):', window.AvaluConfig?.nextTermName() || '');
   if(!name) return;
   try {
     const newId = await Terms.addNewTermWithName(name);
@@ -2520,7 +2521,7 @@ btnAddTerm.addEventListener('click', async () => {
 
 const btnAddTerm2 = document.getElementById('btnAddTerm2');
 btnAddTerm2.addEventListener('click', async () => {
-  const name = await promptDialog('Nom del nou període (p. ex. 2TRIM):');
+  const name = await promptDialog('Nom del nou període (p. ex. 2TRIM):', window.AvaluConfig?.nextTermName() || '');
   if(!name) return;
   try {
     const newId = await Terms.addNewTermWithName(name);
@@ -2701,9 +2702,13 @@ async function sendNotesTo(ids) {
       await db.collection('alumnes').doc(studentId).update({ email });
     }
 
-    const body = await formatStudentNotesForEmail(studentId);
+    const C = window.AvaluConfig, cf = C?.get() || {};
+    const vars = { nom: name, classe: _classData?.nom || '' };
+    let body = await formatStudentNotesForEmail(studentId);
+    if (cf.intro) body = C.fill(cf.intro, vars) + '\n\n' + body;
+    if (cf.signatura) body += '\n\n' + cf.signatura;
     try {
-      await gmailSendEmail(email, `Notes de ${name}`, body);
+      await gmailSendEmail(email, C ? C.fill(cf.assumpte || 'Notes de {nom}', vars) : `Notes de ${name}`, body);
       sent++;
     } catch (e) {
       console.error(e);

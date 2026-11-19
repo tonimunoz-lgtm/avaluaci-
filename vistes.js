@@ -10,7 +10,8 @@ const PASS = 5;
 const num = v => { const n = Number(v); return v === '' || v == null || isNaN(n) ? null : n; };
 const fmt = v => v == null ? '–' : (Math.round(v * 10) / 10).toFixed(1).replace('.', ',');
 const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
-const toneOf = v => v == null ? 'none' : v < 5 ? 'red' : v < 7 ? 'yellow' : v < 9 ? 'lgreen' : 'green';
+const _th = () => window.AvaluConfig?.get().th || { red: 5, yellow: 7, green: 9 };
+const toneOf = v => { const t = _th(); return v == null ? 'none' : v < t.red ? 'red' : v < t.yellow ? 'yellow' : v < t.green ? 'lgreen' : 'green'; };
 const hue = name => { let h = 0; for (const c of String(name || '')) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
 const initials = n => (String(n || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('') || '?').toUpperCase();
 
@@ -110,7 +111,7 @@ const pct = (n, t) => t ? Math.round(n * 100 / t) + ' %' : '–';
 
 function histogram(bins) {
   const max = Math.max(1, ...bins);
-  const tone = i => i < 5 ? 'red' : i < 7 ? 'yellow' : i < 9 ? 'lgreen' : 'green';
+  const tone = i => i < _th().red ? 'red' : i < _th().yellow ? 'yellow' : i < _th().green ? 'lgreen' : 'green';
   return `<div class="histo">${bins.map((n, i) => `
     <div class="histo-col"><span class="histo-n">${n || ''}</span>
       <div class="histo-bar t-${tone(i)}" style="height:${Math.max(n ? 6 : 2, n / max * 100)}%"></div>
@@ -261,17 +262,7 @@ function compareHTML(classes) {
 
 /* ------------------------------------------------------------ Configuració */
 function renderConfig() {
-  $('screen-config').innerHTML = `
-    <h2 class="section-title">Configuració</h2>
-    <div class="panel soon" style="margin-top:1rem">
-      <div class="soon-ico">⚙️</div>
-      <h3>Pròximament</h3>
-      <p class="muted">Aquí podràs personalitzar el gestor. Encara no fa res; és un espai reservat per a futures funcionalitats.</p>
-      <ul class="soon-list">
-        <li>👤 Perfil i dades del centre</li><li>⚖️ Pesos (%) de les activitats</li>
-        <li>🎨 Aparença i idioma</li><li>🔔 Preferències de notificacions</li>
-      </ul>
-    </div>`;
+  if (window.AvaluConfig?.render) window.AvaluConfig.render($('screen-config'));
 }
 
 /* ------------------------------------------------------------ pestanyes de classe */
@@ -379,7 +370,7 @@ bell.addEventListener('click', e => { e.stopPropagation(); bellMenu.classList.to
 document.addEventListener('click', () => bellMenu.classList.add('hidden'));
 window.addEventListener('pending-comments', e => {
   const { total, byClass } = e.detail;
-  $('bellDot').classList.toggle('hidden', !total);
+  $('bellDot').classList.toggle('hidden', !total || window.AvaluConfig?.get().avisos === false);
   bellMenu.innerHTML = total
     ? `<div class="bell-title">Comentaris pendents</div>` + byClass.filter(x => x.pending).map(x =>
         `<button type="button" data-id="${esc(x.id)}"><b>${esc(x.nom)}</b><small>${x.pending} alumne${x.pending === 1 ? '' : 's'} sense comentari</small></button>`).join('')
