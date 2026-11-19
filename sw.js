@@ -14,7 +14,6 @@ const STATIC_ASSETS = [
   '/competencial-config.js',
   '/formula-info.js',
   '/auto-recalc.js',
-  '/improvements.js',
   '/modals.js',
   '/terms.js',
   '/tutoria.js',

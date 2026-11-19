@@ -827,17 +827,6 @@ async function createActivityModal() {
    // }
 }
 
-function removeActivity(actId){
-  confirmAction('Eliminar activitat', 'Esborrar activitat i totes les notes relacionades?', async ()=> {
-    try {
-      await deleteActivityCascade(actId);
-      loadClassData();
-    } catch(e) {
-      alert('Error esborrant activitat: ' + e.message);
-    }
-  });
-}
-
 /* ---------------- Render Students List amb menú ---------------- */
 function renderStudentsList() {
   studentsList.innerHTML = '';
@@ -1347,29 +1336,6 @@ input.addEventListener('keydown', e => {
 }
 
 // Funció per actualitzar cel·les calculades sense recrear tota la taula
-function updateCalculatedCells() {
-  db.collection('classes').doc(currentClassId).get().then(doc => {
-    if (!doc.exists) return;
-    const calculatedActs = doc.data().calculatedActivities || {};
-
-    classStudents.forEach(sid => {
-      const row = document.querySelector(`tr[data-student-id="${sid}"]`);
-      if (!row) return;
-
-      classActivities.forEach(aid => {
-        if (!calculatedActs[aid]) return;
-        const input = row.querySelector(`input[data-activity-id="${aid}"]`);
-        if (!input) return;
-
-        const val = computeCalculatedNote(sid, aid); // funció que calcula nota
-        input.value = val;
-        input.disabled = true;
-        input.style.backgroundColor = "#fca5a5";
-      });
-    });
-  });
-}
-
 //--------------nou per incloure buscador am filtre
 const gridStudentSearch = document.getElementById('gridStudentSearch');
 gridStudentSearch.addEventListener('input', () => {
@@ -1410,13 +1376,6 @@ function applyCellColor(inputEl){
   else if(v < 5) inputEl.classList.add('bg-yellow-100');  
   else if(v < 7) inputEl.classList.add('bg-purple-100');
   else inputEl.classList.add('bg-green-100');
-}
-
-function computeStudentAverageText(studentData){
-  const notesMap = (studentData && studentData.notes) ? studentData.notes : {};
-  const vals = classActivities.map(aid => (notesMap[aid] !== undefined ? Number(notesMap[aid]) : null)).filter(v=> v!==null && !isNaN(v));
-  if(vals.length === 0) return '';
-  return (vals.reduce((s,n)=> s+n,0)/vals.length).toFixed(2);
 }
 
 // 🔥 CORRECCIÓN EN renderAverages() - Ignorar columna de comentarios
@@ -1737,28 +1696,6 @@ async function applyFormula(formula) {
   await Promise.all(classStudents.map(async sid => {
     const result = await evalFormulaAsync(formula, sid);
     await saveNote(sid, currentCalcActivityId, result);
-  }));
-}
-
-async function applyRounding(formula) {
-  if (!formula.trim()) throw new Error('Selecciona activitat i 0,5 o 1');
-
-  const activityDocs = await Promise.all(classActivities.map(aid => db.collection('activitats').doc(aid).get()));
-  const selectedActivityDoc = activityDocs.find(doc => doc.exists && formula.startsWith(doc.data().nom));
-  if (!selectedActivityDoc) throw new Error('Activitat no trobada');
-
-  const selectedActivityName = selectedActivityDoc.data().nom;
-  const multiplier = Number(formula.slice(selectedActivityName.length)) || 1;
-
-  await Promise.all(classStudents.map(async sid => {
-    const studentDoc = await db.collection('alumnes').doc(sid).get();
-    const notes = studentDoc.exists ? studentDoc.data().notes || {} : {};
-    let val = Number(notes[selectedActivityDoc.id]) || 0;
-
-    if (multiplier === 1) val = Math.round(val);
-    else if (multiplier === 0.5) val = Math.round(val * 2) / 2;
-
-    await saveNote(sid, currentCalcActivityId, val);
   }));
 }
 
@@ -2253,13 +2190,6 @@ async function evalFormulaAsync(formula, studentId){
 
 
 // ---------------- Helper per trobar nom alumne per ID ----------------
-function getStudentRowById(sid) {
-  // Busca la fila corresponent a aquest studentId
-  const studentIndex = classStudents.findIndex(id => id === sid);
-  if (studentIndex === -1) return null;
-  return notesTbody.children[studentIndex] || null;
-}
-
 /* ---------------- Drag & Drop per activitats ---------------- */
 function enableActivityDrag(){
   const ths = notesThead.querySelectorAll('tr:first-child th');
@@ -2309,73 +2239,6 @@ function enableActivityDrag(){
 }
 
 
-/* ---------------- Marcar activitat com calculada ---------------- */
-async function markActivityAsCalculated(activityId){
-  if(!currentClassId) return;
-  await db.collection('classes').doc(currentClassId).update({
-    [`calculatedActivities.${activityId}`]: true
-  });
-  // Re-render per assegurar bloqueig i color
-  renderNotesGrid();
-}
-
-
-
-/* ---------------- Export Excel ---------------- 
-btnExport.addEventListener('click', exportExcel);
-async function exportExcel(){
-  if(!currentClassId) return alert('No hi ha cap classe seleccionada.');
-
-  try {
-    // Carregar informació de la classe
-    const classDoc = await db.collection('classes').doc(currentClassId).get();
-    if(!classDoc.exists) return alert('Classe no trobada.');
-    const classData = classDoc.data();
-
-    // Carregar activitats
-    const actDocs = await Promise.all(classActivities.map(id => db.collection('activitats').doc(id).get()));
-
-    // Carregar alumnes
-    const studentDocs = await Promise.all(classStudents.map(id => db.collection('alumnes').doc(id).get()));
-
-    const ws_data = [];
-
-    // Capçalera
-    const header = ['Alumne', ...actDocs.map(a => a.exists ? a.data().nom : 'Sense nom'), 'Mitjana'];
-    ws_data.push(header);
-
-    // Files alumnes
-    studentDocs.forEach(sdoc => {
-      const notes = sdoc.exists ? sdoc.data().notes || {} : {};
-      const row = [sdoc.exists ? sdoc.data().nom : 'Desconegut'];
-
-      let sum = 0, count = 0;
-
-      actDocs.forEach(adoc => {
-        const aid = adoc.id;
-        const val = (notes[aid] !== undefined) ? Number(notes[aid]) : '';
-        row.push(val);
-        if(val !== '') { sum += val; count++; }
-      });
-
-      row.push(count ? (sum/count).toFixed(2) : '');
-      ws_data.push(row);
-    });
-
-    // Crear llibre Excel i full
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(ws_data);
-    XLSX.utils.book_append_sheet(wb, ws, 'Notes');
-
-    // Nom del fitxer
-    const fname = (document.getElementById('classTitle').textContent || 'classe') + '.xlsx';
-    XLSX.writeFile(wb, fname);
-
-  } catch(e){
-    console.error(e);
-    alert('Error exportant Excel: ' + e.message);
-  }
-}*/
 
 
 /* ---------------- Tancar menús si fas clic fora ---------------- */
@@ -2768,26 +2631,6 @@ window.__sendNotesModeActive = false;
 })();
 
 // -------------------- FUNCIONS DE MODE ENVIAR NOTES --------------------
-window.__sendNotesModeActive = false;
-
-// Afegim l’opció al menú global dels alumnes
-(function attachGlobalStudentsMenuOption(){
-  const studentsMenu = document.getElementById('studentsMenu');
-  if (!studentsMenu) return;
-
-  if (!studentsMenu.querySelector('.send-notes-mode-btn')) {
-    const btn = document.createElement('button');
-    btn.className = 'send-notes-mode-btn px-3 py-1 w-full text-left hover:bg-gray-100';
-    btn.textContent = 'Enviar notes';
-    btn.addEventListener('click', () => {
-      toggleSendNotesMode();
-      studentsMenu.classList.add('hidden');
-    });
-    studentsMenu.appendChild(btn);
-  }
-})();
-
-// -------------------- FUNCIONS DE MODE ENVIAR NOTES --------------------
 function toggleSendNotesMode() {
   window.__sendNotesModeActive = !window.__sendNotesModeActive;
 
@@ -3030,3 +2873,8 @@ async function gmailSendEmail(to, subject, message) {
     alert("Error enviant el correu: " + err.message);
   }
 }
+
+// Globals que altres mòduls ja esperaven (abans mai s'assignaven)
+window.loadClassData = loadClassData;
+window.renderNotesGrid = renderNotesGrid;
+window.applyCellColor = applyCellColor;
