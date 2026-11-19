@@ -435,12 +435,15 @@ let _classCache = [];   // [{id, data}] de l'última càrrega, per a la cerca i 
 function renderClassCards() {
   const q = (document.getElementById('classSearch')?.value || '').trim().toLowerCase();
   classesGrid.innerHTML = '';
+  // El botó «Eliminar seleccionats» s'ha de treure sempre abans de pintar (també als estats buits)
+  document.querySelectorAll('.delete-selected-btn').forEach(b => b.remove());
   let list = _classCache.filter(c => !q || String(c.data.nom || '').toLowerCase().includes(q));
   if (_classSort === 'az') list = [...list].sort((a, b) => String(a.data.nom).localeCompare(String(b.data.nom), 'ca'));
   else if (_classSort === 'za') list = [...list].sort((a, b) => String(b.data.nom).localeCompare(String(a.data.nom), 'ca'));
   else if (_classSort === 'students') list = [...list].sort((a, b) => (b.data.alumnes || []).length - (a.data.alumnes || []).length);
   screenClasses.classList.toggle('is-empty', _classCache.length === 0);
   if (_classCache.length === 0) {
+    if (deleteMode) { deleteMode = false; btnDeleteMode.textContent = '🗑️ Eliminar classe'; }
     classesGrid.innerHTML = `<div class="first-run">
       <div class="fr-ico">🎓</div>
       <h2>Comencem!</h2>
@@ -516,8 +519,6 @@ function renderClassCards() {
     classesGrid.appendChild(card);
   });
 
-  const existingBtn = document.querySelector('#classesGrid + .delete-selected-btn');
-  if (existingBtn) existingBtn.remove();
   if (deleteMode) addDeleteSelectedButton();
 }
 
@@ -1274,7 +1275,7 @@ await renderNotesGrid();
     const menuDiv = document.createElement('div');
     menuDiv.className = 'relative';
     menuDiv.innerHTML = `
-      <button class="menu-btn opt-btn tooltip" type="button" aria-label="Opcions de l'activitat"><span class="lbl">Opcions</span><span class="ic-dots" aria-hidden="true">⋯</span></button>
+      <button class="menu-btn opt-btn tooltip" type="button" aria-label="Opcions de l'activitat"><span class="dots-v" aria-hidden="true">⋮</span><span class="lbl">Opcions</span><span class="ic-dots" aria-hidden="true">⋯</span></button>
       <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10">
         <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
         <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>

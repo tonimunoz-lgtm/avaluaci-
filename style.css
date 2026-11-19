@@ -652,3 +652,16 @@ body.dens-compact .stu-avatar { width: 24px; height: 24px; font-size: .6rem; }
 #screen-classes.is-empty .side-cards { display: block !important; }
 #screen-classes.is-empty .classes-layout { display: block; max-width: 46rem; margin: 1rem auto 0; }
 #screen-classes.is-empty .side-cards .quote { margin-top: 1.2rem; }
+
+/* Capçalera d'activitat: ⋮ vertical a l'escriptori; «Opcions» compacte (⋯) al mòbil */
+#notesThead .menu-btn .dots-v { display: none; }
+@media (min-width: 861px) {
+  #notesThead th .menu-btn.opt-btn { border: 0; background: none; box-shadow: none; color: var(--c-muted); font-size: 1.15rem; padding: 0 .3rem; border-radius: 8px; }
+  #notesThead th .menu-btn.opt-btn:hover { background: #e7e1ff !important; color: var(--c-primary) !important; border: 0 !important; }
+  #notesThead .menu-btn .dots-v { display: inline; line-height: 1; }
+  #notesThead .menu-btn .lbl, #notesThead .menu-btn .ic-dots { display: none; }
+}
+/* Mòbil: la barra de cerca/filtres queda fixa en fer scroll horitzontal de la graella */
+@media (max-width: 860px) {
+  #notesTable-wrapper .filters-bar { position: sticky; left: 0; z-index: 5; box-sizing: border-box; width: calc(100vw - 2.6rem); max-width: 100%; }
+}
