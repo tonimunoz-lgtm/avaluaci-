@@ -2,6 +2,8 @@
 // classe = clase / class · alumne = alumno/a / student · nota = nota / grade · activitat = actividad / assignment
 // període (d'avaluació) = período (de evaluación) / grading period · butlletí = boletín / report card
 export const DICT = [
+["✏️ Modificar fórmula","✏️ Modificar fórmula","✏️ Edit formula"],
+["Columna calculada","Columna calculada","Calculated column"],
 ["Format del nom dels alumnes","Formato del nombre de los alumnos","Student name format"],
 ["Com surten escrits a la llista. Serveix per separar nom i cognoms als comentaris.","Cómo aparecen escritos en la lista. Sirve para separar nombre y apellidos en los comentarios.","How they're written in the list. Used to split first name and surname in comments."],
 ["— Tria l'alumne —","— Elige el alumno —","— Choose a student —"],

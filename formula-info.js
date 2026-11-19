@@ -118,6 +118,11 @@ style.textContent = `
     font-weight: 600;
     cursor: pointer;
   }
+  .fi-modal-sheet .fi-edit-btn {
+    width: 100%; padding: 12px; margin-bottom: 8px; background: #fff; color: #1d4ed8;
+    border: 2px solid #3b82f6; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+  .fi-modal-sheet .fi-edit-btn:hover { background: #eff6ff; }
   .fi-modal-sheet .fi-close-btn:active { background: #1d4ed8; }
   @keyframes fi-fadein { from { opacity: 0 } to { opacity: 1 } }
   @keyframes fi-slidein { from { transform: translateY(60px) } to { transform: translateY(0) } }
@@ -160,7 +165,7 @@ function positionTooltip(btn) {
 }
 
 // ── Modal mòbil ───────────────────────────────────────────────
-function showMobileModal(actName, displayFormula, rawFormula) {
+function showMobileModal(actName, displayFormula, rawFormula, actId) {
   const overlay = document.createElement('div');
   overlay.className = 'fi-modal-overlay';
   overlay.innerHTML = `
@@ -168,6 +173,7 @@ function showMobileModal(actName, displayFormula, rawFormula) {
       <div class="fi-act-name">Columna calculada</div>
       <h3>📐 ${escHtml(actName)}</h3>
       <div class="fi-formula-box">${escHtml(displayFormula || rawFormula || '—')}</div>
+      ${actId ? '<button class="fi-edit-btn">✏️ Modificar fórmula</button>' : ''}
       <button class="fi-close-btn">Tancar</button>
     </div>
   `;
@@ -175,6 +181,10 @@ function showMobileModal(actName, displayFormula, rawFormula) {
 
   const close = () => overlay.remove();
   overlay.querySelector('.fi-close-btn').addEventListener('click', close);
+  overlay.querySelector('.fi-edit-btn')?.addEventListener('click', () => {
+    close(); hideTooltip();
+    window.AvaluApp?.editFormula?.(actId, displayFormula, rawFormula);
+  });
   overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
 }
 
@@ -240,12 +250,12 @@ async function patchHeaders() {
       }
     }
 
-    const actName = thEl.querySelector('span')?.textContent?.trim() || actId || '?';
-    addInfoBtn(thEl, actName, displayFormula, rawFormula);
+    const actName = thEl.querySelector('.act-name')?.textContent?.trim() || actId || '?';
+    addInfoBtn(thEl, actName, displayFormula, rawFormula, actId);
   });
 }
 
-function addInfoBtn(thEl, actName, displayFormula, rawFormula) {
+function addInfoBtn(thEl, actName, displayFormula, rawFormula, actId) {
   if (thEl.querySelector('.fi-info-btn')) return;
 
   const btn = document.createElement('button');
@@ -257,20 +267,20 @@ function addInfoBtn(thEl, actName, displayFormula, rawFormula) {
   if (isTouchDevice()) {
     btn.addEventListener('click', e => {
       e.stopPropagation();
-      showMobileModal(actName, displayFormula, rawFormula);
+      showMobileModal(actName, displayFormula, rawFormula, actId);
     });
   } else {
     btn.addEventListener('mouseenter', () => showTooltip(btn, actName, displayFormula, rawFormula));
     btn.addEventListener('mouseleave', hideTooltip);
     btn.addEventListener('click', e => {
       e.stopPropagation();
-      showMobileModal(actName, displayFormula, rawFormula);
+      showMobileModal(actName, displayFormula, rawFormula, actId);
     });
   }
 
   const container = thEl.querySelector('.flex');
   if (container) {
-    const spanName = container.querySelector('span');
+    const spanName = container.querySelector('.act-name') || container.querySelector('span');
     if (spanName) spanName.after(btn);
     else container.appendChild(btn);
   } else {

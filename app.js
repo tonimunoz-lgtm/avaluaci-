@@ -1170,7 +1170,9 @@ async function renderNotesGrid() {
     container.className = 'flex items-center justify-between';
 
     const spanName = document.createElement('span');
+    spanName.className = 'act-name';
     spanName.textContent = name;
+    thEl.dataset.activityId = id;
 
    // Candau
 const lockIcon = document.createElement('span');
@@ -1661,6 +1663,30 @@ function openCalcModal(activityId){
   clearFormulaValidation();
 }
 
+// Obre el modal de càlcul amb la fórmula actual d'una activitat per poder-la modificar
+function openFormulaEditor(activityId, displayFormula, rawFormula) {
+  openCalcModal(activityId);
+  const raw = String(rawFormula ?? '').trim();
+  const disp = String(displayFormula ?? raw).trim();
+  const setType = t => { calcTypeSelect.value = t; calcTypeSelect.dispatchEvent(new Event('change')); };
+  if (/^-?\d+([.,]\d+)?$/.test(raw)) {                       // nota fixa
+    setType('numeric');
+    numericField.value = raw.replace(',', '.');
+    return;
+  }
+  const rd = disp.match(/^Math\.round\((.+?)(\*2)?\)(\/2)?$/);   // arrodoniment
+  if (rd) {
+    setType('rounding');
+    formulaField.value = rd[2] ? `${rd[1]} 0.5` : rd[1];
+    return;
+  }
+  setType('formula');                                           // fórmula
+  formulaField.value = disp;
+  if (formulaFieldHidden) formulaFieldHidden.value = raw;
+  _fCaret = null;
+  validateFormula();
+}
+
 const calcTypeSelect = document.getElementById('calcType');
 // Selector segmentat (Numèric / Fórmula / Arrodoniment) sincronitzat amb el select amagat
 function syncCalcSeg() {
@@ -1726,6 +1752,8 @@ function setupFormulaValidation() {
   formulaField.setAttribute('inputmode', 'none');
   formulaField.setAttribute('autocomplete', 'off');
 
+  if (formulaField.dataset.valInit) return;   // els listeners només es posen una vegada
+  formulaField.dataset.valInit = '1';
   formulaField.addEventListener('input', validateFormula);
   ['click', 'keyup', 'select', 'mouseup', 'touchend'].forEach(ev =>
     formulaField.addEventListener(ev, rememberCaret));
@@ -2840,5 +2868,6 @@ window.AvaluApp = {
   refreshPending: () => computePendingComments(),
   getCalculatedActivities: () => _gridCalculated,
   getStudentIds: () => Array.from(classStudents),
-  getActivityIds: () => Array.from(classActivities)
+  getActivityIds: () => Array.from(classActivities),
+  editFormula: (id, display, raw) => openFormulaEditor(id, display, raw)
 };
