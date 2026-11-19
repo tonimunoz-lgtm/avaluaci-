@@ -665,3 +665,18 @@ body.dens-compact .stu-avatar { width: 24px; height: 24px; font-size: .6rem; }
 @media (max-width: 860px) {
   #notesTable-wrapper .filters-bar { position: sticky; left: 0; z-index: 5; box-sizing: border-box; width: calc(100vw - 2.6rem); max-width: 100%; }
 }
+/* Densitat compacta de la graella (Configuració) */
+body.dens-compact #notesTable tbody td { height: 32px; }
+body.dens-compact #notesTable tbody td input { padding-top: .1rem; padding-bottom: .1rem; min-height: 0; font-size: .85rem; }
+body.dens-compact #notesTable tbody td:last-child { font-size: .82rem; }
+body.dens-compact #notesTable thead th { padding-top: .4rem; padding-bottom: .4rem; }
+body.dens-compact .stu-cell { gap: .45rem; font-size: .85rem; }
+body.dens-compact .stu-avatar { width: 22px; height: 22px; font-size: .58rem; }
+/* Les cel·les de notes no han de heretar l'estil de camp arrodonit */
+body input.table-input { border: 0; border-radius: 0; padding: 0 .3rem; background-color: transparent; box-shadow: none; }
+body input.table-input:hover { border: 0; }
+body input.table-input:focus { border: 0; box-shadow: inset 0 0 0 2px var(--c-primary-2); }
+body.dens-compact input.table-input { height: 32px; font-size: .85rem; padding-top: 0; padding-bottom: 0; }
+body input.table-input { border: 0 !important; border-radius: 0 !important; padding: 0 .3rem !important; box-shadow: none !important; }
+body input.table-input:focus { box-shadow: inset 0 0 0 2px var(--c-primary-2) !important; }
+body.dens-compact input.table-input { padding-top: 0 !important; padding-bottom: 0 !important; }
