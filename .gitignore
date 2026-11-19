@@ -1,0 +1,5 @@
+node_modules/
+.DS_Store
+rules-tests/node_modules/
+serviceAccount*.json
+.env*
