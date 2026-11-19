@@ -779,13 +779,15 @@ async function tcGenerar(modal) {
   textDiv.innerHTML = '<span class="text-gray-400 italic">La IA està escrivint...</span>';
 
   try {
+    const _tk = await firebase.auth().currentUser?.getIdToken();
+    if (!_tk) throw new Error('Cal iniciar sessió');
     const res = await fetch('/api/tutoria', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_tk}` },
       body: JSON.stringify({ prompt: tcPrompt(dades) }),
     });
-    if (!res.ok) throw new Error(`Error API: ${res.status}`);
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `Error API: ${res.status}`);
     textDiv.textContent = data.text || 'No s\'ha pogut generar.';
     resultat.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     btnGu.classList.remove('hidden');

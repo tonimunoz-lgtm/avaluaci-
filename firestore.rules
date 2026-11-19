@@ -1,0 +1,123 @@
+rules_version = '2';
+
+// ETAPA 1 — desplegable ja, sense canvis al model de dades.
+// Tanca: autoescalada a admin, usuaris suspesos/eliminats, llistat obert de
+// plantilles i edició de plantilles per qualsevol membre.
+// alumnes/activitats continuen oberts a qualsevol usuari actiu fins a l'etapa 2
+// (firestore.stage2.rules), que requereix ownerUid + script de migració.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isLoggedIn() {
+      return request.auth != null;
+    }
+
+    function prof(uid) {
+      return get(/databases/$(database)/documents/professors/$(uid)).data;
+    }
+
+    function isAdmin() {
+      return isLoggedIn() && prof(request.auth.uid).get('isAdmin', false) == true;
+    }
+
+    // Usuari amb sessió i compte no suspès ni eliminat (comprovat al servidor)
+    function isActive() {
+      return isLoggedIn()
+        && prof(request.auth.uid).get('suspended', false) != true
+        && prof(request.auth.uid).get('deleted', false) != true;
+    }
+
+    function userEmail() {
+      return request.auth.token.email.lower();
+    }
+
+    // ---------------------------------------------------------------
+    match /professors/{profId} {
+      allow get: if isLoggedIn() && (request.auth.uid == profId || isAdmin());
+      allow list: if isAdmin();
+
+      // Un usuari només es pot crear a si mateix i mai com a admin/suspès/eliminat
+      allow create: if isLoggedIn() && request.auth.uid == profId
+        && request.resource.data.get('isAdmin', false) == false
+        && request.resource.data.get('suspended', false) == false
+        && request.resource.data.get('deleted', false) == false;
+
+      // L'usuari edita el seu perfil, però no els camps de privilegis
+      allow update: if isAdmin() || (
+        isLoggedIn() && request.auth.uid == profId
+        && !request.resource.data.diff(resource.data).affectedKeys()
+              .hasAny(['isAdmin', 'suspended', 'deleted'])
+      );
+
+      allow delete: if isAdmin();
+
+      match /logins/{logId} {
+        allow create: if isLoggedIn() && request.auth.uid == profId;
+        allow read: if isAdmin();
+        allow update, delete: if false;
+      }
+    }
+
+    // ---------------------------------------------------------------
+    match /classes/{classId} {
+      allow create: if isActive();
+      allow read, update, delete: if isActive() && (
+        classId in prof(request.auth.uid).get('classes', []) || isAdmin()
+      );
+    }
+
+    match /alumnes/{alumneId} {
+      allow read, write: if isActive();
+    }
+
+    match /activitats/{actId} {
+      allow read, write: if isActive();
+    }
+
+    // ---------------------------------------------------------------
+    match /tutoria_config/{userId} {
+      allow read, write: if isActive() && request.auth.uid == userId;
+    }
+
+    // ---------------------------------------------------------------
+    // Plantilles Ultracomentator (compartides per codi)
+    match /ultracomentator_plantilles/{codi} {
+
+      // Obrir una plantilla pel seu codi
+      allow get: if isActive();
+
+      // Llistar: només les teves (membre) o aquelles on tens una invitació pendent.
+      // Ja no es poden enumerar totes les plantilles.
+      allow list: if isActive() && request.auth.uid in resource.data.membres;
+      allow list: if isActive() && userEmail() in resource.data.invitacionsPendents;
+
+      // Crear: l'autor ets tu i ets membre
+      allow create: if isActive()
+        && request.resource.data.creatPer == request.auth.uid
+        && request.auth.uid in request.resource.data.membres;
+
+      // Actualitzar:
+      //  - propietari: tot
+      //  - membre: només llista de membres/invitacions
+      //  - convidat: només pot afegir-se ell mateix a membres i treure's la invitació
+      allow update: if isActive() && (
+        request.auth.uid == resource.data.creatPer
+        || (
+          request.auth.uid in resource.data.membres
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['membres', 'membresEmail', 'invitacionsPendents'])
+        )
+        || (
+          userEmail() in resource.data.invitacionsPendents
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['membres', 'invitacionsPendents'])
+          && request.resource.data.membres.toSet()
+               .difference(resource.data.membres.toSet()).hasOnly([request.auth.uid])
+        )
+      );
+
+      allow delete: if isActive() && request.auth.uid == resource.data.creatPer;
+    }
+  }
+}

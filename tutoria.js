@@ -813,13 +813,15 @@ async function generarComentari(modal) {
   comentariText.innerHTML = '<span class="text-gray-400 italic">La IA està escrivint el comentari...</span>';
 
   try {
+    const _tk = await firebase.auth().currentUser?.getIdToken();
+    if (!_tk) throw new Error('Cal iniciar sessió');
     const response = await fetch('/api/tutoria', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_tk}` },
       body: JSON.stringify({ prompt: buildPrompt(dades) }),
     });
-    if (!response.ok) throw new Error(`Error API: ${response.status}`);
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `Error API: ${response.status}`);
     comentariText.textContent = data.text || 'No s\'ha pogut generar el comentari.';
     resultatDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   } catch (err) {

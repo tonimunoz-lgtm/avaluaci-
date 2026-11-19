@@ -1350,14 +1350,16 @@ ${instrNom}
 Escriu ÚNICAMENT els blocs de comentari, res més.`;
 
   try {
+    const _tk = await firebase.auth().currentUser?.getIdToken();
+    if (!_tk) throw new Error('Cal iniciar sessió');
     const response = await fetch('/api/tutoria', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_tk}` },
       body: JSON.stringify({ prompt })
     });
 
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error?.message || 'Error API');
+    if (!response.ok) throw new Error(data.error || 'Error API');
 
     const comentari = (data.text || '').trim();
     resultText.textContent = comentari;
@@ -1715,7 +1717,11 @@ function openConvidarModal(codi, nomPlantilla) {
     try {
       const db = window._tutoriaDB;
       // Buscar l'usuari per email a professors
-      const profSnap = await db.collection('professors').where('email', '==', email).limit(1).get();
+      // Les regles no permeten llistar professors: si la cerca falla, es deixa invitació pendent
+      let profSnap = { empty: true, docs: [] };
+      try {
+        profSnap = await db.collection('professors').where('email', '==', email).limit(1).get();
+      } catch (_) { /* permission-denied */ }
 
       if (profSnap.empty) {
         // No trobat → guardar invitació pendent per email
@@ -1800,7 +1806,10 @@ async function carregarMembres(codi) {
           const docSnap = await docRef.get();
           const pd = docSnap.data();
           // Buscar uid per email
-          const profSnap = await db.collection('professors').where('email', '==', btn.dataset.email).limit(1).get();
+          let profSnap = { empty: true, docs: [] };
+          try {
+            profSnap = await db.collection('professors').where('email', '==', btn.dataset.email).limit(1).get();
+          } catch (_) { /* permission-denied */ }
           const updates = {
             membresEmail: firebase.firestore.FieldValue.arrayRemove(btn.dataset.email),
             invitacionsPendents: firebase.firestore.FieldValue.arrayRemove(btn.dataset.email)
@@ -1857,7 +1866,7 @@ async function comprovarInvitacionsPendents() {
   const uid = window._tutoriaUID;
   const auth = window.firebase && window.firebase.auth && window.firebase.auth();
   if (!uid || !auth || !auth.currentUser) return;
-  const email = auth.currentUser.email;
+  const email = (auth.currentUser.email || '').toLowerCase();
   if (!email) return;
 
   try {

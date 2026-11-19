@@ -224,6 +224,7 @@ export async function pasteGridStructure(termId) {
     // 2. Crear nova activitat duplicada
     const newActRef = await _db.collection('activitats').add({
       ...data,
+      ownerUid: firebase.auth().currentUser.uid,
       originalCloneOf: actId,         // opcional: rastrejar d'on ve
       createdAt: Date.now()
     });

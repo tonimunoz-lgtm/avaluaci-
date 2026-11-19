@@ -591,7 +591,7 @@ function createClassModal(){
   const name = document.getElementById('modalClassName').value.trim();
   if(!name) return alert('Posa un nom');
   const ref = db.collection('classes').doc();
-  ref.set({ nom: name, alumnes: [], activitats: [] })
+  ref.set({ nom: name, alumnes: [], activitats: [], ownerUid: professorUID })
     .then(()=> db.collection('professors').doc(professorUID).update({ classes: firebase.firestore.FieldValue.arrayUnion(ref.id) }))
     .then(()=> {
       closeModal('modalCreateClass');
@@ -664,7 +664,7 @@ function createStudentModal(){
   const name = document.getElementById('modalStudentName').value.trim();
   if(!name) return alert('Posa un nom');
   const ref = db.collection('alumnes').doc();
-  ref.set({ nom: name, notes: {} })
+  ref.set({ nom: name, notes: {}, ownerUid: professorUID })
     .then(()=> db.collection('classes').doc(currentClassId).update({ alumnes: firebase.firestore.FieldValue.arrayUnion(ref.id) }))
     .then(()=> {
       closeModal('modalAddStudent');
@@ -722,7 +722,8 @@ async function createActivityModal() {
         nom: name,
         data: new Date().toISOString().split("T")[0],
         calcType: "numeric",
-        formula: ""
+        formula: "",
+        ownerUid: professorUID
     });
 
     // 🔥 Aquí afegim l'activitat al terme actiu
@@ -2423,7 +2424,7 @@ async function addImportedStudents(names) {
       // Crear tots els documents d'alumnes en un sol batch
       chunk.forEach(name => {
         const studentRef = db.collection('alumnes').doc();
-        batch.set(studentRef, { nom: name, notes: {} });
+        batch.set(studentRef, { nom: name, notes: {}, ownerUid: professorUID });
         chunkIds.push(studentRef.id);
       });
 

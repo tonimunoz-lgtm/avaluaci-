@@ -172,7 +172,8 @@ async function createActivityWithType(name, evaluationType) {
       calcType: 'numeric',
       formula: '',
       evaluationType: evaluationType,
-      isCompetency: evaluationType === 'competency'
+      isCompetency: evaluationType === 'competency',
+      ownerUid: firebase.auth().currentUser.uid
     });
 
     console.log('✅ Actividad guardada en Firestore');
@@ -413,6 +414,7 @@ async function getCompetencyActivityIds() {
     if (!db) return new Set();
 
     const snapshot = await db.collection('activitats')
+      .where('ownerUid', '==', firebase.auth().currentUser.uid)
       .where('evaluationType', '==', 'competency')
       .get();
 
@@ -456,6 +458,7 @@ async function disableCompetencyButtons() {
 
       try {
         const snapshot = await db.collection('activitats')
+          .where('ownerUid', '==', firebase.auth().currentUser.uid)
           .where('nom', '==', actName)
           .limit(1)
           .get();

@@ -675,6 +675,7 @@ async function tagHeadersAndPatchLocks() {
 
     // Obtenir activitats competencials
     const compSnap = await _db.collection('activitats')
+      .where('ownerUid', '==', firebase.auth().currentUser.uid)
       .where('evaluationType', '==', 'competency').get();
     const compIds = new Set(compSnap.docs.map(d => d.id));
 
@@ -758,6 +759,7 @@ async function reEnableCompetencyButtons() {
   try {
     if (!_db) return;
     const snapshot = await _db.collection('activitats')
+      .where('ownerUid', '==', firebase.auth().currentUser.uid)
       .where('evaluationType', '==', 'competency')
       .get();
     const compIds = new Set(snapshot.docs.map(d => d.id));

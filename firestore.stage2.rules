@@ -1,0 +1,120 @@
+rules_version = '2';
+
+// ETAPA 2 — només es desplega DESPRÉS de:
+//   1) desplegar l'app amb ownerUid a totes les creacions,
+//   2) executar scripts/backfill-owner.js --apply
+// Afegeix propietari a classes, alumnes i activitats.
+// La resta és idèntic a l'etapa 1.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isLoggedIn() {
+      return request.auth != null;
+    }
+
+    function prof(uid) {
+      return get(/databases/$(database)/documents/professors/$(uid)).data;
+    }
+
+    function isAdmin() {
+      return isLoggedIn() && prof(request.auth.uid).get('isAdmin', false) == true;
+    }
+
+    function isActive() {
+      return isLoggedIn()
+        && prof(request.auth.uid).get('suspended', false) != true
+        && prof(request.auth.uid).get('deleted', false) != true;
+    }
+
+    function userEmail() {
+      return request.auth.token.email.lower();
+    }
+
+    function isOwner() {
+      return resource.data.ownerUid == request.auth.uid;
+    }
+
+    // L'ownerUid no es pot canviar en una edició
+    function keepsOwner() {
+      return request.resource.data.ownerUid == resource.data.ownerUid;
+    }
+
+    // ---------------------------------------------------------------
+    match /professors/{profId} {
+      allow get: if isLoggedIn() && (request.auth.uid == profId || isAdmin());
+      allow list: if isAdmin();
+
+      allow create: if isLoggedIn() && request.auth.uid == profId
+        && request.resource.data.get('isAdmin', false) == false
+        && request.resource.data.get('suspended', false) == false
+        && request.resource.data.get('deleted', false) == false;
+
+      allow update: if isAdmin() || (
+        isLoggedIn() && request.auth.uid == profId
+        && !request.resource.data.diff(resource.data).affectedKeys()
+              .hasAny(['isAdmin', 'suspended', 'deleted'])
+      );
+
+      allow delete: if isAdmin();
+
+      match /logins/{logId} {
+        allow create: if isLoggedIn() && request.auth.uid == profId;
+        allow read: if isAdmin();
+        allow update, delete: if false;
+      }
+    }
+
+    // ---------------------------------------------------------------
+    match /classes/{classId} {
+      allow create: if isActive() && request.resource.data.ownerUid == request.auth.uid;
+      allow read, delete: if isActive() && (isOwner() || isAdmin());
+      allow update: if isActive() && ((isOwner() && keepsOwner()) || isAdmin());
+    }
+
+    match /alumnes/{alumneId} {
+      allow create: if isActive() && request.resource.data.ownerUid == request.auth.uid;
+      allow read, delete: if isActive() && (isOwner() || isAdmin());
+      allow update: if isActive() && ((isOwner() && keepsOwner()) || isAdmin());
+    }
+
+    match /activitats/{actId} {
+      allow create: if isActive() && request.resource.data.ownerUid == request.auth.uid;
+      allow read, delete: if isActive() && (isOwner() || isAdmin());
+      allow update: if isActive() && ((isOwner() && keepsOwner()) || isAdmin());
+    }
+
+    // ---------------------------------------------------------------
+    match /tutoria_config/{userId} {
+      allow read, write: if isActive() && request.auth.uid == userId;
+    }
+
+    match /ultracomentator_plantilles/{codi} {
+      allow get: if isActive();
+      allow list: if isActive() && request.auth.uid in resource.data.membres;
+      allow list: if isActive() && userEmail() in resource.data.invitacionsPendents;
+
+      allow create: if isActive()
+        && request.resource.data.creatPer == request.auth.uid
+        && request.auth.uid in request.resource.data.membres;
+
+      allow update: if isActive() && (
+        request.auth.uid == resource.data.creatPer
+        || (
+          request.auth.uid in resource.data.membres
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['membres', 'membresEmail', 'invitacionsPendents'])
+        )
+        || (
+          userEmail() in resource.data.invitacionsPendents
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['membres', 'invitacionsPendents'])
+          && request.resource.data.membres.toSet()
+               .difference(resource.data.membres.toSet()).hasOnly([request.auth.uid])
+        )
+      );
+
+      allow delete: if isActive() && request.auth.uid == resource.data.creatPer;
+    }
+  }
+}

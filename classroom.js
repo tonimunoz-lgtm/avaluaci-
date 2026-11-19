@@ -194,7 +194,8 @@ export async function importClassroomCourse(courseData, db, professorUID) {
         email: student.email || 'No disponible',
         notes: {},
         googleClassroomId: student.id,
-        comentarios: {}
+        comentarios: {},
+        ownerUid: professorUID
       });
     }
     await batch.commit();
@@ -215,7 +216,8 @@ export async function importClassroomCourse(courseData, db, professorUID) {
         calcType: 'numeric',
         formula: '',
         googleClassroomId: coursework.id,
-        maxPoints: coursework.maxPoints
+        maxPoints: coursework.maxPoints,
+        ownerUid: professorUID
       });
 
       const submissions = await getStudentSubmissions(courseData.id, coursework.id);
@@ -254,6 +256,7 @@ export async function importClassroomCourse(courseData, db, professorUID) {
       },
       calculatedActivities: {},
       googleClassroomId: courseData.id,
+      ownerUid: professorUID,
       importedAt: new Date().toISOString()
     });
 
