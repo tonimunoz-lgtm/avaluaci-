@@ -1653,6 +1653,8 @@ function openCalcModal(activityId){
   document.querySelectorAll('#calcSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === 'numeric'));
   document.getElementById('formulaInputs').classList.add('hidden');
   document.getElementById('numericInput').classList.remove('hidden');
+  weightedDiv?.classList.add('hidden');
+  _wPrefill = null;
   document.getElementById('numericField').value = '';
   document.getElementById('formulaField').value = '';
   _fCaret = null;
@@ -1663,6 +1665,86 @@ function openCalcModal(activityId){
   clearFormulaValidation();
 }
 
+/* ---------------- Mitjana ponderada ---------------- */
+const weightedDiv = document.getElementById('weightedInputs');
+let _wRows = [];        // [{id, name, on, w}]
+let _wPrefill = null;   // pesos per recuperar en editar {activitatId: pes}
+const _wColors = ['#534AB7', '#7F77DD', '#AFA9EC', '#CECBF6', '#0F6E56', '#5DCAA5', '#BA7517', '#EF9F27'];
+const _wFmt = n => String(Math.round(n * 100) / 100).replace('.', ',');
+const _wTotal = () => _wRows.filter(r => r.on).reduce((s, r) => s + (Number(r.w) || 0), 0);
+
+async function buildWeighted() {
+  const ids = [...classActivities].filter(id => id !== currentCalcActivityId);
+  const docs = await Promise.all(ids.map(id => db.collection('activitats').doc(id).get()));
+  const prefill = _wPrefill; _wPrefill = null;
+  _wRows = docs.filter(d => d.exists).map(d => ({ id: d.id, name: d.data().nom || '?', on: false, w: 0 }));
+  if (prefill) _wRows.forEach(r => { if (prefill[r.id] != null) { r.on = true; r.w = Number(prefill[r.id]); } });
+  renderWeighted();
+}
+
+function renderWeighted() {
+  const list = document.getElementById('wList');
+  if (!list) return;
+  list.innerHTML = '';
+  if (!_wRows.length) { list.innerHTML = '<p class="muted" style="padding:.6rem 0">Cap activitat en aquest període.</p>'; updateWeightedSummary(); return; }
+  _wRows.forEach(r => {
+    const row = document.createElement('div');
+    row.className = 'w-row' + (r.on ? '' : ' off');
+    row.innerHTML = `<input type="checkbox" ${r.on ? 'checked' : ''} aria-label="Inclou">
+      <span class="w-name" translate="no">${esc(r.name)}</span>
+      <span class="w-pct"><input type="number" min="0" max="100" step="any" inputmode="decimal" value="${r.on ? r.w : ''}" placeholder="—" aria-label="Pes en %"> %</span>`;
+    const cb = row.querySelector('input[type=checkbox]');
+    const num = row.querySelector('input[type=number]');
+    cb.addEventListener('change', () => {
+      r.on = cb.checked;
+      if (r.on && !Number(r.w)) r.w = Math.max(0, Math.round((100 - _wTotal()) * 100) / 100);   // omple el que falta fins a 100
+      if (!r.on) r.w = 0;
+      renderWeighted();
+    });
+    num.addEventListener('input', () => { r.w = Math.max(0, Number(num.value) || 0); updateWeightedSummary(); });
+    list.appendChild(row);
+  });
+  updateWeightedSummary();
+}
+
+function updateWeightedSummary() {
+  const on = _wRows.filter(r => r.on);
+  const total = _wTotal();
+  const ok = on.length > 0 && Math.abs(total - 100) < 0.01;
+  const bar = document.getElementById('wBar');
+  bar.innerHTML = on.filter(r => r.w > 0).map((r, i) => `<i style="width:${Math.min(100, r.w)}%;background:${_wColors[i % _wColors.length]}" title="${esc(r.name)}"></i>`).join('');
+  const tot = document.getElementById('wTotal');
+  tot.className = 'w-total' + (ok ? '' : ' bad');
+  tot.innerHTML = ok
+    ? `<span>✓ Total dels pesos</span><span>100 %</span>`
+    : `<span>${on.length ? 'Els pesos sumen ' + _wFmt(total) + ' %' : 'Marca almenys una activitat'}</span>${on.length ? '<button type="button" id="wFix">Ajusta a 100 %</button>' : ''}`;
+  document.getElementById('wFix')?.addEventListener('click', () => {
+    const t = _wTotal(); if (!t) return;
+    const act = on.filter(r => r.w > 0);
+    let acc = 0;
+    act.forEach((r, i) => { r.w = i === act.length - 1 ? Math.round((100 - acc) * 100) / 100 : Math.round(r.w * 100 / t * 100) / 100; acc += r.w; });
+    renderWeighted();
+  });
+  const ex = document.getElementById('wExample');
+  if (ok) {
+    const samples = [8, 7, 9, 6, 5, 10, 7.5, 8.5];
+    const act = on.filter(r => r.w > 0);
+    const notes = act.map((_, i) => samples[i % samples.length]);
+    const res = act.reduce((s, r, i) => s + notes[i] * r.w / 100, 0);
+    ex.textContent = `Exemple amb un alumne que té ${notes.map(_wFmt).join(', ')}: nota final ${_wFmt(res)}`;
+  } else ex.textContent = '';
+}
+
+document.getElementById('wEqual')?.addEventListener('click', () => {
+  if (!_wRows.length) return;
+  if (!_wRows.some(r => r.on)) _wRows.forEach(r => r.on = true);
+  const on = _wRows.filter(r => r.on);
+  const each = Math.floor(10000 / on.length) / 100;
+  let acc = 0;
+  on.forEach((r, i) => { r.w = i === on.length - 1 ? Math.round((100 - acc) * 100) / 100 : each; acc += r.w; });
+  renderWeighted();
+});
+
 // Obre el modal de càlcul amb la fórmula actual d'una activitat per poder-la modificar
 function openFormulaEditor(activityId, displayFormula, rawFormula) {
   openCalcModal(activityId);
@@ -1672,6 +1754,12 @@ function openFormulaEditor(activityId, displayFormula, rawFormula) {
   if (/^-?\d+([.,]\d+)?$/.test(raw)) {                       // nota fixa
     setType('numeric');
     numericField.value = raw.replace(',', '.');
+    return;
+  }
+  const wts = _gridCalculated?.[activityId]?.weights;
+  if (wts && _gridCalculated[activityId].formula === raw) {      // mitjana ponderada: es reobre amb els seus pesos
+    _wPrefill = wts;
+    setType('weighted');
     return;
   }
   const rd = disp.match(/^Math\.round\((.+?)(\*2)?\)(\/2)?$/);   // arrodoniment
@@ -1711,7 +1799,12 @@ let formulaPreviewDiv = null;
 // Cambio tipo cálculo
 calcTypeSelect.addEventListener('change', ()=>{
   syncCalcSeg();
-  if(calcTypeSelect.value==='numeric'){
+  weightedDiv?.classList.toggle('hidden', calcTypeSelect.value !== 'weighted');
+  if(calcTypeSelect.value==='weighted'){
+    numericDiv.classList.add('hidden');
+    formulaDiv.classList.add('hidden');
+    buildWeighted();
+  } else if(calcTypeSelect.value==='numeric'){
     numericDiv.classList.remove('hidden');
     formulaDiv.classList.add('hidden');
   } else if(calcTypeSelect.value==='formula'){
@@ -1928,6 +2021,7 @@ modalApplyCalcBtn.addEventListener('click', async () => {
   try {
     let formulaText = '';
     let displayFormulaText = '';
+    let weights = null;
 
     switch (calcTypeSelect.value) {
       case 'numeric':
@@ -1944,6 +2038,21 @@ modalApplyCalcBtn.addEventListener('click', async () => {
         // 🔥 FIX: Traduir __ACT__id a noms per al displayFormula
         displayFormulaText = formulaField.value; // el camp visual ja té els noms
         break;
+
+      case 'weighted': {
+        const sel = _wRows.filter(r => r.on && r.w > 0);
+        const tt = s => (window.t ? window.t(s) : s);
+        if (!sel.length) throw new Error(tt('Marca almenys una activitat amb pes'));
+        const tot = sel.reduce((s, r) => s + r.w, 0);
+        if (Math.abs(tot - 100) > 0.01) throw new Error(tt(`Els pesos han de sumar 100 % (ara sumen ${_wFmt(tot)} %). Prem «Ajusta a 100 %».`));
+        const k = r => +(r.w / 100).toFixed(4);
+        const wf = '(' + sel.map(r => `__ACT__${r.id}*${k(r)}`).join('+') + ')';
+        await applyFormula(wf);
+        formulaText = wf;
+        displayFormulaText = '(' + sel.map(r => `${r.name}*${k(r)}`).join('+') + ')';
+        weights = Object.fromEntries(sel.map(r => [r.id, r.w]));
+        break;
+      }
 
       case 'rounding':
         if (!formulaField.value.trim()) throw new Error('Selecciona activitat i 0,5 o 1');
@@ -1990,7 +2099,8 @@ modalApplyCalcBtn.addEventListener('click', async () => {
         [`calculatedActivities.${currentCalcActivityId}`]: {
           calculated: true,
           formula: formulaText,
-          displayFormula: displayFormulaText
+          displayFormula: displayFormulaText,
+          ...(weights ? { weights } : {})
         }
       });
     }

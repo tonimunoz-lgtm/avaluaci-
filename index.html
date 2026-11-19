@@ -409,11 +409,13 @@
      <select id="calcType" style="display:none" aria-hidden="true">
        <option value="numeric">Numèric</option>
        <option value="formula">Fórmula</option>
+       <option value="weighted">Mitjana ponderada</option>
        <option value="rounding">Arrodoniment</option>
      </select>
      <div class="seg" id="calcSeg" role="tablist">
        <button type="button" data-v="numeric" class="on">Numèric</button>
        <button type="button" data-v="formula">Fórmula</button>
+       <button type="button" data-v="weighted" title="Mitjana ponderada">Ponderada</button>
        <button type="button" data-v="rounding">Arrodoniment</button>
      </div>
 
@@ -427,6 +429,17 @@
        <input type="text" id="formulaField" readonly placeholder="Construeix la fórmula amb els botons">
        <input type="hidden" id="formulaFieldHidden">
        <div id="formulaButtons"></div>
+     </div>
+
+     <div id="weightedInputs" class="hidden">
+       <div class="w-head">
+         <span class="calc-label" style="margin:0">Mitjana ponderada: tria les activitats i el pes de cadascuna</span>
+         <button type="button" id="wEqual" class="w-link">Repartir a parts iguals</button>
+       </div>
+       <div id="wList"></div>
+       <div id="wBar" class="w-bar"></div>
+       <div id="wTotal" class="w-total"></div>
+       <div id="wExample" class="w-example"></div>
      </div>
 
      <div class="calc-foot">

@@ -2,6 +2,15 @@
 // classe = clase / class · alumne = alumno/a / student · nota = nota / grade · activitat = actividad / assignment
 // període (d'avaluació) = período (de evaluación) / grading period · butlletí = boletín / report card
 export const DICT = [
+["Ponderada","Ponderada","Weighted"],
+["Mitjana ponderada","Media ponderada","Weighted average"],
+["Mitjana ponderada: tria les activitats i el pes de cadascuna","Media ponderada: elige las actividades y el peso de cada una","Weighted average: choose the assignments and the weight of each"],
+["Repartir a parts iguals","Repartir a partes iguales","Split equally"],
+["Cap activitat en aquest període.","Ninguna actividad en este período.","No assignments in this period."],
+["✓ Total dels pesos","✓ Total de los pesos","✓ Total of the weights"],
+["Marca almenys una activitat","Marca al menos una actividad","Select at least one assignment"],
+["Ajusta a 100 %","Ajustar a 100 %","Adjust to 100%"],
+["Marca almenys una activitat amb pes","Marca al menos una actividad con peso","Select at least one assignment with a weight"],
 ["✏️ Modificar fórmula","✏️ Modificar fórmula","✏️ Edit formula"],
 ["Columna calculada","Columna calculada","Calculated column"],
 ["Format del nom dels alumnes","Formato del nombre de los alumnos","Student name format"],
@@ -483,6 +492,9 @@ export const SUBJECTS = [
 
 /* Textos amb valors dins: $1, $2… són els grups capturats. */
 export const PATTERNS = [
+[/^Els pesos sumen (.+) %$/, "Los pesos suman $1 %", "The weights add up to $1%"],
+[/^Exemple amb un alumne que té (.+): nota final (.+)$/, "Ejemplo con un alumno que tiene $1: nota final $2", "Example with a student who has $1: final grade $2"],
+[/^Els pesos han de sumar 100 % \(ara sumen (.+) %\)\. Prem «Ajusta a 100 %»\.$/, "Los pesos deben sumar 100 % (ahora suman $1 %). Pulsa «Ajustar a 100 %».", "The weights must add up to 100% (currently $1%). Press “Adjust to 100%”."],
 [/^\(cognoms\)$/, "(apellidos)", "(surnames)"],
 [/^(\d+) de (\d+) activitats$/, "$1 de $2 actividades", "$1 of $2 assignments"],
 [/^\(nom\)$/, "(nombre)", "(first name)"],
