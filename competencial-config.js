@@ -49,7 +49,7 @@ async function init() {
     if (!user) return;
     _professorUID = user.uid;
     _trams = await loadTrams();
-    injectConfigButton();
+    // (el botó de la barra d'eines s'ha mogut a Configuració → «Avaluació competencial»)
     console.log('🎓 competencial-config.js inicialitzat, trams:', _trams);
   });
 }
@@ -69,6 +69,7 @@ async function loadTrams() {
 }
 
 async function saveTrams(trams) {
+  if (!_db || !_professorUID) { notify('Espera un moment i torna-ho a provar.'); return; }
   try {
     await _db.collection('professors').doc(_professorUID).update({ competencyTrams: trams });
     _trams = trams;
@@ -143,25 +144,26 @@ function injectConfigButton() {
 // ============================================================
 // MODAL DE CONFIGURACIÓ DELS TRAMS
 // ============================================================
-function openConfigModal() {
+// host: element on s'incrusta l'editor (pantalla Configuració). Sense host, s'obre com a finestra.
+function openConfigModal(host) {
+  const inline = !!host;
   document.getElementById('compConfigModal')?.remove();
 
   const trams = _trams || DEFAULT_TRAMS;
-  const modal = document.createElement('div');
-  modal.id = 'compConfigModal';
-  modal.className = 'fixed inset-0 flex items-center justify-center z-[9999] bg-black bg-opacity-50';
+  const modal = inline ? host : document.createElement('div');
+  if (!inline) {
+    modal.id = 'compConfigModal';
+    modal.className = 'fixed inset-0 flex items-center justify-center z-[9999] bg-black bg-opacity-50';
+  }
 
   modal.innerHTML = `
-    <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-      <div class="flex justify-between items-center mb-4">
+    <div class="${inline ? '' : 'bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto'}">
+      ${inline ? '' : `<div class="flex justify-between items-center mb-4">
         <h2 class="text-xl font-bold text-gray-900">⚙️ Configuració Competencial</h2>
         <button id="btnCloseCompConfig" class="text-gray-400 hover:text-gray-700 text-2xl leading-none">✕</button>
-      </div>
+      </div>`}
 
-      <p class="text-sm text-gray-600 mb-4">
-        Notes <strong>numèriques de l'1 al 4</strong>. Defineix el rang de cada qualificació.
-        Els trams <strong>no poden solapar-se</strong> ni deixar forats.
-      </p>
+      <p class="text-sm text-gray-600 mb-4">Defineix el rang de cada qualificació (notes numèriques de l'1 al 4). Els trams no poden solapar-se ni deixar forats.</p>
 
       <div class="space-y-2 mb-4" id="tramsContainer">
         ${['NA','AS','AN','AE'].map(label => `
@@ -188,7 +190,7 @@ function openConfigModal() {
 
       <!-- Visualitzador de l'escala -->
       <div class="mb-4">
-        <p class="text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Previsualització de l'escala 1–4</p>
+        <p class="text-xs font-semibold text-gray-500 mb-1 tracking-wide">Previsualització de l'escala 1–4</p>
         <div id="scalePreview" class="h-8 rounded-lg overflow-hidden flex text-xs font-bold"></div>
         <div class="flex justify-between text-xs text-gray-400 mt-1 px-0.5">
           <span>1</span><span>1.5</span><span>2</span><span>2.5</span><span>3</span><span>3.5</span><span>4</span>
@@ -199,7 +201,10 @@ function openConfigModal() {
       <div id="tramError" class="hidden text-sm bg-red-50 border border-red-200 rounded p-3 mb-3 space-y-1"></div>
 
       <!-- Botons -->
-      <div class="flex gap-2 justify-between items-center">
+      ${inline ? `<div class="flex gap-2 justify-between items-center flex-wrap">
+        <button id="btnResetTrams" type="button" class="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded font-medium">↺ Restaurar defecte</button>
+        <span id="tramSaved" class="text-xs text-gray-500"></span>
+      </div>` : `<div class="flex gap-2 justify-between items-center">
         <button id="btnResetTrams" class="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded font-medium">
           ↺ Restaurar defecte
         </button>
@@ -211,11 +216,12 @@ function openConfigModal() {
             💾 Guardar
           </button>
         </div>
-      </div>
+      </div>`}
     </div>
   `;
 
-  document.body.appendChild(modal);
+  if (!inline) document.body.appendChild(modal);
+
 
   // ── Validació i preview en temps real ──────────────────────
   function readTrams() {
@@ -290,7 +296,7 @@ function openConfigModal() {
     const t = readTrams();
     const errors = validateTrams(t);
     const errorDiv = document.getElementById('tramError');
-    const saveBtn = document.getElementById('btnSaveTrams');
+    const saveBtn = document.getElementById('btnSaveTrams') || { disabled: false };
 
     // Netejar estats visuals
     ['NA','AS','AN','AE'].forEach(label => {
@@ -325,7 +331,20 @@ function openConfigModal() {
 
     // Actualitzar barra de previsualització
     updateScalePreview(t, errors.length === 0);
+
+    // A Configuració es desa sol quan els trams són vàlids
+    if (inline) {
+      const st = document.getElementById('tramSaved');
+      clearTimeout(modal._saveT);
+      if (errors.length) { if (st) st.textContent = ''; }
+      else if (_tramsStarted) {
+        if (st) st.textContent = 'Desant…';
+        modal._saveT = setTimeout(async () => { await saveTrams(t); if (st) st.textContent = '✓ Desat'; }, 600);
+      }
+      _tramsStarted = true;
+    }
   }
+  let _tramsStarted = false;
 
   function updateScalePreview(t, valid) {
     const preview = document.getElementById('scalePreview');
@@ -359,7 +378,7 @@ function openConfigModal() {
       div.style.fontWeight = 'bold';
       div.style.overflow = 'hidden';
       div.style.whiteSpace = 'nowrap';
-      div.textContent = widthPct > 8 ? `${seg.label} (${seg.min}–${seg.max})` : seg.label;
+      div.textContent = widthPct > 25 ? `${seg.label} (${seg.min}–${seg.max})` : seg.label;
       preview.appendChild(div);
     });
   }
@@ -380,7 +399,7 @@ function openConfigModal() {
   });
 
   // Botó guardar
-  document.getElementById('btnSaveTrams').addEventListener('click', async () => {
+  document.getElementById('btnSaveTrams')?.addEventListener('click', async () => {
     const t = readTrams();
     const errors = validateTrams(t);
     if (errors.length > 0) return; // No hauria de passar (botó desactivat)
@@ -389,13 +408,15 @@ function openConfigModal() {
     showToastComp('✅ Configuració guardada correctament');
   });
 
-  document.getElementById('btnCloseCompConfig').addEventListener('click', () => modal.remove());
-  document.getElementById('btnCancelCompConfig').addEventListener('click', () => modal.remove());
-  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.getElementById('btnCloseCompConfig')?.addEventListener('click', () => modal.remove());
+  document.getElementById('btnCancelCompConfig')?.addEventListener('click', () => modal.remove());
+  if (!inline) modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
 
   // Pintar estat inicial
   updateUI();
 }
+
+window.CompConfig = { renderInto: host => openConfigModal(host), open: () => openConfigModal() };
 
 // ============================================================
 // TOAST SIMPLE

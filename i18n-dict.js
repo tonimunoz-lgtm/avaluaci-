@@ -2,6 +2,14 @@
 // classe = clase / class · alumne = alumno/a / student · nota = nota / grade · activitat = actividad / assignment
 // període (d'avaluació) = período (de evaluación) / grading period · butlletí = boletín / report card
 export const DICT = [
+["Avaluació competencial","Evaluación competencial","Competency-based assessment"],
+["Defineix el rang de cada qualificació (notes numèriques de l'1 al 4). Els trams no poden solapar-se ni deixar forats.","Define el rango de cada calificación (notas numéricas del 1 al 4). Los tramos no pueden solaparse ni dejar huecos.","Set the range for each grade (numeric scores from 1 to 4). Bands can't overlap or leave gaps."],
+["De","De","From"],["fins a","hasta","to"],
+["Previsualització de l'escala 1–4","Vista previa de la escala 1–4","Preview of the 1–4 scale"],
+["↺ Restaurar defecte","↺ Restaurar valores por defecto","↺ Restore defaults"],
+["Desant…","Guardando…","Saving…"],["✓ Desat","✓ Guardado","✓ Saved"],
+["⛔ Corregeix els errors per veure la previsualització","⛔ Corrige los errores para ver la vista previa","⛔ Fix the errors to see the preview"],
+["Espera un moment i torna-ho a provar.","Espera un momento y vuelve a intentarlo.","Wait a moment and try again."],
 ["Ponderada","Ponderada","Weighted"],
 ["Mitjana ponderada","Media ponderada","Weighted average"],
 ["Mitjana ponderada: tria les activitats i el pes de cadascuna","Media ponderada: elige las actividades y el peso de cada una","Weighted average: choose the assignments and the weight of each"],
@@ -492,6 +500,11 @@ export const SUBJECTS = [
 
 /* Textos amb valors dins: $1, $2… són els grups capturats. */
 export const PATTERNS = [
+[/^(NA|AS|AN|AE): cal introduir valors numèrics\.$/, "$1: hay que introducir valores numéricos.", "$1: enter numeric values."],
+[/^(NA|AS|AN|AE): els valors han d'estar entre 1 i 4\.$/, "$1: los valores deben estar entre 1 y 4.", "$1: values must be between 1 and 4."],
+[/^(NA|AS|AN|AE): el valor mínim no pot ser major que el màxim\.$/, "$1: el valor mínimo no puede ser mayor que el máximo.", "$1: the minimum can't be greater than the maximum."],
+[/^(.*)Solapament entre (\w+) i (\w+): el rang (.+) pertany als dos trams alhora\.$/, "$1Solapamiento entre $2 y $3: el rango $4 pertenece a los dos tramos a la vez.", "$1Overlap between $2 and $3: the range $4 belongs to both bands."],
+[/^(.*)Forat: el valor (.+) no queda cobert per cap tram\.$/, "$1Hueco: el valor $2 no queda cubierto por ningún tramo.", "$1Gap: the value $2 isn't covered by any band."],
 [/^Els pesos sumen (.+) %$/, "Los pesos suman $1 %", "The weights add up to $1%"],
 [/^Exemple amb un alumne que té (.+): nota final (.+)$/, "Ejemplo con un alumno que tiene $1: nota final $2", "Example with a student who has $1: final grade $2"],
 [/^Els pesos han de sumar 100 % \(ara sumen (.+) %\)\. Prem «Ajusta a 100 %»\.$/, "Los pesos deben sumar 100 % (ahora suman $1 %). Pulsa «Ajustar a 100 %».", "The weights must add up to 100% (currently $1%). Press “Adjust to 100%”."],

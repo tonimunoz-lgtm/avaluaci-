@@ -94,6 +94,7 @@ export function renderConfigScreen(el) {
         'Els comentaris generats amb la IA s\'escriuran en aquest idioma per defecte.') +
       row('Idioma de l\'aplicació', `<select id="cf_lang" translate="no"><option value="ca" ${getLang() === 'ca' ? 'selected' : ''}>Català</option><option value="es" ${getLang() === 'es' ? 'selected' : ''}>Castellano</option><option value="en" ${getLang() === 'en' ? 'selected' : ''}>English</option></select>`,
         'Tot el text de l\'aplicació es mostrarà en aquest idioma. La pàgina es recarregarà en canviar-lo.'))}
+    ${card('🧭', 'Avaluació competencial', '<div id="cf_comp"></div>')}
     ${card('✉️', 'Correu de notes',
       row('Assumpte', `<input id="cf_assumpte" type="text" value="${esc(c.assumpte)}">`, 'Pots usar {nom} i {classe}.') +
       row('Text d\'inici', `<textarea id="cf_intro" rows="3">${esc(c.intro)}</textarea>`) +
@@ -131,6 +132,7 @@ export function renderConfigScreen(el) {
   };
   let t; el.querySelectorAll('input, select, textarea').forEach(i => i.addEventListener('input', () => { clearTimeout(t); t = setTimeout(save, 500); }));
   el.querySelector('#cf_backup').addEventListener('click', backup);
+  window.CompConfig?.renderInto(el.querySelector('#cf_comp'));
 }
 
 async function backup() {

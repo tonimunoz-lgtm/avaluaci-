@@ -704,3 +704,9 @@ body #weightedInputs .w-pct input { width: 5.6rem !important; padding: .3rem .6r
 #weightedInputs .w-total button { background: none; border: 0; color: inherit; text-decoration: underline; font-weight: 700; cursor: pointer; }
 #weightedInputs .w-example { margin-top: .5rem; padding: .5rem .8rem; border-radius: 14px; background: #f5f4ff; color: #5b5780; font-size: .8rem; }
 #weightedInputs .w-example:empty { display: none; }
+
+/* Avaluació competencial dins Configuració */
+.cfg-card #cf_comp .tram-input { width: 3.9rem !important; padding: .3rem .3rem !important; text-align: center; }
+.cfg-card #cf_comp [id^="row_"] { flex-wrap: nowrap; gap: .4rem !important; padding: .5rem .6rem !important; }
+.cfg-card #cf_comp [id^="icon_"] { display: none; }
+.cfg-card #cf_comp [id^="row_"] > span.inline-block { width: 2.4rem; }
