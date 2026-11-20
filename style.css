@@ -709,4 +709,23 @@ body #weightedInputs .w-pct input { width: 5.6rem !important; padding: .3rem .6r
 .cfg-card #cf_comp .tram-input { width: 3.9rem !important; padding: .3rem .3rem !important; text-align: center; }
 .cfg-card #cf_comp [id^="row_"] { flex-wrap: nowrap; gap: .4rem !important; padding: .5rem .6rem !important; }
 .cfg-card #cf_comp [id^="icon_"] { display: none; }
+.cfg-card #cf_comp .tram-fld, #compConfigModal .tram-fld { display: inline-flex; flex-direction: column; align-items: center; gap: .1rem; }
+.cfg-card #cf_comp .tram-fld small, #compConfigModal .tram-fld small { font-size: .62rem; font-weight: 600; color: var(--c-muted, #7a7799); line-height: 1; }
+.cfg-card #cf_comp .tram-input[readonly] { background: #f3f2fb !important; color: #8a87a8 !important; }
 .cfg-card #cf_comp [id^="row_"] > span.inline-block { width: 2.4rem; }
+
+
+/* ===== Mòbil: campaneta + barra de filtres d'una sola fila ===== */
+@media (max-width: 860px) {
+  #bellMenu { position: fixed; left: .7rem; right: .7rem; width: auto; max-height: 70vh; overflow-y: auto; }
+
+  .filters-bar { flex-direction: row !important; flex-wrap: nowrap; align-items: stretch; gap: .35rem !important; }
+  .filters-bar .search-box { flex: 1.25 1 0; min-width: 0; width: auto !important; padding: .6rem .7rem; gap: .35rem; }
+  .filters-bar .search-box svg { width: 1.1rem; height: 1.1rem; flex: none; }
+  .filters-bar .search-box input { min-width: 0; font-size: .8rem; text-overflow: ellipsis; }
+  .filters-bar #actFilter { flex: 1 1 0; width: auto; min-width: 0; padding: .6rem 1.5rem .6rem .7rem; font-size: .78rem; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
+  .filters-bar .sort-wrap { flex: .8 1 0; width: auto; min-width: 0; }
+  .filters-bar .sort-wrap > .pill-select { width: 100%; padding: .6rem .6rem; font-size: .78rem; gap: .25rem; justify-content: center; white-space: nowrap; }
+  .filters-bar .sort-pre { display: none; }
+  .filters-bar .sort-wrap > .pill-select svg { width: .9rem; height: .9rem; flex: none; }
+}

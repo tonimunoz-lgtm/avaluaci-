@@ -366,7 +366,13 @@ $('actFilter')?.addEventListener('change', applyActFilter);
 
 /* ------------------------------------------------------------ notificacions */
 const bell = $('btnBell'), bellMenu = $('bellMenu');
-bell.addEventListener('click', e => { e.stopPropagation(); bellMenu.classList.toggle('hidden'); });
+bell.addEventListener('click', e => {
+  e.stopPropagation();
+  bellMenu.classList.toggle('hidden');
+  // En mòbil el desplegable va a pantalla completa en amplada (si no, queda tallat per l'esquerra)
+  bellMenu.style.top = (!bellMenu.classList.contains('hidden') && window.innerWidth <= 860)
+    ? (bell.getBoundingClientRect().bottom + 8) + 'px' : '';
+});
 document.addEventListener('click', () => bellMenu.classList.add('hidden'));
 window.addEventListener('pending-comments', e => {
   const { total, byClass, noTutoria } = e.detail;

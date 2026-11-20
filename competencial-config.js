@@ -15,11 +15,15 @@ window._competencialConfigActive = true;
 // CONFIG PER DEFECTE DELS TRAMS
 // ============================================================
 const DEFAULT_TRAMS = {
-  NA:  { min: 1,   max: 2 },
+  NA:  { min: 0,   max: 2 },
   AS:  { min: 2,   max: 2.5 },
   AN:  { min: 2.5, max: 3 },
   AE:  { min: 3,   max: 4    }
 };
+
+// Semàntica dels trams: cada tram és [min, max) — el mínim s'inclou i el màxim NO —
+// excepte l'últim (AE), que inclou també el seu màxim (4).
+const SCALE_MIN = 0, SCALE_MAX = 4;
 
 const COMP_COLORS = {
   NA: { bg: '#ef4444', text: '#fff' },
@@ -93,13 +97,15 @@ async function saveTrams(trams) {
 // ============================================================
 function numericToCompetency(val, trams) {
   trams = trams || _trams || DEFAULT_TRAMS;
-  for (const [label, range] of Object.entries(trams)) {
-    if (val >= range.min && val <= range.max) return label;
+  const entries = Object.entries(trams).sort((a, b) => a[1].min - b[1].min);
+  const lastLabel = entries[entries.length - 1][0];
+  for (const [label, range] of entries) {
+    // [min, max)  — l'últim tram també inclou el màxim
+    if (val >= range.min && (val < range.max || (label === lastLabel && val <= range.max))) return label;
   }
   // Fallback: el més proper
-  if (val < trams.NA.min) return 'NA';
-  if (val > trams.AE.max) return 'AE';
-  return 'NA';
+  if (val < entries[0][1].min) return entries[0][0];
+  return lastLabel;
 }
 
 function applyBadgeStyle(el, badge) {
@@ -163,7 +169,7 @@ function openConfigModal(host) {
         <button id="btnCloseCompConfig" class="text-gray-400 hover:text-gray-700 text-2xl leading-none">✕</button>
       </div>`}
 
-      <p class="text-sm text-gray-600 mb-4">Defineix el rang de cada qualificació (notes numèriques de l'1 al 4). Els trams no poden solapar-se ni deixar forats.</p>
+      <p class="text-sm text-gray-600 mb-4">Defineix el rang de cada qualificació (notes numèriques de 0 a 4). El valor inicial s'inclou i el final no (excepte l'últim tram, que inclou el 4). Els trams no poden solapar-se ni deixar forats.</p>
 
       <div class="space-y-2 mb-4" id="tramsContainer">
         ${['NA','AS','AN','AE'].map(label => `
@@ -174,15 +180,21 @@ function openConfigModal(host) {
               ${label}
             </span>
             <span class="text-sm text-gray-500 shrink-0">De</span>
-            <input type="number" id="tram_${label}_min" step="0.01" min="1" max="4"
-              value="${trams[label].min}"
-              class="tram-input border rounded px-2 py-1 w-20 text-center text-sm focus:ring-2 focus:ring-purple-400"
-              data-label="${label}" data-type="min">
+            <span class="tram-fld">
+              <input type="number" id="tram_${label}_min" step="0.01" min="0" max="4"
+                value="${label === 'NA' ? SCALE_MIN : trams[label].min}" ${label === 'NA' ? 'readonly tabindex="-1"' : ''}
+                class="tram-input border rounded px-2 py-1 w-20 text-center text-sm focus:ring-2 focus:ring-purple-400"
+                data-label="${label}" data-type="min">
+              <small>inclòs</small>
+            </span>
             <span class="text-sm text-gray-500 shrink-0">fins a</span>
-            <input type="number" id="tram_${label}_max" step="0.01" min="1" max="4"
-              value="${trams[label].max}"
-              class="tram-input border rounded px-2 py-1 w-20 text-center text-sm focus:ring-2 focus:ring-purple-400"
-              data-label="${label}" data-type="max">
+            <span class="tram-fld">
+              <input type="number" id="tram_${label}_max" step="0.01" min="0" max="4"
+                value="${label === 'AE' ? SCALE_MAX : trams[label].max}" ${label === 'AE' ? 'readonly tabindex="-1"' : ''}
+                class="tram-input border rounded px-2 py-1 w-20 text-center text-sm focus:ring-2 focus:ring-purple-400"
+                data-label="${label}" data-type="max">
+              <small>${label === 'AE' ? 'inclòs' : 'no inclòs'}</small>
+            </span>
             <span id="icon_${label}" class="text-lg shrink-0 w-6 text-center">✅</span>
           </div>
         `).join('')}
@@ -190,10 +202,10 @@ function openConfigModal(host) {
 
       <!-- Visualitzador de l'escala -->
       <div class="mb-4">
-        <p class="text-xs font-semibold text-gray-500 mb-1 tracking-wide">Previsualització de l'escala 1–4</p>
+        <p class="text-xs font-semibold text-gray-500 mb-1 tracking-wide">Previsualització de l'escala 0–4</p>
         <div id="scalePreview" class="h-8 rounded-lg overflow-hidden flex text-xs font-bold"></div>
         <div class="flex justify-between text-xs text-gray-400 mt-1 px-0.5">
-          <span>1</span><span>1.5</span><span>2</span><span>2.5</span><span>3</span><span>3.5</span><span>4</span>
+          <span>0</span><span>0.5</span><span>1</span><span>1.5</span><span>2</span><span>2.5</span><span>3</span><span>3.5</span><span>4</span>
         </div>
       </div>
 
@@ -232,6 +244,7 @@ function openConfigModal(host) {
         max: parseFloat(document.getElementById(`tram_${label}_max`).value)
       };
     }
+    result.NA.min = SCALE_MIN; result.AE.max = SCALE_MAX;
     return result;
   }
 
@@ -246,48 +259,35 @@ function openConfigModal(host) {
         errors.push({ labels: [label], msg: `${label}: cal introduir valors numèrics.` });
         continue;
       }
-      if (min < 1 || max > 4) {
-        errors.push({ labels: [label], msg: `${label}: els valors han d'estar entre 1 i 4.` });
+      if (min < SCALE_MIN || max > SCALE_MAX) {
+        errors.push({ labels: [label], msg: `${label}: els valors han d'estar entre 0 i 4.` });
       }
-      if (min > max) {
-        errors.push({ labels: [label], msg: `${label}: el valor mínim no pot ser major que el màxim.` });
+      if (min >= max) {
+        errors.push({ labels: [label], msg: `${label}: el valor inicial ha de ser menor que el final.` });
       }
     }
 
     if (errors.length) return errors;
 
-    // 2) Solapaments
-    for (let i = 0; i < labels.length; i++) {
-      for (let j = i + 1; j < labels.length; j++) {
-        const a = labels[i], b = labels[j];
-        const ta = t[a], tb = t[b];
-        // Solapament si els intervals s'encavalquen (no només toquen)
-        if (ta.min < tb.max && tb.min < ta.max) {
-          const overlapMin = Math.max(ta.min, tb.min).toFixed(2);
-          const overlapMax = Math.min(ta.max, tb.max).toFixed(2);
-          errors.push({
-            labels: [a, b],
-            msg: `⚠️ Solapament entre ${a} i ${b}: el rang ${overlapMin}–${overlapMax} pertany als dos trams alhora.`
-          });
-        }
-      }
-    }
-
-    // 3) Forats (valors sense cobertura)
-    const allPoints = [...new Set(
-      labels.flatMap(l => [t[l].min, t[l].max])
-    )].sort((a, b) => a - b);
-
-    for (let k = 0; k < allPoints.length - 1; k++) {
-      const mid = (allPoints[k] + allPoints[k + 1]) / 2;
-      const covered = labels.some(l => t[l].min <= mid && mid <= t[l].max);
-      if (!covered) {
+    // 2) Solapaments i forats (trams [min, max) ordenats per valor inicial)
+    const seg = labels.map(l => ({ l, ...t[l] })).sort((x, y) => x.min - y.min);
+    const f = v => String(+v.toFixed(2)).replace('.', ',');
+    for (let k = 0; k < seg.length - 1; k++) {
+      const a = seg[k], b = seg[k + 1];
+      if (b.min < a.max) {
         errors.push({
-          labels: [],
-          msg: `⚠️ Forat: el valor ${allPoints[k].toFixed(2)}–${allPoints[k+1].toFixed(2)} no queda cobert per cap tram.`
+          labels: [a.l, b.l],
+          msg: `⚠️ Solapament entre ${a.l} i ${b.l}: el rang ${f(b.min)}–${f(a.max)} pertany als dos trams alhora.`
+        });
+      } else if (b.min > a.max) {
+        errors.push({
+          labels: [a.l, b.l],
+          msg: `⚠️ Forat: el valor ${f(a.max)}–${f(b.min)} no queda cobert per cap tram.`
         });
       }
     }
+    if (seg[0].min > SCALE_MIN) errors.push({ labels: [seg[0].l], msg: `⚠️ Forat: el valor ${f(SCALE_MIN)}–${f(seg[0].min)} no queda cobert per cap tram.` });
+    if (seg[seg.length - 1].max < SCALE_MAX) errors.push({ labels: [seg[seg.length - 1].l], msg: `⚠️ Forat: el valor ${f(seg[seg.length - 1].max)}–${f(SCALE_MAX)} no queda cobert per cap tram.` });
 
     return errors;
   }
@@ -351,7 +351,7 @@ function openConfigModal(host) {
     if (!preview) return;
     preview.innerHTML = '';
 
-    const SCALE_MIN = 1, SCALE_MAX = 4, SCALE_RANGE = SCALE_MAX - SCALE_MIN;
+    const SCALE_RANGE = SCALE_MAX - SCALE_MIN;
 
     if (!valid) {
       preview.style.background = '#fee2e2';
@@ -378,15 +378,25 @@ function openConfigModal(host) {
       div.style.fontWeight = 'bold';
       div.style.overflow = 'hidden';
       div.style.whiteSpace = 'nowrap';
-      div.textContent = widthPct > 25 ? `${seg.label} (${seg.min}–${seg.max})` : seg.label;
+      div.textContent = widthPct > 25 ? `${seg.label} (${String(seg.min).replace('.', ',')}–${String(seg.max).replace('.', ',')})` : seg.label;
       preview.appendChild(div);
     });
   }
 
+  // Els límits van encadenats: el final d'un tram és l'inici del següent
+  const ORDER = ['NA','AS','AN','AE'];
+  function syncNeighbour(inp) {
+    const i = ORDER.indexOf(inp.dataset.label);
+    const other = inp.dataset.type === 'max' ? ORDER[i + 1] : ORDER[i - 1];
+    if (!other) return;
+    const el = document.getElementById(`tram_${other}_${inp.dataset.type === 'max' ? 'min' : 'max'}`);
+    if (el && inp.value !== '') el.value = inp.value;
+  }
+
   // Lligar events als inputs
   modal.querySelectorAll('.tram-input').forEach(inp => {
-    inp.addEventListener('input', updateUI);
-    inp.addEventListener('change', updateUI);
+    inp.addEventListener('input', () => { syncNeighbour(inp); updateUI(); });
+    inp.addEventListener('change', () => { syncNeighbour(inp); updateUI(); });
   });
 
   // Botó reset
@@ -514,7 +524,7 @@ function buildCompWrapper(activityId, studentId, numericVal) {
 
   const input = document.createElement('input');
   input.type = 'number';
-  input.min = '1';
+  input.min = '0';
   input.max = '4';
   input.step = '0.01';
   input.className = 'border rounded px-1 py-0.5 w-full text-center text-sm font-semibold focus:ring-2 focus:ring-purple-400';
@@ -524,7 +534,7 @@ function buildCompWrapper(activityId, studentId, numericVal) {
   input.dataset.isCompetencyNumeric = 'true';
   input.dataset.patched = 'true';
   input.dataset.upgraded = 'true';
-  input.placeholder = '1-4';
+  input.placeholder = '0-4';
   if (numericVal !== null && !isNaN(numericVal)) input.value = numericVal;
 
   // ── Aplicar estat de bloqueig des del moment de creació ──
@@ -545,7 +555,7 @@ function buildCompWrapper(activityId, studentId, numericVal) {
   input.addEventListener('change', async () => {
     if (input.disabled) return; // ignorar si bloquejat
     const val = parseFloat(input.value);
-    if (isNaN(val) || val < 1 || val > 4) {
+    if (isNaN(val) || val < 0 || val > 4) {
       input.value = '';
       badge.textContent = '-';
       badge.style.backgroundColor = '#f3f4f6';

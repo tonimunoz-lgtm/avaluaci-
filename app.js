@@ -210,10 +210,6 @@ const modalCreateClassBtn = document.getElementById('modalCreateClassBtn');
 const modalAddStudentBtn = document.getElementById('modalAddStudentBtn');
 const modalAddActivityBtn = document.getElementById('modalAddActivityBtn');
 
-const btnImportAL = document.getElementById('btnImportAL');
-btnImportAL.addEventListener('click', () => {
-  openModal('modalImportAL');
-});
 
 /* ---------- UTILS ---------- */
 function showLogin() {
@@ -906,7 +902,8 @@ async function sortStudents(field, dir) {
     const b = e.target.closest('button[data-field]');
     if (!b) return;
     menu.classList.add('hidden');
-    btn.childNodes[0].nodeValue = `Ordenar per: ${b.dataset.field === 'cognom' ? 'Cognom' : 'Nom'} ${b.dataset.dir === 'desc' ? '↓' : '↑'} `;
+    const sv = btn.querySelector('.sort-val');
+    if (sv) sv.textContent = `${b.dataset.field === 'cognom' ? 'Cognom' : 'Nom'} ${b.dataset.dir === 'desc' ? '↓' : '↑'}`;
     sortStudents(b.dataset.field, b.dataset.dir);
   });
   document.addEventListener('click', () => menu.classList.add('hidden'));
@@ -1063,10 +1060,12 @@ async function studentRowAction(action, studentId, tr) {
 function openStudentHeadMenu(anchor) {
   openStudentMenu(anchor, [
     ['add', 'Afegir alumne'],
+    ['import', 'Importar alumnes'],
     ['send', 'Enviar notes (massiu)'],
     ['delete', 'Eliminar alumnes (massiu)', 'danger']
   ], a => {
     if (a === 'add') openModal('modalAddStudent');
+    else if (a === 'import') openModal('modalImportAL');
     else setStudentMode(a);
   });
 }

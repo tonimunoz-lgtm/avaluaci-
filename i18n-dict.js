@@ -3,7 +3,9 @@
 // període (d'avaluació) = período (de evaluación) / grading period · butlletí = boletín / report card
 export const DICT = [
 ["Avaluació competencial","Evaluación competencial","Competency-based assessment"],
-["Defineix el rang de cada qualificació (notes numèriques de l'1 al 4). Els trams no poden solapar-se ni deixar forats.","Define el rango de cada calificación (notas numéricas del 1 al 4). Los tramos no pueden solaparse ni dejar huecos.","Set the range for each grade (numeric scores from 1 to 4). Bands can't overlap or leave gaps."],
+["Defineix el rang de cada qualificació (notes numèriques de 0 a 4). El valor inicial s'inclou i el final no (excepte l'últim tram, que inclou el 4). Els trams no poden solapar-se ni deixar forats.","Define el rango de cada calificación (notas numéricas de 0 a 4). El valor inicial se incluye y el final no (excepto el último tramo, que incluye el 4). Los tramos no pueden solaparse ni dejar huecos.","Set the range for each grade (numeric scores from 0 to 4). The start value is included and the end value is not (except the last band, which includes 4). Bands can't overlap or leave gaps."],
+["inclòs","incluido","included"],["no inclòs","no incluido","not included"],
+["Previsualització de l'escala 0–4","Vista previa de la escala 0–4","Preview of the 0–4 scale"],
 ["De","De","From"],["fins a","hasta","to"],
 ["Previsualització de l'escala 1–4","Vista previa de la escala 1–4","Preview of the 1–4 scale"],
 ["↺ Restaurar defecte","↺ Restaurar valores por defecto","↺ Restore defaults"],
@@ -144,6 +146,7 @@ export const DICT = [
 ["Totes les activitats","Todas las actividades","All assignments"],
 ["Només pendents","Solo pendientes","Pending only"],
 ["Ordenar per: Nom","Ordenar por: Nombre","Sort by: Name"],
+["Ordenar per:","Ordenar por:","Sort by:"],["Cognom","Apellido","Surname"],
 ["Ordenar per: Cognom","Ordenar por: Apellido","Sort by: Surname"],
 ["Llegenda de colors","Leyenda de colores","Colour legend"],
 ["Nom (A → Z)","Nombre (A → Z)","Name (A → Z)"],
@@ -501,7 +504,8 @@ export const SUBJECTS = [
 /* Textos amb valors dins: $1, $2… són els grups capturats. */
 export const PATTERNS = [
 [/^(NA|AS|AN|AE): cal introduir valors numèrics\.$/, "$1: hay que introducir valores numéricos.", "$1: enter numeric values."],
-[/^(NA|AS|AN|AE): els valors han d'estar entre 1 i 4\.$/, "$1: los valores deben estar entre 1 y 4.", "$1: values must be between 1 and 4."],
+[/^(NA|AS|AN|AE): els valors han d'estar entre 0 i 4\.$/, "$1: los valores deben estar entre 0 y 4.", "$1: values must be between 0 and 4."],
+[/^(NA|AS|AN|AE): el valor inicial ha de ser menor que el final\.$/, "$1: el valor inicial debe ser menor que el final.", "$1: the start value must be lower than the end value."],
 [/^(NA|AS|AN|AE): el valor mínim no pot ser major que el màxim\.$/, "$1: el valor mínimo no puede ser mayor que el máximo.", "$1: the minimum can't be greater than the maximum."],
 [/^(.*)Solapament entre (\w+) i (\w+): el rang (.+) pertany als dos trams alhora\.$/, "$1Solapamiento entre $2 y $3: el rango $4 pertenece a los dos tramos a la vez.", "$1Overlap between $2 and $3: the range $4 belongs to both bands."],
 [/^(.*)Forat: el valor (.+) no queda cobert per cap tram\.$/, "$1Hueco: el valor $2 no queda cubierto por ningún tramo.", "$1Gap: the value $2 isn't covered by any band."],
@@ -537,6 +541,8 @@ export const PATTERNS = [
 [/^Seleccionats: (\d+)$/, "Seleccionados: $1", "Selected: $1"],
 [/^(\d+) de (\d+) cursos$/, "$1 de $2 cursos", "$1 of $2 courses"],
 [/^Usuari (reactivat|suspès)$/, "Usuario $1", "User $1"],
+[/^Nom (↑|↓)$/, "Nombre $1", "Name $1"],
+[/^Cognom (↑|↓)$/, "Apellido $1", "Surname $1"],
 [/^Ordenar per: (Nom|Cognom) (↑|↓)$/, "Ordenar por: $1 $2", "Sort by: $1 $2"],
 [/^(\d+) usuaris? eliminats? amagats?\. Els pots veure amb el filtre «Eliminats»\.$/, "$1 usuario(s) eliminado(s) oculto(s).", "$1 deleted user(s) hidden."],
 ];
