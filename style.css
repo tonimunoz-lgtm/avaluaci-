@@ -735,7 +735,8 @@ body #weightedInputs .w-pct input { width: 5.6rem !important; padding: .3rem .6r
 @media (max-width: 860px) {
   #screen-classes .view-toggle { display: none; }
   #screen-classes .view-dd { display: block; }
-  #screen-classes .action-pill { flex-wrap: nowrap; gap: .3rem; padding: .4rem; justify-content: space-between; }
+  #screen-classes .action-row { display: block; }
+  #screen-classes .action-pill { width: 100%; box-sizing: border-box; display: flex; flex-wrap: nowrap; gap: .3rem; padding: .4rem; justify-content: space-between; }
   #screen-classes .action-pill > button, #screen-classes .view-dd > button {
     padding: .55rem .6rem; font-size: .78rem; gap: .25rem; white-space: nowrap; flex: 0 1 auto; min-width: 0;
     display: inline-flex; align-items: center;
