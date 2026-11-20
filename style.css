@@ -560,6 +560,9 @@ body select:focus, body textarea:focus { border-color: var(--c-blue); box-shadow
   .toolbar .lbl, #btnTutoria .lbl { display: none; }
   .toolbar button { padding: .55rem .7rem; gap: .2rem; }
   #btnAddActivity { padding: .55rem .8rem; }
+  .class-actions .lbl-x, #btnTutoria .lbl-d { display: none; }
+  #btnAddActivity .lbl-main { text-transform: capitalize; }
+  #btnAddActivity svg, #btnTutoria svg { flex: none; }
   #termMenuBtn .lbl { display: none; }
   #termMenuBtn .ic-dots { display: inline; }
   #btnClassFilter span, #btnCreateClass .lbl { display: none; }
@@ -744,4 +747,23 @@ body #weightedInputs .w-pct input { width: 5.6rem !important; padding: .3rem .6r
   #screen-classes .lbl-x { display: none; }
   #screen-classes .action-pill svg, #screen-classes .view-dd svg { width: 1rem; height: 1rem; flex: none; }
   #screen-classes .view-dd .app-dropdown { left: 0; right: auto; white-space: nowrap; }
+}
+
+/* Ordenar: icona de filtres (només mòbil) */
+.sort-ic { display: none; }
+@media (max-width: 860px) {
+  .filters-bar .sort-val, .filters-bar .sort-chev { display: none; }
+  .filters-bar .sort-ic { display: block; width: 1.25rem !important; height: 1.25rem !important; }
+  .filters-bar .sort-wrap { flex: 0 0 auto; }
+  .filters-bar .sort-wrap > .pill-select { width: auto; padding: .6rem .75rem; }
+}
+
+#btnTutoria .lbl-m { display: none; }
+@media (max-width: 860px) { #btnTutoria .lbl-m { display: inline; } }
+
+@media (max-width: 860px) {
+  .class-head .class-actions { flex-wrap: wrap; gap: .3rem; }
+  .class-head .class-actions > button { padding: .5rem .6rem !important; font-size: .78rem; gap: .25rem; white-space: nowrap; flex: 0 1 auto; min-width: 0; }
+  .class-head .class-actions svg { width: 1rem; height: 1rem; }
+  .filters-bar .sort-wrap .app-dropdown { left: auto; right: 0; white-space: nowrap; }
 }

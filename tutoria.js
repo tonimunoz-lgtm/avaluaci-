@@ -77,7 +77,7 @@ function injectTutoriaButton() {
   const btn = document.createElement('button');
   btn.id = 'btnTutoria';
   btn.className = 'bg-rose-500 hover:bg-rose-600 text-white px-3 py-1 rounded font-semibold text-sm flex items-center gap-1 transition-colors';
-  btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M4 5h16v11H11l-4 4v-4H4z"/><path d="M8.5 10.5h.01M12 10.5h.01M15.5 10.5h.01"/></svg><span class="lbl">Comentaris</span>';
+  btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M4 5h16v11H11l-4 4v-4H4z"/><path d="M8.5 10.5h.01M12 10.5h.01M15.5 10.5h.01"/></svg><span class="lbl-d">Comentaris</span><span class="lbl-m">Crear comentari</span>';
   btn.title = 'Generar comentaris de butlletí per a les famílies';
   btn.addEventListener('click', () => openTutoriaModal());
   btnAddActivity.parentNode.insertBefore(btn, btnAddActivity.nextSibling);

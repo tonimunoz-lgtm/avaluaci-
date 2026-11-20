@@ -120,7 +120,7 @@ export const DICT = [
 ["Notes","Notas","Grades"],
 ["Comentaris","Comentarios","Comments"],
 ["Resum","Resumen","Summary"],
-["Afegir activitat","Añadir actividad","Add assignment"],
+["Afegir activitat","Añadir actividad","Add assignment"],["Afegir","Añadir","Add"],["Crear comentari","Crear comentario","Create comment"],["activitat","actividad","assignment"],
 ["Afegir","Añadir","Add"],
 ["Importar alumnes","Importar alumnos","Import students"],
 ["Exportar","Exportar","Export"],
