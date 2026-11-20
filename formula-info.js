@@ -148,16 +148,19 @@ function hideTooltip() {
 }
 
 function positionTooltip(btn) {
-  const rect = btn.getBoundingClientRect();
+  const z = parseFloat(getComputedStyle(document.documentElement).zoom) || 1; // mode compacte (portàtil)
+  const R = btn.getBoundingClientRect();
+  const rect = { left: R.left / z, right: R.right / z, top: R.top / z, bottom: R.bottom / z, width: R.width / z };
+  const iw = window.innerWidth / z, ih = window.innerHeight / z;
   const tw = 320;
   let left = rect.left + rect.width / 2 - tw / 2;
   let top = rect.bottom + 8;
 
   // Evitar sortir per la dreta
-  if (left + tw > window.innerWidth - 8) left = window.innerWidth - tw - 8;
+  if (left + tw > iw - 8) left = iw - tw - 8;
   if (left < 8) left = 8;
   // Evitar sortir per baix
-  if (top + 120 > window.innerHeight) top = rect.top - 120 - 8;
+  if (top + 120 > ih) top = rect.top - 120 - 8;
 
   tooltip.style.left = left + 'px';
   tooltip.style.top = top + 'px';

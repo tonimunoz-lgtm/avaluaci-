@@ -793,3 +793,16 @@ body #weightedInputs .w-pct input { width: 5.6rem !important; padding: .3rem .6r
 }
 .side-logout svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 #bellMenu { color: var(--c-text); }
+
+
+/* ===== Mode compacte automàtic per a portàtils (861–1500 px): es veu com amb el navegador al 80% ===== */
+:root { --zf: 1; }
+@media (min-width: 861px) and (max-width: 1500px) {
+  html:not(.ui-normal) { --zf: .8; zoom: .8; }
+  /* amb zoom, les unitats vh es queden curtes: es compensen */
+  html:not(.ui-normal) #appRoot { min-height: calc(100vh / var(--zf)); }
+  html:not(.ui-normal) .sidebar { height: calc(100vh / var(--zf)); }
+  html:not(.ui-normal) .app-modal, html:not(.ui-normal) .calc-modal { max-height: calc(92vh / var(--zf)); }
+  html:not(.ui-normal) .max-h-\[90vh\] { max-height: calc(90vh / var(--zf)); }
+  html:not(.ui-normal) .max-h-\[95vh\] { max-height: calc(95vh / var(--zf)); }
+}

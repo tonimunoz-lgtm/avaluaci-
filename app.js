@@ -1055,11 +1055,12 @@ function openStudentMenu(anchor, items, onPick) {
     m.classList.add('hidden');
     onPick(b.dataset.act);
   };
+  const z = parseFloat(getComputedStyle(document.documentElement).zoom) || 1; // mode compacte (portàtil)
   const r = anchor.getBoundingClientRect();
   m.classList.remove('hidden');
   m.style.position = 'fixed';
-  m.style.top = Math.min(r.bottom + 4, window.innerHeight - m.offsetHeight - 8) + 'px';
-  m.style.left = Math.max(8, Math.min(r.left, window.innerWidth - m.offsetWidth - 8)) + 'px';
+  m.style.top = Math.min(r.bottom / z + 4, window.innerHeight / z - m.offsetHeight - 8) + 'px';
+  m.style.left = Math.max(8, Math.min(r.left / z, window.innerWidth / z - m.offsetWidth - 8)) + 'px';
 }
 
 async function studentRowAction(action, studentId, tr) {
