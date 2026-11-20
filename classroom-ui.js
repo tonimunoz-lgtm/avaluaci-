@@ -162,7 +162,7 @@ function setupClassroomButton() {
   btn.className = 'bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-xl shadow transition-transform font-semibold mb-0';
   btn.style.height = 'auto';
   btn.style.padding = '0.5rem 1.25rem';
-  btn.innerHTML = '<img src="img/classroom.png" alt="" class="btn-logo"><span class="lbl-main">Importar</span><span class="lbl-x"> de Classroom</span>';
+  btn.innerHTML = '<img src="img/classroom.png" alt="" class="btn-logo"><span><span class="lbl-main">Importar</span><span class="lbl-x"> de Classroom</span></span>';
   
   btn.addEventListener('click', async () => {
     console.log('🎓 Botón Classroom clickeado');

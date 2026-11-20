@@ -645,7 +645,7 @@ const btnDeleteMode = document.getElementById('btnDeleteMode');
 function setDeleteBtn(on) {
   btnDeleteMode.innerHTML = on
     ? '<span class="lbl-main">❌ Cancel·lar eliminar</span>'
-    : '<svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg><span class="lbl-main">Eliminar</span><span class="lbl-x"> classe</span>';
+    : '<svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg><span><span class="lbl-main">Eliminar</span><span class="lbl-x"> classe</span></span>';
 }
 btnDeleteMode.addEventListener('click', ()=> {
   deleteMode = !deleteMode;
