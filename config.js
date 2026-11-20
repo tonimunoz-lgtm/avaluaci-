@@ -106,6 +106,9 @@ export function renderConfigScreen(el) {
     ${card('🔌', 'Connexions',
       `<p class="muted" style="font-size:.85rem">Compte: <b>${esc(firebase.auth().currentUser?.email || '—')}</b></p>
        <p class="muted" style="font-size:.85rem;margin-top:.4rem">Gmail (enviament de notes) i Google Classroom (importació) demanen permís la primera vegada que els fas servir.</p>`)}
+    ${window.__avaluAdmin ? card('⚙️', 'Administració',
+      `<p class="muted" style="font-size:.85rem;margin-bottom:.7rem">Gestiona els usuaris i els permisos de l'aplicació.</p>
+       <button id="cf_admin" type="button" class="btn">Obrir el panell d'administració</button>`) : ''}
     ${card('💾', 'Dades',
       `<p class="muted" style="font-size:.85rem;margin-bottom:.7rem">Descarrega una còpia de seguretat de totes les teves classes, alumnes i activitats.</p>
        <button id="cf_backup" type="button" class="btn">Descarrega la còpia (JSON)</button>`)}
@@ -132,6 +135,7 @@ export function renderConfigScreen(el) {
   };
   let t; el.querySelectorAll('input, select, textarea').forEach(i => i.addEventListener('input', () => { clearTimeout(t); t = setTimeout(save, 500); }));
   el.querySelector('#cf_backup').addEventListener('click', backup);
+  el.querySelector('#cf_admin')?.addEventListener('click', () => { window.location.href = 'administrador.html'; });
   window.CompConfig?.renderInto(el.querySelector('#cf_comp'));
 }
 

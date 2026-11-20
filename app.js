@@ -308,6 +308,7 @@ async function signInWithGoogleGmail() {
 document.getElementById("googleLoginBtn").addEventListener("click", signInWithGoogleGmail);
 
 
+document.getElementById('btnLogoutIcon')?.addEventListener('click', () => btnLogout.click());
 btnLogout.addEventListener('click', ()=> {
   auth.signOut().then(()=> {
     professorUID = null;
@@ -351,6 +352,7 @@ async function setupAfterAuth(user, profData) {
   }
 
   // ----------------- AFEGIR OPCIÓ ADMIN -----------------
+  window.__avaluAdmin = !!(profData && profData.isAdmin);
   if (profData && profData.isAdmin) {
     if (!document.getElementById('btnAdminPanel')) {
       const adminBtn = document.createElement('button');

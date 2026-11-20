@@ -366,6 +366,20 @@ $('actFilter')?.addEventListener('change', applyActFilter);
 
 /* ------------------------------------------------------------ notificacions */
 const bell = $('btnBell'), bellMenu = $('bellMenu');
+// En mòbil la campaneta passa a la capçalera fixa (menú de dalt), al costat del botó de sortir
+(function () {
+  const mq = window.matchMedia('(max-width: 860px)');
+  const wrap = document.querySelector('.bell-wrap'), side = document.querySelector('.sidebar'), out = $('btnLogoutIcon');
+  const right = document.querySelector('.topbar-right'), ua = $('userArea');
+  if (!wrap || !side || !right) return;
+  const place = () => {
+    if (mq.matches) side.insertBefore(wrap, out || null);
+    else right.insertBefore(wrap, ua || null);
+    bellMenu.classList.add('hidden');
+  };
+  place();
+  (mq.addEventListener ? mq.addEventListener('change', place) : mq.addListener(place));
+})();
 bell.addEventListener('click', e => {
   e.stopPropagation();
   bellMenu.classList.toggle('hidden');

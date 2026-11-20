@@ -560,7 +560,7 @@ body select:focus, body textarea:focus { border-color: var(--c-blue); box-shadow
   .toolbar .lbl, #btnTutoria .lbl { display: none; }
   .toolbar button { padding: .55rem .7rem; gap: .2rem; }
   #btnAddActivity { padding: .55rem .8rem; }
-  .class-actions .lbl-x, #btnTutoria .lbl-d { display: none; }
+  .class-actions .lbl-x { display: none; }
   #btnAddActivity .lbl-main { text-transform: capitalize; }
   #btnAddActivity svg, #btnTutoria svg { flex: none; }
   #termMenuBtn .lbl { display: none; }
@@ -758,8 +758,6 @@ body #weightedInputs .w-pct input { width: 5.6rem !important; padding: .3rem .6r
   .filters-bar .sort-wrap > .pill-select { width: auto; padding: .6rem .75rem; }
 }
 
-#btnTutoria .lbl-m { display: none; }
-@media (max-width: 860px) { #btnTutoria .lbl-m { display: inline; } }
 
 @media (max-width: 860px) {
   .class-head .class-actions { flex-wrap: wrap; gap: .3rem; }
@@ -767,3 +765,31 @@ body #weightedInputs .w-pct input { width: 5.6rem !important; padding: .3rem .6r
   .class-head .class-actions svg { width: 1rem; height: 1rem; }
   .filters-bar .sort-wrap .app-dropdown { left: auto; right: 0; white-space: nowrap; }
 }
+
+/* ===== Mòbil: capçalera fixa (navegació + campaneta + sortir), sense salutació ni perfil ===== */
+.side-logout { display: none; }
+@media (max-width: 860px) {
+  .sidebar { position: sticky !important; top: 0; z-index: 300; overflow: visible; }
+  .sidebar .brand { display: none !important; }
+  .topbar { display: none !important; }
+  .sidebar .nav { flex: 1; min-width: 0; }
+  .sidebar .bell, .sidebar .side-logout {
+    display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 50%; border: 0;
+    background: rgba(255, 255, 255, .14); color: #fff; box-shadow: none; padding: 0;
+  }
+  .sidebar .bell svg, .sidebar .side-logout svg { width: 1.25rem; height: 1.25rem; }
+  .sidebar .bell-dot { top: 7px; right: 8px; border-color: #3b27c9; }
+  .sidebar .bell-wrap { flex: none; }
+
+  /* Barra d'accions de la classe: primer imprimir i després exportar (només icones) */
+  #btnPrintClass { order: 1; }
+  #btnExportClass { order: 2; }
+  #btnAddActivity { order: 3; }
+  #btnTutoria { order: 4; }
+}
+@media (max-width: 860px) {
+  /* clip (i no hidden) perquè la capçalera sticky continuï fixa en fer scroll */
+  html, body { overflow-x: clip; }
+}
+.side-logout svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+#bellMenu { color: var(--c-text); }
