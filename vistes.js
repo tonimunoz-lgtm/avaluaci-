@@ -404,3 +404,41 @@ bellMenu.addEventListener('click', e => {
   ['screen-alumnes', 'screen-informes', 'screen-config'].forEach(s => $(s).classList.add('hidden'));
   window.AvaluApp?.openClass?.(b.dataset.id, 'comentaris');
 });
+
+/* ------------------------------------------------------------ indicacions en passar el ratolí (tooltips) */
+// Tot botó o icona rep un «title» perquè en passar-hi el ratolí s'expliqui què fa.
+// Si l'element ja en té, no es toca; si només té aria-label, es copia; i per als principals hi ha un text propi.
+const TIPS = {
+  navHome: 'Inici: les teves classes', navStudents: 'Alumnes', navReports: 'Informes', navSettings: 'Configuració',
+  btnBell: 'Comentaris pendents', userMenuBtn: "Menú d'usuari", btnLogoutIcon: 'Tanca la sessió',
+  viewCards: 'Mostra les classes en targetes', viewList: 'Mostra les classes en llista', viewDDBtn: 'Canvia la vista de les classes',
+  btnCreateClass: 'Crea una classe nova', btnDeleteMode: 'Selecciona classes per eliminar',
+  btnClassroomImport: 'Importa classes i activitats de Google Classroom',
+  btnClassFilter: 'Ordena i filtra les classes', btnBack: 'Torna a totes les classes',
+  btnSortAlpha: 'Ordena els alumnes per nom o cognom', btnStudentsMenu: 'Afegir, importar o eliminar alumnes',
+  btnAddTerm: 'Afegeix un període nou', termMenuBtn: 'Opcions del període', termsDropdown: "Canvia de període d'avaluació",
+  actFilter: 'Mostra només una activitat', gridStudentSearch: 'Cerca un alumne per nom',
+  classSearch: 'Cerca una classe pel nom', stuHeadMenuBtn: 'Opcions dels alumnes',
+  btnExportClass: 'Exporta les notes de la classe', btnPrintClass: 'Imprimeix la graella de notes',
+  btnAddActivity: 'Afegeix una activitat a la graella', btnTutoria: 'Crea un comentari de butlletí amb IA',
+  repCsv: "Descarrega l'informe en CSV", repPrint: "Imprimeix l'informe"
+};
+const TIPS_BY_CLASS = [
+  ['.stu-menu-btn', "Opcions de l'alumne"], ['.menu-btn.opt-btn', "Opcions de l'activitat"], ['.menu-btn', 'Opcions'],
+  ['.tab', null]
+];
+function autoTitle(root) {
+  const els = root.querySelectorAll ? root.querySelectorAll('button, [role="button"], select, input[type="search"], input[type="text"], .legend, [aria-label]') : [];
+  const list = root.matches && root.matches('button, [aria-label]') ? [root, ...els] : els;
+  list.forEach(el => {
+    if (el.title || el.closest('[translate="no"]')) return;
+    let tip = TIPS[el.id];
+    if (!tip) for (const [sel, t] of TIPS_BY_CLASS) { if (t && el.matches(sel)) { tip = t; break; } }
+    if (!tip) tip = el.getAttribute('aria-label');
+    if (tip) el.title = tip;
+  });
+}
+let _tipT = 0;
+new MutationObserver(() => { cancelAnimationFrame(_tipT); _tipT = requestAnimationFrame(() => autoTitle(document.body)); })
+  .observe(document.body, { childList: true, subtree: true });
+autoTitle(document.body);
