@@ -121,6 +121,7 @@ export const DICT = [
 ["Comentaris","Comentarios","Comments"],
 ["Resum","Resumen","Summary"],
 ["Afegir activitat","Añadir actividad","Add assignment"],["Afegir","Añadir","Add"],
+["El servei d'IA ha arribat al límit d'ús. Torna-ho a provar d'aquí uns minuts (codi 429).","El servicio de IA ha alcanzado el límite de uso. Vuelve a intentarlo en unos minutos (código 429).","The AI service has reached its usage limit. Please try again in a few minutes (code 429)."],
 ["Inici: les teves classes","Inicio: tus clases","Home: your classes"],
 ["Comentaris pendents","Comentarios pendientes","Pending comments"],
 ["Menú d'usuari","Menú de usuario","User menu"],
@@ -533,6 +534,7 @@ export const SUBJECTS = [
 
 /* Textos amb valors dins: $1, $2… són els grups capturats. */
 export const PATTERNS = [
+[/^Error del servei d'IA \(codi (.+)\)$/, "Error del servicio de IA (código $1)", "AI service error (code $1)"],
 [/^(NA|AS|AN|AE): cal introduir valors numèrics\.$/, "$1: hay que introducir valores numéricos.", "$1: enter numeric values."],
 [/^(NA|AS|AN|AE): els valors han d'estar entre 0 i 4\.$/, "$1: los valores deben estar entre 0 y 4.", "$1: values must be between 0 and 4."],
 [/^(NA|AS|AN|AE): el valor inicial ha de ser menor que el final\.$/, "$1: el valor inicial debe ser menor que el final.", "$1: the start value must be lower than the end value."],

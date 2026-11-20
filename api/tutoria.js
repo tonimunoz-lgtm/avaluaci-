@@ -100,30 +100,44 @@ export default async function handler(req, res) {
     return res.status(413).json({ error: 'El prompt és massa llarg' });
   }
 
+  // Es prova primer el model gran i, si el servei el rebutja (límit d'ús, model retirat, error del servidor),
+  // el model petit, que té els seus propis límits. Així una saturació puntual no deixa el professorat sense comentari.
+  const MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
+  let last = { status: 0, data: null };
   try {
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 1000,
-        temperature: 0.8,
-      }),
-    });
+    for (const model of MODELS) {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: 1000,
+          temperature: 0.8,
+        }),
+      });
 
-    const data = await response.json();
+      const data = await response.json().catch(() => null);
 
-    if (!response.ok) {
-      console.error('Error Groq:', response.status, JSON.stringify(data));
-      return res.status(502).json({ error: 'Error del servei d\'IA' });
+      if (response.ok) {
+        const text = data?.choices?.[0]?.message?.content || '';
+        if (text) return res.status(200).json({ text });
+        last = { status: 502, data: { error: { message: 'resposta buida' } } };
+        continue;
+      }
+      last = { status: response.status, data };
+      console.error('Error Groq:', model, response.status, JSON.stringify(data));
+      if (response.status === 401 || response.status === 403) break; // clau no vàlida: el segon model tampoc no servirà
     }
 
-    const text = data.choices?.[0]?.message?.content || '';
-    return res.status(200).json({ text });
+    const st = last.status;
+    if (st === 429) {
+      return res.status(503).json({ error: 'El servei d\'IA ha arribat al límit d\'ús. Torna-ho a provar d\'aquí uns minuts (codi 429).' });
+    }
+    return res.status(502).json({ error: `Error del servei d'IA (codi ${st || 'xarxa'})` });
 
   } catch (err) {
     console.error('Error:', err);
