@@ -11,6 +11,7 @@
 //
 // Variables d'entorn a Vercel:
 //  GROQ_API_KEY       (obligatòria)
+//  GROQ_MODELS        (opcional, models a provar per ordre; per defecte openai/gpt-oss-120b,openai/gpt-oss-20b)
 //  FIREBASE_PROJECT_ID (opcional, per defecte gestornotes-cc6d0)
 //  ALLOWED_ORIGINS    (opcional, llista separada per comes: https://el-teu-domini.com)
 
@@ -102,7 +103,11 @@ export default async function handler(req, res) {
 
   // Es prova primer el model gran i, si el servei el rebutja (límit d'ús, model retirat, error del servidor),
   // el model petit, que té els seus propis límits. Així una saturació puntual no deixa el professorat sense comentari.
-  const MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
+  // Groq va retirar llama-3.3-70b-versatile i llama-3.1-8b-instant el 16/08/2026 (donen 404);
+  // els substituts recomanats són openai/gpt-oss-120b i openai/gpt-oss-20b.
+  // Es poden canviar sense tocar el codi amb la variable d'entorn GROQ_MODELS (llista separada per comes).
+  const MODELS = (process.env.GROQ_MODELS || 'openai/gpt-oss-120b,openai/gpt-oss-20b')
+    .split(',').map(m => m.trim()).filter(Boolean);
   let last = { status: 0, data: null };
   try {
     for (const model of MODELS) {
@@ -115,7 +120,9 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           model,
           messages: [{ role: 'user', content: prompt }],
-          max_tokens: 1000,
+          // els models gpt-oss "raonen" abans de respondre: es limita l'esforç i es deixa marge de tokens
+          max_tokens: 2500,
+          reasoning_effort: 'low',
           temperature: 0.8,
         }),
       });
@@ -123,7 +130,7 @@ export default async function handler(req, res) {
       const data = await response.json().catch(() => null);
 
       if (response.ok) {
-        const text = data?.choices?.[0]?.message?.content || '';
+        const text = (data?.choices?.[0]?.message?.content || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim();
         if (text) return res.status(200).json({ text });
         last = { status: 502, data: { error: { message: 'resposta buida' } } };
         continue;
