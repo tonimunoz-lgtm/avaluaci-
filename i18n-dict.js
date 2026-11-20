@@ -99,7 +99,7 @@ export const DICT = [
 ["Importa una classe des de Classroom","Importa una clase desde Classroom","Import a class from Classroom"],
 ["No tens cap classe activa. Crea la primera!","No tienes ninguna clase activa. ¡Crea la primera!","You have no active classes. Create your first one!"],
 ["Cap classe coincideix amb la cerca.","Ninguna clase coincide con la búsqueda.","No classes match your search."],
-["Importar de Classroom","Importar de Classroom","Import from Classroom"],
+["Importar de Classroom","Importar de Classroom","Import from Classroom"],["de Classroom","de Classroom","from Classroom"],["classe","clase","class"],
 ["Importar de Google Classroom","Importar de Google Classroom","Import from Google Classroom"],
 ["Carregant els teus cursos de Classroom...","Cargando tus cursos de Classroom...","Loading your Classroom courses..."],
 ["Selecciona els cursos a importar:","Selecciona los cursos a importar:","Select the courses to import:"],

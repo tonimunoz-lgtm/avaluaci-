@@ -439,7 +439,7 @@ function renderClassCards() {
   else if (_classSort === 'students') list = [...list].sort((a, b) => (b.data.alumnes || []).length - (a.data.alumnes || []).length);
   screenClasses.classList.toggle('is-empty', _classCache.length === 0);
   if (_classCache.length === 0) {
-    if (deleteMode) { deleteMode = false; btnDeleteMode.textContent = '🗑️ Eliminar classe'; }
+    if (deleteMode) { deleteMode = false; setDeleteBtn(false); }
     classesGrid.innerHTML = `<div class="first-run">
       <div class="fr-ico">🎓</div>
       <h2>Comencem!</h2>
@@ -618,11 +618,36 @@ document.getElementById('viewList').addEventListener('click', () => {
   document.getElementById('viewCards').classList.remove('active');
 });
 
+/* Selector de vista desplegable (mòbil) */
+(function () {
+  const btn = document.getElementById('viewDDBtn'), menu = document.getElementById('viewDDMenu'), ico = document.getElementById('viewDDIcon');
+  if (!btn) return;
+  const sync = () => {
+    const src = document.getElementById(document.getElementById('viewList').classList.contains('active') ? 'viewList' : 'viewCards');
+    ico.innerHTML = src.querySelector('svg').outerHTML;
+  };
+  sync();
+  btn.addEventListener('click', e => { e.stopPropagation(); menu.classList.toggle('hidden'); });
+  menu.addEventListener('click', e => {
+    const b = e.target.closest('button[data-v]'); if (!b) return;
+    menu.classList.add('hidden');
+    document.getElementById(b.dataset.v === 'list' ? 'viewList' : 'viewCards').click();
+  });
+  document.getElementById('viewCards').addEventListener('click', sync);
+  document.getElementById('viewList').addEventListener('click', sync);
+  document.addEventListener('click', () => menu.classList.add('hidden'));
+})();
+
 /* ---------------- Delete Mode Classes ---------------- */
 const btnDeleteMode = document.getElementById('btnDeleteMode');
+function setDeleteBtn(on) {
+  btnDeleteMode.innerHTML = on
+    ? '<span class="lbl-main">❌ Cancel·lar eliminar</span>'
+    : '<svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg><span class="lbl-main">Eliminar</span><span class="lbl-x"> classe</span>';
+}
 btnDeleteMode.addEventListener('click', ()=> {
   deleteMode = !deleteMode;
-  btnDeleteMode.textContent = deleteMode ? '❌ Cancel·lar eliminar' : '🗑️ Eliminar classe';
+  setDeleteBtn(deleteMode);
   loadClassesScreen();
 });
 
@@ -739,7 +764,7 @@ function confirmDeleteSelected(){
         notify('Error eliminant classe: ' + e.message);
       }
       deleteMode = false;
-      btnDeleteMode.textContent = '🗑️ Eliminar classe';
+      setDeleteBtn(false);
       loadClassesScreen();
     }
   );
