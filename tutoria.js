@@ -921,9 +921,11 @@ function buildPrompt(dades) {
   const sensNom = !nom || nom === "l'alumne/a";          // no s'ha pogut triar cap nom
   const ref = sensNom ? "l'alumne/a" : (ca ? nomAmbArticle : nom);   // com cal anomenar-lo
   const nSusp = dades.suspeses.length;
+  // Només importa QUANTES n'ha suspès (les famílies ja veuen les notes al butlletí)
+  const quantitat = n => n === 0 ? 'cap' : n === 1 ? 'una' : n === 2 ? 'dues' : n === 3 ? 'tres' : n <= 5 ? 'quatre o cinc (força)' : 'moltes (la majoria)';
   const suspesesTxt = nSusp > 0
-    ? `Assignatures suspeses (${nSusp}): ${dades.suspeses.join(', ')}.`
-    : 'No té cap assignatura suspesa.';
+    ? `Matèries suspeses: ${quantitat(nSusp)}.`
+    : 'Matèries suspeses: cap.';
   const campOpcional = (label, val) => val ? `- ${label}: ${val}` : '';
 
   const grups = ['comportament', 'esforc', 'tasques', 'assistencia', 'actitud'];
@@ -947,8 +949,8 @@ function buildPrompt(dades) {
     campOpcional('Assistència', dades.assistencia),
     campOpcional('Actitud i participació', dades.actitud),
     apartatsExtraTxt,
-    campOpcional('Punts forts', dades.puntsForts),
-    campOpcional('Recomanacions', dades.recomanacions),
+    campOpcional('Punts forts (del tutor)', dades.puntsForts),
+    campOpcional('Recomanacions (del tutor)', dades.recomanacions),
   ].filter(Boolean).join('\n');
 
   const fem = genere === 'noia';
@@ -960,41 +962,48 @@ function buildPrompt(dades) {
 
   const t = dades.trimestre || '';
   const trimestreCtx = !t ? '' : /final|curs/i.test(t)
-    ? `El moment és «${t}»: fes una reflexió global del curs.`
-    : `El moment és «${t}» (no és el final de curs): mira cap al període següent, sense parlar de trimestres que no coneixes.`;
+    ? `El moment és «${t}»: dona una visió global del curs.`
+    : `El moment és «${t}» (no és el final de curs): mira cap al període següent.`;
 
-  const paraules = dades.llargada === 'curt' ? ['50', '80', 'molt concís: 2-3 frases, només el més important']
-    : dades.llargada === 'llarg' ? ['150', '250', 'desenvolupat, amb 2-3 paràgrafs']
+  const paraules = dades.llargada === 'curt' ? ['50', '80', 'molt concís: 2-3 frases amb el més important']
+    : dades.llargada === 'llarg' ? ['150', '250', 'desenvolupat, en 2-3 paràgrafs']
     : ['80', '150', 'un o dos paràgrafs'];
+
+  const graduacio = nSusp === 0 ? ''
+    : nSusp <= 2 ? "Té poques matèries suspeses: presenta-ho com un repte concret i recuperable."
+    : nSusp <= 5 ? "Té diverses matèries suspeses: cal que la família vegi que és una situació que s'ha de revertir amb constància."
+    : "Té moltes matèries suspeses: transmet preocupació sincera i la necessitat d'un canvi important i d'un treball conjunt família-centre.";
 
   const regles = [
     idiomaInstruccio,
+    "Escrius com el tutor/a de l'alumne/a, amb un text que llegiran els pares i mares al butlletí. Parla de l'alumne/a en tercera persona, amb un to proper i professional, com ho faria un professor de debò.",
     sensNom ? '' : (ca ? `Comença el comentari amb "${ref}".` : dades.idioma === 'angles' ? `Start the comment with "${nom}".` : `Empieza el comentario con "${nom}".`),
-    "El comentari parla de l'alumne/a (en tercera persona), no s'adreça directament a la família.",
-    `Extensió: entre ${paraules[0]} i ${paraules[1]} paraules (${paraules[2]}). Respecta aquest marge; si hi ha poques dades, no omplis amb tòpics ni repeticions. Paràgrafs fluids, sense llistes ni títols.`,
-    "Fes servir NOMÉS la informació de DADES. No t'inventis fets, anècdotes, notes, noms de professors ni motius que no hi apareguin. No parlis d'aspectes que no hi són.",
-    'No mencions notes numèriques.',
+    `Extensió: entre ${paraules[0]} i ${paraules[1]} paraules (${paraules[2]}).`,
+    "DADES és només el perfil de l'alumne/a perquè sàpigues com és: NO és una llista per reproduir. No repeteixis cada característica una per una. Tria els aspectes més rellevants per al to i teixeix-los en un relat coherent, ometent o agrupant els detalls menors.",
+    "Redacta amb prosa natural i fluida: frases completes que tinguin sentit per a una família, connectors naturals, sense enumeracions i sense encadenar «però» seguits. Evita expressions artificials, tòpics buits i frases que una persona no diria mai.",
+    "No deduïs ni afegeixis trets de caràcter o de personalitat (introvertit, tímid, inquiet…) ni fets, anècdotes o motius que no surtin a DADES.",
+    'No mencions notes numèriques ni noms d\'assignatures concretes: la família ja té el butlletí.',
     trimestreCtx,
     toInstruccio(dades.to, situacioGreu),
+    nSusp > 0
+      ? `Hi ha matèries suspeses. NO diguis quines ni en facis una llista; només fes-hi referència de manera general («les matèries pendents») i orienta el comentari a com superar-les. ${graduacio}`
+      : 'No hi ha cap matèria suspesa: no en parlis.',
     (['felicitacio', 'segueix'].includes(dades.to) && hiHaProblemes)
-      ? "Atenció: a DADES també hi ha aspectes negatius o suspesos. Felicita només el que és positiu i esmenta'ls breument i amb tacte, sense felicitar-lo de manera global."
+      ? "A DADES també hi ha aspectes fluixos o matèries suspeses: felicita només el que és realment bo i esmenta la resta amb tacte i breument, sense felicitar de manera global."
       : '',
     (dades.to === 'avertencia' && nomesPositiu)
-      ? "Atenció: a DADES no hi ha cap aspecte negatiu. Mantén un to formal però no inventis problemes; centra't en la necessitat de mantenir l'esforç."
+      ? "A DADES no hi ha cap aspecte negatiu: mantén un to formal però no inventis problemes; insisteix en la importància de mantenir l'esforç."
       : '',
-    nSusp > 0
-      ? `Esmenta les assignatures suspeses pel seu nom (${dades.suspeses.join(', ')})${nSusp > 3 ? ' de forma agrupada' : ''}. No n'expliquis els motius si no consten a DADES.`
-      : 'No parlis de suspensos: no n\'hi ha cap.',
-    dades.apartatsValors.length ? "Integra de forma natural els apartats personalitzats de DADES (cadascun amb la valoració indicada)." : '',
-    dades.puntsForts ? 'Inclou els punts forts indicats, reformulats amb naturalitat.' : '',
-    dades.recomanacions ? 'Inclou les recomanacions indicades de forma natural, com a suggeriments concrets.' : '',
-    'Acaba amb una frase final coherent amb el to triat.',
+    dades.apartatsValors.length ? "Si hi ha apartats personalitzats, integra'ls amb naturalitat dins del text (no com a llista)." : '',
+    dades.puntsForts ? "Aprofita els punts forts indicats pel tutor, reformulats amb naturalitat." : '',
+    dades.recomanacions ? "Inclou les recomanacions del tutor com un consell concret per a la família." : '',
+    "Acaba amb una frase final orientada cap al futur, coherent amb el to triat (per exemple, superar les matèries pendents si n'hi ha, o mantenir el bon ritme).",
     'Concordança de gènere correcta.',
   ].filter(Boolean);
 
-  return `Ets un tutor/a escolar que escriu comentaris per al butlletí de notes.
+  return `Ets un tutor/a escolar que escriu el comentari de tutoria del butlletí de notes, dirigit a les famílies.
 
-DADES:
+DADES DE L'ALUMNE/A:
 ${context}
 
 INSTRUCCIONS:
