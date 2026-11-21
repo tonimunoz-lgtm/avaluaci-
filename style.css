@@ -813,3 +813,24 @@ body #weightedInputs .w-pct input { width: 5.6rem !important; padding: .3rem .6r
 .progress-row .prog-cell { font-size: .78rem; color: #b26a00; font-weight: 700; }
 .progress-row .prog-cell.prog-full { color: #0f8a5f; }
 .progress-row .prog-cell.prog-full::before { content: "✓ "; }
+
+/* Fase 5: targeta d'alumnes a vigilar */
+.risk-card { margin: 0 0 1.1rem; border-radius: 20px; background: #fff; border: 1px solid #f3d9a6; box-shadow: 0 6px 20px rgba(120,80,0,.07); overflow: hidden; }
+.risk-card.ok { border-color: #cfeede; }
+.risk-card .rk-head { display: flex; align-items: center; gap: .8rem; width: 100%; padding: .85rem 1.1rem; border: 0; background: linear-gradient(90deg, #fff6e2, #fff); text-align: left; cursor: pointer; color: #5a3b00; font-size: .95rem; }
+.risk-card.ok .rk-head { background: linear-gradient(90deg, #e9f9f1, #fff); color: #0f6b4a; cursor: default; }
+.risk-card .rk-ic { font-size: 1.3rem; }
+.risk-card .rk-t { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem; }
+.risk-card .rk-t small { flex-basis: 100%; color: #9a7b3a; font-size: .76rem; }
+.risk-card .rk-head svg { width: 1.2rem; height: 1.2rem; fill: none; stroke: currentColor; stroke-width: 2; transition: transform .2s; }
+.risk-card.open .rk-head svg { transform: rotate(180deg); }
+.risk-card .rk-head.static svg { display: none; }
+.risk-card .rk-body { display: none; padding: .2rem 1.1rem 1rem; max-height: 340px; overflow-y: auto; }
+.risk-card.open .rk-body { display: block; }
+.risk-card .rk-class { margin: .8rem 0 .2rem; font-size: .75rem; font-weight: 700; color: #7a7799; text-transform: uppercase; letter-spacing: .04em; }
+.risk-card .rk-row { display: flex; align-items: center; gap: .65rem; padding: .5rem .4rem; border-radius: 12px; cursor: pointer; }
+.risk-card .rk-row:hover { background: #f6f3ff; }
+.risk-card .rk-row .stu-avatar { width: 2rem; height: 2rem; font-size: .72rem; flex: none; }
+.risk-card .rk-n { flex: 1; min-width: 0; font-weight: 600; color: #231a5c; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.risk-card .rk-row small { color: #7a7799; white-space: nowrap; }
+@media (max-width: 520px) { .risk-card .rk-row small { display: none; } }

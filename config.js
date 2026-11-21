@@ -7,7 +7,7 @@ const DEFAULTS = {
   th: { red: 5, yellow: 7, green: 9 },
   idioma: 'catala', tutoriaClassId: '', ordreNom: '', escala: '',
   assumpte: 'Notes de {nom}', intro: 'Hola {nom},\n\nAquestes són les teves notes:',
-  densitat: 'normal', avisos: true, ignorarBuits: false
+  densitat: 'normal', avisos: true, ignorarBuits: false, avisRisc: true
 };
 const KEY = 'avaluapp.config';
 // Textos per defecte segons l'idioma de l'aplicació (només se substitueixen si l'usuari no els ha personalitzat)
@@ -108,6 +108,7 @@ export function renderConfigScreen(el) {
       row('Densitat de la graella', `<select id="cf_densitat"><option value="normal" ${c.densitat === 'normal' ? 'selected' : ''}>Còmoda</option><option value="compact" ${c.densitat === 'compact' ? 'selected' : ''}>Compacta</option></select>`) +
       row('Mida de la interfície', `<select id="cf_escala"><option value="auto" ${c.escala !== 'normal' ? 'selected' : ''}>Automàtica (compacta en portàtils)</option><option value="normal" ${c.escala === 'normal' ? 'selected' : ''}>Normal (100%)</option></select>`, 'En pantalles de portàtil es mostra una mica més petita perquè hi càpiga més contingut.') +
       row('Format del nom dels alumnes', `<select id="cf_ordre"><option value="nc" ${(c.ordreNom || localStorage.getItem('uc_nom_order') || 'nc') === 'nc' ? 'selected' : ''}>Nom Cognoms</option><option value="cn" ${(c.ordreNom || localStorage.getItem('uc_nom_order') || 'nc') === 'cn' ? 'selected' : ''}>Cognoms Nom</option></select>`, 'Com surten escrits a la llista. Serveix per separar nom i cognoms als comentaris.') +
+      row('Alumnes a vigilar a l\'inici', `<select id="cf_risc"><option value="1" ${c.avisRisc !== false ? 'selected' : ''}>Activat</option><option value="0" ${c.avisRisc === false ? 'selected' : ''}>Desactivat</option></select>`, 'Targeta amb els alumnes amb mitjana inferior a 5 o 2 o més activitats suspeses.') +
       row('Avís de comentaris pendents', `<select id="cf_avisos"><option value="1" ${c.avisos ? 'selected' : ''}>Activat</option><option value="0" ${!c.avisos ? 'selected' : ''}>Desactivat</option></select>`))}
     ${card('🔌', 'Connexions',
       `<p class="muted" style="font-size:.85rem">Compte: <b>${esc(firebase.auth().currentUser?.email || '—')}</b></p>
@@ -131,7 +132,7 @@ export function renderConfigScreen(el) {
       terms: n('cf_terms').value.split(',').map(s => s.trim()).filter(Boolean),
       th: { red: +n('cf_th_red').value || 5, yellow: +n('cf_th_yellow').value || 7, green: +n('cf_th_green').value || 9 },
       tutoriaClassId: n('cf_tut').value, idioma: n('cf_idioma').value, assumpte: n('cf_assumpte').value, intro: n('cf_intro').value,
-      signatura: n('cf_signatura').value, ordreNom: n('cf_ordre').value, escala: n('cf_escala').value, densitat: n('cf_densitat').value, avisos: n('cf_avisos').value === '1', ignorarBuits: n('cf_buits').value === '1'
+      signatura: n('cf_signatura').value, ordreNom: n('cf_ordre').value, escala: n('cf_escala').value, densitat: n('cf_densitat').value, avisos: n('cf_avisos').value === '1', ignorarBuits: n('cf_buits').value === '1', avisRisc: n('cf_risc').value === '1'
     });
     try { localStorage.setItem('uc_nom_order', cfg.ordreNom); } catch {}
     const nl = n('cf_lang').value;

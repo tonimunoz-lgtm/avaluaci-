@@ -443,3 +443,64 @@ let _tipT = 0;
 new MutationObserver(() => { cancelAnimationFrame(_tipT); _tipT = requestAnimationFrame(() => autoTitle(document.body)); })
   .observe(document.body, { childList: true, subtree: true });
 autoTitle(document.body);
+
+/* ------------------------------------------------------------ Fase 5: alumnes a vigilar (pantalla d'inici) */
+// Targeta amb els alumnes amb mitjana < 5 o 2 o més activitats suspeses (mateix criteri que Informes).
+// Reutilitza la memòria cau de loadAll (60 s) i només es calcula mentre es veu la pantalla d'inici.
+let _riskAt = 0, _riskBusy = false;
+const riskOpenKey = 'avaluapp.riskOpen';
+async function renderRiskCard() {
+  const home = $('screen-classes');
+  if (!home || home.classList.contains('hidden') || _riskBusy) return;
+  const on = window.AvaluConfig?.get().avisRisc !== false;
+  let card = $('riskCard');
+  if (!on) { card?.remove(); return; }
+  _riskBusy = true;
+  try {
+    const classes = await loadAll();
+    _riskAt = Date.now();
+    const groups = classes.map(c => {
+      const a = analyse(c);
+      return { c, risk: a.risk.sort((x, y) => x.avg - y.avg), graded: a.rows.length - a.noGrades };
+    }).filter(g => g.risk.length);
+    const total = groups.reduce((n, g) => n + g.risk.length, 0);
+    const anyGrades = classes.some(c => analyse(c).rows.length - analyse(c).noGrades > 0);
+    if (!anyGrades) { card?.remove(); return; }
+    if (!card) {
+      card = document.createElement('div'); card.id = 'riskCard';
+      home.insertBefore(card, home.querySelector('.classes-head'));
+      card.addEventListener('click', e => {
+        if (e.target.closest('.rk-head')) {
+          const open = !card.classList.contains('open'); card.classList.toggle('open', open);
+          try { localStorage.setItem(riskOpenKey, open ? '1' : '0'); } catch {}
+          return;
+        }
+        const r = e.target.closest('[data-stu]');
+        if (r) window.AvaluApp?.openClass?.(r.dataset.cls, 'notes');
+      });
+    }
+    let open = false; try { open = localStorage.getItem(riskOpenKey) === '1'; } catch {}
+    card.className = 'risk-card' + (total ? ' warn' : ' ok') + (open ? ' open' : '');
+    card.innerHTML = total ? `
+      <button type="button" class="rk-head" aria-expanded="${open}">
+        <span class="rk-ic">⚠️</span>
+        <span class="rk-t"><b translate="no">${total}</b> <span>${total === 1 ? 'alumne a vigilar' : 'alumnes a vigilar'}</span>
+          <small>mitjana inferior a 5 o 2 o més activitats suspeses</small></span>
+        <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
+      <div class="rk-body">${groups.map(g => `<div class="rk-class" translate="no">${esc(g.c.nom || 'Sense nom')}</div>` +
+        g.risk.map(r => `<div class="rk-row" role="button" tabindex="0" data-stu="${esc(r.id)}" data-cls="${esc(g.c.id)}">
+          <span class="stu-avatar" style="--hue:${hue(r.nom)}" translate="no">${esc(initials(r.nom))}</span>
+          <span class="rk-n" translate="no">${esc(r.nom)}</span>
+          <small>${r.failed} susp. · ${r.missing} sense nota</small>
+          <span class="pill t-${toneOf(r.avg)}" translate="no">${fmt(r.avg)}</span></div>`).join('')).join('')}</div>`
+      : `<div class="rk-head static"><span class="rk-ic">✅</span><span class="rk-t"><span>Cap alumne a vigilar</span></span></div>`;
+  } catch (e) { console.warn('Targeta d\'alumnes a vigilar:', e); }
+  finally { _riskBusy = false; }
+}
+window.addEventListener('class-opened', () => { _riskAt = 0; });
+window.addEventListener('avalu-config', () => { _riskAt = 0; renderRiskCard(); });
+setInterval(() => {
+  if (!firebase.auth().currentUser) return;
+  const home = $('screen-classes');
+  if (home && !home.classList.contains('hidden') && Date.now() - _riskAt > 60000) renderRiskCard();
+}, 2500);
