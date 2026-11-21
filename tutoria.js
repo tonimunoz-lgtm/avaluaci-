@@ -1000,6 +1000,9 @@ function buildPrompt(dades) {
     "VOCABULARI: usa un llenguatge senzill, quotidià i càlid. Evita paraules rimbombants o d'informe com «panorama», «situació acadèmica delicada», «recuperar el rendiment», «revertir», «imprescindible», «conjuntura», «energia», «potencial», «cal destacar». No facis servir expressions que sonin a text generat.",
     "Els PUNTS FORTS són només per conèixer el perfil: no cal esmentar-los, i si ho fas, que sigui amb naturalitat i amb altres paraules (no copiïs la frase). Les RECOMANACIONS, en canvi, sí que han de sortir al comentari.",
     "FRASES NATURALS: construeix el text amb verbs i expressions del dia a dia («s'esforça molt», «treballa molt bé», «lliura les tasques»), no amb noms abstractes ni adjectius d'informe («esforç elevat», «treball elevat», «participació constant», «regularitat del lliurament», «combinada amb»). Revisa que cada adjectiu concordi bé en gènere i nombre.",
+    "Quan relacionis l'actitud amb les notes, fes-ho de manera simple: «i això es nota en els resultats», «i els resultats ho reflecteixen». Mai amb construccions com «cosa que es reflecteix en la regularitat amb què…». Gradua els resultats segons el perfil: molt bons → «excel·lents / fantàstics resultats»; bons → «bons resultats»; ajustats → «resultats correctes»; fluixos → «resultats millorables».",
+    "Les recomanacions, enfocades als resultats: «per millorar encara més els resultats», «per anar més reforçat/da». Mai «enriquir l'aprenentatge», «aprofundir en el seu aprenentatge» ni expressions semblants.",
+    "Prohibit: «cosa que es reflecteix», «enriquir», «aprenentatge», «ha demostrat fins ara», «actitud positiva que ha demostrat».",
     "No deduïs ni afegeixis trets de caràcter o de personalitat (introvertit, tímid, inquiet…) ni fets, anècdotes o motius que no surtin a DADES.",
     'No mencions notes numèriques ni noms d\'assignatures concretes: la família ja té el butlletí.',
     trimestreCtx,
@@ -1027,6 +1030,10 @@ ${context}
 
 INSTRUCCIONS:
 ${regles.map(r => '- ' + r).join('\n')}
+
+EXEMPLES D'ESTIL (només per al to i la naturalitat; no en copiïs frases ni l'estructura exacta):
+1) «La Marta treballa molt bé i participa activament a classe, i això es nota en els resultats. Per millorar-los encara més, li recomanem llegir una mica cada dia a casa. Felicitem la Marta pels bons resultats obtinguts i l'animem a continuar així.»
+2) «En Pau és puntual i participa a classe, però aquest trimestre no ha lliurat moltes tasques i li han quedat tres matèries pendents. Li recomanem organitzar-se millor a casa i dedicar-hi una estona cada dia. Confiem que, amb constància, les podrà superar el proper trimestre.»
 
 Escriu NOMÉS el comentari final, sense títol ni explicació.`;
 }
