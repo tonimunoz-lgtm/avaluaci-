@@ -890,7 +890,7 @@ function recollidaDades(modal) {
 // ============================================================
 function toInstruccio(to, situacioGreu) {
   const tos = {
-    felicitacio: `TO FELICITACIÓ: Celebra els bons resultats i l'actitud de l'alumne/a. El comentari ha de TANCAR-SE amb una felicitació explícita completa, en plural del tutor, del tipus «Felicitem [nom] per [motiu concret] i l'animem a continuar així.» (frase completa, amb el motiu).`,
+    felicitacio: `TO FELICITACIÓ: Celebra els bons resultats i l'actitud de l'alumne/a. El comentari ha de TANCAR-SE amb una felicitació explícita completa, en plural del tutor. El motiu de la felicitació són els RESULTATS I EL TREBALL EN CONJUNT (per exemple, «Felicitem [nom] pels bons resultats obtinguts i l'animem a continuar així.»), no un únic aspecte aïllat com el comportament. Si no té cap matèria suspesa, destaca-ho com a motiu (sense dir quines).`,
     positiu:     `TO POSITIU: Destaca els aspectes bons per sobre dels negatius. Si hi ha suspesos o aspectes fluixos, presenta'ls breument com a reptes superables sense que dominin el missatge. Acaba amb confiança en les capacitats de l'alumne/a.`,
     neutre:      `TO EQUILIBRAT: Presenta punts forts i aspectes a millorar de forma proporcionada. ${situacioGreu ? "Menciona les mancances clarament però de forma constructiva." : "Menciona els reptes com a oportunitats de creixement."} Acaba amb encoratjament realista.`,
     anims:       `TO ÀNIM: L'alumne/a necessita motivació. Reconeix l'esforç fet, per petit que sigui. Si hi ha suspesos, emfatitza que és possible superar-los. El final ha de ser un missatge d'ànim sincer.`,
@@ -914,6 +914,21 @@ const _NEG_GREU = {
   comportament: ['dolent', 'disruptiu'], esforc: ['baix', 'molt baix'], tasques: ['rarament', 'mai'],
   assistencia: ['moltes faltes sense justificar'], actitud: ['passiva i desinteressada', 'negativa i desmotivada'],
 };
+
+// Les opcions es passen a la IA com a frases naturals (no com a etiquetes), perquè no les copiï tal qual
+const _DESC = {
+  comportament: { 'excel·lent': 'es comporta de manera excel·lent', 'bo': 'es comporta bé', 'neutre': 'comportament correcte, sense més',
+    'irregular': 'el comportament té alts i baixos', 'dolent': 'el comportament no és l\'adequat a classe', 'disruptiu': 'interromp sovint la classe i li costa respectar el ritme del grup' },
+  esforc: { 'molt alt': 's\'esforça moltíssim i treballa molt bé', 'alt': 's\'esforça molt i treballa bé', 'adequat': 's\'esforça el que cal',
+    'baix': 's\'esforça poc', 'molt baix': 's\'esforça molt poc' },
+  tasques: { 'sempre': 'lliura sempre les tasques', 'gairebé sempre': 'lliura gairebé sempre les tasques', 'a vegades': 'lliura les tasques només de tant en tant',
+    'rarament': 'gairebé mai no lliura les tasques', 'mai': 'no lliura les tasques' },
+  assistencia: { 'perfecta': 've a classe cada dia', 'bona': 'assisteix bé a classe', 'irregular amb justificació': 'ha faltat alguns dies, amb justificació',
+    'moltes faltes sense justificar': 'ha faltat molts dies sense justificar' },
+  actitud: { 'participa molt activament': 'participa molt a classe', 'participa adequadament': 'participa a classe de manera adequada', 'poc participativa': 'participa poc a classe',
+    'passiva i desinteressada': 'es mostra passiu/passiva i poc interessat/ada', 'negativa i desmotivada': 'mostra poca motivació i una actitud poc positiva' },
+};
+const _desc = (g, v) => v ? ((_DESC[g] || {})[v] || v) : '';
 
 function buildPrompt(dades) {
   const { nom, nomAmbArticle, genere, article } = dades;
@@ -943,11 +958,11 @@ function buildPrompt(dades) {
     dades.trimestre ? `Moment d'avaluació: ${dades.trimestre}.` : '',
     dades.curs ? `Curs: ${dades.curs}` : '',
     suspesesTxt,
-    campOpcional('Comportament', dades.comportament),
-    campOpcional('Esforç i treball', dades.esforc),
-    campOpcional('Lliurament de tasques', dades.tasques),
-    campOpcional('Assistència', dades.assistencia),
-    campOpcional('Actitud i participació', dades.actitud),
+    campOpcional('Comportament', _desc('comportament', dades.comportament)),
+    campOpcional('Esforç i treball', _desc('esforc', dades.esforc)),
+    campOpcional('Lliurament de tasques', _desc('tasques', dades.tasques)),
+    campOpcional('Assistència', _desc('assistencia', dades.assistencia)),
+    campOpcional('Actitud i participació', _desc('actitud', dades.actitud)),
     apartatsExtraTxt,
     campOpcional('Punts forts (només per conèixer el perfil)', dades.puntsForts),
     campOpcional('Recomanacions (del tutor)', dades.recomanacions),
@@ -984,6 +999,7 @@ function buildPrompt(dades) {
     "DELICADESA: el text el llegeixen els pares. No facis servir etiquetes dures ni les paraules de les opcions tal qual (disruptiu, dolent, negatiu, desmotivat, passiu, desinteressat, irregular…). Descriu les situacions amb tacte i de manera concreta, centrant-te en què cal millorar i com ajudar-lo (per exemple, «li costa seguir el ritme de la classe», «cal que s'impliqui més en el treball diari», «ha de cuidar l'actitud a l'aula», «ha faltat massa sovint»). Sigues clar/a si el cas és greu, però sempre amb respecte, sense culpar ni retreure.",
     "VOCABULARI: usa un llenguatge senzill, quotidià i càlid. Evita paraules rimbombants o d'informe com «panorama», «situació acadèmica delicada», «recuperar el rendiment», «revertir», «imprescindible», «conjuntura», «energia», «potencial», «cal destacar». No facis servir expressions que sonin a text generat.",
     "Els PUNTS FORTS són només per conèixer el perfil: no cal esmentar-los, i si ho fas, que sigui amb naturalitat i amb altres paraules (no copiïs la frase). Les RECOMANACIONS, en canvi, sí que han de sortir al comentari.",
+    "FRASES NATURALS: construeix el text amb verbs i expressions del dia a dia («s'esforça molt», «treballa molt bé», «lliura les tasques»), no amb noms abstractes ni adjectius d'informe («esforç elevat», «treball elevat», «participació constant», «regularitat del lliurament», «combinada amb»). Revisa que cada adjectiu concordi bé en gènere i nombre.",
     "No deduïs ni afegeixis trets de caràcter o de personalitat (introvertit, tímid, inquiet…) ni fets, anècdotes o motius que no surtin a DADES.",
     'No mencions notes numèriques ni noms d\'assignatures concretes: la família ja té el butlletí.',
     trimestreCtx,
