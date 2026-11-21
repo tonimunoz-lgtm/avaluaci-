@@ -86,7 +86,7 @@ function showEvaluationTypeDialog() {
     modal.className = 'fixed inset-0 flex items-center justify-center z-[9999] bg-black bg-opacity-40';
     modal.innerHTML = `
       <div class="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
-        <h2 class="text-2xl font-bold mb-2 text-gray-900">¿Cómo vols avaluar aquesta activitat?</h2>
+        <h2 class="text-2xl font-bold mb-2 text-gray-900">Com vols avaluar aquesta activitat?</h2>
         <p class="text-sm text-gray-600 mb-6">Selecciona el tipus d'avaluació:</p>
         
         <div class="space-y-3 mb-6">
@@ -189,9 +189,8 @@ async function createActivityWithType(name, evaluationType) {
     if (inputName) inputName.value = '';
 
     // Cerrar modal
-    if (window.closeModal) {
-      window.closeModal('modalAddActivity');
-    }
+    const modal = document.getElementById('modalAddActivity');
+    if (modal) { modal.classList.add('hidden'); modal.style.display = 'none'; }
 
     // Recargar
     if (window.loadClassData) {

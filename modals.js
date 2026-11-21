@@ -38,3 +38,7 @@ document.addEventListener('click', (e) => {
     if (which) closeModal(which);
   }
 });
+
+// També accessibles globalment per als scripts que no són mòduls (p. ex. competencial.js)
+window.openModal = openModal;
+window.closeModal = closeModal;
