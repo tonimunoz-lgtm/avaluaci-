@@ -5,6 +5,11 @@ let _db = null;
 let _currentClassId = null;
 let _classData = null;
 let _activeTermId = null;
+// El període triat per l'usuari es recorda per classe (en aquest dispositiu): la graella el recupera
+// en tornar a obrir la classe i els Informes / «Alumnes a vigilar» l'usen com a període actual.
+const termKey = id => `avaluapp.term.${id}`;
+const rememberTerm = () => { try { if (_currentClassId && _activeTermId) localStorage.setItem(termKey(_currentClassId), _activeTermId); } catch {} };
+const recalledTerm = id => { try { return localStorage.getItem(termKey(id)) || null; } catch { return null; } };
 let _lastClassId = null;
 let _onChangeCallback = null;
 let _copiedGridStructure = null;
@@ -36,7 +41,7 @@ export function setup(db, classId, classData, opts = {}) {
   }
 
   // Selecciona primer terme actiu
-  if (!_activeTermId) _activeTermId = Object.keys(_classData.terms)[0];
+  if (!_activeTermId) { const r = recalledTerm(classId); _activeTermId = (r && _classData.terms[r]) ? r : Object.keys(_classData.terms)[0]; }
 
   renderDropdown();
 
@@ -84,6 +89,7 @@ function renderDropdown() {
 
   sel.onchange = (e) => {
     _activeTermId = e.target.value;
+    rememberTerm();
     showEmptyMessage(false);
     if (_onChangeCallback) _onChangeCallback(_activeTermId);
   };
@@ -135,6 +141,7 @@ export async function addNewTermWithName(name) {
   _classData = doc.exists ? doc.data() : _classData;
 
   _activeTermId = newId;
+  rememberTerm();
   renderDropdown();
   showEmptyMessage(false);
 

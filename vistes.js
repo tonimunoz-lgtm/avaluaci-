@@ -60,11 +60,27 @@ function commentTerms(c, termId) {
   return withActs.length ? withActs : ids;
 }
 
+// Període «actual» d'una classe: el que l'usuari ha triat per última vegada a la graella; si no n'hi ha,
+// l'últim període que ja té alguna nota (sense comptar activitats calculades); si no, l'últim.
+function currentTermOf(c) {
+  const ids = Object.keys(c.terms || {});
+  if (!ids.length) return '';
+  let r = null; try { r = localStorage.getItem(`avaluapp.term.${c.id}`); } catch {}
+  if (r && c.terms[r]) return r;
+  const calc = c.calculatedActivities || {};
+  const hasGrades = id => (c.terms[id].activities || []).some(a => !calc[a]?.calculated && (c.students || []).some(s => num((s.notes || {})[a]) != null));
+  return [...ids].reverse().find(hasGrades) || ids[ids.length - 1];
+}
+const termName = (c, id) => (c.terms?.[id]?.name || c.terms?.[id]?.nom || '');
+
 // Estadístiques d'una classe (opcionalment per a un sol grup d'avaluació)
 function analyse(c, termId) {
   const terms = c.terms || {};
-  const actIds = termId && terms[termId] ? (terms[termId].activities || [])
-    : [...new Set(Object.values(terms).flatMap(t => t.activities || []))];
+  // Les activitats calculades (fórmula, mitjana ponderada, arrodoniment) són només el resultat d'altres
+  // activitats: no compten als informes ni a «Alumnes a vigilar» (comptarien les notes dues vegades).
+  const calc = c.calculatedActivities || {};
+  const actIds = (termId && terms[termId] ? (terms[termId].activities || [])
+    : [...new Set(Object.values(terms).flatMap(t => t.activities || []))]).filter(a => !calc[a]?.calculated);
   const rows = (c.students || []).map(s => {
     const vals = actIds.map(a => num((s.notes || {})[a]));
     const done = vals.filter(v => v != null);
@@ -225,34 +241,35 @@ async function renderAlumnes() {
 }
 
 /* ------------------------------------------------------------ pantalla Informes */
-let _repSel = { cls: '', term: '' };
+let _repSel = { cls: '', term: null }; // term: null = període actual de la classe; '' = tots
 async function renderInformes() {
   const root = $('screen-informes');
   root.innerHTML = '<h2 class="section-title">Informes</h2><p class="muted" style="margin-top:1rem">Carregant…</p>';
   const classes = await loadAll();
   if (!classes.length) { root.innerHTML = '<h2 class="section-title">Informes</h2><div class="panel" style="margin-top:1rem">Crea una classe per veure\'n els informes.</div>'; return; }
-  if (!classes.some(c => c.id === _repSel.cls) && _repSel.cls !== 'ALL') _repSel = { cls: classes[0].id, term: '' };
+  if (!classes.some(c => c.id === _repSel.cls) && _repSel.cls !== 'ALL') _repSel = { cls: classes[0].id, term: null };
   const cur = classes.find(c => c.id === _repSel.cls);
   const termOpts = cur ? Object.entries(cur.terms || {}) : [];
+  const termSel = cur ? (_repSel.term === null ? currentTermOf(cur) : _repSel.term) : '';
   root.innerHTML = `
     <div class="classes-head"><h2 class="section-title">Informes</h2>
       <div class="toolbar">
         <select id="repClass" class="pill-select">${classes.map(c => `<option value="${esc(c.id)}" ${c.id === _repSel.cls ? 'selected' : ''}>${esc(c.nom || 'Sense nom')}</option>`).join('')}<option value="ALL" ${_repSel.cls === 'ALL' ? 'selected' : ''}>Totes les classes (comparativa)</option></select>
-        ${cur ? `<select id="repTerm" class="pill-select"><option value="">Tots els períodes</option>${termOpts.map(([id, t]) => `<option value="${esc(id)}" ${id === _repSel.term ? 'selected' : ''}translate="no">${esc(t.name || t.nom || id)}</option>`).join('')}</select>
+        ${cur ? `<select id="repTerm" class="pill-select"><option value="">Tots els períodes</option>${termOpts.map(([id, t]) => `<option value="${esc(id)}" ${id === termSel ? 'selected' : ''} translate="no">${esc(t.name || t.nom || id)}</option>`).join('')}</select>
         <button id="repCsv" type="button"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>Exportar CSV</button>` : ''}
         <button id="repPrint" type="button"><svg viewBox="0 0 24 24"><path d="M7 9V3h10v6M7 17H4v-7h16v7h-3M7 14h10v7H7z"/></svg>Imprimir</button>
       </div></div>
-    <div id="repBody">${cur ? reportHTML(cur, _repSel.term) : compareHTML(classes)}</div>`;
-  $('repClass').addEventListener('change', e => { _repSel = { cls: e.target.value, term: '' }; renderInformes(); });
+    <div id="repBody">${cur ? reportHTML(cur, termSel) : compareHTML(classes)}</div>`;
+  $('repClass').addEventListener('change', e => { _repSel = { cls: e.target.value, term: null }; renderInformes(); });
   $('repTerm')?.addEventListener('change', e => { _repSel.term = e.target.value; renderInformes(); });
-  $('repCsv')?.addEventListener('click', () => download(`informe-${(cur.nom || 'classe').replace(/\W+/g, '_')}.csv`, csvOf(cur, _repSel.term)));
+  $('repCsv')?.addEventListener('click', () => download(`informe-${(cur.nom || 'classe').replace(/\W+/g, '_')}.csv`, csvOf(cur, termSel)));
   $('repPrint').addEventListener('click', () => window.print());
 }
 
 function compareHTML(classes) {
-  const rows = classes.map(c => ({ c, a: analyse(c) }));
+  const rows = classes.map(c => ({ c, a: analyse(c, currentTermOf(c)) }));
   const max = 10;
-  return `<div class="panel"><h3>Comparativa entre classes</h3><p class="muted">Mitjana de les mitjanes dels alumnes i percentatge d'aprovats</p>
+  return `<div class="panel"><h3>Comparativa entre classes</h3><p class="muted">Mitjana de les mitjanes dels alumnes i percentatge d'aprovats, del període actual de cada classe</p>
   <div class="tbl-wrap"><table class="rep-table"><thead><tr><th class="l">Classe</th><th>Alumnes</th><th>Mitjana</th><th class="l" style="min-width:160px"></th><th>Aprovats</th><th>Suspesos</th><th>En risc</th></tr></thead><tbody>
   ${rows.map(({ c, a }) => `<tr><td class="l"><b>${esc(c.nom || 'Sense nom')}</b></td><td>${a.rows.length}</td>
     <td><span class="pill t-${toneOf(a.mean)}">${fmt(a.mean)}</span></td>
@@ -281,7 +298,7 @@ function switchTab(tab) {
 document.querySelector('.tabs').addEventListener('click', e => {
   const b = e.target.closest('.tab'); if (b) switchTab(b.dataset.tab);
 });
-window.addEventListener('class-opened', e => { invalidate(); switchTab(e.detail?.tab || 'notes'); });
+window.addEventListener('class-opened', e => { _resTerm = null; invalidate(); switchTab(e.detail?.tab || 'notes'); });
 // Quan es redibuixa la graella (nota, comentari…) refresquem la pestanya activa
 window.addEventListener('grid-rendered', () => {
   invalidate(); fillActFilter();
@@ -298,7 +315,7 @@ let _cmTerm = null;
 const termSelect = (c, id, sel, withAll) => {
   const ts = Object.entries(c.terms || {});
   if (!ts.length) return '';
-  return `<select id="${id}" class="pill-select">${withAll ? `<option value="">Tots els períodes</option>` : ''}${ts.map(([k, t]) => `<option value="${esc(k)}" ${k === sel ? 'selected' : ''}translate="no">${esc(t.name || k)}</option>`).join('')}</select>`;
+  return `<select id="${id}" class="pill-select">${withAll ? `<option value="">Tots els períodes</option>` : ''}${ts.map(([k, t]) => `<option value="${esc(k)}" ${k === sel ? 'selected' : ''} translate="no">${esc(t.name || k)}</option>`).join('')}</select>`;
 };
 
 async function renderComentaris() {
@@ -334,12 +351,13 @@ async function renderComentaris() {
   });
 }
 
-let _resTerm = '';
+let _resTerm = null; // null = període actiu de la graella; '' = tots
 async function renderResum() {
   const root = $('tab-resum');
   root.innerHTML = '<p class="muted" style="padding:1rem">Carregant…</p>';
   const c = await currentClass();
   if (!c) { root.innerHTML = ''; return; }
+  if (_resTerm === null) _resTerm = window.AvaluApp?.getActiveTermId?.() || '';
   root.innerHTML = `<div class="toolbar" style="margin-top:.8rem">${termSelect(c, 'resTermSel', _resTerm, true)}</div>` + reportHTML(c, _resTerm);
   $('resTermSel')?.addEventListener('change', e => { _resTerm = e.target.value; renderResum(); });
 }
@@ -460,11 +478,11 @@ async function renderRiskCard() {
     const classes = await loadAll();
     _riskAt = Date.now();
     const groups = classes.map(c => {
-      const a = analyse(c);
+      const a = analyse(c, currentTermOf(c));
       return { c, risk: a.risk.sort((x, y) => x.avg - y.avg), graded: a.rows.length - a.noGrades };
     }).filter(g => g.risk.length);
     const total = groups.reduce((n, g) => n + g.risk.length, 0);
-    const anyGrades = classes.some(c => analyse(c).rows.length - analyse(c).noGrades > 0);
+    const anyGrades = classes.some(c => { const a = analyse(c, currentTermOf(c)); return a.rows.length - a.noGrades > 0; });
     if (!anyGrades) { card?.remove(); return; }
     if (!card) {
       card = document.createElement('div'); card.id = 'riskCard';
@@ -485,9 +503,9 @@ async function renderRiskCard() {
       <button type="button" class="rk-head" aria-expanded="${open}">
         <span class="rk-ic">⚠️</span>
         <span class="rk-t"><b translate="no">${total}</b> <span>${total === 1 ? 'alumne a vigilar' : 'alumnes a vigilar'}</span>
-          <small>mitjana inferior a 5 o 2 o més activitats suspeses</small></span>
+          <small>període actual de cada classe · mitjana inferior a 5 o 2 o més suspeses</small></span>
         <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
-      <div class="rk-body">${groups.map(g => `<div class="rk-class" translate="no">${esc(g.c.nom || 'Sense nom')}</div>` +
+      <div class="rk-body">${groups.map(g => `<div class="rk-class" translate="no">${esc(g.c.nom || 'Sense nom')}${termName(g.c, currentTermOf(g.c)) ? ' · ' + esc(termName(g.c, currentTermOf(g.c))) : ''}</div>` +
         g.risk.map(r => `<div class="rk-row" role="button" tabindex="0" data-stu="${esc(r.id)}" data-cls="${esc(g.c.id)}">
           <span class="stu-avatar" style="--hue:${hue(r.nom)}" translate="no">${esc(initials(r.nom))}</span>
           <span class="rk-n" translate="no">${esc(r.nom)}</span>
