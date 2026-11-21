@@ -489,13 +489,19 @@ async function upgradeCompetencyInputs() {
       const studentId = el.dataset.studentId || el.closest('tr')?.dataset.studentId;
       if (!activityId || !studentId) continue;
 
-      // Llegir valor de Firestore
+      // El valor ja és a la cel·la (app.js el pinta en crear la graella): no cal llegir res a Firestore
+      // (abans: una lectura seqüencial per cel·la, que feia la graella molt lenta).
       let numericVal = null;
-      try {
-        const studentDoc = await _db.collection('alumnes').doc(studentId).get();
-        const rawVal = studentDoc.exists ? studentDoc.data().notes?.[activityId] : null;
-        numericVal = (rawVal != null) ? parseFloat(rawVal) : null;
-      } catch (_) {}
+      if (el.tagName === 'INPUT') {
+        const raw = String(el.value ?? '').trim();
+        numericVal = raw !== '' && !isNaN(parseFloat(raw)) ? parseFloat(raw) : null;
+      } else {
+        try {   // només els selectors antics NA/AS/AN/AE necessiten la nota numèrica del núvol
+          const studentDoc = await _db.collection('alumnes').doc(studentId).get();
+          const rawVal = studentDoc.exists ? studentDoc.data().notes?.[activityId] : null;
+          numericVal = (rawVal != null) ? parseFloat(rawVal) : null;
+        } catch (_) {}
+      }
 
       // Comprovar de nou que l'element segueix al DOM després de l'await
       if (!document.body.contains(el) || !el.parentNode) continue;
@@ -696,6 +702,7 @@ function patchActivityHeaders() {
 
 patchActivityHeaders();
 
+let _compIdsCache = null;
 async function tagHeadersAndPatchLocks() {
   if (!_db || !window.currentClassId) return;
 
@@ -705,10 +712,14 @@ async function tagHeadersAndPatchLocks() {
     const calculatedActs = classDoc.data().calculatedActivities || {};
 
     // Obtenir activitats competencials
-    const compSnap = await _db.collection('activitats')
-      .where('ownerUid', '==', firebase.auth().currentUser.uid)
-      .where('evaluationType', '==', 'competency').get();
-    const compIds = new Set(compSnap.docs.map(d => d.id));
+    // La consulta recorre totes les activitats competencials del professor: es reutilitza 60 s
+    if (!_compIdsCache || Date.now() - _compIdsCache.at > 60000) {
+      const compSnap = await _db.collection('activitats')
+        .where('ownerUid', '==', firebase.auth().currentUser.uid)
+        .where('evaluationType', '==', 'competency').get();
+      _compIdsCache = { at: Date.now(), ids: new Set(compSnap.docs.map(d => d.id)) };
+    }
+    const compIds = _compIdsCache.ids;
 
     const thead = document.getElementById('notesThead');
     if (!thead) return;
@@ -825,8 +836,11 @@ async function reEnableCompetencyButtons() {
 // Quan una activitat competencial té un valor numèric calculat,
 // mostrem el badge de color al costat del número
 // ============================================================
+let _badgeT = 0;
 const badgeObserver = new MutationObserver(() => {
-  setTimeout(addBadgesToCalculatedCells, 200);
+  // Una sola execució per ràfega de canvis (abans: una per cada cel·la pintada, cadascuna amb lectures a Firestore)
+  clearTimeout(_badgeT);
+  _badgeT = setTimeout(addBadgesToCalculatedCells, 350);
 });
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -838,8 +852,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }, 2000);
 });
 
+window.addEventListener('activity-kind-changed', () => { _calcKindCache.clear(); _compIdsCache = null; });
+const _calcKindCache = new Map(); // id d'activitat -> és competencial? (no canvia durant la sessió)
+let _badgeBusy = false;
 async function addBadgesToCalculatedCells() {
-  if (!_db || !window.currentClassId) return;
+  if (!_db || !window.currentClassId || _badgeBusy) return;
+  _badgeBusy = true;
 
   // Obtenir activitats competencials calculades
   try {
@@ -851,9 +869,12 @@ async function addBadgesToCalculatedCells() {
     for (const [actId, calcData] of Object.entries(calculatedActs)) {
       if (!calcData.calculated) continue;
 
-      // Comprovar si és competencial
-      const actDoc = await _db.collection('activitats').doc(actId).get();
-      if (!actDoc.exists || actDoc.data().evaluationType !== 'competency') continue;
+      // Comprovar si és competencial (amb memòria cau: una sola lectura per activitat)
+      if (!_calcKindCache.has(actId)) {
+        const actDoc = await _db.collection('activitats').doc(actId).get();
+        _calcKindCache.set(actId, !!actDoc.exists && actDoc.data().evaluationType === 'competency');
+      }
+      if (!_calcKindCache.get(actId)) continue;
 
       // Trobar les cel·les d'aquesta activitat (inputs numèrics calculats = readonly)
       const inputs = document.querySelectorAll(
@@ -880,7 +901,7 @@ async function addBadgesToCalculatedCells() {
     }
   } catch (e) {
     // silenci - no crític
-  }
+  } finally { _badgeBusy = false; }
 }
 
 console.log('🎓 competencial-config.js: tots els mòduls inicialitzats');

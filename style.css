@@ -845,3 +845,8 @@ body #weightedInputs .w-pct input { width: 5.6rem !important; padding: .3rem .6r
   .risk-card .rk-head { padding: .6rem 1rem; }
   .risk-card .rk-ic { font-size: 1.1rem; }
 }
+
+/* Escriptori: «N alumnes a vigilar» i l'explicació del període a la mateixa línia */
+@media (min-width: 861px) {
+  .risk-card .rk-t small { flex-basis: auto; margin-left: .3rem; }
+}

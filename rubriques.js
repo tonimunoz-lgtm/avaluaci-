@@ -16,6 +16,9 @@ const DEFAULT_TRAMS = { NA: { min: 0, max: 2 }, AS: { min: 2, max: 2.5 }, AN: { 
 (function () {
   const st = document.createElement('style');
   st.textContent = `
+  .comp-badge.has-rb { display: flex !important; align-items: center; justify-content: space-between; gap: .3rem; padding-left: 0 !important; cursor: pointer; }
+  .comp-badge.has-rb::before { content: attr(data-rb); font-size: .62rem; font-weight: 700; padding: 0 .45rem; border-right: 1.5px solid currentColor; opacity: .85; line-height: 1.5; }
+  .comp-badge.has-rb:hover::before { text-decoration: underline; }
   .rb-btn { border: 0; background: #efe9ff; color: #4a2fd4; border-radius: 8px; font-size: .7rem; font-weight: 700; padding: .12rem .45rem; cursor: pointer; line-height: 1.2; }
   .rb-btn.done { background: #4a2fd4; color: #fff; }
   .rb-ov { position: fixed; inset: 0; z-index: 9600; display: flex; align-items: center; justify-content: center; background: rgba(20,10,60,.45); backdrop-filter: blur(3px); padding: 1rem; }
@@ -233,22 +236,31 @@ async function decorate(force) {
       b.addEventListener('click', e => { e.stopPropagation(); menu.classList.add('hidden'); editRubric(a, name); });
       menu.insertBefore(b, menu.querySelector('.clear-btn') || null);
     });
-    // botó 📋 a cada cel·la d'una activitat amb rúbrica
+    // La insígnia NA/AS/AN/AE es parteix en dos: a l'esquerra «Rúbrica» (mateix color) i a la dreta el nivell.
     cells.forEach(inp => {
       const w = inp.closest('.comp-cell-wrapper'); if (!w) return;
-      const has = _rub.get(inp.dataset.activityId);
-      let b = w.querySelector('.rb-btn');
-      if (!has || inp.disabled) { b?.remove(); return; }
-      if (b) return;
-      b = document.createElement('button'); b.type = 'button'; b.className = 'rb-btn'; b.textContent = 'Rúbrica';
-      b.title = 'Avalua aquest alumne amb la rúbrica';
-      b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); evalStudent(inp.dataset.activityId, inp.dataset.studentId || inp.closest('tr')?.dataset.studentId, inp); });
-      w.appendChild(b);
+      w.querySelector('.rb-btn')?.remove();                       // restes de la versió anterior
+      const bd = w.querySelector('.comp-badge'); if (!bd) return;
+      const has = _rub.get(inp.dataset.activityId) && !inp.disabled;
+      bd.classList.toggle('has-rb', !!has);
+      if (!has) { delete bd.dataset.rb; bd.removeAttribute('title'); return; }
+      bd.dataset.rb = window.t ? window.t('Rúbrica') : 'Rúbrica';
+      bd.title = 'Fes clic a «Rúbrica» per avaluar aquest alumne amb la rúbrica';
+      if (bd.dataset.rbWired) return;
+      bd.dataset.rbWired = '1';
+      bd.addEventListener('click', e => {
+        if (!bd.classList.contains('has-rb')) return;
+        const r = bd.getBoundingClientRect();
+        if ((e.clientX - r.left) / r.width > 0.55) return;         // només la meitat esquerra
+        e.preventDefault(); e.stopPropagation();
+        evalStudent(inp.dataset.activityId, inp.dataset.studentId || inp.closest('tr')?.dataset.studentId, inp);
+      });
     });
   } finally { _busy = false; }
 }
 const later = () => { clearTimeout(_t); _t = setTimeout(() => decorate(), 700); };
 window.addEventListener('grid-rendered', later);
-new MutationObserver(later).observe(document.body, { childList: true, subtree: true });
+// Només la graella (no tot el document): així no es dispara amb cada canvi de la pàgina
+['notesTbody', 'notesThead'].forEach(id => { const el = document.getElementById(id); if (el) new MutationObserver(later).observe(el, { childList: true, subtree: true }); });
 
 window.Rubriques = { edit: editRubric, getRubric, trams, levelValue };

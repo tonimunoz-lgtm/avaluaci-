@@ -2174,6 +2174,7 @@ modalApplyCalcBtn.addEventListener('click', async () => {
           if (!confirm('Has escollit activitats competencials, així que el resultat serà una activitat competencial (NA/AS/AN/AE). Aquesta activitat passarà a ser competencial. Vols continuar?')) return;
           await db.collection('activitats').doc(currentCalcActivityId).update({ evaluationType: 'competency', isCompetency: true });
           _actKind.set(currentCalcActivityId, true); _calcTargetComp = true;
+          window.dispatchEvent(new CustomEvent('activity-kind-changed', { detail: { id: currentCalcActivityId } }));
         }
         const k = r => +(r.w / 100).toFixed(4);
         const wf = '(' + sel.map(r => `__ACT__${r.id}*${k(r)}`).join('+') + ')';

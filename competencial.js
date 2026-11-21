@@ -234,6 +234,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // 🔥 MEJORADO: Procesar TODOS los inputs de una vez
+const _kindCache = new Map();
+window.addEventListener('activity-kind-changed', () => _kindCache.clear());
 async function patchCompetencyInputs() {
   // Ignorar inputs ja gestionats per competencial-config.js (data-is-competency-numeric)
   // i els que estan dins d'un wrapper .comp-cell-wrapper (ja processats)
@@ -265,20 +267,20 @@ async function patchCompetencyInputs() {
   });
 
   // Precarga: obtener todas las actividades de una vez
+  // (memòria cau: una sola lectura per activitat durant la sessió, no una per cada repintat de la graella)
   const competencyActivityIds = new Set();
-  for (const actId of activityIds) {
+  await Promise.all([...activityIds].map(async actId => {
     try {
-      const actDoc = await db.collection('activitats').doc(actId).get();
-      if (actDoc.exists) {
-        const activity = actDoc.data();
-        if (activity.evaluationType === 'competency' || activity.isCompetency) {
-          competencyActivityIds.add(actId);
-        }
+      if (!_kindCache.has(actId)) {
+        const actDoc = await db.collection('activitats').doc(actId).get();
+        const a = actDoc.exists ? actDoc.data() : null;
+        _kindCache.set(actId, !!a && (a.evaluationType === 'competency' || !!a.isCompetency));
       }
+      if (_kindCache.get(actId)) competencyActivityIds.add(actId);
     } catch (err) {
       console.error('Error cargando actividad:', err);
     }
-  }
+  }));
 
   console.log(`📊 Actividades competenciales detectadas: ${competencyActivityIds.size}`);
 
