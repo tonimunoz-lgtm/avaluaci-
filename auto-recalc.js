@@ -121,7 +121,7 @@ async function doRecalc(formulas) {
 async function doRecalcWithStudents(formulas, students, db) {
   showToast();
   try {
-    for (const [calcActId, { formula, weights }] of formulas) {
+    for (const [calcActId, { formula, weights, comp }] of formulas) {
       // ⚡ Processar tots els alumnes en paral·lel
       await Promise.all(students.map(async sid => {
         try {
@@ -132,7 +132,7 @@ async function doRecalcWithStudents(formulas, students, db) {
           const finalResult = result !== null ? result : await evalFormulaFromFirestore(formula, sid, db, weights);
 
           if (finalResult === null || isNaN(finalResult)) return;
-          const rounded = Math.round(finalResult * 10) / 10;
+          const rounded = comp ? Math.round(finalResult * 100) / 100 : Math.round(finalResult * 10) / 10; // competencials: 2 decimals
 
           // ⚡ Actualitzar DOM immediatament (sense esperar Firestore)
           flashCell(sid, calcActId, rounded);
@@ -263,7 +263,7 @@ async function ensureCache() {
       }
 
       if (dependsOn.size > 0) {
-        _cache[actId] = { formula, dependsOn, weights: (data && data.weights) || null };
+        _cache[actId] = { formula, dependsOn, weights: (data && data.weights) || null, comp: !!(data && data.competency) };
         _origLog(`✅ auto-recalc: cache[${actId}] formula="${formula}" depèn de`, [...dependsOn]);
       } else {
         _origLog(`⚠️ auto-recalc: [${actId}] no s'han trobat dependències per formula="${formula}"`);

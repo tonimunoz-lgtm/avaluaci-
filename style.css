@@ -833,3 +833,7 @@ body #weightedInputs .w-pct input { width: 5.6rem !important; padding: .3rem .6r
 .risk-card .rk-n { flex: 1; min-width: 0; font-weight: 600; color: #231a5c; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .risk-card .rk-row small { color: #7a7799; white-space: nowrap; }
 @media (max-width: 520px) { .risk-card .rk-row small { display: none; } }
+
+#weightedInputs .w-row.locked { opacity: .45; }
+#weightedInputs .w-row.locked .w-pct { pointer-events: none; }
+#weightedInputs .w-comp { color: #7c3aed; font-weight: 700; margin-left: .3rem; }

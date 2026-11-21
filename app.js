@@ -1594,9 +1594,9 @@ function th(txt, cls=''){
 }
 
 // Canvia saveNote perquè NO re-renderitzi la taula
-function saveNote(studentId, activityId, value){
+function saveNote(studentId, activityId, value, dec = 10){
   let num = value === '' ? null : Number(value);
-  if (num !== null && !isNaN(num)) num = Math.round(num * 10) / 10; // màxim 1 decimal
+  if (num !== null && !isNaN(num)) num = Math.round(num * dec) / dec; // 1 decimal (2 en activitats competencials calculades)
   const updateObj = {};
   if(num === null || isNaN(num)) updateObj[`notes.${activityId}`] = firebase.firestore.FieldValue.delete();
   else updateObj[`notes.${activityId}`] = num;
@@ -1720,8 +1720,44 @@ let _classData = null;
 let _selectedTermForFormula = null;
 let _activityNameMap = {}; // 🔥 mapa id -> nom per al camp visual de fórmules
 
+// ---- Activitats competencials al càlcul ----
+// Una activitat competencial només es pot calcular amb la mitjana ponderada d'altres activitats competencials
+// (i el resultat és competencial). Les numèriques i les competencials no es barregen.
+const _actKind = new Map(); // id d'activitat -> true si és competencial
+const isCompDoc = d => !!d && (d.evaluationType === 'competency' || d.isCompetency === true);
+let _calcTargetComp = false;
+async function loadKinds(ids) {
+  await Promise.all(ids.filter(id => !_actKind.has(id)).map(async id => {
+    try { const d = await db.collection('activitats').doc(id).get(); _actKind.set(id, d.exists && isCompDoc(d.data())); } catch { /* es tractarà com a numèrica */ }
+  }));
+}
+function applyCalcModeLock() {
+  document.querySelectorAll('#calcSeg button').forEach(b => {
+    const lock = _calcTargetComp && b.dataset.v !== 'weighted';
+    b.disabled = lock;
+    b.title = lock ? 'Una activitat competencial només es pot calcular amb la mitjana ponderada d\'activitats competencials' : (b.dataset.v === 'weighted' ? 'Mitjana ponderada' : '');
+    b.style.opacity = lock ? '.4' : '';
+  });
+}
+function switchToWeightedWith(aid) {
+  _wPrefill = { [aid]: 100 };
+  notify('Les activitats competencials es calculen amb la mitjana ponderada: només es poden barrejar activitats competencials.');
+  calcTypeSelect.value = 'weighted';
+  calcTypeSelect.dispatchEvent(new Event('change'));
+}
+
 function openCalcModal(activityId){
   currentCalcActivityId = activityId; 
+  _calcTargetComp = false; applyCalcModeLock();
+  loadKinds([activityId, ...classActivities]).then(() => {
+    if (currentCalcActivityId !== activityId) return;
+    _calcTargetComp = !!_actKind.get(activityId);
+    applyCalcModeLock();
+    if (_calcTargetComp) {
+      if (calcTypeSelect.value !== 'weighted') { calcTypeSelect.value = 'weighted'; calcTypeSelect.dispatchEvent(new Event('change')); }
+      else renderWeighted();
+    }
+  });
   openModal('modalCalc');
   document.getElementById('calcType').value = 'numeric';
   document.querySelectorAll('#calcSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === 'numeric'));
@@ -1751,7 +1787,7 @@ async function buildWeighted() {
   const ids = [...classActivities].filter(id => id !== currentCalcActivityId);
   const docs = await Promise.all(ids.map(id => db.collection('activitats').doc(id).get()));
   const prefill = _wPrefill; _wPrefill = null;
-  _wRows = docs.filter(d => d.exists).map(d => ({ id: d.id, name: d.data().nom || '?', on: false, w: 0 }));
+  _wRows = docs.filter(d => d.exists).map(d => { _actKind.set(d.id, isCompDoc(d.data())); return { id: d.id, name: d.data().nom || '?', on: false, w: 0, comp: isCompDoc(d.data()) }; });
   if (prefill) _wRows.forEach(r => { if (prefill[r.id] != null) { r.on = true; r.w = Number(prefill[r.id]); } });
   renderWeighted();
 }
@@ -1761,11 +1797,22 @@ function renderWeighted() {
   if (!list) return;
   list.innerHTML = '';
   if (!_wRows.length) { list.innerHTML = '<p class="muted" style="padding:.6rem 0">Cap activitat en aquest període.</p>'; updateWeightedSummary(); return; }
+  // Tipus de la selecció: si el destí és competencial o ja n'has marcat una, només es poden marcar competencials;
+  // si has marcat una numèrica, només numèriques.
+  const firstOn = _wRows.find(r => r.on);
+  const kind = _calcTargetComp ? true : (firstOn ? !!firstOn.comp : null);
+  const note = document.getElementById('wCompNote') || (() => { const n = document.createElement('p'); n.id = 'wCompNote'; n.className = 'muted'; n.style.cssText = 'font-size:.82rem;margin:.2rem 0 .5rem'; list.parentNode.insertBefore(n, list); return n; })();
+  note.textContent = kind === true
+    ? (_wRows.some(r => r.comp) ? 'Activitat competencial: només es poden barrejar activitats competencials. El resultat serà competencial (NA/AS/AN/AE).' : 'No hi ha cap altra activitat competencial en aquest període per calcular-ne la mitjana.')
+    : (kind === false ? 'Activitats numèriques: no es poden barrejar amb les competencials.' : '');
+  note.style.display = note.textContent ? '' : 'none';
   _wRows.forEach(r => {
+    const locked = kind !== null && !!r.comp !== kind;
     const row = document.createElement('div');
-    row.className = 'w-row' + (r.on ? '' : ' off');
-    row.innerHTML = `<input type="checkbox" ${r.on ? 'checked' : ''} aria-label="Inclou">
-      <span class="w-name" translate="no">${esc(r.name)}</span>
+    row.className = 'w-row' + (r.on ? '' : ' off') + (locked ? ' locked' : '');
+    if (locked) row.title = kind ? 'Només es poden escollir activitats competencials' : 'No es poden barrejar activitats numèriques amb competencials';
+    row.innerHTML = `<input type="checkbox" ${r.on ? 'checked' : ''} ${locked ? 'disabled' : ''} aria-label="Inclou">
+      <span class="w-name" translate="no">${esc(r.name)}${r.comp ? ' <small class="w-comp">competencial</small>' : ''}</span>
       <span class="w-pct"><input type="number" min="0" max="100" step="any" inputmode="decimal" value="${r.on ? r.w : ''}" placeholder="—" aria-label="Pes en %"> %</span>`;
     const cb = row.querySelector('input[type=checkbox]');
     const num = row.querySelector('input[type=number]');
@@ -2084,7 +2131,7 @@ async function applyFormula(formula) {
   await Promise.all(classStudents.map(async sid => {
     const result = await evalFormulaAsync(formula, sid);
     if (result === null) return; // no es pot calcular per a aquest alumne
-    await saveNote(sid, currentCalcActivityId, result);
+    await saveNote(sid, currentCalcActivityId, result, _calcTargetComp ? 100 : 10);
   }));
 }
 
@@ -2119,6 +2166,15 @@ modalApplyCalcBtn.addEventListener('click', async () => {
         if (!sel.length) throw new Error(tt('Marca almenys una activitat amb pes'));
         const tot = sel.reduce((s, r) => s + r.w, 0);
         if (Math.abs(tot - 100) > 0.01) throw new Error(tt(`Els pesos han de sumar 100 % (ara sumen ${_wFmt(tot)} %). Prem «Ajusta a 100 %».`));
+        // Competencials: no es barregen amb numèriques i el resultat és competencial
+        const nComp = sel.filter(r => r.comp).length;
+        if (nComp && nComp !== sel.length) throw new Error('No es poden barrejar activitats competencials amb numèriques');
+        if (_calcTargetComp && nComp !== sel.length) throw new Error('Una activitat competencial només es pot calcular amb activitats competencials');
+        if (nComp && !_calcTargetComp) {
+          if (!confirm('Has escollit activitats competencials, així que el resultat serà una activitat competencial (NA/AS/AN/AE). Aquesta activitat passarà a ser competencial. Vols continuar?')) return;
+          await db.collection('activitats').doc(currentCalcActivityId).update({ evaluationType: 'competency', isCompetency: true });
+          _actKind.set(currentCalcActivityId, true); _calcTargetComp = true;
+        }
         const k = r => +(r.w / 100).toFixed(4);
         const wf = '(' + sel.map(r => `__ACT__${r.id}*${k(r)}`).join('+') + ')';
         await applyFormula(wf);
@@ -2174,7 +2230,8 @@ modalApplyCalcBtn.addEventListener('click', async () => {
           calculated: true,
           formula: formulaText,
           displayFormula: displayFormulaText,
-          ...(weights ? { weights } : {})
+          ...(weights ? { weights } : {}),
+          ...(_calcTargetComp ? { competency: true } : {})
         }
       });
     }
@@ -2432,7 +2489,7 @@ function buildActivityButtons(){
         _activityNameMap[aid] = name;
         
         // 🔥 FIX: Visible = nom, Ocult = __ACT__id
-        btn.addEventListener('click', () => insertAtCursor(`__ACT__${aid}`, name));
+        btn.addEventListener('click', () => { if (isCompDoc(doc.data())) { _actKind.set(aid, true); switchToWeightedWith(aid); } else insertAtCursor(`__ACT__${aid}`, name); });
         activitiesContainer.appendChild(btn);
       });
     });
@@ -2535,7 +2592,7 @@ function buildRoundingActivityButtons(){
         }
         btn.textContent = buttonText;
         
-        btn.addEventListener('click', () => insertAtCursor(name));
+        btn.addEventListener('click', () => { if (isCompDoc(doc.data())) { _actKind.set(aid, true); switchToWeightedWith(aid); } else insertAtCursor(name); });
         activitiesContainer.appendChild(btn);
       });
     });
