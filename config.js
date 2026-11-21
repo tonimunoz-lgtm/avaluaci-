@@ -114,6 +114,7 @@ export function renderConfigScreen(el) {
     ${window.__avaluAdmin ? card('⚙️', 'Administració',
       `<p class="muted" style="font-size:.85rem;margin-bottom:.7rem">Gestiona els usuaris i els permisos de l'aplicació.</p>
        <button id="cf_admin" type="button" class="btn">Obrir el panell d'administració</button>`) : ''}
+    ${card('🛟', 'Còpies de seguretat', '<div id="cf_cops"></div>')}
     ${card('💾', 'Dades',
       `<p class="muted" style="font-size:.85rem;margin-bottom:.7rem">Descarrega una còpia de seguretat de totes les teves classes, alumnes i activitats.</p>
        <button id="cf_backup" type="button" class="btn">Descarrega la còpia (JSON)</button>`)}
@@ -142,6 +143,7 @@ export function renderConfigScreen(el) {
   el.querySelector('#cf_backup').addEventListener('click', backup);
   el.querySelector('#cf_admin')?.addEventListener('click', () => { window.location.href = 'administrador.html'; });
   window.CompConfig?.renderInto(el.querySelector('#cf_comp'));
+  window.Historial?.renderCopies(el.querySelector('#cf_cops'));
 }
 
 async function backup() {
