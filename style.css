@@ -837,3 +837,11 @@ body #weightedInputs .w-pct input { width: 5.6rem !important; padding: .3rem .6r
 #weightedInputs .w-row.locked { opacity: .45; }
 #weightedInputs .w-row.locked .w-pct { pointer-events: none; }
 #weightedInputs .w-comp { color: #7c3aed; font-weight: 700; margin-left: .3rem; }
+
+/* Fase 5 (mòbil): targeta d'alumnes a vigilar en una sola fila, sense l'explicació del període */
+@media (max-width: 860px) {
+  .risk-card .rk-t small { display: none; }
+  .risk-card .rk-t { flex-wrap: nowrap; white-space: nowrap; }
+  .risk-card .rk-head { padding: .6rem 1rem; }
+  .risk-card .rk-ic { font-size: 1.1rem; }
+}
