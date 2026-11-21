@@ -121,15 +121,15 @@ async function doRecalc(formulas) {
 async function doRecalcWithStudents(formulas, students, db) {
   showToast();
   try {
-    for (const [calcActId, { formula }] of formulas) {
+    for (const [calcActId, { formula, weights }] of formulas) {
       // ⚡ Processar tots els alumnes en paral·lel
       await Promise.all(students.map(async sid => {
         try {
           // ⚡ evalFormula ara llegeix del DOM — 0 lectures Firestore per alumne
-          const result = evalFormulaFromDOM(formula, sid);
+          const result = evalFormulaFromDOM(formula, sid, weights);
 
           // Si no hem pogut llegir del DOM (alumne no visible), caiem a Firestore
-          const finalResult = result !== null ? result : await evalFormulaFromFirestore(formula, sid, db);
+          const finalResult = result !== null ? result : await evalFormulaFromFirestore(formula, sid, db, weights);
 
           if (finalResult === null || isNaN(finalResult)) return;
           const rounded = Math.round(finalResult * 10) / 10;
@@ -163,18 +163,33 @@ function getStudentsFromDOM() {
 
 // ── ⚡ Avaluar fórmula llegint valors del DOM (0 Firestore) ───────────────
 // Retorna null si no pot llegir (alumne no al DOM)
-function evalFormulaFromDOM(formula, studentId) {
+// Mitjana ponderada ignorant les notes buides (opció de Configuració): els pesos de les
+// activitats sense nota no compten i es reparteixen entre les que sí que en tenen.
+const ignoreEmpty = () => !!window.AvaluConfig?.get?.().ignorarBuits;
+function weightedIgnoringEmpty(weights, valueOf) {
+  let sum = 0, wsum = 0;
+  for (const [id, w] of Object.entries(weights)) {
+    const v = valueOf(id);
+    if (v === undefined) continue;
+    sum += v * w; wsum += w;
+  }
+  return wsum > 0 ? sum / wsum : NaN;
+}
+
+function evalFormulaFromDOM(formula, studentId, weights) {
   try {
     const tr = document.querySelector(`tr[data-student-id="${studentId}"]`);
     if (!tr) return null; // Alumne no al DOM → fallback Firestore
 
-    const values = {};
+    const values = {}, empty = new Set();
     for (const m of formula.matchAll(/__ACT__([a-zA-Z0-9_]+)/g)) {
       const input = tr.querySelector(`input[data-activity-id="${m[1]}"]`);
       if (!input) return null; // activitat d'un altre grup → fallback a Firestore
       const val = parseFloat(input.value);
+      if (isNaN(val)) empty.add(m[1]);
       values[m[1]] = isNaN(val) ? 0 : val;
     }
+    if (weights && ignoreEmpty()) return weightedIgnoringEmpty(weights, id => empty.has(id) ? undefined : values[id]);
     return window.FormulaEngine.evalSafe(formula, id => values[id]);
   } catch(e) {
     return null;
@@ -183,10 +198,11 @@ function evalFormulaFromDOM(formula, studentId) {
 
 // ── Fallback: Avaluar fórmula llegint de Firestore ────────────────────────
 // Només s'usa quan l'alumne o activitat no és visible al DOM
-async function evalFormulaFromFirestore(formula, studentId, db) {
+async function evalFormulaFromFirestore(formula, studentId, db, weights) {
   try {
     const sdoc = await db.collection('alumnes').doc(studentId).get();
     const notes = sdoc.exists ? (sdoc.data().notes || {}) : {};
+    if (weights && ignoreEmpty()) return weightedIgnoringEmpty(weights, id => { const v = notes[id]; return (v === undefined || v === null || v === '' || isNaN(Number(v))) ? undefined : Number(v); });
     return window.FormulaEngine.evalSafe(formula, id => { const v = Number(notes[id]); return isNaN(v) ? 0 : v; });
   } catch(e) { return null; }
 }
@@ -247,7 +263,7 @@ async function ensureCache() {
       }
 
       if (dependsOn.size > 0) {
-        _cache[actId] = { formula, dependsOn };
+        _cache[actId] = { formula, dependsOn, weights: (data && data.weights) || null };
         _origLog(`✅ auto-recalc: cache[${actId}] formula="${formula}" depèn de`, [...dependsOn]);
       } else {
         _origLog(`⚠️ auto-recalc: [${actId}] no s'han trobat dependències per formula="${formula}"`);

@@ -7,7 +7,7 @@ const DEFAULTS = {
   th: { red: 5, yellow: 7, green: 9 },
   idioma: 'catala', tutoriaClassId: '', ordreNom: '', escala: '',
   assumpte: 'Notes de {nom}', intro: 'Hola {nom},\n\nAquestes són les teves notes:',
-  densitat: 'normal', avisos: true
+  densitat: 'normal', avisos: true, ignorarBuits: false
 };
 const KEY = 'avaluapp.config';
 // Textos per defecte segons l'idioma de l'aplicació (només se substitueixen si l'usuari no els ha personalitzat)
@@ -104,6 +104,7 @@ export function renderConfigScreen(el) {
       row('Text d\'inici', `<textarea id="cf_intro" rows="3">${esc(c.intro)}</textarea>`) +
       row('Signatura', `<textarea id="cf_signatura" rows="2" placeholder="Cordialment,&#10;Toni Muñoz">${esc(c.signatura)}</textarea>`))}
     ${card('🎨', 'Aparença i avisos',
+      row('Notes buides a les mitjanes', `<select id="cf_buits"><option value="0" ${!c.ignorarBuits ? 'selected' : ''}>Compten com a 0</option><option value="1" ${c.ignorarBuits ? 'selected' : ''}>S'ignoren</option></select>`, 'Afecta la fila «Mitjana activitat» i les mitjanes ponderades. Les altres fórmules no canvien.') +
       row('Densitat de la graella', `<select id="cf_densitat"><option value="normal" ${c.densitat === 'normal' ? 'selected' : ''}>Còmoda</option><option value="compact" ${c.densitat === 'compact' ? 'selected' : ''}>Compacta</option></select>`) +
       row('Mida de la interfície', `<select id="cf_escala"><option value="auto" ${c.escala !== 'normal' ? 'selected' : ''}>Automàtica (compacta en portàtils)</option><option value="normal" ${c.escala === 'normal' ? 'selected' : ''}>Normal (100%)</option></select>`, 'En pantalles de portàtil es mostra una mica més petita perquè hi càpiga més contingut.') +
       row('Format del nom dels alumnes', `<select id="cf_ordre"><option value="nc" ${(c.ordreNom || localStorage.getItem('uc_nom_order') || 'nc') === 'nc' ? 'selected' : ''}>Nom Cognoms</option><option value="cn" ${(c.ordreNom || localStorage.getItem('uc_nom_order') || 'nc') === 'cn' ? 'selected' : ''}>Cognoms Nom</option></select>`, 'Com surten escrits a la llista. Serveix per separar nom i cognoms als comentaris.') +
@@ -127,7 +128,7 @@ export function renderConfigScreen(el) {
       terms: n('cf_terms').value.split(',').map(s => s.trim()).filter(Boolean),
       th: { red: +n('cf_th_red').value || 5, yellow: +n('cf_th_yellow').value || 7, green: +n('cf_th_green').value || 9 },
       tutoriaClassId: n('cf_tut').value, idioma: n('cf_idioma').value, assumpte: n('cf_assumpte').value, intro: n('cf_intro').value,
-      signatura: n('cf_signatura').value, ordreNom: n('cf_ordre').value, escala: n('cf_escala').value, densitat: n('cf_densitat').value, avisos: n('cf_avisos').value === '1'
+      signatura: n('cf_signatura').value, ordreNom: n('cf_ordre').value, escala: n('cf_escala').value, densitat: n('cf_densitat').value, avisos: n('cf_avisos').value === '1', ignorarBuits: n('cf_buits').value === '1'
     });
     try { localStorage.setItem('uc_nom_order', cfg.ordreNom); } catch {}
     const nl = n('cf_lang').value;

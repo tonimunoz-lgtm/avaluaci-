@@ -1618,6 +1618,7 @@ function applyCellColor(inputEl){
 }
 
 // 🔥 CORRECCIÓN EN renderAverages() - Ignorar columna de comentarios
+window.addEventListener('avalu-config', () => { try { if (typeof currentClassId !== 'undefined' && currentClassId) renderAverages(); } catch {} });
 function renderAverages(){
   // Actualitzar mitjanes alumnes
   //Array.from(notesTbody.children).forEach(tr=>{
@@ -1641,7 +1642,8 @@ function renderAverages(){
 
   for(let i=0;i<actCount;i++){
     const inputs = Array.from(notesTbody.querySelectorAll('tr')).map(r => r.querySelectorAll('input')[i]).filter(Boolean);
-    const vals = inputs.map(inp => Number(inp.value)).filter(v=> !isNaN(v));
+    const ignoreBlank = !!window.AvaluConfig?.get().ignorarBuits;
+    const vals = inputs.filter(inp => !ignoreBlank || String(inp.value).trim() !== '').map(inp => Number(inp.value)).filter(v=> !isNaN(v));
     const avg = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) : '';
     const td = document.createElement('td');
     td.className = 'border px-2 py-1 text-center font-semibold';
@@ -1650,6 +1652,31 @@ function renderAverages(){
   }
   trAvg.appendChild(th('',''));
   notesTfoot.appendChild(trAvg);
+
+  // ----------------- Progrés de la correcció: notes posades / alumnes -----------------
+  const trProg = document.createElement('tr');
+  trProg.className = 'text-sm progress-row';
+  trProg.appendChild(th('Notes posades'));
+  const bodyRows = Array.from(notesTbody.querySelectorAll('tr[data-student-id]'));
+  for (let i = 0; i < actCount; i++) {
+    const aid = classActivities[i];
+    let done = 0, total = 0;
+    bodyRows.forEach(r => {
+      const inp = r.querySelector(`input.table-input[data-activity-id="${aid}"]`);
+      if (!inp) return;
+      total++;
+      const empty = String(inp.value).trim() === '';
+      if (!empty) done++;
+      inp.classList.toggle('cell-empty', empty && !inp.classList.contains('blocked-cell'));
+    });
+    const td = document.createElement('td');
+    td.className = 'border px-2 py-1 text-center prog-cell' + (total && done === total ? ' prog-full' : '');
+    td.setAttribute('translate', 'no');
+    td.textContent = total ? `${done}/${total}` : '';
+    trProg.appendChild(td);
+  }
+  trProg.appendChild(th('',''));
+  notesTfoot.appendChild(trProg);
 
   // ----------------- Fila fórmules -----------------
   const trForm = document.createElement('tr');
