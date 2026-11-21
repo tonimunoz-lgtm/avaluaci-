@@ -33,7 +33,8 @@
 
     const escRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     let safePrompt = String(prompt);
-    map.forEach(m => { safePrompt = safePrompt.replace(new RegExp(escRe(m.real), 'gi'), m.token); });
+    // Només paraules senceres (evita que «Eva» trenqui «evolució» o «Ona» «personalitzats»)
+    map.forEach(m => { safePrompt = safePrompt.replace(new RegExp('(?<![\\p{L}\\p{N}])' + escRe(m.real) + '(?![\\p{L}\\p{N}])', 'giu'), m.token); });
 
     const response = await fetch('/api/tutoria', {
       method: 'POST',

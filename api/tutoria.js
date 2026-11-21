@@ -123,7 +123,7 @@ export default async function handler(req, res) {
           // els models gpt-oss "raonen" abans de respondre: es limita l'esforç i es deixa marge de tokens
           max_tokens: 2500,
           reasoning_effort: 'low',
-          temperature: 0.8,
+          temperature: 0.6,
         }),
       });
 

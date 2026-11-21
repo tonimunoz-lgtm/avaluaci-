@@ -523,6 +523,17 @@ function initModalInteractions(modal) {
     }
   });
 
+  // Les tries (comportament, esforç…) es poden desmarcar tornant a clicar: així l'aspecte no surt al comentari
+  const _grupsOpc = new Set(['comportament', 'esforc', 'tasques', 'assistencia', 'actitud']);
+  modal.addEventListener('mousedown', e => {
+    const r = e.target.closest('label')?.querySelector('input[type="radio"]');
+    if (r && (_grupsOpc.has(r.name) || r.name.startsWith('apartat_'))) r.dataset.was = r.checked ? '1' : '';
+  });
+  modal.addEventListener('click', e => {
+    const r = e.target.closest('label')?.querySelector('input[type="radio"]');
+    if (r && r.dataset.was === '1') { r.checked = false; r.dataset.was = ''; e.preventDefault(); }
+  });
+
   // Generar / Regenerar / Copiar
   modal.querySelector('#btnGenerarComentari').addEventListener('click', () => generarComentari(modal));
   modal.addEventListener('click', e => {
@@ -850,7 +861,7 @@ function recollidaDades(modal) {
   // Apòstrof català: l'Albert, l'Aina (davant vocal o h muda)
   const _esVH   = nom && nom !== "l'alumne/a" && /^[aeiouàèéíïóòúüh]/i.test(nom.trim());
   const article = _esVH ? "l'" : (genere === 'noia' ? 'La' : 'El');
-  const nomAmbArticle = _esVH ? `l'${nom}` : `${article} ${nom}`;
+  const nomAmbArticle = nom === "l'alumne/a" ? nom : (_esVH ? `l'${nom}` : `${article} ${nom}`);
 
   // Recollir apartats personalitzats
   const apartatsValors = _apartatsExtra.map(ap => ({
@@ -879,12 +890,12 @@ function recollidaDades(modal) {
 // ============================================================
 function toInstruccio(to, situacioGreu) {
   const tos = {
-    felicitacio: `TO FELICITACIÓ: Comença amb una felicitació explícita i entusiasta (ex: "Felicitem al/la [nom] per..."). Celebra els èxits concrets. Ressalta els punts forts amb entusiasme. Acaba animant a mantenir aquest nivell excel·lent.`,
-    positiu:     `TO POSITIU: Destaca els aspectes bons per sobre dels negatius. Si hi ha suspesos, presenta'ls breument com a reptes superables sense que dominin el missatge. Acaba amb confiança en les capacitats de l'alumne/a.`,
+    felicitacio: `TO FELICITACIÓ: Comença amb una felicitació explícita i entusiasta. Celebra els èxits concrets i ressalta els punts forts. Acaba animant a mantenir aquest nivell.`,
+    positiu:     `TO POSITIU: Destaca els aspectes bons per sobre dels negatius. Si hi ha suspesos o aspectes fluixos, presenta'ls breument com a reptes superables sense que dominin el missatge. Acaba amb confiança en les capacitats de l'alumne/a.`,
     neutre:      `TO EQUILIBRAT: Presenta punts forts i aspectes a millorar de forma proporcionada. ${situacioGreu ? "Menciona les mancances clarament però de forma constructiva." : "Menciona els reptes com a oportunitats de creixement."} Acaba amb encoratjament realista.`,
-    anims:       `TO ÀNIM: L'alumne/a necessita motivació. Reconeix l'esforç fet, per petit que sigui. Si hi ha suspesos, emfatitza que és possible superar-los. El final ha de ser un missatge d'ànim fort i sincer. Que se sentin recolzats.`,
-    avertencia:  `TO SERIÓS (respectuós però directe): La situació és preocupant. Menciona explícitament que la manca de treball, assistència o comportament ha perjudicat el rendiment. Transmetre preocupació real i necessitat de canvi. Acaba demanant esforç concret.`,
-    segueix:     `TO SEGUEIX AIXÍ: L'alumne/a ho fa bé, cal reconèixer-ho. Usa expressions com "Segueix així!", "Manté aquest excel·lent treball", "Estem molt contents amb la teva evolució". Que se sentin valorats i motivats a continuar.`,
+    anims:       `TO ÀNIM: L'alumne/a necessita motivació. Reconeix l'esforç fet, per petit que sigui. Si hi ha suspesos, emfatitza que és possible superar-los. El final ha de ser un missatge d'ànim sincer.`,
+    avertencia:  `TO SERIÓS (respectuós però directe): La situació és preocupant. Digues clarament que els aspectes negatius indicats a DADES han perjudicat el rendiment. Transmet preocupació real i necessitat de canvi. Acaba demanant esforç concret.`,
+    segueix:     `TO SEGUEIX AIXÍ: L'alumne/a ho fa bé; reconeix-ho i anima'l a mantenir el ritme (pots usar expressions com "Segueix així!"). Que se senti valorat i motivat a continuar.`,
   };
   return tos[to] || tos.neutre;
 }
@@ -892,32 +903,42 @@ function toInstruccio(to, situacioGreu) {
 // ============================================================
 // CONSTRUIR PROMPT
 // ============================================================
+const _NEG = {
+  comportament: ['irregular', 'dolent', 'disruptiu'],
+  esforc: ['baix', 'molt baix'],
+  tasques: ['a vegades', 'rarament', 'mai'],
+  assistencia: ['irregular amb justificació', 'moltes faltes sense justificar'],
+  actitud: ['poc participativa', 'passiva i desinteressada', 'negativa i desmotivada'],
+};
+const _NEG_GREU = {
+  comportament: ['dolent', 'disruptiu'], esforc: ['baix', 'molt baix'], tasques: ['rarament', 'mai'],
+  assistencia: ['moltes faltes sense justificar'], actitud: ['passiva i desinteressada', 'negativa i desmotivada'],
+};
+
 function buildPrompt(dades) {
   const { nom, nomAmbArticle, genere, article } = dades;
-  const suspesesTxt = dades.suspeses.length > 0
-    ? `Assignatures suspeses: ${dades.suspeses.join(', ')}.`
+  const ca = !dades.idioma || dades.idioma === 'catala';
+  const sensNom = !nom || nom === "l'alumne/a";          // no s'ha pogut triar cap nom
+  const ref = sensNom ? "l'alumne/a" : (ca ? nomAmbArticle : nom);   // com cal anomenar-lo
+  const nSusp = dades.suspeses.length;
+  const suspesesTxt = nSusp > 0
+    ? `Assignatures suspeses (${nSusp}): ${dades.suspeses.join(', ')}.`
     : 'No té cap assignatura suspesa.';
-  const trimestreTxt = dades.trimestre ? `Moment d'avaluació: ${dades.trimestre}.` : '';
   const campOpcional = (label, val) => val ? `- ${label}: ${val}` : '';
 
-  const aspectesNegatius = [
-    dades.comportament === 'dolent' || dades.comportament === 'disruptiu',
-    dades.esforc === 'baix' || dades.esforc === 'molt baix',
-    dades.tasques === 'rarament' || dades.tasques === 'mai',
-    dades.assistencia === 'moltes faltes sense justificar',
-    dades.actitud === 'passiva i desinteressada' || dades.actitud === 'negativa i desmotivada',
-  ].filter(Boolean).length;
+  const grups = ['comportament', 'esforc', 'tasques', 'assistencia', 'actitud'];
+  const negatius = grups.filter(g => (_NEG[g] || []).includes(dades[g])).length;
+  const greus = grups.filter(g => (_NEG_GREU[g] || []).includes(dades[g])).length;
+  const situacioGreu = greus >= 3 || (nSusp > 0 && greus >= 2);
+  const hiHaProblemes = nSusp > 0 || negatius >= 2;
+  const nomesPositiu = grups.every(g => !(_NEG[g] || []).includes(dades[g])) && nSusp === 0;
 
-  const situacioGreu = aspectesNegatius >= 3 || (dades.suspeses.length > 0 && aspectesNegatius >= 2);
-
-  const apartatsExtraTxt = dades.apartatsValors.length > 0
-    ? dades.apartatsValors.map(a => campOpcional(a.nom, a.valor)).join('\n')
-    : '';
+  const apartatsExtraTxt = dades.apartatsValors.map(a => campOpcional(a.nom, a.valor)).join('\n');
 
   const context = [
-    `Nom: ${nom} (usar "${nomAmbArticle}")`,
-    `Gènere: ${genere}`,
-    trimestreTxt,
+    sensNom ? '' : `Nom: ${nom} (usar "${ref}")`,
+    `Gènere: ${genere === 'noia' ? 'noia' : 'noi'}`,
+    dades.trimestre ? `Moment d'avaluació: ${dades.trimestre}.` : '',
     dades.curs ? `Curs: ${dades.curs}` : '',
     suspesesTxt,
     campOpcional('Comportament', dades.comportament),
@@ -930,17 +951,46 @@ function buildPrompt(dades) {
     campOpcional('Recomanacions', dades.recomanacions),
   ].filter(Boolean).join('\n');
 
+  const fem = genere === 'noia';
   const idiomaInstruccio = dades.idioma === 'angles'
-    ? `Write the comment in English. Refer to the student as "${nom}" and use the pronouns ${article === 'El' ? 'he/him' : 'she/her'}.`
+    ? `Write the comment in English. ${sensNom ? 'Refer to the student as "the student"' : `Refer to the student as "${nom}"`} and use the pronouns ${fem ? 'she/her' : 'he/him'}.`
     : dades.idioma === 'castella'
-    ? `Escriu en castellano. Usa "${article === 'El' ? 'El' : 'La'} ${nom}" i pronoms él/ella.`
-    : `Escriu en català. Usa "${nomAmbArticle}". Omet el pronom subjecte ell/ella quan el subjecte és conegut (pro-drop).`;
+    ? `Escribe el comentario en castellano. ${sensNom ? 'Refiérete al alumno/a de forma neutra' : `Llama al alumno "${nom}" (sin artículo delante del nombre)`} y usa los pronombres ${fem ? 'ella' : 'él'}.`
+    : `Escriu en català. ${sensNom ? "Anomena l'alumne/a «l'alumne/a»" : `Usa "${ref}"`}. Omet el pronom subjecte ell/ella quan el subjecte és conegut.`;
 
-  const trimestreCtx = dades.trimestre
-    ? `És el ${dades.trimestre}: ${/final/i.test(dades.trimestre) ? 'reflexiona sobre tot el curs' : 'anima a millorar de cara als propers trimestres'}.`
-    : '';
+  const t = dades.trimestre || '';
+  const trimestreCtx = !t ? '' : /final|curs/i.test(t)
+    ? `El moment és «${t}»: fes una reflexió global del curs.`
+    : `El moment és «${t}» (no és el final de curs): mira cap al període següent, sense parlar de trimestres que no coneixes.`;
 
-  const toInstr = toInstruccio(dades.to, situacioGreu);
+  const paraules = dades.llargada === 'curt' ? ['50', '80', 'molt concís: 2-3 frases, només el més important']
+    : dades.llargada === 'llarg' ? ['150', '250', 'desenvolupat, amb 2-3 paràgrafs']
+    : ['80', '150', 'un o dos paràgrafs'];
+
+  const regles = [
+    idiomaInstruccio,
+    sensNom ? '' : (ca ? `Comença el comentari amb "${ref}".` : dades.idioma === 'angles' ? `Start the comment with "${nom}".` : `Empieza el comentario con "${nom}".`),
+    "El comentari parla de l'alumne/a (en tercera persona), no s'adreça directament a la família.",
+    `Extensió: entre ${paraules[0]} i ${paraules[1]} paraules (${paraules[2]}). Respecta aquest marge; si hi ha poques dades, no omplis amb tòpics ni repeticions. Paràgrafs fluids, sense llistes ni títols.`,
+    "Fes servir NOMÉS la informació de DADES. No t'inventis fets, anècdotes, notes, noms de professors ni motius que no hi apareguin. No parlis d'aspectes que no hi són.",
+    'No mencions notes numèriques.',
+    trimestreCtx,
+    toInstruccio(dades.to, situacioGreu),
+    (['felicitacio', 'segueix'].includes(dades.to) && hiHaProblemes)
+      ? "Atenció: a DADES també hi ha aspectes negatius o suspesos. Felicita només el que és positiu i esmenta'ls breument i amb tacte, sense felicitar-lo de manera global."
+      : '',
+    (dades.to === 'avertencia' && nomesPositiu)
+      ? "Atenció: a DADES no hi ha cap aspecte negatiu. Mantén un to formal però no inventis problemes; centra't en la necessitat de mantenir l'esforç."
+      : '',
+    nSusp > 0
+      ? `Esmenta les assignatures suspeses pel seu nom (${dades.suspeses.join(', ')})${nSusp > 3 ? ' de forma agrupada' : ''}. No n'expliquis els motius si no consten a DADES.`
+      : 'No parlis de suspensos: no n\'hi ha cap.',
+    dades.apartatsValors.length ? "Integra de forma natural els apartats personalitzats de DADES (cadascun amb la valoració indicada)." : '',
+    dades.puntsForts ? 'Inclou els punts forts indicats, reformulats amb naturalitat.' : '',
+    dades.recomanacions ? 'Inclou les recomanacions indicades de forma natural, com a suggeriments concrets.' : '',
+    'Acaba amb una frase final coherent amb el to triat.',
+    'Concordança de gènere correcta.',
+  ].filter(Boolean);
 
   return `Ets un tutor/a escolar que escriu comentaris per al butlletí de notes.
 
@@ -948,18 +998,7 @@ DADES:
 ${context}
 
 INSTRUCCIONS:
-- ${idiomaInstruccio}
-- Comença SEMPRE amb "${nomAmbArticle}" (mai amb "Estimada família").
-- El comentari és sobre l'alumne/a, no adreçat a la família.
-- ${dades.llargada === 'curt' ? 'Entre 50 i 80 paraules (molt concís)' : dades.llargada === 'llarg' ? 'Entre 150 i 250 paraules (desenvolupat)' : 'Entre 80 i 150 paraules'}. Paràgrafs fluids, sense llistes.
-- No mencions notes numèriques.
-- ${trimestreCtx}
-- ${toInstr}
-- Si hi ha assignatures suspeses, menciona-les i explica les carències.
-- Si hi ha apartats personalitzats (treball cooperatiu, projectes...), integra'ls naturalment.
-- Si hi ha recomanacions, inclou-les de forma natural.
-- Acaba amb encoratjament genuí.
-- Concordança de gènere correcta.
+${regles.map(r => '- ' + r).join('\n')}
 
 Escriu NOMÉS el comentari final, sense títol ni explicació.`;
 }
