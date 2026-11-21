@@ -640,6 +640,26 @@ document.getElementById('viewList').addEventListener('click', () => {
   document.addEventListener('click', () => menu.classList.add('hidden'));
 })();
 
+/* Mòbil: vista de llista per defecte (si l'usuari en tria una altra, es recorda) */
+(function () {
+  const mq = window.matchMedia('(max-width: 860px)'), K = 'avaluapp.vistaMobil';
+  let applying = false;
+  const pref = () => { try { return localStorage.getItem(K) === 'cards' ? 'cards' : 'list'; } catch { return 'list'; } };
+  const apply = () => {
+    if (!mq.matches) return;
+    applying = true;
+    document.getElementById(pref() === 'cards' ? 'viewCards' : 'viewList').click();
+    applying = false;
+  };
+  [['viewCards', 'cards'], ['viewList', 'list']].forEach(([id, v]) =>
+    document.getElementById(id).addEventListener('click', () => {
+      if (applying || !mq.matches) return;
+      try { localStorage.setItem(K, v); } catch {}
+    }));
+  apply();
+  (mq.addEventListener ? mq.addEventListener('change', apply) : mq.addListener(apply));
+})();
+
 /* ---------------- Delete Mode Classes ---------------- */
 const btnDeleteMode = document.getElementById('btnDeleteMode');
 function setDeleteBtn(on) {
