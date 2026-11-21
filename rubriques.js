@@ -32,6 +32,12 @@ const DEFAULT_TRAMS = { NA: { min: 0, max: 2 }, AS: { min: 2, max: 2.5 }, AN: { 
   .rb-lv button.on { border-color: transparent; }
   .rb-row { display: flex; gap: .5rem; align-items: center; margin-bottom: .5rem; }
   .rb-row input { flex: 1; min-width: 0; border: 1.5px solid #d9d3fb; border-radius: 12px; padding: .55rem .8rem; font-size: .92rem; color: #231a5c; background: #fff; }
+  .rb-pct { flex: none; display: flex; align-items: center; gap: .25rem; font-weight: 700; color: #7a7799; }
+  .rb-pct input { flex: none; width: 4.6rem; text-align: right; }
+  .rb-tot { margin-top: .9rem; font-size: .85rem; font-weight: 700; padding: .5rem .8rem; border-radius: 12px; }
+  .rb-tot.ok { background: #e9f9f1; color: #0f6b4a; }
+  .rb-tot.bad { background: #fff4e0; color: #a85a00; }
+  .rb-w { color: #7a7799; font-weight: 700; margin-left: .3rem; }
   .rb-row button { flex: none; border: 0; background: #fde8ee; color: #c0143c; border-radius: 10px; width: 2rem; height: 2rem; cursor: pointer; }
   .rb-foot { display: flex; align-items: center; justify-content: space-between; gap: .6rem; flex-wrap: wrap; padding: .9rem 1.3rem; border-top: 1px solid #ece9fb; background: #faf9ff; }
   .rb-res { display: flex; align-items: center; gap: .6rem; font-weight: 800; font-size: 1.25rem; }
@@ -61,10 +67,21 @@ function toLevel(T, v) {
   for (const [l, r] of e) if (v >= r.min && (v < r.max || (l === last && v <= r.max))) return l;
   return v < e[0][1].min ? e[0][0] : last;
 }
+// Pes d'un criteri: el seu % o, si la rúbrica no en té (rúbriques antigues), el mateix per a tots
+const wOf = (c, crits) => (typeof c.pes === 'number' ? c.pes : 100 / crits.length);
 function score(T, ratings, crits) {
-  const vals = crits.map(c => ratings[c.id]).filter(Boolean).map(l => levelValue(T, l));
-  return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length * 100) / 100 : null;
+  let sum = 0, ws = 0;
+  crits.forEach(c => { const l = ratings[c.id]; if (!l) return; const w = wOf(c, crits); sum += levelValue(T, l) * w; ws += w; });
+  return ws > 0 ? Math.round(sum / ws * 100) / 100 : null;   // si falten criteris, es reparteix entre els marcats
 }
+const round2 = n => Math.round(n * 100) / 100;
+function equalWeights(crits) {
+  const n = crits.length; if (!n) return;
+  const base = Math.floor(10000 / n) / 100;
+  crits.forEach(c => { c.pes = base; });
+  crits[n - 1].pes = round2(100 - base * (n - 1));           // l'últim recull l'arrodoniment: suma exacta 100
+}
+const fmtP = n => String(round2(n)).replace('.', ',');
 
 /* ------------------------------------------------------------------ dades */
 const _rub = new Map(); // activitat -> rúbrica | null
@@ -97,22 +114,44 @@ async function editRubric(actId, actName) {
   const cur = await getRubric(actId, true);
   let crits = (cur?.criteris || []).map(c => ({ ...c }));
   if (!crits.length) crits = [{ id: uid8(), nom: '' }, { id: uid8(), nom: '' }, { id: uid8(), nom: '' }];
-  const { ov, close } = modal(`Rúbrica · ${esc(actName)}`, '<div id="rbList"></div><button type="button" class="rb-b" id="rbAdd">+ Afegir criteri</button>',
+  if (crits.some(c => typeof c.pes !== 'number')) equalWeights(crits);
+  const { ov, close } = modal(`Rúbrica · ${esc(actName)}`,
+    '<p class="rb-note">Escriu els criteris que avalues (per exemple «Participació», «Resolució del problema») i el pes de cadascun. La nota de cada alumne serà la mitjana ponderada dels nivells que marquis.</p><div id="rbList"></div><div style="display:flex;gap:.5rem;flex-wrap:wrap"><button type="button" class="rb-b" id="rbAdd">+ Afegir criteri</button><button type="button" class="rb-b" id="rbEq">Mateix pes per a tots</button></div><div id="rbTot" class="rb-tot"></div>',
     `${cur ? '<button type="button" class="rb-b danger" id="rbDel">Treu la rúbrica</button>' : '<span></span>'}<span style="display:flex;gap:.5rem"><button type="button" class="rb-b" id="rbCancel">Cancel·la</button><button type="button" class="rb-b primary" id="rbSave">Desa</button></span>`);
+  const total = () => round2(crits.reduce((t, c) => t + (Number(c.pes) || 0), 0));
+  const upTotal = () => {
+    const t = total(), ok = Math.abs(t - 100) < 0.01;
+    const el = $('#rbTot', ov);
+    el.className = 'rb-tot ' + (ok ? 'ok' : 'bad');
+    el.textContent = ok ? '✓ Total dels pesos: 100 %' : `Els pesos sumen ${fmtP(t)} % (han de sumar 100 %)` + (t < 100 ? ` · en falten ${fmtP(100 - t)} %` : ` · en sobren ${fmtP(t - 100)} %`);
+    $('#rbSave', ov).disabled = !ok;
+  };
   const draw = () => {
-    $('#rbList', ov).innerHTML = `<p class="rb-note">Escriu els criteris que avalues (per exemple «Participació», «Resolució del problema»). La nota de cada alumne serà la mitjana dels nivells que marquis.</p>` +
-      crits.map((c, i) => `<div class="rb-row"><input type="text" data-i="${i}" value="${esc(c.nom)}" placeholder="Criteri ${i + 1}" translate="no"><button type="button" data-d="${i}" aria-label="Elimina" title="Elimina">✕</button></div>`).join('');
+    $('#rbList', ov).innerHTML = crits.map((c, i) => `<div class="rb-row"><input type="text" data-i="${i}" value="${esc(c.nom)}" placeholder="Criteri ${i + 1}" translate="no">
+      <span class="rb-pct"><input type="number" min="0" max="100" step="any" inputmode="decimal" data-p="${i}" value="${c.pes ?? ''}" aria-label="Pes en %" placeholder="—"> %</span>
+      <button type="button" data-d="${i}" aria-label="Elimina" title="Elimina">✕</button></div>`).join('');
+    upTotal();
   };
   draw();
-  ov.addEventListener('input', e => { const i = e.target.dataset?.i; if (i != null) crits[+i].nom = e.target.value; });
+  ov.addEventListener('input', e => {
+    const t = e.target;
+    if (t.dataset?.i != null) crits[+t.dataset.i].nom = t.value;
+    if (t.dataset?.p != null) { crits[+t.dataset.p].pes = Math.max(0, Number(t.value) || 0); upTotal(); }
+  });
   ov.addEventListener('click', e => {
     const d = e.target.closest('[data-d]'); if (d) { crits.splice(+d.dataset.d, 1); draw(); }
   });
-  $('#rbAdd', ov).addEventListener('click', () => { crits.push({ id: uid8(), nom: '' }); draw(); $('#rbList input:last-of-type', ov)?.focus(); });
+  $('#rbAdd', ov).addEventListener('click', () => {
+    const rest = Math.max(0, round2(100 - total()));            // el nou criteri agafa el que falta fins a 100
+    crits.push({ id: uid8(), nom: '', pes: rest }); draw(); ov.querySelector('.rb-row:last-of-type input[type=text]')?.focus();
+  });
+  $('#rbEq', ov).addEventListener('click', () => { equalWeights(crits); draw(); });
   $('#rbCancel', ov).addEventListener('click', close);
   $('#rbSave', ov).addEventListener('click', async () => {
-    const clean = crits.map(c => ({ id: c.id, nom: c.nom.trim() })).filter(c => c.nom);
+    const clean = crits.map(c => ({ id: c.id, nom: c.nom.trim(), pes: round2(Number(c.pes) || 0) })).filter(c => c.nom);
     if (!clean.length) { notify('Escriu almenys un criteri'); return; }
+    const t = round2(clean.reduce((n, c) => n + c.pes, 0));
+    if (Math.abs(t - 100) >= 0.01) { notify(`Els pesos han de sumar 100 % (ara sumen ${fmtP(t)} %). Fes servir «Mateix pes per a tots» o ajusta'ls.`); return; }
     try { await db().collection('activitats').doc(actId).update({ rubrica: { criteris: clean } }); _rub.set(actId, { criteris: clean }); close(); notify('Rúbrica desada'); decorate(); }
     catch (e) { notify('No s\'ha pogut desar la rúbrica: ' + e.message); }
   });
@@ -132,7 +171,7 @@ async function evalStudent(actId, studentId, input) {
   const an = ($(`#notesThead th[data-activity-id="${CSS.escape(actId)}"] .act-name`)?.textContent || '').trim();
   const ratings = { ...(sd.exists ? (sd.data().rubriques || {})[actId] || {} : {}) };
   const crits = rub.criteris;
-  const body = () => crits.map(c => `<div class="rb-crit"><div class="rb-n" translate="no">${esc(c.nom)}</div><div class="rb-lv">${LEVELS.map(l => {
+  const body = () => crits.map(c => `<div class="rb-crit"><div class="rb-n"><span translate="no">${esc(c.nom)}</span> <small class="rb-w" translate="no">${fmtP(wOf(c, crits))} %</small></div><div class="rb-lv">${LEVELS.map(l => {
     const on = ratings[c.id] === l;
     return `<button type="button" data-c="${esc(c.id)}" data-l="${l}" class="${on ? 'on' : ''}" style="${on ? `background:${COLORS[l][0]};color:${COLORS[l][1]}` : ''}">${l}</button>`;
   }).join('')}</div></div>`).join('');
