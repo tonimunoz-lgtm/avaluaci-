@@ -234,6 +234,7 @@ function prev() { if (!S || S.i === 0) return; commit(); S.i--; show(); }
 function finish() { progress(); $('#qe').classList.add('finished'); }
 
 function onClick(e) {
+  if (e.target.closest('.qe-x')) { close(); return; }
   const k = e.target.closest('[data-k]');
   if (k) { press(k.dataset.k); return; }
   const a = e.target.closest('[data-act]'); if (!a) return;
@@ -241,7 +242,6 @@ function onClick(e) {
   else if (a.dataset.act === 'prev') prev();
   else if (a.dataset.act === 'close') close();
   else if (a.dataset.act === 'pending') { commit(); S.onlyPending = !S.onlyPending; rebuild(0); }
-  if (e.target.closest('.qe-x')) close();
 }
 
 function onKey(e) {

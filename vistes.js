@@ -177,7 +177,7 @@ function download(name, text) {
 }
 
 /* ------------------------------------------------------------- navegació */
-const SCREENS = ['screen-classes', 'screen-class', 'screen-alumnes', 'screen-informes', 'screen-config'];
+const SCREENS = ['screen-classes', 'screen-class', 'screen-alumnes', 'screen-informes', 'screen-historial', 'screen-config'];
 function setActiveNav(btn) {
   document.querySelectorAll('.sidebar .nav-item').forEach(b => b.classList.toggle('active', b === btn));
 }
@@ -187,11 +187,12 @@ function showOnly(id) {
 
 $('navHome').addEventListener('click', () => {
   setActiveNav($('navHome'));
-  ['screen-alumnes', 'screen-informes', 'screen-config'].forEach(s => $(s).classList.add('hidden'));
+  ['screen-alumnes', 'screen-informes', 'screen-historial', 'screen-config'].forEach(s => $(s).classList.add('hidden'));
   invalidate();
 });
 $('navStudents').addEventListener('click', () => { setActiveNav($('navStudents')); showOnly('screen-alumnes'); renderAlumnes(); });
 $('navReports').addEventListener('click', () => { setActiveNav($('navReports')); showOnly('screen-informes'); renderInformes(); });
+$('navHistory').addEventListener('click', () => { setActiveNav($('navHistory')); showOnly('screen-historial'); window.Historial?.renderScreen($('screen-historial')); });
 $('navSettings').addEventListener('click', () => { setActiveNav($('navSettings')); showOnly('screen-config'); renderConfig(); });
 
 /* ------------------------------------------------------------ pantalla Alumnes */
@@ -401,7 +402,7 @@ bellMenu.addEventListener('click', e => {
   const b = e.target.closest('button[data-id]'); if (!b) return;
   bellMenu.classList.add('hidden');
   setActiveNav($('navHome'));
-  ['screen-alumnes', 'screen-informes', 'screen-config'].forEach(s => $(s).classList.add('hidden'));
+  ['screen-alumnes', 'screen-informes', 'screen-historial', 'screen-config'].forEach(s => $(s).classList.add('hidden'));
   window.AvaluApp?.openClass?.(b.dataset.id, 'comentaris');
 });
 

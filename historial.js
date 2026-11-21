@@ -1,13 +1,15 @@
 // historial.js — Fase 2: xarxa de seguretat
-//  1) Cada canvi de nota a la graella queda registrat i apareix un avís «Desfer».
-//  2) Historial de canvis de la classe (a Opcions → Historial de canvis).
+//  1) Cada canvi de nota a la graella queda registrat (en aquest dispositiu, últims 30 dies).
+//  2) Pantalla «Historial» (menú lateral): llista paginada dels canvis, amb opció de restaurar el valor anterior.
 //  3) Còpia de seguretat automàtica setmanal al núvol + restaurar des de Configuració.
 //
 // Cap d'aquestes funcions toca el flux existent de desat: «desfer» simplement reescriu el valor
 // de la cel·la i dispara el mateix esdeveniment `change`, de manera que el desat i els
 // recàlculs automàtics funcionen exactament igual que quan s'escriu la nota a mà.
 
-const HIST_MAX = 400;          // canvis guardats per professor (en aquest dispositiu)
+const HIST_MAX = 600;          // canvis guardats per professor (en aquest dispositiu)
+const HIST_DAYS = 30;          // dies que es conserva l'historial
+const PAGE = 20;               // canvis per pàgina a la pantalla Historial
 const KEEP_WEEKS = 8;          // setmanes de còpies que es conserven al núvol
 const MAX_COPY_CHARS = 900000; // límit d'un document de Firestore (~1 MB)
 
@@ -21,14 +23,6 @@ const db = () => firebase.firestore();
   const st = document.createElement('style');
   st.id = 'histStyles';
   st.textContent = `
-  #undoBar { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%) translateY(20px); opacity: 0; pointer-events: none;
-    z-index: 9400; max-width: min(92vw, 560px); display: flex; align-items: center; gap: .8rem; padding: .65rem .8rem .65rem 1.1rem;
-    background: #231a5c; color: #fff; border-radius: 999px; box-shadow: 0 10px 30px rgba(35,26,92,.35); font-size: .86rem;
-    transition: opacity .2s, transform .2s; }
-  #undoBar.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
-  #undoBar .ub-txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-  #undoBar button { flex: none; border: 0; border-radius: 999px; padding: .4rem .9rem; font-weight: 700; cursor: pointer;
-    background: #fff; color: #4a2fd4; font-size: .82rem; }
   .hist-overlay { position: fixed; inset: 0; z-index: 9500; display: flex; align-items: center; justify-content: center;
     background: rgba(20,10,60,.45); backdrop-filter: blur(3px); padding: 1rem; }
   .hist-card { background: #fff; border-radius: 24px; width: 100%; max-width: 40rem; max-height: calc(88vh / var(--zf, 1));
@@ -62,12 +56,13 @@ const db = () => firebase.firestore();
 
 /* ------------------------------------------------------------------ 1) registre local + «Desfer» */
 const histKey = () => `avaluapp.hist.${uid() || 'anon'}`;
-function loadHist() { try { return JSON.parse(localStorage.getItem(histKey()) || '[]'); } catch { return []; } }
+function loadHist() {
+  const min = Date.now() - HIST_DAYS * 86400000;
+  try { return JSON.parse(localStorage.getItem(histKey()) || '[]').filter(e => e.t >= min); } catch { return []; }
+}
 function saveHist(list) { try { localStorage.setItem(histKey(), JSON.stringify(list.slice(-HIST_MAX))); } catch {} }
 
 let _undoing = false;
-let _lastEntry = null;
-let _barTimer = 0;
 
 function inputOf(entry) {
   return document.querySelector(`#notesTbody tr[data-student-id="${CSS.escape(entry.s)}"] input.table-input[data-activity-id="${CSS.escape(entry.a)}"]`);
@@ -82,42 +77,6 @@ function applyValue(entry, value) {
     inp.dispatchEvent(new Event('change', { bubbles: true }));
   } finally { _undoing = false; }
   return true;
-}
-
-function ensureBar() {
-  let bar = $('#undoBar');
-  if (!bar) {
-    bar = document.createElement('div');
-    bar.id = 'undoBar';
-    bar.setAttribute('role', 'status');
-    bar.innerHTML = '<span class="ub-txt"></span><button type="button" class="ub-btn">Desfer</button>';
-    document.body.appendChild(bar);
-    $('.ub-btn', bar).addEventListener('click', () => {
-      if (!_lastEntry) return;
-      const e = _lastEntry; _lastEntry = null;
-      if (applyValue(e, e.b)) showBar(null, 'Canvi desfet', 2500);
-      else showBar(null, 'No s\'ha pogut desfer: la cel·la ja no és visible', 4000);
-    });
-  }
-  return bar;
-}
-function showBar(entry, text, ms = 8000) {
-  if (document.body.classList.contains('qe-open')) return; // entrada ràpida: sense avisos
-  const bar = ensureBar();
-  const btn = $('.ub-btn', bar);
-  _lastEntry = entry;
-  btn.style.display = entry ? '' : 'none';
-  const txt = $('.ub-txt', bar);
-  txt.textContent = '';
-  if (entry) {
-    const fmt = v => (v === '' || v == null) ? '—' : v;
-    txt.append(document.createTextNode('Nota: '));
-    const nm = document.createElement('span'); nm.setAttribute('translate', 'no'); nm.textContent = `${entry.sn} · ${entry.an}`;
-    txt.append(nm, document.createTextNode(`  ${fmt(entry.b)} → ${fmt(entry.v)}`));
-  } else txt.textContent = text;
-  bar.classList.add('show');
-  clearTimeout(_barTimer);
-  _barTimer = setTimeout(() => { bar.classList.remove('show'); _lastEntry = null; }, ms);
 }
 
 // valor anterior: es captura en entrar a la cel·la
@@ -138,6 +97,7 @@ document.addEventListener('change', e => {
   const entry = {
     t: Date.now(),
     c: window.AvaluApp?.getClassId?.() || '',
+    cn: (document.getElementById('classTitle')?.textContent || '').trim().slice(0, 60),
     s: tr?.dataset.studentId || '',
     a: inp.dataset.activityId,
     sn: (tr?.querySelector('.stu-name')?.textContent || '').trim(),
@@ -145,7 +105,6 @@ document.addEventListener('change', e => {
     b: before, v: after, u: _undoing ? 1 : 0
   };
   const list = loadHist(); list.push(entry); saveHist(list);
-  if (!_undoing) showBar(entry);
 }, true);
 
 /* ------------------------------------------------------------------ 2) historial de la classe */
@@ -163,22 +122,65 @@ function overlay(title, bodyHTML) {
 const fmtDT = t => { const d = new Date(t); const p = n => String(n).padStart(2, '0'); return `${p(d.getDate())}/${p(d.getMonth() + 1)} ${p(d.getHours())}:${p(d.getMinutes())}`; };
 const fmtV = v => (v === '' || v == null) ? '—' : esc(v);
 
-function openHistory() {
-  const cid = window.AvaluApp?.getClassId?.();
-  const rows = loadHist().filter(e => e.c === cid).reverse().slice(0, 150);
-  const body = rows.length
-    ? `<p class="hist-note">Últims canvis de notes fets en aquest dispositiu. «Restaurar» torna la cel·la al valor anterior.</p>` +
-      rows.map((e, i) => `<div class="hist-row">
-        <div class="hr-main"><div class="hr-who" translate="no">${esc(e.sn)} · ${esc(e.an)}</div><div class="hr-sub">${fmtDT(e.t)}${e.u ? ' · <span>Desfet</span>' : ''}</div></div>
-        <div class="hr-val" translate="no">${fmtV(e.b)} → ${fmtV(e.v)}</div>
-        <button type="button" class="hist-btn" data-i="${i}"${inputOf(e) && !inputOf(e).disabled ? '' : ' disabled'}>Restaurar</button></div>`).join('')
-    : '<div class="hist-empty">Encara no hi ha canvis registrats en aquesta classe.</div>';
-  const ov = overlay('Historial de canvis', body);
-  ov.addEventListener('click', ev => {
-    const b = ev.target.closest('.hist-btn[data-i]'); if (!b) return;
-    const e = rows[+b.dataset.i];
-    if (applyValue(e, e.b)) { b.textContent = 'Fet'; b.disabled = true; }
+
+let _hp = { page: 0, cls: '' };
+function renderScreen(root) {
+  if (!root) return;
+  const all = loadHist().reverse();
+  const classes = new Map();
+  all.forEach(e => { if (e.c && !classes.has(e.c)) classes.set(e.c, e.cn || 'Classe'); });
+  if (_hp.cls && !classes.has(_hp.cls)) _hp.cls = '';
+  const rows = all.filter(e => !_hp.cls || e.c === _hp.cls);
+  const pages = Math.max(1, Math.ceil(rows.length / PAGE));
+  _hp.page = Math.min(Math.max(_hp.page, 0), pages - 1);
+  const view = rows.slice(_hp.page * PAGE, _hp.page * PAGE + PAGE);
+  const day = t => { const d = new Date(t); const p = n => String(n).padStart(2, '0'); return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`; };
+  let lastDay = '', html = '';
+  view.forEach((e, i) => {
+    const dd = day(e.t);
+    if (dd !== lastDay) { lastDay = dd; html += `<div class="cop-week" translate="no">${dd}</div>`; }
+    const hh = new Date(e.t); const tm = `${String(hh.getHours()).padStart(2, '0')}:${String(hh.getMinutes()).padStart(2, '0')}`;
+    html += `<div class="hist-row"><div class="hr-main"><div class="hr-who" translate="no">${esc(e.sn)} · ${esc(e.an)}</div>
+      <div class="hr-sub"><span translate="no">${tm} · ${esc(e.cn || '')}</span>${e.u ? ' · <span>Restaurat</span>' : ''}</div></div>
+      <div class="hr-val" translate="no">${fmtV(e.b)} → ${fmtV(e.v)}</div>
+      <button type="button" class="hist-btn" data-i="${_hp.page * PAGE + i}">Restaura</button></div>`;
   });
+  root.innerHTML = `<h2 class="section-title">Historial</h2>
+    <div class="card" style="margin-top:1rem;padding:1.2rem 1.4rem">
+      <div style="display:flex;flex-wrap:wrap;gap:.7rem;align-items:center;justify-content:space-between">
+        <p class="hist-note" style="margin:0">Canvis de notes fets en aquest dispositiu durant els últims ${HIST_DAYS} dies. «Restaura» obre la classe i torna la cel·la al valor anterior.</p>
+        <select id="hsCls" class="hist-btn" style="padding:.4rem .8rem"><option value="">Totes les classes</option>${[...classes].map(([id, n]) => `<option value="${esc(id)}" ${_hp.cls === id ? 'selected' : ''} translate="no">${esc(n)}</option>`).join('')}</select>
+      </div>
+      ${view.length ? html : '<div class="hist-empty">Encara no hi ha canvis registrats.</div>'}
+      ${rows.length > PAGE ? `<div style="display:flex;align-items:center;justify-content:center;gap:.8rem;margin-top:1rem">
+        <button type="button" class="hist-btn" id="hsPrev" ${_hp.page === 0 ? 'disabled' : ''}>← Anterior</button>
+        <span class="hist-note" style="margin:0" translate="no">${_hp.page + 1} / ${pages}</span>
+        <button type="button" class="hist-btn" id="hsNext" ${_hp.page >= pages - 1 ? 'disabled' : ''}>Següent →</button></div>` : ''}
+      ${all.length ? '<div style="text-align:right;margin-top:1rem"><button type="button" class="hist-btn danger" id="hsClear">Esborra l\'historial</button></div>' : ''}
+    </div>`;
+  root.querySelector('#hsCls')?.addEventListener('change', e => { _hp = { page: 0, cls: e.target.value }; renderScreen(root); });
+  root.querySelector('#hsPrev')?.addEventListener('click', () => { _hp.page--; renderScreen(root); });
+  root.querySelector('#hsNext')?.addEventListener('click', () => { _hp.page++; renderScreen(root); });
+  root.querySelector('#hsClear')?.addEventListener('click', () => {
+    if (!confirm('Vols esborrar l\'historial d\'aquest dispositiu? Les notes no es toquen.')) return;
+    saveHist([]); _hp = { page: 0, cls: '' }; renderScreen(root);
+  });
+  root.querySelectorAll('.hist-btn[data-i]').forEach(b => b.addEventListener('click', () => restoreEntry(rows[+b.dataset.i], b)));
+}
+
+// Obre la classe i hi reescriu el valor anterior (així es recalculen les columnes amb fórmula i queda registrat)
+async function restoreEntry(e, btn) {
+  if (!e) return;
+  btn.disabled = true;
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  try {
+    document.getElementById('navHome')?.click();
+    window.AvaluApp?.openClass?.(e.c, 'notes');
+    await wait(400);
+    for (let k = 0; k < 40 && !(window.AvaluApp?.getClassId?.() === e.c && inputOf(e)); k++) await wait(150);
+    if (applyValue(e, e.b)) { btn.textContent = 'Fet'; window.notify?.('Nota restaurada'); }
+    else { btn.disabled = false; window.notify?.('No s\'ha pogut restaurar: la cel·la ja no existeix o està bloquejada'); }
+  } catch (err) { btn.disabled = false; window.notify?.('No s\'ha pogut restaurar: ' + err.message); }
 }
 
 /* ------------------------------------------------------------------ 3) còpies setmanals al núvol */
@@ -259,21 +261,22 @@ function revive(v) {
   if (Array.isArray(v)) return v.map(revive);
   if (v && typeof v === 'object') {
     const k = Object.keys(v);
-    if (k.length === 2 && 'seconds' in v && 'nanoseconds' in v) return new firebase.firestore.Timestamp(v.seconds, v.nanoseconds);
+    if ('seconds' in v && 'nanoseconds' in v && k.every(x => ['seconds', 'nanoseconds', 'type'].includes(x))) return new firebase.firestore.Timestamp(v.seconds, v.nanoseconds);
     const o = {}; k.forEach(x => { o[x] = revive(v[x]); }); return o;
   }
   return v;
 }
 
-async function restoreCopy(docSnap) {
-  const u = uid(); const m = docSnap.data(); const data = JSON.parse(m.json);
+async function restoreData(classId, data, { strictPre = true } = {}) {
+  const u = uid();
   // 1) còpia de seguretat de l'estat actual, per poder tornar enrere
-  await makeCopies({ tipus: 'pre', label: 'abans-de-restaurar', onlyClass: m.classId }).catch(e => { throw new Error('No s\'ha pogut fer la còpia prèvia: ' + e.message); });
+  try { await makeCopies({ tipus: 'pre', label: 'abans-de-restaurar', onlyClass: classId }); }
+  catch (e) { if (strictPre) throw new Error('No s\'ha pogut fer la còpia prèvia: ' + e.message); console.warn('Sense còpia prèvia:', e.message); }
   // 2) la classe ha de ser a la llista del professor
-  await db().collection('professors').doc(u).update({ classes: firebase.firestore.FieldValue.arrayUnion(m.classId) });
+  await db().collection('professors').doc(u).update({ classes: firebase.firestore.FieldValue.arrayUnion(classId) });
   // 3) reescriure classe, alumnes i activitats per lots
   const ops = [
-    [db().collection('classes').doc(m.classId), revive(data.class)],
+    [db().collection('classes').doc(classId), revive(data.class)],
     ...Object.entries(data.alumnes || {}).map(([id, d]) => [db().collection('alumnes').doc(id), revive(d)]),
     ...Object.entries(data.activitats || {}).map(([id, d]) => [db().collection('activitats').doc(id), revive(d)])
   ];
@@ -282,6 +285,52 @@ async function restoreCopy(docSnap) {
     ops.slice(i, i + 400).forEach(([ref, d]) => b.set(ref, d));
     await b.commit();
   }
+}
+const restoreCopy = docSnap => restoreData(docSnap.data().classId, JSON.parse(docSnap.data().json));
+
+// Fitxers JSON: accepta tant la còpia d'una classe (botó «Descarrega» de les còpies)
+// com la còpia completa de Configuració → Dades.
+function parseBackupFile(text) {
+  const j = JSON.parse(text);
+  if (j && j.v === 1 && j.classId && j.class) return [{ classId: j.classId, nom: j.class.nom || 'Sense nom', data: { class: j.class, alumnes: j.alumnes || {}, activitats: j.activitats || {} } }];
+  if (j && Array.isArray(j.classes)) {
+    return j.classes.filter(c => c && c.id).map(c => {
+      const { id, alumnesDades, activitatsDades, ...cls } = c;
+      const alumnes = {}; (alumnesDades || []).forEach(({ id: i, ...d }) => { alumnes[i] = d; });
+      const activitats = {}; (activitatsDades || []).forEach(({ id: i, ...d }) => { activitats[i] = d; });
+      return { classId: id, nom: cls.nom || 'Sense nom', data: { class: cls, alumnes, activitats } };
+    });
+  }
+  throw new Error('El fitxer no és una còpia d\'AvaluApp');
+}
+
+function chooseClasses(items) {
+  return new Promise(res => {
+    const ov = overlay('Restaurar des d\'un fitxer', `
+      <p class="hist-note">Marca les classes que vols restaurar. Es tornaran a escriure les notes, els alumnes i les activitats amb el contingut del fitxer: <b>els canvis fets després de la còpia es perdran</b>. Abans, es desa una còpia de l'estat actual al núvol (si és possible).</p>
+      ${items.map((it, i) => `<label class="hist-row" style="cursor:pointer"><input type="checkbox" data-c="${i}" checked><div class="hr-main"><div class="hr-who" translate="no">${esc(it.nom)}</div><div class="hr-sub"><span translate="no">${Object.keys(it.data.alumnes).length}</span> alumnes</div></div></label>`).join('')}
+      <div style="display:flex;gap:.6rem;justify-content:flex-end;margin-top:1rem">
+        <button type="button" class="hist-btn" data-r="0">Cancel·la</button>
+        <button type="button" class="hist-btn primary" data-r="1">Restaura</button></div>`);
+    ov.addEventListener('click', e => {
+      const b = e.target.closest('[data-r]'); if (!b) return;
+      const sel = [...ov.querySelectorAll('[data-c]')].filter(x => x.checked).map(x => items[+x.dataset.c]);
+      closeOverlay(); res(b.dataset.r === '1' ? sel : []);
+    });
+    $('.hist-x', ov).addEventListener('click', () => res([]));
+  });
+}
+
+async function restoreFile(file) {
+  try {
+    const items = parseBackupFile(await file.text());
+    if (!items.length) { window.notify?.('El fitxer no conté cap classe'); return; }
+    const sel = await chooseClasses(items);
+    if (!sel.length) return;
+    for (const it of sel) await restoreData(it.classId, it.data, { strictPre: false });
+    window.notify?.('Còpia restaurada');
+    setTimeout(() => location.reload(), 900);
+  } catch (e) { console.error(e); window.notify?.('No s\'ha pogut restaurar: ' + (e.message || e)); }
 }
 
 function download(docSnap) {
@@ -324,10 +373,15 @@ async function renderCopies(host) {
       head = '<p class="cop-status warn">Les còpies automàtiques al núvol encara no estan actives: cal desplegar les regles de Firestore actualitzades (fitxer firestore.rules).</p>';
     } else if (docs.length) {
       const last = docs[0].data().ts?.toDate?.();
-      head = `<p class="cop-status">Còpia automàtica cada setmana. Última còpia: <span translate="no">${last ? fmtDT(last.getTime()) : '—'}</span></p>`;
+      head = `<p class="cop-status">Còpia automàtica cada setmana (les «Manuals» són les que fas tu amb el botó). Última còpia: <span translate="no">${last ? fmtDT(last.getTime()) : '—'}</span></p>`;
     } else head = '<p class="cop-status">Encara no hi ha cap còpia. Se\'n crea una de manera automàtica cada setmana.</p>';
     const groups = {};
-    docs.forEach(d => { const m = d.data(); const k = m.tipus === 'pre' ? 'Abans de restaurar' : m.week; (groups[k] ||= []).push(d); });
+    const wkNum = w => { const m = /^(\d{4})-W(\d{2})/.exec(w || ''); return m ? `${+m[2]} (${m[1]})` : w; };
+    docs.forEach(d => {
+      const m = d.data(); const ts = m.ts?.toDate?.();
+      const k = m.tipus === 'pre' ? 'Abans de restaurar' : m.tipus === 'manual' ? `Manual · ${ts ? fmtDT(ts.getTime()) : ''}` : `Automàtica · setmana ${wkNum(m.week)}`;
+      (groups[k] ||= []).push(d);
+    });
     const list = Object.entries(groups).map(([k, ds]) => `<div class="cop-week" translate="no">${esc(k)}</div>` +
       ds.map(d => { const m = d.data(); return `<div class="hist-row"><div class="hr-main"><div class="hr-who" translate="no">${esc(m.nom)}</div><div class="hr-sub"><span translate="no">${m.n ?? '?'}</span> alumnes</div></div>
         <button type="button" class="hist-btn" data-dl="${d.id}">Descarrega</button>
@@ -359,16 +413,6 @@ async function renderCopies(host) {
 }
 
 /* ------------------------------------------------------------------ enllaços amb la interfície */
-document.addEventListener('click', e => {
-  const b = e.target.closest('.history-btn');
-  if (b) { $('#termMenu')?.classList.add('hidden'); openHistory(); }
-});
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeOverlay();
-  // Ctrl/Cmd+Z fora d'un camp de text: desfà l'últim canvi de nota
-  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z' && _lastEntry && !e.target.matches?.('input, textarea, select')) {
-    e.preventDefault(); $('#undoBar .ub-btn')?.click();
-  }
-});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeOverlay(); });
 
-window.Historial = { open: openHistory, renderCopies, makeCopies, ensureWeekly, weekId };
+window.Historial = { renderScreen, renderCopies, restoreFile, makeCopies, ensureWeekly, weekId };

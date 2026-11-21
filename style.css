@@ -808,7 +808,7 @@ body #weightedInputs .w-pct input { width: 5.6rem !important; padding: .3rem .6r
 }
 
 /* Fase 4: progrés de correcció i cel·les buides */
-#notesTable input.cell-empty { background: repeating-linear-gradient(135deg, #fff7e0 0 6px, #fffdf5 6px 12px); box-shadow: inset 0 0 0 1px #f0d38a; border-radius: 6px; }
+#notesTable td:has(.cell-empty) { background: repeating-linear-gradient(135deg, #fff1c9 0 7px, #fffaf0 7px 14px); }
 #notesTfoot .progress-row th, .progress-row th { font-weight: 600; color: #7a7799; }
 .progress-row .prog-cell { font-size: .78rem; color: #b26a00; font-weight: 700; }
 .progress-row .prog-cell.prog-full { color: #0f8a5f; }

@@ -118,7 +118,10 @@ export function renderConfigScreen(el) {
     ${card('🛟', 'Còpies de seguretat', '<div id="cf_cops"></div>')}
     ${card('💾', 'Dades',
       `<p class="muted" style="font-size:.85rem;margin-bottom:.7rem">Descarrega una còpia de seguretat de totes les teves classes, alumnes i activitats.</p>
-       <button id="cf_backup" type="button" class="btn">Descarrega la còpia (JSON)</button>`)}
+       <button id="cf_backup" type="button" class="btn">Descarrega la còpia (JSON)</button>
+       <p class="muted" style="font-size:.85rem;margin:1.1rem 0 .7rem">Si tens un fitxer de còpia (el d'aquí o el que has descarregat de les còpies al núvol), pots tornar-hi les classes:</p>
+       <button id="cf_restore" type="button" class="btn">Restaura des d'un fitxer…</button>
+       <input id="cf_restore_file" type="file" accept=".json,application/json" hidden>`)}
     </div>`;
 
   const save = () => {
@@ -142,6 +145,9 @@ export function renderConfigScreen(el) {
   };
   let t; el.querySelectorAll('input, select, textarea').forEach(i => i.addEventListener('input', () => { clearTimeout(t); t = setTimeout(save, 500); }));
   el.querySelector('#cf_backup').addEventListener('click', backup);
+  const rf = el.querySelector('#cf_restore_file');
+  el.querySelector('#cf_restore').addEventListener('click', () => rf.click());
+  rf.addEventListener('change', () => { const f = rf.files[0]; rf.value = ''; if (f) window.Historial?.restoreFile(f); });
   el.querySelector('#cf_admin')?.addEventListener('click', () => { window.location.href = 'administrador.html'; });
   window.CompConfig?.renderInto(el.querySelector('#cf_comp'));
   window.Historial?.renderCopies(el.querySelector('#cf_cops'));
