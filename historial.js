@@ -65,7 +65,7 @@ function saveHist(list) { try { localStorage.setItem(histKey(), JSON.stringify(l
 let _undoing = false;
 
 function inputOf(entry) {
-  return document.querySelector(`#notesTbody tr[data-student-id="${CSS.escape(entry.s)}"] input.table-input[data-activity-id="${CSS.escape(entry.a)}"]`);
+  return document.querySelector(`#notesTbody tr[data-student-id="${CSS.escape(entry.s)}"] :is(input.table-input, input[data-is-competency-numeric="true"])[data-activity-id="${CSS.escape(entry.a)}"]`);
 }
 function applyValue(entry, value) {
   const inp = inputOf(entry);
@@ -82,12 +82,12 @@ function applyValue(entry, value) {
 // valor anterior: es captura en entrar a la cel·la
 document.addEventListener('focusin', e => {
   const inp = e.target;
-  if (inp?.matches?.('#notesTbody input.table-input[data-activity-id]')) inp.dataset.hPrev = inp.value;
+  if (inp?.matches?.('#notesTbody :is(input.table-input, input[data-is-competency-numeric="true"])[data-activity-id]')) inp.dataset.hPrev = inp.value;
 }, true);
 
 document.addEventListener('change', e => {
   const inp = e.target;
-  if (!inp?.matches?.('#notesTbody input.table-input[data-activity-id]') || inp.disabled) return;
+  if (!inp?.matches?.('#notesTbody :is(input.table-input, input[data-is-competency-numeric="true"])[data-activity-id]') || inp.disabled) return;
   const before = inp.dataset.hPrev;
   const after = inp.value;
   inp.dataset.hPrev = after;

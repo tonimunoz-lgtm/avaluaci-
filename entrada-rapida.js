@@ -49,6 +49,10 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
   #qe.finished .qe-done { display: flex; }
   #qe.finished .qe-stu, #qe.finished .qe-pad, #qe.finished .qe-nav, #qe.finished .qe-meta { display: none; }
   #qe .qe-done b { font-size: 1.4rem; }
+  #qe .qe-badge { font-weight: 800; font-size: .95rem; padding: .15rem .8rem; border-radius: 10px; }
+  #qe .qe-chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: .5rem; padding: .5rem .8rem 0; background: #fff; border-top: 1px solid #ece9fb; }
+  #qe .qe-chips button { border: 0; border-radius: 14px; padding: .7rem 0; font-weight: 800; font-size: .95rem; cursor: pointer; }
+  #qe.finished .qe-chips { display: none !important; }
   @media (max-height: 640px) { #qe .qe-val { font-size: 3rem; min-height: 3.2rem; } #qe .qe-key { height: 3rem; } }
   @media (min-width: 861px) { #qe { max-width: 460px; margin: 0 auto; left: 0; right: 0; box-shadow: 0 0 0 100vmax rgba(20,10,60,.45); } }
   `;
@@ -57,37 +61,52 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 
 /* ------------------------------------------------------------------ dades de la graella */
 const rowsOf = () => Array.from(document.querySelectorAll('#notesTbody tr[data-student-id]'));
-const inputOf = (tr, actId) => tr.querySelector(`input.table-input[data-activity-id="${CSS.escape(actId)}"]`);
+const inputOf = (tr, actId) => tr.querySelector(`input.table-input[data-activity-id="${CSS.escape(actId)}"], input[data-is-competency-numeric="true"][data-activity-id="${CSS.escape(actId)}"]`);
 
+// Activitats on es poden posar notes: numèriques (0-10) i competencials (0-4 amb NA/AS/AN/AE).
+// Es descarten les calculades/bloquejades i les columnes competencials que encara s'estan construint.
 function editableActivities() {
   const out = [];
   document.querySelectorAll('#notesThead th[data-activity-id]').forEach(th => {
     const id = th.dataset.activityId;
     const ins = rowsOf().map(tr => inputOf(tr, id)).filter(Boolean);
-    if (!ins.length) return;
-    // només activitats amb nota numèrica editable (no calculades, bloquejades ni competencials)
-    if (ins.some(i => i.disabled || i.dataset.isCompetency === 'true' || i.closest('.comp-cell-wrapper') || i.type !== 'number')) return;
-    out.push({ id, name: (th.querySelector('.act-name')?.textContent || th.textContent || id).trim() });
+    if (!ins.length || ins.some(i => i.disabled)) return;
+    const comp = ins.every(i => i.dataset.isCompetencyNumeric === 'true');
+    const num = ins.every(i => i.classList.contains('table-input') && i.type === 'number' && i.dataset.isCompetency !== 'true' && !i.closest('.comp-cell-wrapper'));
+    if (!comp && !num) return;
+    out.push({ id, comp, name: (th.querySelector('.act-name')?.textContent || th.textContent || id).trim() });
   });
   return out;
 }
+const DEFAULT_TRAMS = { NA: { min: 0, max: 2 }, AS: { min: 2, max: 2.5 }, AN: { min: 2.5, max: 3 }, AE: { min: 3, max: 4 } };
+const QCOL = { NA: ['#ef4444', '#fff'], AS: ['#f97316', '#fff'], AN: ['#eab308', '#000'], AE: ['#22c55e', '#fff'] };
+const kindOf = () => S.acts.find(a => a.id === S.actId) || { comp: false };
+function levelOf(v) {
+  const T = S.T || DEFAULT_TRAMS;
+  const e = Object.entries(T).sort((a, b) => a[1].min - b[1].min); const last = e[e.length - 1][0];
+  for (const [l, r] of e) if (v >= r.min && (v < r.max || (l === last && v <= r.max))) return l;
+  return v < e[0][1].min ? e[0][0] : last;
+}
+const midOf = l => { const r = (S.T || DEFAULT_TRAMS)[l]; return Math.round((r.min + r.max) / 2 * 100) / 100; };
 
 /* ------------------------------------------------------------------ pantalla d'entrada */
 let S = null; // estat de la sessió
 
-function open() {
+async function open() {
   if (S) return;
   const acts = editableActivities();
   if (!rowsOf().length || !acts.length) {
-    window.notify?.('No hi ha cap activitat amb notes numèriques per editar.');
+    window.notify?.('No hi ha cap activitat on es puguin posar notes.');
     return;
   }
   const filter = $('#actFilter')?.value;
   const firstPending = acts.find(a => rowsOf().some(tr => (inputOf(tr, a.id)?.value ?? '') === ''));
   S = {
     acts, actId: (acts.find(a => a.id === filter) || firstPending || acts[0]).id,
-    onlyPending: false, list: [], i: 0, buf: '', dirty: false
+    onlyPending: false, list: [], i: 0, buf: '', dirty: false, T: null
   };
+  if (acts.some(a => a.comp)) { try { S.T = await window.Rubriques?.trams?.(); } catch {} }
+  if (!S) return;
   document.body.classList.add('qe-open');
   const el = document.createElement('div');
   el.id = 'qe'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true');
@@ -103,8 +122,10 @@ function open() {
       <div class="qe-name" translate="no"></div>
       <div class="qe-pos"></div>
       <div class="qe-val empty">—</div>
+      <div class="qe-badge"></div>
       <div class="qe-hint"></div>
     </div>
+    <div class="qe-chips"></div>
     <div class="qe-done"><div style="font-size:3rem">🎉</div><b>Fet!</b><div>Has acabat els alumnes d'aquesta activitat.</div>
       <button type="button" class="qe-btn primary" data-act="close" style="padding:0 2rem">Tanca</button></div>
     <div class="qe-pad">
@@ -165,7 +186,7 @@ function show() {
 }
 
 function paint() {
-  const el = $('#qe'), v = $('.qe-val', el), tr = cur(), orig = origOf(tr);
+  const el = $('#qe'), v = $('.qe-val', el), tr = cur(), orig = origOf(tr), comp = kindOf().comp;
   if (S.dirty) {
     v.textContent = S.buf === '' ? '—' : fmt(S.buf);
     v.className = 'qe-val' + (S.buf === '' ? ' empty' : '');
@@ -177,6 +198,12 @@ function paint() {
     v.textContent = '—'; v.className = 'qe-val empty';
     $('.qe-hint', el).textContent = 'Sense nota';
   }
+  const bd = $('.qe-badge', el), shown = S.dirty ? S.buf : orig, n = Number(shown);
+  if (comp && shown !== '' && !isNaN(n)) { const l = levelOf(n); bd.textContent = l; bd.style.background = QCOL[l][0]; bd.style.color = QCOL[l][1]; bd.style.display = ''; }
+  else { bd.textContent = ''; bd.style.display = 'none'; }
+  const ch = $('.qe-chips', el);
+  if (comp && !ch.dataset.on) { ch.dataset.on = '1'; ch.innerHTML = ['NA', 'AS', 'AN', 'AE'].map(l => `<button type="button" data-lv="${l}" style="background:${QCOL[l][0]};color:${QCOL[l][1]}">${l}</button>`).join(''); }
+  ch.style.display = comp ? '' : 'none';
 }
 
 function progress() {
@@ -190,23 +217,23 @@ function progress() {
 /* ---- teclat ---- */
 function press(k) {
   if (!S || $('#qe').classList.contains('finished')) return;
+  const comp = kindOf().comp, maxV = comp ? 4 : 10, maxDec = comp ? 2 : 1;
   let b = S.dirty ? S.buf : '';
-  if (k === 'back') { b = b.slice(0, -1); }
+  if (k === 'back') b = b.slice(0, -1);
   else if (k === '.') {
     if (b.includes('.')) return;
     b = (b === '' ? '0' : b) + '.';
   } else {
-    const nb = b + k;
-    if (b === '0' && k !== '0') b = k;                    // 0 → 7  (no «07»)
-    else if (b === '0' && k === '0') return;
-    else if (b.includes('.') && b.split('.')[1].length >= 1) return; // un sol decimal
-    else if (Number(nb) > 10) { navigator.vibrate?.(30); return; }
-    else b = nb;
-    if (Number(b) > 10) { navigator.vibrate?.(30); return; }
+    if (b === '0' && k === '0') return;
+    if (b === '0') b = k;                                   // 0 → 7  (no «07»)
+    else if (b.includes('.') && b.split('.')[1].length >= maxDec) return;
+    else b += k;
+    if (Number(b) > maxV) { navigator.vibrate?.(30); return; }
   }
   S.buf = b; S.dirty = true;
   paint();
 }
+function pickLevel(l) { if (!S) return; S.buf = String(midOf(l)); S.dirty = true; paint(); }
 
 /* ---- desar i moure's ---- */
 function commit() {
@@ -235,6 +262,8 @@ function finish() { progress(); $('#qe').classList.add('finished'); }
 
 function onClick(e) {
   if (e.target.closest('.qe-x')) { close(); return; }
+  const lv = e.target.closest('[data-lv]');
+  if (lv) { pickLevel(lv.dataset.lv); return; }
   const k = e.target.closest('[data-k]');
   if (k) { press(k.dataset.k); return; }
   const a = e.target.closest('[data-act]'); if (!a) return;
