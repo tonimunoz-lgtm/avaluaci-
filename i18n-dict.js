@@ -120,7 +120,8 @@ export const DICT = [
 ["Notes","Notas","Grades"],
 ["Comentaris","Comentarios","Comments"],
 ["Resum","Resumen","Summary"],
-["Afegir activitat","Añadir actividad","Add assignment"],["Afegir","Añadir","Add"],
+["Afegir activitat","Añadir actividad","Add assignment"],["Entrada ràpida","Entrada rápida","Quick entry"],["Només pendents","Solo pendientes","Pending only"],["Desa i següent →","Guardar y siguiente →","Save & next →"],["← Anterior","← Anterior","← Previous"],["Fet!","¡Hecho!","Done!"],["Has acabat els alumnes d'aquesta activitat.","Has terminado los alumnos de esta actividad.","You've finished the students for this activity."],["Sense nota","Sin nota","No grade"],["Nota actual — escriu-ne una de nova per canviar-la","Nota actual — escribe una nueva para cambiarla","Current grade — type a new one to change it"],["Entra les notes d'una activitat alumne per alumne","Introduce las notas de una actividad alumno a alumno","Enter an activity's grades student by student"],["No hi ha cap activitat amb notes numèriques per editar.","No hay ninguna actividad con notas numéricas para editar.","There is no activity with numeric grades to edit."],["Tanca","Cierra","Close"],["Activitat","Actividad","Assignment"],
+["Afegir","Añadir","Add"],
 ["Desfer","Deshacer","Undo"],
 ["Canvi desfet","Cambio deshecho","Change undone"],
 ["No s'ha pogut desfer: la cel·la ja no és visible","No se ha podido deshacer: la celda ya no está visible","Couldn't undo: the cell is no longer visible"],
@@ -566,6 +567,8 @@ export const SUBJECTS = [
 
 /* Textos amb valors dins: $1, $2… són els grups capturats. */
 export const PATTERNS = [
+  [/^(\d+)\/(\d+) amb nota$/, '$1/$2 con nota', '$1/$2 graded'],
+  [/^Nota actual: (.+)$/, 'Nota actual: $1', 'Current grade: $1'],
 [/^No s'ha pogut fer la còpia: (.+)$/, "No se ha podido hacer la copia: $1", "Couldn't back up: $1"],
 [/^No s'ha pogut restaurar: (.+)$/, "No se ha podido restaurar: $1", "Couldn't restore: $1"],
 [/^No s'ha pogut fer la còpia prèvia: (.+)$/, "No se ha podido hacer la copia previa: $1", "Couldn't make the safety backup: $1"],

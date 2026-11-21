@@ -102,6 +102,7 @@ function ensureBar() {
   return bar;
 }
 function showBar(entry, text, ms = 8000) {
+  if (document.body.classList.contains('qe-open')) return; // entrada ràpida: sense avisos
   const bar = ensureBar();
   const btn = $('.ub-btn', bar);
   _lastEntry = entry;
