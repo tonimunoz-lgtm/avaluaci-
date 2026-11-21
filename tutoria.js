@@ -890,12 +890,12 @@ function recollidaDades(modal) {
 // ============================================================
 function toInstruccio(to, situacioGreu) {
   const tos = {
-    felicitacio: `TO FELICITACIÓ: Comença amb una felicitació explícita i entusiasta. Celebra els èxits concrets i ressalta els punts forts. Acaba animant a mantenir aquest nivell.`,
+    felicitacio: `TO FELICITACIÓ: Celebra els bons resultats i l'actitud de l'alumne/a. El comentari ha de TANCAR-SE amb una felicitació explícita completa, en plural del tutor, del tipus «Felicitem [nom] per [motiu concret] i l'animem a continuar així.» (frase completa, amb el motiu).`,
     positiu:     `TO POSITIU: Destaca els aspectes bons per sobre dels negatius. Si hi ha suspesos o aspectes fluixos, presenta'ls breument com a reptes superables sense que dominin el missatge. Acaba amb confiança en les capacitats de l'alumne/a.`,
     neutre:      `TO EQUILIBRAT: Presenta punts forts i aspectes a millorar de forma proporcionada. ${situacioGreu ? "Menciona les mancances clarament però de forma constructiva." : "Menciona els reptes com a oportunitats de creixement."} Acaba amb encoratjament realista.`,
     anims:       `TO ÀNIM: L'alumne/a necessita motivació. Reconeix l'esforç fet, per petit que sigui. Si hi ha suspesos, emfatitza que és possible superar-los. El final ha de ser un missatge d'ànim sincer.`,
     avertencia:  `TO SERIÓS (respectuós però directe): La situació és preocupant. Digues clarament que els aspectes negatius indicats a DADES han perjudicat el rendiment. Transmet preocupació real i necessitat de canvi. Acaba demanant esforç concret.`,
-    segueix:     `TO SEGUEIX AIXÍ: L'alumne/a ho fa bé; reconeix-ho i anima'l a mantenir el ritme (pots usar expressions com "Segueix així!"). Que se senti valorat i motivat a continuar.`,
+    segueix:     `TO SEGUEIX AIXÍ: L'alumne/a ho fa bé; reconeix-ho. Tanca el comentari animant-lo a mantenir el ritme amb una frase completa en tercera persona, del tipus «L'animem a continuar així perquè [motiu concret].»`,
   };
   return tos[to] || tos.neutre;
 }
@@ -999,7 +999,8 @@ function buildPrompt(dades) {
       : '',
     dades.apartatsValors.length ? "Si hi ha apartats personalitzats, integra'ls amb naturalitat dins del text (no com a llista)." : '',
     dades.recomanacions ? "Inclou les recomanacions del tutor com un consell concret per a la família." : '',
-    "Acaba amb una frase final orientada cap al futur, coherent amb el to triat (per exemple, superar les matèries pendents si n'hi ha, o mantenir el bon ritme).",
+    "TOT el text va en tercera persona i en plural del tutor («Felicitem…», «L'animem a…», «Esperem que…», «Li recomanem…»). MAI no t'adrecis directament a l'alumne/a ni a la família amb imperatius o formes de «vostè/tu» (prohibit: «Continuï amb aquest esforç», «Segueix així», «Hauria de…»).",
+    "La frase final ha de ser completa i tenir sentit per ella mateixa: ha de dir què s'espera o es desitja i per què (per exemple, mantenir el bon ritme o superar les matèries pendents, segons el cas). No acabis amb una ordre ni amb una frase amb paraules que falten.",
     'Concordança de gènere correcta.',
   ].filter(Boolean);
 
