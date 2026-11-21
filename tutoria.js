@@ -949,7 +949,7 @@ function buildPrompt(dades) {
     campOpcional('Assistència', dades.assistencia),
     campOpcional('Actitud i participació', dades.actitud),
     apartatsExtraTxt,
-    campOpcional('Punts forts (del tutor)', dades.puntsForts),
+    campOpcional('Punts forts (només per conèixer el perfil)', dades.puntsForts),
     campOpcional('Recomanacions (del tutor)', dades.recomanacions),
   ].filter(Boolean).join('\n');
 
@@ -971,8 +971,8 @@ function buildPrompt(dades) {
 
   const graduacio = nSusp === 0 ? ''
     : nSusp <= 2 ? "Té poques matèries suspeses: presenta-ho com un repte concret i recuperable."
-    : nSusp <= 5 ? "Té diverses matèries suspeses: cal que la família vegi que és una situació que s'ha de revertir amb constància."
-    : "Té moltes matèries suspeses: transmet preocupació sincera i la necessitat d'un canvi important i d'un treball conjunt família-centre.";
+    : nSusp <= 5 ? "Té diverses matèries suspeses: cal que la família vegi que convé posar-s'hi amb constància per millorar-ho."
+    : "Té moltes matèries suspeses: transmet preocupació sincera i la necessitat d'un canvi important, amb l'ajuda de la família.";
 
   const regles = [
     idiomaInstruccio,
@@ -981,6 +981,9 @@ function buildPrompt(dades) {
     `Extensió: entre ${paraules[0]} i ${paraules[1]} paraules (${paraules[2]}).`,
     "DADES és només el perfil de l'alumne/a perquè sàpigues com és: NO és una llista per reproduir. No repeteixis cada característica una per una. Tria els aspectes més rellevants per al to i teixeix-los en un relat coherent, ometent o agrupant els detalls menors.",
     "Redacta amb prosa natural i fluida: frases completes que tinguin sentit per a una família, connectors naturals, sense enumeracions i sense encadenar «però» seguits. Evita expressions artificials, tòpics buits i frases que una persona no diria mai.",
+    "DELICADESA: el text el llegeixen els pares. No facis servir etiquetes dures ni les paraules de les opcions tal qual (disruptiu, dolent, negatiu, desmotivat, passiu, desinteressat, irregular…). Descriu les situacions amb tacte i de manera concreta, centrant-te en què cal millorar i com ajudar-lo (per exemple, «li costa seguir el ritme de la classe», «cal que s'impliqui més en el treball diari», «ha de cuidar l'actitud a l'aula», «ha faltat massa sovint»). Sigues clar/a si el cas és greu, però sempre amb respecte, sense culpar ni retreure.",
+    "VOCABULARI: usa un llenguatge senzill, quotidià i càlid. Evita paraules rimbombants o d'informe com «panorama», «situació acadèmica delicada», «recuperar el rendiment», «revertir», «imprescindible», «conjuntura», «energia», «potencial», «cal destacar». No facis servir expressions que sonin a text generat.",
+    "Els PUNTS FORTS són només per conèixer el perfil: no cal esmentar-los, i si ho fas, que sigui amb naturalitat i amb altres paraules (no copiïs la frase). Les RECOMANACIONS, en canvi, sí que han de sortir al comentari.",
     "No deduïs ni afegeixis trets de caràcter o de personalitat (introvertit, tímid, inquiet…) ni fets, anècdotes o motius que no surtin a DADES.",
     'No mencions notes numèriques ni noms d\'assignatures concretes: la família ja té el butlletí.',
     trimestreCtx,
@@ -995,7 +998,6 @@ function buildPrompt(dades) {
       ? "A DADES no hi ha cap aspecte negatiu: mantén un to formal però no inventis problemes; insisteix en la importància de mantenir l'esforç."
       : '',
     dades.apartatsValors.length ? "Si hi ha apartats personalitzats, integra'ls amb naturalitat dins del text (no com a llista)." : '',
-    dades.puntsForts ? "Aprofita els punts forts indicats pel tutor, reformulats amb naturalitat." : '',
     dades.recomanacions ? "Inclou les recomanacions del tutor com un consell concret per a la família." : '',
     "Acaba amb una frase final orientada cap al futur, coherent amb el to triat (per exemple, superar les matèries pendents si n'hi ha, o mantenir el bon ritme).",
     'Concordança de gènere correcta.',
