@@ -375,19 +375,26 @@ async function renderCopies(host) {
       const last = docs[0].data().ts?.toDate?.();
       head = `<p class="cop-status">Còpia automàtica cada setmana (les «Manuals» són les que fas tu amb el botó). Última còpia: <span translate="no">${last ? fmtDT(last.getTime()) : '—'}</span></p>`;
     } else head = '<p class="cop-status">Encara no hi ha cap còpia. Se\'n crea una de manera automàtica cada setmana.</p>';
-    const groups = {};
     const wkNum = w => { const m = /^(\d{4})-W(\d{2})/.exec(w || ''); return m ? `${+m[2]} (${m[1]})` : w; };
+    // Dos desplegables: automàtiques i manuals (les «Abans de restaurar» van amb les manuals)
+    const sec = { auto: {}, man: {} };
     docs.forEach(d => {
       const m = d.data(); const ts = m.ts?.toDate?.();
-      const k = m.tipus === 'pre' ? 'Abans de restaurar' : m.tipus === 'manual' ? `Manual · ${ts ? fmtDT(ts.getTime()) : ''}` : `Automàtica · setmana ${wkNum(m.week)}`;
-      (groups[k] ||= []).push(d);
+      const manual = m.tipus === 'pre' || m.tipus === 'manual';
+      const k = m.tipus === 'pre' ? `Abans de restaurar · ${ts ? fmtDT(ts.getTime()) : ''}` : m.tipus === 'manual' ? `Manual · ${ts ? fmtDT(ts.getTime()) : ''}` : `Setmana ${wkNum(m.week)}`;
+      ((manual ? sec.man : sec.auto)[k] ||= []).push(d);
     });
-    const list = Object.entries(groups).map(([k, ds]) => `<div class="cop-week" translate="no">${esc(k)}</div>` +
+    const rowsOf = groups => Object.entries(groups).map(([k, ds]) => `<div class="cop-week" translate="no">${esc(k)}</div>` +
       ds.map(d => { const m = d.data(); return `<div class="hist-row"><div class="hr-main"><div class="hr-who" translate="no">${esc(m.nom)}</div><div class="hr-sub"><span translate="no">${m.n ?? '?'}</span> alumnes</div></div>
         <button type="button" class="hist-btn" data-dl="${d.id}">Descarrega</button>
         <button type="button" class="hist-btn danger" data-rs="${d.id}">Restaura</button></div>`; }).join('')).join('');
+    const count = g => Object.values(g).reduce((n, a) => n + a.length, 0);
+    const open = host._open || (host._open = {});
+    const details = (key, title, g) => `<details class="cop-det" data-k="${key}"${open[key] ? ' open' : ''}><summary>${title} <span class="cop-n" translate="no">${count(g)}</span></summary><div class="cop-body">${count(g) ? rowsOf(g) : '<p class="cop-status">Cap còpia.</p>'}</div></details>`;
+    const list = details('auto', 'Còpies automàtiques', sec.auto) + details('man', 'Còpies manuals', sec.man);
     host.innerHTML = head + `<button type="button" class="hist-btn primary" id="copNow" style="margin:.2rem 0 .6rem">Fes una còpia ara</button>` + list;
     host._docs = docs;
+    host.querySelectorAll('.cop-det').forEach(dt => dt.addEventListener('toggle', () => { open[dt.dataset.k] = dt.open; }));
     $('#copNow', host).addEventListener('click', async ev => {
       const b = ev.currentTarget; b.disabled = true; b.textContent = 'Fent la còpia…';
       try { await makeCopies({ tipus: 'manual', label: weekId() + '-manual' }); setState(u, { denied: false }); window.notify?.('Còpia feta'); }
