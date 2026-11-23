@@ -1323,6 +1323,7 @@ await renderNotesGrid();
         <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>
         <button class="calc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Càlcul</button>
         ${calculatedActs[id]?.calculated ? '<button class="recalc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Recalcular fórmula</button>' : ''}
+        ${calculatedActs[id]?.calculated ? '' : `<button class="kind-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">${isCompDoc(adoc.exists ? adoc.data() : null) ? 'Convertir a numèrica' : 'Convertir a competencial'}</button>`}
         <button class="clear-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Netejar</button>
       </div>
     `;
@@ -1353,6 +1354,43 @@ await renderNotesGrid();
       const newName = await promptDialog('Nou nom activitat:', name);
       if (!newName || newName.trim() === name) return;
       db.collection('activitats').doc(id).update({ nom: newName.trim() }).then(() => renderNotesGrid());
+    });
+
+    // Convertir el tipus d'avaluació: numèrica (0–10) ↔ competencial (0–4); les notes ja posades es converteixen proporcionalment
+    menuDiv.querySelector('.kind-btn')?.addEventListener('click', async () => {
+      menu.classList.add('hidden');
+      const toComp = !isCompDoc(adoc.exists ? adoc.data() : null);
+      const dependents = Object.entries(calculatedActs).filter(([cid, c]) => c && c.calculated && cid !== id &&
+        ((c.weights && c.weights[id] !== undefined) || String(c.formula || '').includes(id)));
+      if (dependents.length) { notify('No es pot canviar el tipus: hi ha activitats calculades que en depenen. Treu-la primer del càlcul.'); return; }
+      const msg = toComp
+        ? `Convertir «${name}» a competencial? Les notes (0–10) es passaran a 0–4 proporcionalment (per exemple 7,5 → 3,00).`
+        : `Convertir «${name}» a numèrica? Les notes (0–4) es passaran a 0–10 proporcionalment (per exemple 3 → 7,5).`;
+      if (!await confirmDialog(msg)) return;
+      try {
+        const sdocs = await Promise.all(classStudents.map(sid => db.collection('alumnes').doc(sid).get()));
+        const upd = [];
+        sdocs.forEach(sd => {
+          if (!sd.exists) return;
+          const v = (sd.data().notes || {})[id];
+          if (v === undefined || v === null || v === '' || isNaN(Number(v))) return;
+          const n = Number(v);
+          const nv = toComp ? Math.min(4, Math.round(n * 0.4 * 100) / 100) : Math.min(10, Math.round(n * 2.5 * 10) / 10);
+          upd.push([sd.ref, { [`notes.${id}`]: nv }]);
+        });
+        for (let i = 0; i < upd.length; i += 400) {
+          const b = db.batch();
+          upd.slice(i, i + 400).forEach(([ref, d]) => b.update(ref, d));
+          await b.commit();
+        }
+        await db.collection('activitats').doc(id).update({ evaluationType: toComp ? 'competency' : 'numeric', isCompetency: toComp });
+        _actKind.set(id, toComp);
+        window.dispatchEvent(new CustomEvent('activity-kind-changed', { detail: { id } }));
+        await renderNotesGrid();
+        notify(`✅ «${name}» ara és ${toComp ? 'competencial' : 'numèrica'}`);
+      } catch (e) {
+        console.error(e); notify('Error canviant el tipus: ' + e.message);
+      }
     });
 
     menuDiv.querySelector('.recalc-btn')?.addEventListener('click', () => { menu.classList.add('hidden'); recalcColumn(); });

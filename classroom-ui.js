@@ -1,7 +1,7 @@
 // classroom-ui.js - Manejador de interfaz para importación de Classroom (optimizado)
 // Funciona de forma independiente sin necesidad de modificar app.js
 
-import { initClassroomAPI, getClassroomCourses, getClassroomCoursework, importClassroomCourse, formatDueDate } from './classroom.js';
+import { initClassroomAPI, getClassroomCourses, getClassroomCoursework, importClassroomCourse, formatDueDate, previewClassroomSync, applyClassroomSync } from './classroom.js';
 import { openModal, closeModal } from './modals.js';
 
 let selectedCourses = [];
@@ -10,6 +10,7 @@ let currentDB = null;
 let step = 'courses';          // 'courses' | 'works'
 let worksByCourse = {};        // courseId → [activitats de Classroom]
 let pickedWorks = {};          // courseId → Set(ids triats)
+let compWorks = {};            // courseId → Set(ids marcats com a competencials)
 
 console.log('✅ classroom-ui.js cargado');
 
@@ -217,7 +218,7 @@ async function loadClassroomCourses() {
   coursesList.classList.add('hidden');
   errorState.classList.add('hidden');
   selectedCourses = [];
-  worksByCourse = {}; pickedWorks = {};
+  worksByCourse = {}; pickedWorks = {}; compWorks = {};
   setStep('courses');
   document.getElementById('btnImportSelectedCourse').disabled = true;
 
@@ -301,6 +302,7 @@ async function loadWorksStep() {
       if (!worksByCourse[c.id]) {
         worksByCourse[c.id] = await getClassroomCoursework(c.id);
         pickedWorks[c.id] = new Set(worksByCourse[c.id].map(w => w.id));   // per defecte, totes marcades
+        compWorks[c.id] = new Set();
       }
     }
   } catch (err) {
@@ -318,10 +320,11 @@ async function loadWorksStep() {
 }
 
 function renderWorks(box) {
-  box.innerHTML = '<p class="text-sm text-gray-600 mb-3">Tria les activitats que vols importar de cada curs. Els alumnes s\'importen sempre.</p>';
+  box.innerHTML = '<p class="text-sm text-gray-600 mb-3">Tria les activitats que vols importar de cada curs. Els alumnes s\'importen sempre. Marca «Competencial» a les que s\'han d\'avaluar amb NA/AS/AN/AE (notes 0–4).</p>';
   selectedCourses.forEach(course => {
     const works = worksByCourse[course.id] || [];
     const picked = pickedWorks[course.id];
+    const comp = compWorks[course.id] || (compWorks[course.id] = new Set());
     const sec = document.createElement('div');
     sec.className = 'mb-4 border rounded';
     const count = () => `${picked.size} de ${works.length} activitats`;
@@ -330,7 +333,8 @@ function renderWorks(box) {
         <div class="font-semibold text-gray-900" translate="no">${escapeHtml(course.name)}</div>
         <div class="text-xs text-gray-600"><span class="cw-count">${count()}</span> ·
           <button type="button" class="cw-all underline text-indigo-600">Totes</button> ·
-          <button type="button" class="cw-none underline text-indigo-600">Cap</button></div>
+          <button type="button" class="cw-none underline text-indigo-600">Cap</button> ·
+          <button type="button" class="cw-comp underline text-indigo-600" title="Marca o desmarca totes com a competencials">Totes competencials</button></div>
       </div>
       <div class="cw-rows divide-y"></div>`;
     const rows = sec.querySelector('.cw-rows');
@@ -340,15 +344,25 @@ function renderWorks(box) {
       const due = formatDueDate(w.dueDate);
       const lab = document.createElement('label');
       lab.className = 'flex items-center gap-3 px-3 py-2 hover:bg-indigo-50 cursor-pointer';
-      lab.innerHTML = `<input type="checkbox" class="w-4 h-4" ${picked.has(w.id) ? 'checked' : ''}>
+      lab.innerHTML = `<input type="checkbox" class="cw-pick w-4 h-4" ${picked.has(w.id) ? 'checked' : ''}>
         <span class="flex-1 text-sm text-gray-900" translate="no">${escapeHtml(w.title || '(sense títol)')}</span>
-        <span class="text-xs text-gray-500">${due ? escapeHtml(due) + ' · ' : ''}${escapeHtml(String(w.maxPoints))} pts</span>`;
-      lab.querySelector('input').addEventListener('change', e => {
+        <span class="text-xs text-gray-500">${due ? escapeHtml(due) + ' · ' : ''}${escapeHtml(String(w.maxPoints))} pts</span>
+        <span class="cw-compwrap flex items-center gap-1 text-xs text-gray-700 border-l pl-3" title="Avaluar amb NA/AS/AN/AE (0–4)"><input type="checkbox" class="cw-comp-pick w-4 h-4" ${comp.has(w.id) ? 'checked' : ''}>Competencial</span>`;
+      lab.querySelector('.cw-pick').addEventListener('change', e => {
         e.target.checked ? picked.add(w.id) : picked.delete(w.id); refresh();
       });
+      const cc = lab.querySelector('.cw-comp-pick');
+      cc.addEventListener('click', e => e.stopPropagation());
+      cc.addEventListener('change', e => { e.target.checked ? comp.add(w.id) : comp.delete(w.id); });
+      lab.querySelector('.cw-compwrap').addEventListener('click', e => e.stopPropagation());
       rows.appendChild(lab);
     });
-    const setAll = on => { works.forEach(w => on ? picked.add(w.id) : picked.delete(w.id)); rows.querySelectorAll('input').forEach(i => i.checked = on); refresh(); };
+    const setAll = on => { works.forEach(w => on ? picked.add(w.id) : picked.delete(w.id)); rows.querySelectorAll('.cw-pick').forEach(i => i.checked = on); refresh(); };
+    sec.querySelector('.cw-comp').addEventListener('click', () => {
+      const on = !works.every(w => comp.has(w.id));
+      works.forEach(w => on ? comp.add(w.id) : comp.delete(w.id));
+      rows.querySelectorAll('.cw-comp-pick').forEach(i => i.checked = on);
+    });
     sec.querySelector('.cw-all').addEventListener('click', () => setAll(true));
     sec.querySelector('.cw-none').addEventListener('click', () => setAll(false));
     box.appendChild(sec);
@@ -419,7 +433,7 @@ function setupImportListener() {
         console.log('📚 Importando curso:', course.name);
         updateProgressModal(progressModal, course.name, i + 1, totalCourses, progress);
         
-        await importClassroomCourse(course, currentDB, currentProfessorUID, { workIds: [...(pickedWorks[course.id] || [])] });
+        await importClassroomCourse(course, currentDB, currentProfessorUID, { workIds: [...(pickedWorks[course.id] || [])], compIds: [...(compWorks[course.id] || [])] });
       }
 
       console.log('✅ Cursos importats correctament');
@@ -450,4 +464,102 @@ function setupImportListener() {
       btn.textContent = step === 'works' ? 'Importar' : 'Següent: triar activitats';
     }
   });
+}
+
+
+// ============================================================
+// ACTUALITZAR CLASSE IMPORTADA (menú «Opcions» del període)
+// ============================================================
+function injectSyncButton() {
+  const menu = document.getElementById('termMenu');
+  if (!menu) { setTimeout(injectSyncButton, 400); return; }
+  if (menu.querySelector('.classroom-sync-btn')) return;
+  const b = document.createElement('button');
+  b.className = 'classroom-sync-btn hidden';
+  b.textContent = 'Actualitzar de Classroom';
+  menu.appendChild(b);
+  // només es mostra si la classe oberta s'ha importat de Classroom
+  document.getElementById('termMenuBtn')?.addEventListener('click', async () => {
+    try {
+      const id = window.AvaluApp?.getClassId?.();
+      const d = id && window.firebase ? await window.firebase.firestore().collection('classes').doc(id).get() : null;
+      b.classList.toggle('hidden', !(d && d.exists && d.data().googleClassroomId));
+    } catch { b.classList.add('hidden'); }
+  });
+  b.addEventListener('click', () => { menu.classList.add('hidden'); startClassroomSync(); });
+}
+document.addEventListener('DOMContentLoaded', injectSyncButton);
+
+function syncBox(html) {
+  let m = document.getElementById('classroomSyncModal');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'classroomSyncModal';
+    m.className = 'fixed inset-0 flex items-center justify-center z-[10000] bg-black bg-opacity-50 p-4';
+    document.body.appendChild(m);
+  }
+  m.innerHTML = `<div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">${html}</div>`;
+  return m;
+}
+const closeSync = () => document.getElementById('classroomSyncModal')?.remove();
+
+async function startClassroomSync() {
+  const classId = window.AvaluApp?.getClassId?.();
+  if (!classId || !currentDB || !currentProfessorUID) { notify('❌ Obre una classe i inicia sessió'); return; }
+  syncBox('<h3 class="font-bold text-lg mb-2">Actualitzar de Classroom</h3><p class="text-sm text-gray-600">⏳ Connectant amb Google Classroom i comparant…</p>');
+  try {
+    await initClassroomAPI();
+    const plan = await previewClassroomSync(classId, currentDB);
+    renderSyncPlan(plan);
+  } catch (err) {
+    console.error(err);
+    syncBox(`<h3 class="font-bold text-lg mb-2">Actualitzar de Classroom</h3><p class="text-sm text-red-600">❌ ${escapeHtml(err.message || String(err))}</p>
+      <div class="mt-4 text-right"><button type="button" id="syncClose" class="border rounded-lg px-4 py-2 text-sm">Tanca</button></div>`);
+    document.getElementById('syncClose').onclick = closeSync;
+  }
+}
+
+function renderSyncPlan(plan) {
+  const nS = plan.newStudents.length, nF = plan.fills.length, nW = plan.newWorks.length;
+  const acts = [...new Set(plan.fills.map(f => f.actName))];
+  const nothing = !nS && !nF && !nW;
+  const html = `
+    <h3 class="font-bold text-lg mb-1">Actualitzar de Classroom</h3>
+    <p class="text-xs text-gray-500 mb-4" translate="no">${escapeHtml(plan.cls.nom || '')}</p>
+    ${nothing ? '<p class="text-sm text-gray-700">✅ Tot està al dia: no hi ha alumnes, notes ni activitats noves.</p>' : `
+    <ul class="text-sm text-gray-800 space-y-2 mb-4">
+      <li>👥 <b>${nS}</b> alumne${nS === 1 ? '' : 's'} nou${nS === 1 ? '' : 's'}${nS ? `: <span translate="no" class="text-gray-600">${escapeHtml(plan.newStudents.map(s => s.nom).join(', '))}</span>` : ''}</li>
+      <li>📝 <b>${nF}</b> nota${nF === 1 ? '' : 's'} per omplir (només cel·les buides)${acts.length ? ` a: <span translate="no" class="text-gray-600">${escapeHtml(acts.join(', '))}</span>` : ''}</li>
+      <li>🆕 <b>${nW}</b> activitat${nW === 1 ? '' : 's'} nova${nW === 1 ? '' : 's'} a Classroom</li>
+    </ul>
+    ${nW ? `<div class="border rounded-lg divide-y mb-4" id="syncWorks">
+      ${plan.newWorks.map(w => `<div class="flex items-center gap-3 px-3 py-2 text-sm" data-id="${escapeHtml(w.id)}">
+        <label class="flex items-center gap-2 flex-1"><input type="checkbox" class="sw-pick w-4 h-4" checked><span translate="no">${escapeHtml(w.title || '(sense títol)')}</span></label>
+        <label class="flex items-center gap-1 text-xs border-l pl-3"><input type="checkbox" class="sw-comp w-4 h-4">Competencial</label></div>`).join('')}
+    </div>` : ''}
+    <p class="text-xs text-gray-500 mb-4">No se sobreescriu cap nota existent ni s'esborra res.</p>`}
+    <div class="flex gap-2 justify-end">
+      <button type="button" id="syncClose" class="border rounded-lg px-4 py-2 text-sm">${nothing ? 'Tanca' : 'Cancel·la'}</button>
+      ${nothing ? '' : '<button type="button" id="syncApply" class="bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-semibold">Actualitza</button>'}
+    </div>`;
+  syncBox(html);
+  document.getElementById('syncClose').onclick = closeSync;
+  const ap = document.getElementById('syncApply');
+  if (!ap) return;
+  ap.onclick = async () => {
+    ap.disabled = true; ap.textContent = '⏳ Actualitzant…';
+    try {
+      const newWorks = [...document.querySelectorAll('#syncWorks [data-id]')]
+        .filter(r => r.querySelector('.sw-pick').checked)
+        .map(r => ({ id: r.dataset.id, comp: r.querySelector('.sw-comp').checked }));
+      const r = await applyClassroomSync(plan, currentDB, currentProfessorUID, { newWorks, termId: window.AvaluApp?.getActiveTermId?.() });
+      closeSync();
+      notify(`✅ Actualitzat: ${r.newStudents} alumnes nous, ${r.notes} notes, ${r.newActivities} activitats noves`);
+      setTimeout(() => { if (window.loadClassData) window.loadClassData(); else location.reload(); }, 300);
+    } catch (err) {
+      console.error(err);
+      notify('❌ Error actualitzant: ' + (err.message || err));
+      ap.disabled = false; ap.textContent = 'Actualitza';
+    }
+  };
 }

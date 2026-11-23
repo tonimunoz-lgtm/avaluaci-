@@ -178,6 +178,23 @@ export function formatDueDate(d) {
   return `${d.year}-${String(d.month).padStart(2, '0')}-${String(d.day).padStart(2, '0')}`;
 }
 
+// Escala una nota de Classroom a l'escala de l'activitat.
+// Numèrica: 0–10 segons maxPoints. Competencial: 0–4; si cap nota supera 4, ja venen en 0–4 i es deixen tal qual;
+// si n'hi ha alguna per sobre de 4, es fa proporcionalment segons maxPoints.
+export function compNeedsScaling(raws) {
+  return raws.some(r => r !== null && r !== undefined && Number(r) > 4);
+}
+export function scaleGrade(raw, maxPoints, comp, scaleComp) {
+  if (raw === undefined || raw === null) return null;
+  const max = Number(maxPoints);
+  if (comp) {
+    const v = scaleComp && max > 0 ? (raw / max) * 4 : Number(raw);
+    return Math.min(4, Math.round(v * 100) / 100);
+  }
+  const v = max > 0 ? (raw / max) * 10 : Number(raw);
+  return Math.round(v * 100) / 100;
+}
+
 // Importar un curso completo
 // - Escriptures en lots de 400 (límit Firestore: 500)
 // - Notes escalades a 0–10 segons maxPoints
@@ -192,6 +209,7 @@ export async function importClassroomCourse(courseData, db, professorUID, opts =
 
     // opts.workIds: només s'importen aquestes activitats (si no es passa, totes)
     const only = opts.workIds ? new Set(opts.workIds) : null;
+    const compSet = new Set(opts.compIds || []);   // activitats marcades com a competencials
     const [students, allWorks] = await Promise.all([
       getClassroomStudents(courseData.id),
       getClassroomCoursework(courseData.id)
@@ -212,6 +230,9 @@ export async function importClassroomCourse(courseData, db, professorUID, opts =
       return ref;
     });
 
+    // Competencials: s'escalen proporcionalment només si alguna nota supera 4
+    const scaleComp = courseworks.map((cw, idx) => compSet.has(cw.id) && compNeedsScaling(Object.values(submissionsList[idx])));
+
     // Alumnes amb les seves notes ja calculades (una sola escriptura per alumne)
     const studentIds = [];
     const writes = [];   // [ref, data]
@@ -220,11 +241,9 @@ export async function importClassroomCourse(courseData, db, professorUID, opts =
       studentIds.push(ref.id);
       const notes = {};
       courseworks.forEach((cw, idx) => {
-        const raw = submissionsList[idx][student.id];
-        if (raw === undefined || raw === null) return;
-        const max = Number(cw.maxPoints);
-        const scaled = max > 0 ? (raw / max) * 10 : raw;     // escala 0–10
-        notes[activityIds[idx]] = Math.round(scaled * 100) / 100;
+        const v = scaleGrade(submissionsList[idx][student.id], cw.maxPoints, compSet.has(cw.id), scaleComp[idx]);
+        if (v === null) return;
+        notes[activityIds[idx]] = v;
       });
       writes.push([ref, {
         nom: student.nom || 'Sin nombre',
@@ -242,6 +261,8 @@ export async function importClassroomCourse(courseData, db, professorUID, opts =
         data: formatDueDate(cw.dueDate) || new Date().toISOString().split('T')[0],
         calcType: 'numeric',
         formula: '',
+        evaluationType: compSet.has(cw.id) ? 'competency' : 'numeric',
+        isCompetency: compSet.has(cw.id),
         googleClassroomId: cw.id,
         maxPoints: cw.maxPoints,
         ownerUid: professorUID
@@ -301,4 +322,146 @@ export async function signOutClassroom() {
   } catch (err) {
     console.error('Error en logout:', err);
   }
+}
+
+
+// ============================================================
+// ACTUALITZAR UNA CLASSE JA IMPORTADA
+// - alumnes nous: s'afegeixen
+// - notes: només s'omplen les cel·les BUIDES de l'app que ara tenen nota a Classroom
+//   (mai se sobreescriu res del que ja hi ha)
+// - activitats noves: es proposen (l'usuari tria quines afegir i si són competencials)
+// - no s'esborra mai res
+// ============================================================
+const _empty = v => v === undefined || v === null || v === '';
+const _norm = e => String(e || '').trim().toLowerCase();
+
+export async function previewClassroomSync(classId, db) {
+  const cdoc = await db.collection('classes').doc(classId).get();
+  if (!cdoc.exists) throw new Error('Classe no trobada');
+  const cls = cdoc.data();
+  const courseId = cls.googleClassroomId;
+  if (!courseId) throw new Error('Aquesta classe no s\'ha importat de Classroom');
+
+  const [stuDocs, actDocs, crStudents, crWorks] = await Promise.all([
+    Promise.all((cls.alumnes || []).map(id => db.collection('alumnes').doc(id).get())),
+    Promise.all((cls.activitats || []).map(id => db.collection('activitats').doc(id).get())),
+    getClassroomStudents(courseId),
+    getClassroomCoursework(courseId)
+  ]);
+  const students = stuDocs.filter(d => d.exists).map(d => ({ id: d.id, ...d.data() }));
+  const acts = actDocs.filter(d => d.exists).map(d => ({ id: d.id, ...d.data() }));
+
+  const byGid = new Map(); const byMail = new Map();
+  students.forEach(st => { if (st.googleClassroomId) byGid.set(st.googleClassroomId, st); if (st.email) byMail.set(_norm(st.email), st); });
+  const matchOf = cs => byGid.get(cs.id) || (cs.email ? byMail.get(_norm(cs.email)) : null) || null;
+
+  const actByGid = new Map(); acts.forEach(a => { if (a.googleClassroomId) actByGid.set(a.googleClassroomId, a); });
+  const knownWorks = crWorks.filter(w => actByGid.has(w.id));
+  const newWorks = crWorks.filter(w => !actByGid.has(w.id));
+
+  // Notes de Classroom: de les activitats ja importades i de les noves (per poder oferir-les)
+  const subs = {};
+  await Promise.all(crWorks.map(async w => { subs[w.id] = await getStudentSubmissions(courseId, w.id); }));
+
+  const newStudents = crStudents.filter(cs => !matchOf(cs));
+  const fills = [];   // {studentId, studentName, actId, actName, value}
+  knownWorks.forEach(w => {
+    const act = actByGid.get(w.id);
+    const comp = act.evaluationType === 'competency' || act.isCompetency === true;
+    const scale = comp && compNeedsScaling(Object.values(subs[w.id]));
+    const max = act.maxPoints || w.maxPoints;
+    crStudents.forEach(cs => {
+      const st = matchOf(cs);
+      if (!st) return;
+      if (!_empty((st.notes || {})[act.id])) return;          // ja té nota: no es toca
+      const v = scaleGrade(subs[w.id][cs.id], max, comp, scale);
+      if (v === null) return;
+      fills.push({ studentId: st.id, studentName: st.nom, actId: act.id, actName: act.nom, value: v });
+    });
+  });
+
+  return { classId, cls, courseId, crStudents, newStudents, newWorks, knownWorks, actByGid, subs, fills, matchOf, students };
+}
+
+// opts.newWorks: [{id, comp}]  -> activitats noves triades
+export async function applyClassroomSync(plan, db, professorUID, opts = {}) {
+  const { classId, cls, newStudents, fills, subs, crStudents } = plan;
+  const chosen = (opts.newWorks || []);
+  const works = plan.newWorks.filter(w => chosen.some(c => c.id === w.id));
+  const compOf = id => !!chosen.find(c => c.id === id)?.comp;
+
+  const writes = [];   // [type, ref, data]
+  // 1) activitats noves
+  const newActIds = {};
+  works.forEach(w => {
+    const ref = db.collection('activitats').doc();
+    newActIds[w.id] = ref.id;
+    const comp = compOf(w.id);
+    writes.push(['set', ref, {
+      nom: w.title, description: w.description,
+      data: formatDueDate(w.dueDate) || new Date().toISOString().split('T')[0],
+      calcType: 'numeric', formula: '',
+      evaluationType: comp ? 'competency' : 'numeric', isCompetency: comp,
+      googleClassroomId: w.id, maxPoints: w.maxPoints, ownerUid: professorUID
+    }]);
+  });
+  const scaleNew = {}; works.forEach(w => { scaleNew[w.id] = compOf(w.id) && compNeedsScaling(Object.values(subs[w.id])); });
+  const noteForNew = (csId) => {
+    const notes = {};
+    works.forEach(w => {
+      const v = scaleGrade(subs[w.id][csId], w.maxPoints, compOf(w.id), scaleNew[w.id]);
+      if (v !== null) notes[newActIds[w.id]] = v;
+    });
+    return notes;
+  };
+
+  // 2) alumnes nous
+  const newStudentIds = [];
+  newStudents.forEach(cs => {
+    const ref = db.collection('alumnes').doc();
+    newStudentIds.push(ref.id);
+    // notes de les activitats ja existents (si les hi ha) + de les noves
+    const notes = noteForNew(cs.id);
+    plan.knownWorks.forEach(w => {
+      const act = plan.actByGid.get(w.id);
+      const comp = act.evaluationType === 'competency' || act.isCompetency === true;
+      const v = scaleGrade(subs[w.id][cs.id], act.maxPoints || w.maxPoints, comp, comp && compNeedsScaling(Object.values(subs[w.id])));
+      if (v !== null) notes[act.id] = v;
+    });
+    writes.push(['set', ref, { nom: cs.nom || 'Sin nombre', email: cs.email || '', notes, googleClassroomId: cs.id, comentarios: {}, ownerUid: professorUID }]);
+  });
+
+  // 3) notes buides d'alumnes existents (activitats ja importades)
+  const byStudent = {};
+  fills.forEach(f => { (byStudent[f.studentId] = byStudent[f.studentId] || {})[`notes.${f.actId}`] = f.value; });
+  // 3b) alumnes existents + activitats noves
+  plan.students.forEach(st => {
+    const cs = crStudents.find(c => (st.googleClassroomId && c.id === st.googleClassroomId) || (!st.googleClassroomId && c.email && _norm(c.email) === _norm(st.email)));
+    if (!cs) return;
+    const extra = noteForNew(cs.id);
+    Object.entries(extra).forEach(([aid, v]) => { (byStudent[st.id] = byStudent[st.id] || {})[`notes.${aid}`] = v; });
+    if (!st.googleClassroomId && byStudent[st.id]) byStudent[st.id].googleClassroomId = cs.id;
+  });
+  Object.entries(byStudent).forEach(([sid, upd]) => writes.push(['update', db.collection('alumnes').doc(sid), upd]));
+
+  // 4) classe: alumnes i activitats nous (+ al grup d'avaluació indicat)
+  const classUpd = {};
+  if (newStudentIds.length) classUpd.alumnes = firebase.firestore.FieldValue.arrayUnion(...newStudentIds);
+  const addedActIds = Object.values(newActIds);
+  if (addedActIds.length) {
+    classUpd.activitats = firebase.firestore.FieldValue.arrayUnion(...addedActIds);
+    const termId = opts.termId && cls.terms && cls.terms[opts.termId] ? opts.termId : (cls.terms && cls.terms.imported ? 'imported' : null);
+    if (termId) classUpd[`terms.${termId}.activities`] = firebase.firestore.FieldValue.arrayUnion(...addedActIds);
+  }
+
+  const items = writes.filter(w => w[0] !== 'class');
+  for (let i = 0; i < items.length; i += 400) {
+    const batch = db.batch();
+    items.slice(i, i + 400).forEach(([t, ref, data]) => t === 'set' ? batch.set(ref, data) : batch.update(ref, data));
+    await batch.commit();
+  }
+  if (Object.keys(classUpd).length) await db.collection('classes').doc(classId).update(classUpd);
+
+  return { newStudents: newStudentIds.length, notes: fills.length, newActivities: addedActIds.length };
 }
