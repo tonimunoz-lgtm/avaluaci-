@@ -33,8 +33,12 @@ async function loadAll(force) {
       Promise.all(actIds.map(id => db().collection('activitats').doc(id).get())),
       Promise.all((c.alumnes || []).map(id => db().collection('alumnes').doc(id).get()))
     ]);
-    c.actNames = {};
-    acts.forEach(a => { c.actNames[a.id] = a.exists ? (a.data().nom || 'Sense nom') : 'Desconeguda'; });
+    c.actNames = {}; c.actComp = {};
+    acts.forEach(a => {
+      c.actNames[a.id] = a.exists ? (a.data().nom || 'Sense nom') : 'Desconeguda';
+      const d = a.exists ? a.data() : {};
+      c.actComp[a.id] = d.evaluationType === 'competency' || d.isCompetency === true;
+    });
     c.students = studs.filter(d => d.exists).map(d => ({ id: d.id, ...d.data() }));
   }));
   _cache = { at: Date.now(), classes };
@@ -168,7 +172,7 @@ function reportHTML(c, termId) {
   <div class="rep-grid">
     <div class="panel"><h3>⚠️ Alumnes en risc</h3><p class="muted">Mitjana inferior a 5 o dues o més activitats suspeses</p>
       ${a.risk.length ? `<ul class="people">${a.risk.sort((x, y) => x.avg - y.avg).map(r => `
-        <li><span class="stu-avatar" style="--hue:${hue(r.nom)}">${esc(initials(r.nom))}</span><b>${esc(r.nom)}</b>
+        <li class="fx-link" data-fx-stu="${esc(r.id)}" data-fx-cls="${esc(c.id)}" role="button" tabindex="0"><span class="stu-avatar" style="--hue:${hue(r.nom)}">${esc(initials(r.nom))}</span><b>${esc(r.nom)}</b>
         <small>${r.failed} susp. · ${r.missing} sense nota</small><span class="pill t-${toneOf(r.avg)}">${fmt(r.avg)}</span></li>`).join('')}</ul>` : '<p class="muted">Cap alumne en risc. 🎉</p>'}
     </div>
     <div class="panel"><h3>🏆 Millors resultats</h3><p class="muted">Els 5 alumnes amb millor mitjana</p>
@@ -193,7 +197,7 @@ function download(name, text) {
 }
 
 /* ------------------------------------------------------------- navegació */
-const SCREENS = ['screen-classes', 'screen-class', 'screen-alumnes', 'screen-informes', 'screen-historial', 'screen-config'];
+const SCREENS = ['screen-classes', 'screen-class', 'screen-alumne', 'screen-alumnes', 'screen-informes', 'screen-historial', 'screen-config'];
 function setActiveNav(btn) {
   document.querySelectorAll('.sidebar .nav-item').forEach(b => b.classList.toggle('active', b === btn));
 }
@@ -203,7 +207,7 @@ function showOnly(id) {
 
 $('navHome').addEventListener('click', () => {
   setActiveNav($('navHome'));
-  ['screen-alumnes', 'screen-informes', 'screen-historial', 'screen-config'].forEach(s => $(s).classList.add('hidden'));
+  ['screen-alumne', 'screen-alumnes', 'screen-informes', 'screen-historial', 'screen-config'].forEach(s => $(s).classList.add('hidden'));
   invalidate();
 });
 $('navStudents').addEventListener('click', () => { setActiveNav($('navStudents')); showOnly('screen-alumnes'); renderAlumnes(); });
@@ -222,7 +226,7 @@ async function renderAlumnes() {
       <div class="search-box"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><input id="allStuSearch" type="search" placeholder="Cercar alumne en totes les classes..."></div></div>
     <div class="panel"><div class="tbl-wrap"><table class="rep-table" id="allStuTable"><thead><tr><th class="l">Alumne</th><th class="l">Classe</th><th>Mitjana</th><th>Susp.</th><th>Sense nota</th><th class="l">Email</th></tr></thead>
     <tbody>${all.sort((a, b) => a.nom.localeCompare(b.nom, 'ca')).map(r => `
-      <tr data-class="${esc(r.classId)}" data-q="${esc((r.nom + ' ' + r.classe).toLowerCase())}">
+      <tr data-class="${esc(r.classId)}" data-stu="${esc(r.id)}" data-q="${esc((r.nom + ' ' + r.classe).toLowerCase())}" style="cursor:pointer">
         <td class="l"><span class="stu-avatar" style="--hue:${hue(r.nom)}">${esc(initials(r.nom))}</span> <b>${esc(r.nom)}</b></td>
         <td class="l">${esc(r.classe)}</td><td><span class="pill t-${toneOf(r.avg)}">${fmt(r.avg)}</span></td>
         <td>${r.failed}</td><td>${r.missing}</td><td class="l muted">${esc(r.email) || '—'}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">Encara no hi ha alumnes.</td></tr>'}</tbody></table></div></div>`;
@@ -233,10 +237,7 @@ async function renderAlumnes() {
   root.querySelector('tbody').addEventListener('click', e => {
     const tr = e.target.closest('tr[data-class]');
     if (!tr) return;
-    setActiveNav($('navHome'));
-    showOnly('screen-class');
-    document.querySelector('.tab[data-tab="notes"]')?.click();
-    window.AvaluApp?.openClass?.(tr.dataset.class, 'notes');
+    openFitxa(tr.dataset.class, tr.dataset.stu, 'alumnes');
   });
 }
 
@@ -264,6 +265,10 @@ async function renderInformes() {
   $('repTerm')?.addEventListener('change', e => { _repSel.term = e.target.value; renderInformes(); });
   $('repCsv')?.addEventListener('click', () => download(`informe-${(cur.nom || 'classe').replace(/\W+/g, '_')}.csv`, csvOf(cur, termSel)));
   $('repPrint').addEventListener('click', () => window.print());
+  $('repBody').addEventListener('click', e => {
+    const li = e.target.closest('[data-fx-stu]');
+    if (li) openFitxa(li.dataset.fxCls, li.dataset.fxStu, 'informes');
+  });
 }
 
 function compareHTML(classes) {
@@ -420,7 +425,7 @@ bellMenu.addEventListener('click', e => {
   const b = e.target.closest('button[data-id]'); if (!b) return;
   bellMenu.classList.add('hidden');
   setActiveNav($('navHome'));
-  ['screen-alumnes', 'screen-informes', 'screen-historial', 'screen-config'].forEach(s => $(s).classList.add('hidden'));
+  ['screen-alumne', 'screen-alumnes', 'screen-informes', 'screen-historial', 'screen-config'].forEach(s => $(s).classList.add('hidden'));
   window.AvaluApp?.openClass?.(b.dataset.id, 'comentaris');
 });
 
@@ -494,7 +499,7 @@ async function renderRiskCard() {
           return;
         }
         const r = e.target.closest('[data-stu]');
-        if (r) window.AvaluApp?.openClass?.(r.dataset.cls, 'notes');
+        if (r) openFitxa(r.dataset.cls, r.dataset.stu, 'home');
       });
     }
     let open = false; try { open = localStorage.getItem(riskOpenKey) === '1'; } catch {}
@@ -522,3 +527,187 @@ setInterval(() => {
   const home = $('screen-classes');
   if (home && !home.classList.contains('hidden') && Date.now() - _riskAt > 60000) renderRiskCard();
 }, 2500);
+
+/* ------------------------------------------------------------ Fitxa de l'alumne (evolució) */
+// Pantalla pròpia d'un alumne: mitjana, tendència, gràfic activitat a activitat (o matèria a matèria a la
+// classe de tutoria) comparat amb la classe, taula per període i avisos calculats amb regles simples (sense IA).
+// Només llegeix (usa loadAll). Les activitats competencials (0–4) es porten a 0–10 només per comparar.
+let _fx = { cls: '', stu: '', term: null, from: 'alumnes' };
+// Classe de tutoria / seguiment: les columnes són matèries, no activitats en el temps. Per defecte es detecta pel nom
+// de la classe («tutor…») i l'usuari ho pot canviar (es recorda per classe, només en aquest navegador).
+function fxSubjectMode(c) {
+  let v = null; try { v = localStorage.getItem('avaluapp.fx.mat.' + c.id); } catch {}
+  if (v === '1') return true; if (v === '0') return false;
+  return /tutor|seguiment/i.test(c.nom || '');
+}
+
+const fxScale = (c, a) => c.actComp?.[a] ? 2.5 : 1;
+const fxVal = (c, s, a) => { const v = num((s.notes || {})[a]); return v == null ? null : v * fxScale(c, a); };
+const fxCalc = c => c.calculatedActivities || {};
+function fxActs(c, termId) {
+  const t = c.terms || {};
+  const ids = termId && t[termId] ? (t[termId].activities || []) : Object.values(t).flatMap(x => x.activities || []);
+  return [...new Set(ids)].filter(a => !fxCalc(c)[a]?.calculated);
+}
+function fxClassAvg(c, a) { return avg((c.students || []).map(s => fxVal(c, s, a)).filter(v => v != null)); }
+
+function fxAnalyse(c, s, termId, subj) {
+  const acts = fxActs(c, termId).map(id => ({
+    id, nom: c.actNames?.[id] || id, v: fxVal(c, s, id), cls: fxClassAvg(c, id),
+    n: (c.students || []).filter(x => fxVal(c, x, id) != null).length
+  }));
+  const done = acts.filter(a => a.v != null);
+  const vals = done.map(a => a.v);
+  const mean = avg(vals);
+  const classMean = avg(acts.map(a => a.cls).filter(v => v != null));
+  const failed = done.filter(a => a.v < PASS).length;
+  const missing = acts.filter(a => a.v == null && a.n >= Math.max(1, (c.students || []).length / 2));
+  // tendència: mitjana de la segona meitat de la sèrie menys la de la primera (mínim 3 notes)
+  let trend = null;
+  if (!subj && vals.length >= 3) { const h = Math.floor(vals.length / 2); trend = avg(vals.slice(vals.length - h)) - avg(vals.slice(0, h)); }
+  // períodes
+  const terms = Object.entries(c.terms || {}).map(([id, t]) => {
+    const as = fxActs(c, id);
+    const mine = as.map(a => fxVal(c, s, a)).filter(v => v != null);
+    const cl = as.map(a => fxClassAvg(c, a)).filter(v => v != null);
+    return { id, nom: t.name || t.nom || id, avg: avg(mine), cls: avg(cl), n: mine.length, total: as.length };
+  });
+  const tWith = terms.filter(t => t.avg != null);
+  if (subj && tWith.length >= 2) trend = tWith[tWith.length - 1].avg - tWith[tWith.length - 2].avg;
+  const alerts = [];
+  const last3 = vals.slice(-3);
+  if (!subj && last3.length === 3 && last3[0] > last3[1] && last3[1] > last3[2] && last3[0] - last3[2] >= 1)
+    alerts.push({ k: 'down', txt: `Ha baixat a les ${last3.length} últimes notes seguides (de ${fmt(last3[0])} a ${fmt(last3[2])}).` });
+  if (!termId && tWith.length >= 2) {
+    const a = tWith[tWith.length - 1], b = tWith[tWith.length - 2];
+    if (b.avg - a.avg >= 1) alerts.push({ k: 'down', txt: `La mitjana ha baixat de ${fmt(b.avg)} a ${fmt(a.avg)} entre «${b.nom}» i «${a.nom}».` });
+    else if (a.avg - b.avg >= 1) alerts.push({ k: 'up', txt: `La mitjana ha pujat de ${fmt(b.avg)} a ${fmt(a.avg)} entre «${b.nom}» i «${a.nom}».` });
+  }
+  if (failed >= 2) alerts.push({ k: 'fail', txt: `Té ${failed} ${failed === 1 ? 'nota suspesa' : 'notes suspeses'} (${done.filter(a => a.v < PASS).slice(0, 4).map(a => a.nom).join(', ')}${failed > 4 ? '…' : ''}).` });
+  else if (failed === 1) alerts.push({ k: 'fail', txt: `Ha suspès ${done.find(a => a.v < PASS).nom} (${fmt(done.find(a => a.v < PASS).v)}).` });
+  if (missing.length) alerts.push({ k: 'miss', txt: `Sense nota a ${missing.length === 1 ? '' : missing.length + ' activitats: '}${missing.slice(0, 4).map(a => a.nom).join(', ')}${missing.length > 4 ? '…' : ''}, i la majoria de la classe sí en té.` });
+  const far = done.filter(a => a.cls != null && a.cls - a.v >= 2 && a.n >= 3).sort((x, y) => (y.cls - y.v) - (x.cls - x.v));
+  if (far.length) alerts.push({ k: 'gap', txt: `Molt per sota de la classe a ${far.slice(0, 2).map(a => `${a.nom} (${fmt(a.v)} davant de ${fmt(a.cls)})`).join(' i ')}.` });
+  const risky = alerts.some(a => ['down', 'fail', 'gap'].includes(a.k) && !(a.k === 'fail' && failed < 2)) || (mean != null && mean < PASS) || failed >= 2;
+  const improving = alerts.some(a => a.k === 'up') || (trend != null && trend >= 1 && !risky);
+  const status = mean == null ? 'none' : risky ? 'warn' : improving ? 'up' : 'ok';
+  // matèries × períodes (mode tutoria): mateix nom de matèria a cada període
+  let matrix = [];
+  if (subj) {
+    const byName = new Map();
+    Object.entries(c.terms || {}).forEach(([tid, t]) => fxActs(c, tid).forEach(a => {
+      const k = (c.actNames?.[a] || a).trim().toLowerCase();
+      const r = byName.get(k) || { nom: c.actNames?.[a] || a, per: {} };
+      r.per[tid] = { v: fxVal(c, s, a), cls: fxClassAvg(c, a) }; byName.set(k, r);
+    }));
+    matrix = [...byName.values()];
+  }
+  return { acts, done, mean, classMean, failed, missing, trend, terms, alerts, status, matrix };
+}
+
+function fxChart(acts) {
+  if (acts.length < 2) return '<p class="muted">Calen almenys dues activitats per dibuixar el gràfic.</p>';
+  const W = 640, H = 230, L = 34, R = 12, T = 12, B = acts.length > 6 ? 62 : 34;
+  const x = i => L + (W - L - R) * (acts.length === 1 ? .5 : i / (acts.length - 1));
+  const y = v => T + (H - T - B) * (1 - Math.max(0, Math.min(10, v)) / 10);
+  const path = key => { let d = '', pen = false; acts.forEach((a, i) => { const v = a[key]; if (v == null) { pen = false; return; } d += `${pen ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)} `; pen = true; }); return d; };
+  const grid = [0, 2, 4, 6, 8, 10].map(v => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="#e8e4fa"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="#6b6f8d">${v}</text>`).join('');
+  const rot = acts.length > 6;
+  const labels = acts.map((a, i) => { const t = a.nom.length > 14 ? a.nom.slice(0, 13) + '…' : a.nom; return `<text translate="no" x="${x(i)}" y="${H - B + 16}" font-size="11" fill="#6b6f8d" text-anchor="${rot ? 'end' : 'middle'}" ${rot ? `transform="rotate(-35 ${x(i)} ${H - B + 16})"` : ''}>${esc(t)}</text>`; }).join('');
+  const pts = acts.map((a, i) => a.v == null ? '' : `<circle cx="${x(i)}" cy="${y(a.v)}" r="5" fill="${a.v < PASS ? '#e11d48' : '#4f2fe0'}"><title translate="no">${esc(a.nom)}: ${fmt(a.v)}${a.cls != null ? ' (classe ' + fmt(a.cls) + ')' : ''}</title></circle>`).join('');
+  return `<svg class="fx-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Evolució de les notes de l'alumne comparada amb la mitjana de la classe">
+    ${grid}<line x1="${L}" x2="${W - R}" y1="${y(PASS)}" y2="${y(PASS)}" stroke="#e11d48" stroke-dasharray="2 4" stroke-width="1.2"/>
+    <path d="${path('cls')}" fill="none" stroke="#8d8aa8" stroke-width="2" stroke-dasharray="6 4"/>
+    <path d="${path('v')}" fill="none" stroke="#4f2fe0" stroke-width="2.5" stroke-linejoin="round"/>${pts}${labels}</svg>
+    <div class="fx-legend"><span><i style="background:#4f2fe0"></i>Alumne</span><span><i class="dash"></i>Mitjana de la classe</span><span><i class="dot"></i>Aprovat (5)</span></div>`;
+}
+
+function fxBars(acts) {
+  if (!acts.length) return '<p class="muted">Encara no hi ha matèries.</p>';
+  const W = 640, H = 240, L = 34, R = 12, T = 12, B = 56;
+  const slot = (W - L - R) / acts.length, bw = Math.min(34, slot * .5);
+  const y = v => T + (H - T - B) * (1 - Math.max(0, Math.min(10, v)) / 10);
+  const cx = i => L + slot * (i + .5);
+  const grid = [0, 2, 4, 6, 8, 10].map(v => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="#e8e4fa"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="#6b6f8d">${v}</text>`).join('');
+  const bars = acts.map((a, i) => (a.v == null ? '' : `<rect x="${cx(i) - bw / 2}" y="${y(a.v)}" width="${bw}" height="${y(0) - y(a.v)}" rx="4" fill="${a.v < PASS ? '#e11d48' : '#4f2fe0'}"><title translate="no">${esc(a.nom)}: ${fmt(a.v)}${a.cls != null ? ' (classe ' + fmt(a.cls) + ')' : ''}</title></rect>`) +
+    (a.cls == null ? '' : `<line x1="${cx(i) - bw / 2 - 5}" x2="${cx(i) + bw / 2 + 5}" y1="${y(a.cls)}" y2="${y(a.cls)}" stroke="#8d8aa8" stroke-width="3" stroke-linecap="round"/>`)).join('');
+  const labels = acts.map((a, i) => { const t = a.nom.length > 14 ? a.nom.slice(0, 13) + '…' : a.nom; return `<text translate="no" x="${cx(i)}" y="${H - B + 16}" font-size="11" fill="#6b6f8d" text-anchor="end" transform="rotate(-35 ${cx(i)} ${H - B + 16})">${esc(t)}</text>`; }).join('');
+  return `<svg class="fx-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Nota de l'alumne en cada matèria comparada amb la mitjana de la classe">${grid}<line x1="${L}" x2="${W - R}" y1="${y(PASS)}" y2="${y(PASS)}" stroke="#e11d48" stroke-dasharray="2 4" stroke-width="1.2"/>${bars}${labels}</svg>
+    <div class="fx-legend"><span><i style="background:#4f2fe0"></i>Alumne</span><span><i style="background:#8d8aa8;height:3px"></i>Mitjana de la classe</span><span><i class="dot"></i>Aprovat (5)</span></div>`;
+}
+
+const FX_ICON = { down: '↘', up: '↗', fail: '✕', miss: '○', gap: '≠' };
+const FX_STATUS = { warn: ['A vigilar', 'warn'], up: ['En millora', 'up'], ok: ['Estable', 'ok'], none: ['Sense notes', 'none'] };
+
+async function openFitxa(classId, stuId, from) {
+  _fx = { cls: classId, stu: stuId, term: null, from: from || _fx.from };
+  setActiveNav($('navStudents'));
+  showOnly('screen-alumne');
+  await renderFitxa();
+}
+
+async function renderFitxa() {
+  const root = $('screen-alumne');
+  if (!root) return;
+  root.innerHTML = '<p class="muted" style="margin-top:1rem">Carregant…</p>';
+  const classes = await loadAll();
+  const c = classes.find(x => x.id === _fx.cls);
+  const s = c?.students.find(x => x.id === _fx.stu);
+  if (!c || !s) { root.innerHTML = '<div class="panel">No s\'ha trobat l\'alumne.</div>'; return; }
+  const termSel = _fx.term === null ? currentTermOf(c) : _fx.term;
+  const subj = fxSubjectMode(c);
+  const a = fxAnalyse(c, s, termSel, subj);
+  const [stLabel, stCls] = FX_STATUS[a.status];
+  const termOpts = Object.entries(c.terms || {});
+  const delta = a.mean != null && a.classMean != null ? a.mean - a.classMean : null;
+  const sg = v => (v > 0 ? '+' : v < 0 ? '−' : '') + fmt(Math.abs(v));
+  root.innerHTML = `
+    <div class="fx-top"><button type="button" id="fxBack" class="fx-back">← Tornar</button></div>
+    <div class="panel fx-head">
+      <span class="stu-avatar fx-av" style="--hue:${hue(s.nom)}" translate="no">${esc(initials(s.nom))}</span>
+      <div class="fx-id"><h2 translate="no">${esc(s.nom || '?')}</h2><p class="muted" translate="no">${esc(c.nom || 'Sense nom')}</p></div>
+      <span class="fx-chip fx-${stCls}">${stLabel}</span>
+      <label class="fx-mode muted"><input type="checkbox" id="fxSubj" ${subj ? 'checked' : ''}> Les columnes són matèries</label>
+      <select id="fxTerm" class="pill-select"><option value="">Tots els períodes</option>${termOpts.map(([id, t]) => `<option value="${esc(id)}" ${id === termSel ? 'selected' : ''} translate="no">${esc(t.name || t.nom || id)}</option>`).join('')}</select>
+    </div>
+    <div class="kpis">
+      ${kpi('Mitjana', fmt(a.mean), a.classMean != null ? `classe ${fmt(a.classMean)}${delta != null ? ' · ' + sg(delta) : ''}` : '', 'tone-' + toneOf(a.mean))}
+      ${kpi('Tendència', a.trend == null ? '–' : (a.trend >= 0.5 ? '↗ ' : a.trend <= -0.5 ? '↘ ' : '→ ') + sg(a.trend), subj ? 'darrer període → anterior' : 'primera meitat → segona meitat', a.trend != null && a.trend <= -1 ? 'tone-red' : a.trend != null && a.trend >= 1 ? 'tone-green' : '')}
+      ${kpi('Suspeses', `${a.failed} <small style="font-size:1rem">de ${a.done.length}</small>`, `${a.acts.length - a.done.length} sense nota`, a.failed ? 'tone-red' : '')}
+    </div>
+    ${subj
+      ? `<div class="panel"><h3>Notes per matèria</h3><p class="muted">Nota de l'alumne a cada matèria i mitjana de la classe</p>${fxBars(a.acts)}</div>
+         ${a.terms.filter(t => t.avg != null).length >= 2 ? `<div class="panel"><h3>Evolució per període</h3><p class="muted">Mitjana de totes les matèries a cada període</p>${fxChart(a.terms.filter(t => t.avg != null).map(t => ({ nom: t.nom, v: t.avg, cls: t.cls })))}</div>` : ''}`
+      : `<div class="panel"><h3>Evolució</h3><p class="muted">Nota a cada ${c.actComp && Object.values(c.actComp).some(Boolean) ? 'activitat (competencials passades a 0–10)' : 'activitat'}</p>${fxChart(a.acts)}</div>`}
+    <div class="panel"><h3>Què s'ha detectat</h3>
+      ${a.alerts.length ? `<ul class="fx-alerts">${a.alerts.map(x => `<li class="fx-a-${x.k}"><b>${FX_ICON[x.k]}</b><span translate="no">${esc(x.txt)}</span></li>`).join('')}</ul>` : `<p class="muted">${a.mean == null ? 'Encara no hi ha notes per analitzar.' : 'Res destacable en aquest període.'}</p>`}
+    </div>
+    ${a.terms.filter(t => t.n).length > 1 ? `<div class="panel"><h3>Per període</h3><div class="tbl-wrap"><table class="rep-table"><thead><tr><th class="l">Període</th><th>Alumne</th><th>Classe</th><th>Diferència</th></tr></thead><tbody>
+      ${a.terms.filter(t => t.n).map(t => `<tr><td class="l" translate="no">${esc(t.nom)}</td><td><span class="pill t-${toneOf(t.avg)}">${fmt(t.avg)}</span></td><td>${fmt(t.cls)}</td><td>${t.cls != null ? sg(t.avg - t.cls) : '–'}</td></tr>`).join('')}</tbody></table></div></div>` : ''}
+    ${subj && a.matrix.length && Object.keys(c.terms || {}).length > 1 ? `<div class="panel"><h3>Matèries per període</h3><p class="muted">Fletxa = canvi respecte del període anterior</p><div class="tbl-wrap"><table class="rep-table"><thead><tr><th class="l">Matèria</th>${Object.entries(c.terms).map(([id, t]) => `<th translate="no">${esc(t.name || t.nom || id)}</th>`).join('')}</tr></thead><tbody>
+      ${a.matrix.map(r => { let prev = null; return `<tr><td class="l" translate="no">${esc(r.nom)}</td>${Object.keys(c.terms).map(id => { const x = r.per[id]; const v = x?.v ?? null; const ar = v != null && prev != null ? (v - prev >= 1 ? ' ↗' : prev - v >= 1 ? ' ↘' : '') : ''; if (v != null) prev = v; return `<td>${v == null ? '–' : `<span class="pill t-${toneOf(v)}">${fmt(v)}</span>${ar}`}</td>`; }).join('')}</tr>`; }).join('')}</tbody></table></div></div>` : ''}
+    <div class="panel"><h3>Detall</h3>
+      ${a.acts.length ? `<div class="tbl-wrap"><table class="rep-table"><thead><tr><th class="l">Activitat / matèria</th><th>Nota</th><th>Classe</th><th>Diferència</th></tr></thead><tbody>
+      ${a.acts.map(x => `<tr><td class="l" translate="no">${esc(x.nom)}</td><td>${x.v == null ? '–' : `<span class="pill t-${toneOf(x.v)}">${fmt(x.v)}</span>`}</td><td>${fmt(x.cls)}</td><td>${x.v != null && x.cls != null ? sg(x.v - x.cls) : '–'}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">Aquest període encara no té activitats.</p>'}
+    </div>
+    <div class="fx-actions">
+      <button type="button" id="fxComment" class="btn btn-primary">Crear comentari de tutoria</button>
+      <button type="button" id="fxGrid" class="btn">Obrir a la graella</button>
+    </div>`;
+  $('fxBack').addEventListener('click', () => {
+    if (_fx.from === 'home') { $('navHome').click(); }
+    else if (_fx.from === 'informes') { $('navReports').click(); }
+    else $('navStudents').click();
+  });
+  $('fxSubj').addEventListener('change', e => { try { localStorage.setItem('avaluapp.fx.mat.' + c.id, e.target.checked ? '1' : '0'); } catch {} renderFitxa(); });
+  $('fxTerm').addEventListener('change', e => { _fx.term = e.target.value; renderFitxa(); });
+  $('fxComment').addEventListener('click', () => {
+    if (window.openTutoriaModal) window.openTutoriaModal({ studentId: s.id, studentName: s.nom || '', classId: c.id });
+  });
+  $('fxGrid').addEventListener('click', () => {
+    setActiveNav($('navHome')); showOnly('screen-class');
+    document.querySelector('.tab[data-tab="notes"]')?.click();
+    window.AvaluApp?.openClass?.(c.id, 'notes');
+  });
+}
+window.AvaluFitxa = { open: openFitxa };

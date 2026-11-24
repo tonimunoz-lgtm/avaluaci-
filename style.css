@@ -866,3 +866,27 @@ body #weightedInputs .w-pct input { width: 5.6rem !important; padding: .3rem .6r
 .cop-det[open] > summary::before { transform: rotate(90deg); }
 .cop-det .cop-n { margin-left: auto; font-size: .75rem; font-weight: 600; background: rgba(99,102,241,.12); color: #4f46e5; border-radius: 999px; padding: .05rem .55rem; }
 .cop-det .cop-body { padding: 0 .9rem .6rem; max-height: 340px; overflow-y: auto; }
+
+/* Fitxa de l'alumne */
+#screen-alumne .panel, #screen-alumne .kpis { margin-bottom: 1.2rem; }
+.fx-back { background: none; border: 0; color: var(--c-primary); font-weight: 700; padding: .3rem 0; margin-bottom: .6rem; }
+.fx-head { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.fx-av { width: 52px; height: 52px; font-size: .95rem; }
+.fx-id { flex: 1; min-width: 160px; } .fx-id h2 { font-size: 1.35rem; }
+.fx-chip { padding: .35rem .9rem; border-radius: 999px; font-weight: 800; font-size: .82rem; }
+.fx-warn { background: #fdeaa8; color: #7a4b00; } .fx-up { background: #cdf5dc; color: #0d5a34; } .fx-ok { background: #e8e4fa; color: var(--c-primary-dark); } .fx-none { background: #e5e7eb; color: #4b5563; }
+.fx-svg { width: 100%; height: auto; margin-top: .6rem; }
+.fx-legend { display: flex; gap: 1.1rem; flex-wrap: wrap; font-size: .82rem; color: var(--c-muted); margin-top: .4rem; }
+.fx-legend span { display: inline-flex; align-items: center; gap: .35rem; }
+.fx-legend i { width: 14px; height: 4px; border-radius: 2px; display: inline-block; }
+.fx-legend i.dash { background: repeating-linear-gradient(90deg, #8d8aa8 0 6px, transparent 6px 10px); }
+.fx-legend i.dot { background: repeating-linear-gradient(90deg, #e11d48 0 2px, transparent 2px 5px); }
+.fx-alerts { list-style: none; padding: 0; margin: .8rem 0 0; display: grid; gap: .6rem; }
+.fx-alerts li { display: flex; gap: .7rem; align-items: flex-start; }
+.fx-alerts li b { width: 1.6rem; height: 1.6rem; flex: none; display: grid; place-items: center; border-radius: 50%; background: #e8e4fa; color: var(--c-primary-dark); }
+.fx-a-down b, .fx-a-fail b { background: #fecdd6; color: #9f1239; } .fx-a-miss b, .fx-a-gap b { background: #fdeaa8; color: #7a4b00; } .fx-a-up b { background: #cdf5dc; color: #0d5a34; }
+.fx-actions { display: flex; gap: .7rem; flex-wrap: wrap; }
+.fx-link { cursor: pointer; border-radius: 12px; } .fx-link:hover { background: #f4f1ff; }
+#allStuTable tbody tr:hover { background: #f8f6ff; }
+@media (max-width: 860px) { .fx-head { gap: .7rem; } .fx-actions button { flex: 1 1 100%; } }
+.fx-mode { display: inline-flex; align-items: center; gap: .4rem; font-size: .85rem; }
