@@ -721,13 +721,14 @@ async function renderFitxa() {
     <div class="panel fx-head">
       <span class="stu-avatar fx-av" style="--hue:${hue(s.nom)}" translate="no">${esc(initials(s.nom))}</span>
       <div class="fx-id"><h2 translate="no">${esc(s.nom || '?')}</h2><p class="muted" translate="no">${esc(c.nom || 'Sense nom')}</p>${lastTxt ? `<p class="fx-last">${lastTxt}</p>` : ''}</div>
+      ${pos ? `<span class="fx-chip fx-pos">Posició a la classe: ${pos}</span>` : ''}
       <span class="fx-chip fx-${stCls}">${stLabel}</span>
       <select id="fxTerm" class="pill-select"><option value="">Tots els períodes</option>${termOpts.map(([id, t]) => `<option value="${esc(id)}" ${id === termSel ? 'selected' : ''} translate="no">${esc(t.name || t.nom || id)}</option>`).join('')}</select>
       <div class="fx-btns"><button type="button" id="fxComment" class="btn btn-primary">Crear comentari de tutoria</button><button type="button" id="fxGrid" class="btn">Obrir a la graella</button></div>
       <div class="fx-opts"><label class="fx-mode muted"><input type="checkbox" id="fxSubj" ${subj ? 'checked' : ''}> Les columnes són matèries</label><label class="fx-mode muted"><input type="checkbox" id="fxPos" ${showPos ? 'checked' : ''}> Mostrar posició a la classe</label></div>
     </div>
     <div class="kpis">
-      ${kpi('Mitjana', fmt(a.mean), a.classMean != null ? `classe ${fmt(a.classMean)}${delta != null ? ' · ' + sg(delta) : ''}${pos ? ' · ' + pos : ''}` : '', 'tone-' + toneOf(a.mean))}
+      ${kpi('Mitjana', fmt(a.mean), a.classMean != null ? `classe ${fmt(a.classMean)}${delta != null ? ' · ' + sg(delta) : ''}` : '', 'tone-' + toneOf(a.mean))}
       ${kpi('Tendència', a.trend == null ? '–' : (a.trend >= 0.5 ? '↗ ' : a.trend <= -0.5 ? '↘ ' : '→ ') + sg(a.trend), trendSub, a.trend != null && a.trend <= -1 ? 'tone-red' : a.trend != null && a.trend >= 1 ? 'tone-green' : '')}
       ${kpi('Suspeses', `${a.failed} <small style="font-size:1rem">de ${a.done.length}</small>`, `${a.acts.length - a.done.length} sense nota`, a.failed ? 'tone-red' : '')}
     </div>

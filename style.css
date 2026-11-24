@@ -906,3 +906,4 @@ body #weightedInputs .w-pct input { width: 5.6rem !important; padding: .3rem .6r
 .fx-cm p { margin: .2rem 0 .6rem; white-space: pre-wrap; font-size: .9rem; }
 .rk-go { font-style: normal; font-size: .75rem; font-weight: 700; color: var(--c-primary); white-space: nowrap; }
 .stu-cell .stu-name:hover { text-decoration: underline; text-decoration-color: var(--c-primary); }
+.fx-pos { background: #fff; border: 1.5px solid var(--c-primary); color: var(--c-primary-dark); }
