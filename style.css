@@ -875,7 +875,7 @@ body #weightedInputs .w-pct input { width: 5.6rem !important; padding: .3rem .6r
 .fx-id { flex: 1; min-width: 160px; } .fx-id h2 { font-size: 1.35rem; }
 .fx-chip { padding: .35rem .9rem; border-radius: 999px; font-weight: 800; font-size: .82rem; }
 .fx-warn { background: #fdeaa8; color: #7a4b00; } .fx-up { background: #cdf5dc; color: #0d5a34; } .fx-ok { background: #e8e4fa; color: var(--c-primary-dark); } .fx-none { background: #e5e7eb; color: #4b5563; }
-.fx-svg { width: 100%; height: auto; margin-top: .6rem; }
+.fx-svg { width: 100%; max-width: 760px; height: auto; margin-top: .6rem; display: block; }
 .fx-legend { display: flex; gap: 1.1rem; flex-wrap: wrap; font-size: .82rem; color: var(--c-muted); margin-top: .4rem; }
 .fx-legend span { display: inline-flex; align-items: center; gap: .35rem; }
 .fx-legend i { width: 14px; height: 4px; border-radius: 2px; display: inline-block; }

@@ -607,13 +607,13 @@ function fxAnalyse(c, s, termId, subj) {
 
 function fxChart(acts) {
   if (acts.length < 2) return '<p class="muted">Calen almenys dues activitats per dibuixar el gràfic.</p>';
-  const W = 640, H = 230, L = 34, R = 12, T = 12, B = acts.length > 6 ? 62 : 34;
-  const x = i => L + (W - L - R) * (acts.length === 1 ? .5 : i / (acts.length - 1));
+  const W = 640, H = 230, L = 34, R = 12, T = 12, B = acts.length > 4 ? 62 : 34;
+  const PAD = 60, x = i => L + PAD + (W - L - R - 2 * PAD) * (acts.length === 1 ? .5 : i / (acts.length - 1));
   const y = v => T + (H - T - B) * (1 - Math.max(0, Math.min(10, v)) / 10);
   const path = key => { let d = '', pen = false; acts.forEach((a, i) => { const v = a[key]; if (v == null) { pen = false; return; } d += `${pen ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)} `; pen = true; }); return d; };
   const grid = [0, 2, 4, 6, 8, 10].map(v => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="#e8e4fa"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="#6b6f8d">${v}</text>`).join('');
-  const rot = acts.length > 6;
-  const labels = acts.map((a, i) => { const t = a.nom.length > 14 ? a.nom.slice(0, 13) + '…' : a.nom; return `<text translate="no" x="${x(i)}" y="${H - B + 16}" font-size="11" fill="#6b6f8d" text-anchor="${rot ? 'end' : 'middle'}" ${rot ? `transform="rotate(-35 ${x(i)} ${H - B + 16})"` : ''}>${esc(t)}</text>`; }).join('');
+  const rot = acts.length > 4;
+  const labels = acts.map((a, i) => { const t = a.nom.length > 18 ? a.nom.slice(0, 17) + '…' : a.nom; return `<text translate="no" x="${x(i)}" y="${H - B + 16}" font-size="11" fill="#6b6f8d" text-anchor="${rot ? 'end' : 'middle'}" ${rot ? `transform="rotate(-35 ${x(i)} ${H - B + 16})"` : ''}>${esc(t)}</text>`; }).join('');
   const pts = acts.map((a, i) => a.v == null ? '' : `<circle cx="${x(i)}" cy="${y(a.v)}" r="5" fill="${a.v < PASS ? '#e11d48' : '#4f2fe0'}"><title translate="no">${esc(a.nom)}: ${fmt(a.v)}${a.cls != null ? ' (classe ' + fmt(a.cls) + ')' : ''}</title></circle>`).join('');
   return `<svg class="fx-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Evolució de les notes de l'alumne comparada amb la mitjana de la classe">
     ${grid}<line x1="${L}" x2="${W - R}" y1="${y(PASS)}" y2="${y(PASS)}" stroke="#e11d48" stroke-dasharray="2 4" stroke-width="1.2"/>
