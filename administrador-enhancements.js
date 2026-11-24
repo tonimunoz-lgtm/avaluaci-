@@ -6,14 +6,29 @@ searchInput.placeholder = 'Cerca per nom, email o estat...';
 searchInput.className = 'border p-2 w-full mb-2 rounded';
 document.querySelector('section.mb-6').insertBefore(searchInput, document.getElementById('usersTableBody').parentNode);
 
-// Funció de filtratge per text
-searchInput.addEventListener('input', () => {
-  const filter = searchInput.value.toLowerCase();
+// Filtre únic: cerca de text + estat (botons). Es torna a aplicar cada vegada que es redibuixa la taula.
+const filterState = { status: 'live', text: '' };   // 'live' = tots menys els eliminats
+function applyFilters() {
+  const t = filterState.text;
+  document.body.classList.toggle('show-deleted', filterState.status === 'deleted' || filterState.status === 'all');
   document.querySelectorAll('#usersTableBody tr').forEach(tr => {
-    const text = tr.innerText.toLowerCase();
-    tr.style.display = text.includes(filter) ? '' : 'none';
+    if (!tr.children[5]) return;
+    const admin = tr.children[3].innerText.toLowerCase();
+    const suspended = tr.children[4].innerText.toLowerCase();
+    const deleted = tr.children[5].innerText.toLowerCase();
+    const okStatus = {
+      all: true,
+      live: deleted === 'no',
+      admin: admin === 'sí' && deleted === 'no',
+      suspended: suspended === 'sí' && deleted === 'no',
+      deleted: deleted === 'sí',
+      active: suspended === 'no' && deleted === 'no'
+    }[filterState.status];
+    const okText = !t || tr.innerText.toLowerCase().includes(t);
+    tr.style.display = okStatus && okText ? '' : 'none';
   });
-});
+}
+searchInput.addEventListener('input', () => { filterState.text = searchInput.value.trim().toLowerCase(); applyFilters(); });
 
 // ---------------- ORDRE COLUMNES ----------------
 document.querySelectorAll('thead th').forEach((th, index) => {
@@ -108,6 +123,7 @@ function wrapActionsWithUndo() {
       await toggleSuspendUser(uid);
       showToast(`Usuari ${prevState ? 'reactivat' : 'suspès'}`, async () => {
         await db.collection('professors').doc(uid).update({ suspended: prevState });
+        window.logAdmin?.(prevState ? 'suspendre' : 'reactivar', uid);
         loadUsers();
       });
     };
@@ -125,85 +141,14 @@ function wrapActionsWithUndo() {
       if (!ok) return;
       showToast(`Usuari eliminat`, async () => {
         await db.collection('professors').doc(uid).update({ deleted: prevState });
+        window.logAdmin?.('restaurar', uid);
         loadUsers();
       });
     };
   });
 }
 
-// ---------------- ADMIN DROPDOWN FILTERS ----------------
-const filterContainer = document.createElement('div');
-filterContainer.className = 'flex gap-2 mb-2';
-
-function createSelect(id, label, options) {
-  const wrapper = document.createElement('div');
-  const lbl = document.createElement('label');
-  lbl.innerText = label + ':';
-  lbl.className = 'mr-1 font-semibold';
-  const select = document.createElement('select');
-  select.id = id;
-  select.className = 'border p-1 rounded';
-  options.forEach(opt => {
-    const option = document.createElement('option');
-    option.value = opt.value;
-    option.text = opt.label;
-    select.appendChild(option);
-  });
-  wrapper.appendChild(lbl);
-  wrapper.appendChild(select);
-  return wrapper;
-}
-
-const adminSelect = createSelect('filterAdmin', 'Admin', [
-  { label: 'Tots', value: '' },
-  { label: 'Sí', value: 'sí' },
-  { label: 'No', value: 'no' }
-]);
-const suspendedSelect = createSelect('filterSuspended', 'Suspès', [
-  { label: 'Tots', value: '' },
-  { label: 'Sí', value: 'sí' },
-  { label: 'No', value: 'no' }
-]);
-const deletedSelect = createSelect('filterDeleted', 'Eliminat', [
-  { label: 'Tots', value: '' },
-  { label: 'Sí', value: 'sí' },
-  { label: 'No', value: 'no' }
-]);
-
-filterContainer.appendChild(adminSelect);
-filterContainer.appendChild(suspendedSelect);
-filterContainer.appendChild(deletedSelect);
-
 const usersSection = document.querySelector('section.mb-6');
-usersSection.insertBefore(filterContainer, usersSection.querySelector('table'));
-
-// Funció de filtratge combinat
-function applyFilters() {
-  const adminVal = document.getElementById('filterAdmin').value;
-  const suspendedVal = document.getElementById('filterSuspended').value;
-  const deletedVal = document.getElementById('filterDeleted').value;
-
-  document.querySelectorAll('#usersTableBody tr').forEach(tr => {
-    const admin = tr.children[3].innerText.toLowerCase();
-    const suspended = tr.children[4].innerText.toLowerCase();
-    const deleted = tr.children[5].innerText.toLowerCase();
-
-    const show =
-      (!adminVal || admin === adminVal) &&
-      (!suspendedVal || suspended === suspendedVal) &&
-      (!deletedVal || deleted === deletedVal);
-
-    tr.style.display = show ? '' : 'none';
-  });
-  document.body.classList.toggle('show-deleted', deletedVal === 'sí');
-}
-
-[adminSelect, suspendedSelect, deletedSelect].forEach(select => {
-  select.addEventListener('change', applyFilters);
-});
-
-const filterObserver = new MutationObserver(applyFilters);
-filterObserver.observe(document.getElementById('usersTableBody'), { childList: true });
 
 const actionObserver = new MutationObserver(wrapActionsWithUndo);
 actionObserver.observe(document.getElementById('usersTableBody'), { childList: true });
@@ -225,29 +170,11 @@ function createStatusButton(label, color, filterValue) {
   btn.appendChild(span);
 
   btn.onclick = () => {
-    // Primer, treure active de tots els botons
+    const was = btn.classList.contains('active');
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    document.body.classList.toggle('show-deleted', filterValue === 'deleted' || filterValue === 'all');
-
-    // Marcar aquest com actiu
-    btn.classList.add('active');
-
-    // Aplicar filtratge existent
-    document.querySelectorAll('#usersTableBody tr').forEach(tr => {
-      const admin = tr.children[3].innerText.toLowerCase();
-      const suspended = tr.children[4].innerText.toLowerCase();
-      const deleted = tr.children[5].innerText.toLowerCase();
-
-      let show = false;
-      switch(filterValue) {
-        case 'admin': show = admin === 'sí'; break;
-        case 'suspended': show = suspended === 'sí'; break;
-        case 'deleted': show = deleted === 'sí'; break;
-        case 'active': show = suspended === 'no' && deleted === 'no'; break;
-        case 'all': show = true; break;
-      }
-      tr.style.display = show ? '' : 'none';
-    });
+    if (was) filterState.status = 'live';           // tornar a clicar el mateix filtre el treu
+    else { btn.classList.add('active'); filterState.status = filterValue; }
+    applyFilters();
   };
   return btn;
 }
@@ -266,6 +193,7 @@ statusFilterContainer.appendChild(activeBtn);
 statusFilterContainer.appendChild(allBtn);
 
 usersSection.insertBefore(statusFilterContainer, usersSection.querySelector('table'));
+new MutationObserver(applyFilters).observe(document.getElementById('usersTableBody'), { childList: true });
 const deletedHint = document.createElement('p');
 deletedHint.id = 'deletedHint';
 deletedHint.className = 'text-sm mb-2';

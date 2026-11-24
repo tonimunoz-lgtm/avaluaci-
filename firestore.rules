@@ -55,12 +55,14 @@ service cloud.firestore {
       match /logins/{logId} {
         allow create: if isLoggedIn() && request.auth.uid == profId;
         allow read: if isAdmin();
-        allow update, delete: if false;
+        allow update: if false;
+        allow delete: if isAdmin();   // només en esborrar definitivament un usuari
       }
 
       // Còpies de seguretat automàtiques setmanals (només el propi professor)
       match /copies/{copyId} {
         allow read, create, delete: if isActive() && request.auth.uid == profId;
+        allow read, delete: if isActive() && isAdmin();   // l'admin pot netejar-les en esborrar definitivament un usuari
         allow update: if false;
       }
     }
@@ -79,6 +81,14 @@ service cloud.firestore {
 
     match /activitats/{actId} {
       allow read, write: if isActive();
+    }
+
+    // ---------------------------------------------------------------
+    // Registre d'accions d'administració (només es pot afegir; ningú l'edita ni l'esborra)
+    match /admin_log/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin() && request.resource.data.by == request.auth.uid;
+      allow update, delete: if false;
     }
 
     // ---------------------------------------------------------------

@@ -275,10 +275,12 @@ async function restoreData(classId, data, { strictPre = true } = {}) {
   // 2) la classe ha de ser a la llista del professor
   await db().collection('professors').doc(u).update({ classes: firebase.firestore.FieldValue.arrayUnion(classId) });
   // 3) reescriure classe, alumnes i activitats per lots
+  // ownerUid sempre és el del professor que restaura (les còpies antigues no el duien; l'etapa 2 de regles el requereix)
+  const own = d => ({ ...revive(d), ownerUid: u });
   const ops = [
-    [db().collection('classes').doc(classId), revive(data.class)],
-    ...Object.entries(data.alumnes || {}).map(([id, d]) => [db().collection('alumnes').doc(id), revive(d)]),
-    ...Object.entries(data.activitats || {}).map(([id, d]) => [db().collection('activitats').doc(id), revive(d)])
+    [db().collection('classes').doc(classId), own(data.class)],
+    ...Object.entries(data.alumnes || {}).map(([id, d]) => [db().collection('alumnes').doc(id), own(d)]),
+    ...Object.entries(data.activitats || {}).map(([id, d]) => [db().collection('activitats').doc(id), own(d)])
   ];
   for (let i = 0; i < ops.length; i += 400) {
     const b = db().batch();

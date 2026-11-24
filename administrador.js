@@ -34,6 +34,7 @@ async function loadUsers() {
 
   if (snapshot.empty) { usersTableBody.innerHTML = '<tr><td colspan="7">Cap usuari registrat.</td></tr>'; return; }
 
+  docs.forEach(doc => { _emails[doc.id] = doc.data().email || ''; });
   docs.forEach(doc => {
     const data = doc.data();
     const tr = document.createElement('tr');
@@ -84,25 +85,85 @@ function attachUserButtons() {
 }
 
 // Restaurar un usuari marcat com a eliminat
+// Registre d'accions d'administració (admin_log): qui ha fet què sobre qui i quan
+const _emails = {};   // uid -> email (cau de la darrera càrrega)
+async function logAdmin(action, targetUid, extra = {}) {
+  try {
+    await db.collection('admin_log').add({
+      ts: firebase.firestore.Timestamp.now(),
+      by: auth.currentUser.uid, byEmail: auth.currentUser.email || '',
+      action, target: targetUid, targetEmail: _emails[targetUid] || '', ...extra
+    });
+  } catch (e) { console.warn('No s\'ha pogut registrar l\'acció:', e.message); }
+}
+
 const isSelf = uid => auth.currentUser && auth.currentUser.uid === uid;
 const noSelf = () => notify('No pots fer aquesta acció sobre el teu propi compte (et quedaries sense accés a l\'administració).', 'error');
 
 async function restoreUser(uid) {
   try {
     await db.collection('professors').doc(uid).update({ deleted: false });
+    logAdmin('restaurar', uid);
     notify('Usuari restaurat.');
     loadUsers();
   } catch (e) { notify('Error: ' + e.message, 'error'); }
 }
 
-// Esborrar definitivament el document de Firestore (el compte d'Authentication s'elimina a la consola de Firebase)
+// Esborrat definitiu d'un usuari: perfil + còpies + accessos + classes, alumnes i activitats que només són seus.
+// (El compte d'Authentication s'elimina a la consola de Firebase.)
+async function collectUserData(uid) {
+  const profs = await db.collection('professors').get();
+  const me = profs.docs.find(d => d.id === uid);
+  const classIds = new Set((me?.data().classes) || []);
+  const usedByOthers = new Set();
+  profs.docs.forEach(d => { if (d.id !== uid) (d.data().classes || []).forEach(c => usedByOthers.add(c)); });
+  // classes amb ownerUid (migrades) + classes de la seva llista
+  const owned = await db.collection('classes').where('ownerUid', '==', uid).get();
+  owned.docs.forEach(d => classIds.add(d.id));
+  const classRefs = [], studentIds = new Set(), actIds = new Set(); let skipped = 0;
+  for (const cid of classIds) {
+    const cd = await db.collection('classes').doc(cid).get();
+    if (!cd.exists) continue;
+    const c = cd.data();
+    if (usedByOthers.has(cid) || (c.ownerUid && c.ownerUid !== uid)) { skipped++; continue; }   // compartida: no es toca
+    classRefs.push(cd.ref);
+    (c.alumnes || []).forEach(i => studentIds.add(i));
+    (c.activitats || []).forEach(i => actIds.add(i));
+    Object.values(c.terms || {}).forEach(t => (t.activities || []).forEach(i => actIds.add(i)));
+  }
+  // documents amb ownerUid que quedin fora de les classes
+  for (const [col, set] of [['alumnes', studentIds], ['activitats', actIds]]) {
+    const q = await db.collection(col).where('ownerUid', '==', uid).get();
+    q.docs.forEach(d => set.add(d.id));
+  }
+  const refsOf = (col, ids) => [...ids].map(id => db.collection(col).doc(id));
+  const subs = async name => (await db.collection('professors').doc(uid).collection(name).get()).docs.map(d => d.ref);
+  const [logins, copies] = await Promise.all([subs('logins'), subs('copies')]);
+  return { classRefs, studentRefs: refsOf('alumnes', studentIds), actRefs: refsOf('activitats', actIds), logins, copies, skipped, email: me?.data().email || '' };
+}
+
 async function purgeUser(uid) {
   if (isSelf(uid)) return noSelf();
-  if (!await confirmDialog('Esborrar definitivament aquest usuari? Desapareixerà de la llista i no es pot desfer.', { okText: 'Esborra' })) return;
+  let plan;
+  try { plan = await collectUserData(uid); }
+  catch (e) { return notify('No s\'han pogut comptar les dades de l\'usuari: ' + e.message, 'error'); }
+  const msg = `Esborrar DEFINITIVAMENT ${plan.email || 'aquest usuari'} i totes les seves dades?\n\n` +
+    `• ${plan.classRefs.length} classes · ${plan.studentRefs.length} alumnes · ${plan.actRefs.length} activitats\n` +
+    `• ${plan.copies.length} còpies de seguretat · ${plan.logins.length} registres d'accés\n` +
+    (plan.skipped ? `• ${plan.skipped} classes compartides amb altres professors NO s'esborren\n` : '') +
+    `\nNo es pot desfer.`;
+  if (!await confirmDialog(msg, { okText: 'Esborra tot' })) return;
   try {
+    const all = [...plan.studentRefs, ...plan.actRefs, ...plan.classRefs, ...plan.copies, ...plan.logins];
+    for (let i = 0; i < all.length; i += 400) {
+      const b = db.batch();
+      all.slice(i, i + 400).forEach(r => b.delete(r));
+      await b.commit();
+    }
+    await logAdmin('esborrar-definitivament', uid, { classes: plan.classRefs.length, alumnes: plan.studentRefs.length, activitats: plan.actRefs.length });
     await db.collection('professors').doc(uid).delete();
-    notify('Usuari esborrat definitivament.');
-    loadUsers();
+    notify('Usuari i dades esborrats definitivament. Recorda eliminar-ne també el compte a Firebase Authentication.');
+    loadUsers(); loadLastLogins(); loadAdminLog();
   } catch (e) { notify('Error: ' + e.message, 'error'); }
 }
 
@@ -121,6 +182,7 @@ async function toggleSuspendUser(uid) {
 
     // Actualitzem Firestore
     await db.collection('professors').doc(uid).update({ suspended: newState });
+    logAdmin(newState ? 'suspendre' : 'reactivar', uid);
 
     // Missatge a l'administrador
     if (newState) {
@@ -147,6 +209,7 @@ async function toggleAdmin(uid) {
   if (!doc.exists) return;
   const isAdmin = doc.data().isAdmin || false;
   await db.collection('professors').doc(uid).update({ isAdmin: !isAdmin });
+  logAdmin(isAdmin ? 'treure-admin' : 'fer-admin', uid);
   loadUsers();
 }
 
@@ -158,6 +221,7 @@ async function deleteUser(uid) {
 
   try {
     await db.collection('professors').doc(uid).update({ deleted: true, suspended: false });
+    logAdmin('eliminar', uid);
     notify("Usuari marcat com a eliminat. Ja no podrà entrar a l'app. (El seu compte d'autenticació continua existint; per restaurar-lo, edita deleted=false a Firestore.)");
     loadUsers(); // Recarregar llista d'usuaris
     return true;
@@ -175,12 +239,16 @@ btnAddAdmin.addEventListener('click', async () => {
   const email = ((await promptDialog('Email (Google) de l’usuari que vols fer administrador:', '', { title: 'Nou administrador', type: 'email' })) || '').trim().toLowerCase();
   if (!email) return;
   try {
-    const snap = await db.collection('professors').where('email', '==', email).get();
+    // comparació sense distingir majúscules (el correu pot haver-se desat amb majúscules)
+    const all = await db.collection('professors').get();
+    const hit = all.docs.find(d => String(d.data().email || '').trim().toLowerCase() === email);
+    const snap = { empty: !hit, docs: hit ? [hit] : [] };
     if (snap.empty) {
       return notify('Aquest usuari encara no ha entrat mai a l’aplicació. Demana-li que iniciï sessió amb Google i torna-ho a provar.', 'error');
     }
     if (!await confirmDialog(`Convertir ${email} en administrador?`, { okText: 'Fer admin', danger: false })) return;
     await db.collection('professors').doc(snap.docs[0].id).update({ isAdmin: true });
+    _emails[snap.docs[0].id] = email; logAdmin('fer-admin', snap.docs[0].id);
     notify('Ara és administrador.');
     loadUsers();
   } catch (e) {
@@ -222,6 +290,21 @@ async function loadLastLogins() {
   }
 }
 
+// Registre d'accions d'administració (últimes 60)
+const ACTION_TXT = { 'suspendre': 'ha suspès', 'reactivar': 'ha reactivat', 'fer-admin': 'ha fet administrador', 'treure-admin': 'ha tret l\'administració a', 'eliminar': 'ha eliminat', 'restaurar': 'ha restaurat', 'esborrar-definitivament': 'ha esborrat definitivament' };
+async function loadAdminLog() {
+  const box = document.getElementById('adminLogContainer');
+  if (!box) return;
+  try {
+    const snap = await db.collection('admin_log').orderBy('ts', 'desc').limit(60).get();
+    if (snap.empty) { box.innerHTML = '<p style="color:#6b7280;font-size:.88rem">Encara no hi ha cap acció registrada.</p>'; return; }
+    box.innerHTML = '<ul class="al-list">' + snap.docs.map(d => {
+      const x = d.data(); const t = x.ts?.toDate?.();
+      return `<li><span class="al-when">${t ? esc(fmtDT(t)) : ''}</span> <b>${esc(x.byEmail || x.by)}</b> ${esc(ACTION_TXT[x.action] || x.action)} <b>${esc(x.targetEmail || x.target)}</b></li>`;
+    }).join('') + '</ul>';
+  } catch (e) { box.innerHTML = `<p style="color:#dc2626;font-size:.88rem">No s'ha pogut carregar el registre: ${esc(e.message)} (cal desplegar les regles de Firestore actualitzades)</p>`; }
+}
+
 // ---------------- LOGOUT ----------------
 btnLogout.addEventListener('click', () => {
   auth.signOut().then(() => window.location.href = 'index.html');
@@ -241,6 +324,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     loadUsers();
     loadLastLogins();
+    loadAdminLog();
   });
 });
 
@@ -282,4 +366,4 @@ async function migrateOldProfessors() {
 
 
 // administrador-enhancements.js és un mòdul separat: li exposem el que necessita
-Object.assign(window, { restoreUser, purgeUser, db, auth, loadUsers, toggleSuspendUser, deleteUser, toggleAdmin });
+Object.assign(window, { logAdmin, restoreUser, purgeUser, db, auth, loadUsers, toggleSuspendUser, deleteUser, toggleAdmin });
