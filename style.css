@@ -907,3 +907,7 @@ body #weightedInputs .w-pct input { width: 5.6rem !important; padding: .3rem .6r
 .rk-go { font-style: normal; font-size: .75rem; font-weight: 700; color: var(--c-primary); white-space: nowrap; }
 .stu-cell .stu-name:hover { text-decoration: underline; text-decoration-color: var(--c-primary); }
 .fx-pos { background: #fff; border: 1.5px solid var(--c-primary); color: var(--c-primary-dark); }
+
+.rk-upd { display: flex; justify-content: flex-end; margin-bottom: .4rem; }
+.rk-refresh { border: 0; background: none; color: var(--c-primary); font-weight: 700; font-size: .8rem; cursor: pointer; padding: .2rem .5rem; border-radius: 999px; margin-left: auto; }
+.rk-refresh:hover { background: #f4f1ff; } .rk-refresh small { font-weight: 400; color: var(--c-muted); }

@@ -471,6 +471,9 @@ autoTitle(document.body);
 // Targeta amb els alumnes amb mitjana < 5 o 2 o més activitats suspeses (mateix criteri que Informes).
 // Reutilitza la memòria cau de loadAll (60 s) i només es calcula mentre es veu la pantalla d'inici.
 let _riskAt = 0, _riskBusy = false;
+// Resultat de la targeta guardat en memòria: es reutilitza 10 minuts (o fins que es premi «Actualitza»)
+// per no tornar a llegir totes les classes cada cop que es torna a l'inici.
+let _riskData = null; const RISK_TTL = 10 * 60000;
 const riskOpenKey = 'avaluapp.riskOpen';
 async function renderRiskCard() {
   const home = $('screen-classes');
@@ -480,19 +483,28 @@ async function renderRiskCard() {
   if (!on) { card?.remove(); return; }
   _riskBusy = true;
   try {
-    const classes = await loadAll();
+    if (!_riskData || Date.now() - _riskData.at > RISK_TTL) {
+      const classes = await loadAll();
+      const groups = classes.map(c => {
+        const a = analyse(c, currentTermOf(c));
+        return { c, risk: a.risk.sort((x, y) => x.avg - y.avg), graded: a.rows.length - a.noGrades };
+      }).filter(g => g.risk.length);
+      _riskData = {
+        at: Date.now(), groups,
+        total: groups.reduce((n, g) => n + g.risk.length, 0),
+        anyGrades: classes.some(c => { const a = analyse(c, currentTermOf(c)); return a.rows.length - a.noGrades > 0; })
+      };
+    }
     _riskAt = Date.now();
-    const groups = classes.map(c => {
-      const a = analyse(c, currentTermOf(c));
-      return { c, risk: a.risk.sort((x, y) => x.avg - y.avg), graded: a.rows.length - a.noGrades };
-    }).filter(g => g.risk.length);
-    const total = groups.reduce((n, g) => n + g.risk.length, 0);
-    const anyGrades = classes.some(c => { const a = analyse(c, currentTermOf(c)); return a.rows.length - a.noGrades > 0; });
+    const { groups, total, anyGrades } = _riskData;
+    const hhmm = new Date(_riskData.at).toLocaleTimeString('ca', { hour: '2-digit', minute: '2-digit' });
+    const refresh = `<button type="button" class="rk-refresh" title="Torna a calcular amb les dades actuals">↻ Actualitza <small>(${hhmm})</small></button>`;
     if (!anyGrades) { card?.remove(); return; }
     if (!card) {
       card = document.createElement('div'); card.id = 'riskCard';
       home.insertBefore(card, home.querySelector('.classes-head'));
       card.addEventListener('click', e => {
+        if (e.target.closest('.rk-refresh')) { _riskData = null; _cache = null; renderRiskCard(); return; }
         if (e.target.closest('.rk-head')) {
           const open = !card.classList.contains('open'); card.classList.toggle('open', open);
           try { localStorage.setItem(riskOpenKey, open ? '1' : '0'); } catch {}
@@ -510,18 +522,20 @@ async function renderRiskCard() {
         <span class="rk-t"><b translate="no">${total}</b> <span>${total === 1 ? 'alumne a vigilar' : 'alumnes a vigilar'}</span>
           <small>període actual de cada classe · mitjana inferior a 5 o 2 o més suspeses</small></span>
         <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
-      <div class="rk-body">${groups.map(g => `<div class="rk-class" translate="no">${esc(g.c.nom || 'Sense nom')}${termName(g.c, currentTermOf(g.c)) ? ' · ' + esc(termName(g.c, currentTermOf(g.c))) : ''}</div>` +
+      <div class="rk-body"><div class="rk-upd">${refresh}</div>${groups.map(g => `<div class="rk-class" translate="no">${esc(g.c.nom || 'Sense nom')}${termName(g.c, currentTermOf(g.c)) ? ' · ' + esc(termName(g.c, currentTermOf(g.c))) : ''}</div>` +
         g.risk.map(r => `<div class="rk-row" role="button" tabindex="0" data-stu="${esc(r.id)}" data-cls="${esc(g.c.id)}">
           <span class="stu-avatar" style="--hue:${hue(r.nom)}" translate="no">${esc(initials(r.nom))}</span>
           <span class="rk-n" translate="no">${esc(r.nom)}</span>
           <small>${r.failed} susp. · ${r.missing} sense nota</small><em class="rk-go">Veure evolució →</em>
           <span class="pill t-${toneOf(r.avg)}" translate="no">${fmt(r.avg)}</span></div>`).join('')).join('')}</div>`
-      : `<div class="rk-head static"><span class="rk-ic">✅</span><span class="rk-t"><span>Cap alumne a vigilar</span></span></div>`;
+      : `<div class="rk-head static"><span class="rk-ic">✅</span><span class="rk-t"><span>Cap alumne a vigilar</span></span>${refresh}</div>`;
   } catch (e) { console.warn('Targeta d\'alumnes a vigilar:', e); }
   finally { _riskBusy = false; }
 }
-window.addEventListener('class-opened', () => { _riskAt = 0; });
-window.addEventListener('avalu-config', () => { _riskAt = 0; renderRiskCard(); });
+
+window.addEventListener('avalu-config', () => { _riskAt = 0; _riskData = null; renderRiskCard(); });
+// En canviar de compte no s'ha de reutilitzar res de l'usuari anterior
+firebase.auth().onAuthStateChanged(() => { _riskData = null; _cache = null; });
 setInterval(() => {
   if (!firebase.auth().currentUser) return;
   const home = $('screen-classes');
