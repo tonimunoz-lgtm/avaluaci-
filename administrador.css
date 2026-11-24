@@ -26,7 +26,15 @@ body.admin-page input[type="text"], body.admin-page input[type="search"] { width
 body.admin-page input:focus, body.admin-page select:focus { border-color: var(--c-primary-2); box-shadow: 0 0 0 3px rgba(124, 92, 255, .18); }
 body.admin-page .filter-btn { border: 0; border-radius: 999px; padding: .45rem .9rem; font-weight: 700; color: #fff; background: var(--c-primary); transition: transform .15s, box-shadow .15s; }
 body.admin-page .filter-btn.active { box-shadow: 0 0 0 3px rgba(124, 92, 255, .35); transform: translateY(-1px); }
-body.admin-page #lastLoginsContainer div { background: #f6f4ff; padding: .6rem .9rem; border-radius: 12px; margin-bottom: .4rem; font-size: .88rem; }
+body.admin-page .ll-item { background: #f6f4ff; padding: .6rem .9rem; border-radius: 12px; margin-bottom: .4rem; font-size: .88rem; }
+body.admin-page .ll-item.ll-deleted { opacity: .6; }
+body.admin-page .ll-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem .7rem; margin: 0; }
+body.admin-page .ll-mail { font-weight: 700; word-break: break-all; }
+body.admin-page .ll-last { color: #6b6f8d; margin-left: auto; }
+body.admin-page .ll-more { margin-top: .3rem; }
+body.admin-page .ll-more summary { cursor: pointer; color: var(--c-primary-dark); font-size: .8rem; font-weight: 600; }
+body.admin-page .ll-more ul { margin: .3rem 0 0 1.1rem; padding: 0; color: #4b4f6b; font-size: .82rem; }
+@media (max-width: 640px) { body.admin-page .ll-last { margin-left: 0; width: 100%; } }
 
 /* Estats (Admin / Suspès / Eliminat) */
 body.admin-page .badge.b-no { background: #eceaf8; color: #6b6f8d; }

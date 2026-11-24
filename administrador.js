@@ -32,32 +32,7 @@ async function loadUsers() {
     return tb - ta; // més nous primer; els antics sense createdAt al final
   });
 
-  // Si no hi ha cap document, podem provar de carregar logs com fallback
-  if (snapshot.empty) {
-    // Buscar tots els usuaris amb subcol·lecció logins
-    const usersWithLogs = await db.collectionGroup('logins')
-      .orderBy('timestamp', 'desc')
-      .limit(50) // pots ajustar
-      .get();
-
-    const emails = new Set();
-    usersWithLogs.forEach(doc => emails.add(doc.ref.parent.parent.id));
-
-    emails.forEach(email => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>-</td>
-        <td>${esc(email)}</td>
-        <td>-</td>
-        <td>No</td>
-        <td>No</td>
-        <td>-</td>
-      `;
-      usersTableBody.appendChild(tr);
-    });
-
-    return;
-  }
+  if (snapshot.empty) { usersTableBody.innerHTML = '<tr><td colspan="7">Cap usuari registrat.</td></tr>'; return; }
 
   docs.forEach(doc => {
     const data = doc.data();
@@ -72,7 +47,7 @@ async function loadUsers() {
     tr.innerHTML = `
       <td>${esc(data.nom || '-')}</td>
       <td>${esc(data.email || '-')}</td>
-      <td>${data.createdAt ? data.createdAt.toDate().toLocaleString() : '-'}</td>
+      <td data-ts="${data.createdAt ? data.createdAt.toMillis() : 0}">${data.createdAt ? data.createdAt.toDate().toLocaleString('ca-ES') : '-'}</td>
       <td><span class="badge ${data.isAdmin ? 'b-admin' : 'b-no'}">${data.isAdmin ? 'Sí' : 'No'}</span></td>
       <td><span class="badge ${data.suspended ? 'b-susp' : 'b-no'}">${data.suspended ? 'Sí' : 'No'}</span></td>
       <td><span class="badge ${data.deleted ? 'b-del' : 'b-no'}">${data.deleted ? 'Sí' : 'No'}</span></td>
@@ -109,6 +84,9 @@ function attachUserButtons() {
 }
 
 // Restaurar un usuari marcat com a eliminat
+const isSelf = uid => auth.currentUser && auth.currentUser.uid === uid;
+const noSelf = () => notify('No pots fer aquesta acció sobre el teu propi compte (et quedaries sense accés a l\'administració).', 'error');
+
 async function restoreUser(uid) {
   try {
     await db.collection('professors').doc(uid).update({ deleted: false });
@@ -119,6 +97,7 @@ async function restoreUser(uid) {
 
 // Esborrar definitivament el document de Firestore (el compte d'Authentication s'elimina a la consola de Firebase)
 async function purgeUser(uid) {
+  if (isSelf(uid)) return noSelf();
   if (!await confirmDialog('Esborrar definitivament aquest usuari? Desapareixerà de la llista i no es pot desfer.', { okText: 'Esborra' })) return;
   try {
     await db.collection('professors').doc(uid).delete();
@@ -131,6 +110,7 @@ async function purgeUser(uid) {
 
 // Suspendre usuari
 async function toggleSuspendUser(uid) {
+  if (isSelf(uid)) return noSelf();
   try {
     // Llegim l'estat actual
     const doc = await db.collection('professors').doc(uid).get();
@@ -162,6 +142,7 @@ async function toggleSuspendUser(uid) {
 
 // Toggle admin
 async function toggleAdmin(uid) {
+  if (isSelf(uid)) return noSelf();
   const doc = await db.collection('professors').doc(uid).get();
   if (!doc.exists) return;
   const isAdmin = doc.data().isAdmin || false;
@@ -172,6 +153,7 @@ async function toggleAdmin(uid) {
 // Eliminar usuari
 // Marcar usuari com a eliminat, sense esborrar document
 async function deleteUser(uid) {
+  if (isSelf(uid)) { noSelf(); return false; }
   if (!await confirmDialog('Estàs segur que vols eliminar aquest usuari?')) return;
 
   try {
@@ -207,18 +189,37 @@ btnAddAdmin.addEventListener('click', async () => {
   }
 });
 
-// Últims 10 accessos per usuari
+// Últims 10 accessos per usuari, ordenats per l'últim accés (els que no han entrat mai, al final)
+const fmtDT = d => d.toLocaleString('ca-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 async function loadLastLogins() {
-  lastLoginsContainer.innerHTML = '';
-  const snapshot = await db.collection('professors').get();
-  snapshot.forEach(async doc => {
-    const loginsSnapshot = await db.collection('professors').doc(doc.id)
-      .collection('logins').orderBy('timestamp', 'desc').limit(10).get();
-    const logins = loginsSnapshot.docs.map(d => d.data().timestamp.toDate().toLocaleString()).join(', ');
-    const div = document.createElement('div');
-    div.textContent = `${doc.data().email}: ${logins || 'Cap accés'}`;
-    lastLoginsContainer.appendChild(div);
-  });
+  lastLoginsContainer.innerHTML = '<p style="color:#6b7280;font-size:.88rem">Carregant…</p>';
+  try {
+    const snapshot = await db.collection('professors').get();
+    const rows = await Promise.all(snapshot.docs.map(async doc => {
+      const d = doc.data();
+      let times = [];
+      try {
+        const ls = await db.collection('professors').doc(doc.id).collection('logins').orderBy('timestamp', 'desc').limit(10).get();
+        times = ls.docs.map(x => x.data().timestamp?.toDate?.()).filter(Boolean);
+      } catch (e) { console.warn('logins', doc.id, e); }
+      return { email: d.email || doc.id, nom: d.nom || d.name || '', deleted: !!d.deleted, suspended: !!d.suspended, times };
+    }));
+    rows.sort((a, b) => (b.times[0]?.getTime() || 0) - (a.times[0]?.getTime() || 0) || a.email.localeCompare(b.email));
+    lastLoginsContainer.innerHTML = '';
+    rows.forEach(r => {
+      const div = document.createElement('div');
+      div.className = 'll-item' + (r.deleted ? ' ll-deleted' : '');
+      const tag = r.deleted ? ' <span class="badge b-del">eliminat</span>' : r.suspended ? ' <span class="badge b-susp">suspès</span>' : '';
+      const last = r.times[0];
+      div.innerHTML = `<div class="ll-head"><span class="ll-mail">${esc(r.email)}</span>${tag}
+          <span class="ll-last">${last ? 'Últim accés: <b>' + esc(fmtDT(last)) + '</b>' : 'Cap accés'}</span></div>` +
+        (r.times.length > 1 ? `<details class="ll-more"><summary>Veure els ${r.times.length} últims accessos</summary><ul>${r.times.map(t => `<li>${esc(fmtDT(t))}</li>`).join('')}</ul></details>` : '');
+      lastLoginsContainer.appendChild(div);
+    });
+  } catch (e) {
+    console.error(e);
+    lastLoginsContainer.innerHTML = `<p style="color:#dc2626;font-size:.88rem">No s'han pogut carregar els accessos: ${esc(e.message)}</p>`;
+  }
 }
 
 // ---------------- LOGOUT ----------------

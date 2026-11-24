@@ -263,6 +263,7 @@ async function enterApp(user, { logLogin = false } = {}) {
 
   professorUID = user.uid;
   if (logLogin) {
+    try { localStorage.setItem('avaluapp.lastlog.' + user.uid, String(Date.now())); } catch {}
     db.collection('professors').doc(user.uid).collection('logins')
       .add({ timestamp: firebase.firestore.Timestamp.now() })
       .catch(e => console.error('Error registrant login:', e));
@@ -321,7 +322,10 @@ btnLogout.addEventListener('click', ()=> {
 auth.onAuthStateChanged(user => {
   if (user) {
     if (_creatingProfile) return; // el handler cridarà enterApp quan el perfil existeixi
-    const log = _explicitLogin;
+    // Registre d'accés: login explícit, o sessió représ si l'últim registre d'aquest dispositiu té més de 6 h
+    let stale = false;
+    try { stale = Date.now() - Number(localStorage.getItem('avaluapp.lastlog.' + user.uid) || 0) > 6 * 3600 * 1000; } catch {}
+    const log = _explicitLogin || stale;
     _explicitLogin = false;
     enterApp(user, { logLogin: log });
   } else {

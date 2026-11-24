@@ -25,8 +25,10 @@ document.querySelectorAll('thead th').forEach((th, index) => {
     th.asc = asc;
 
     rows.sort((a, b) => {
-      const aText = a.children[index].innerText.toLowerCase();
-      const bText = b.children[index].innerText.toLowerCase();
+      const ca = a.children[index], cb = b.children[index];
+      if (ca && cb && ca.dataset.ts !== undefined && cb.dataset.ts !== undefined) return (Number(ca.dataset.ts) - Number(cb.dataset.ts)) * (asc ? 1 : -1);   // dates: per valor real
+      const aText = (ca?.innerText || '').toLowerCase();
+      const bText = (cb?.innerText || '').toLowerCase();
       return aText.localeCompare(bText) * (asc ? 1 : -1);
     });
 
@@ -77,7 +79,7 @@ function showToast(message, undoCallback) {
   
   if (undoCallback) {
     const undoBtn = document.createElement('button');
-    undoBtn.textContent = 'Undo';
+    undoBtn.textContent = 'Desfés';
     undoBtn.className = 'ml-4 bg-white text-gray-800 px-2 py-1 rounded';
     undoBtn.onclick = () => {
       undoCallback();
