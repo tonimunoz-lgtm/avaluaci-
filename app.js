@@ -439,6 +439,20 @@ const QUOTES = [
   "Avaluar és, abans de res, ajudar a créixer."
 ];
 
+// Color de la targeta: el de la «matèria» (segons el nom), però si ja l'ha agafat una classe anterior es tria el primer color lliure,
+// perquè dues classes (p. ex. dues de «Llengua» importades de Classroom) no tinguin el mateix color. Estable: segueix l'ordre de la llista.
+function _toneOf(c) {
+  const used = new Set(); let mine = null;
+  for (const x of _classCache) {
+    const pref = ART_TONE[classVisual(x.data.nom).art];
+    let t = pref ?? (_classCache.indexOf(x) % 6);
+    if (used.has(t) && used.size < 6) { for (let k = 0; k < 6; k++) { const cand = ((pref ?? 0) + k) % 6; if (!used.has(cand)) { t = cand; break; } } }
+    used.add(t);
+    if (x === c) { mine = t; break; }
+  }
+  return mine ?? 0;
+}
+
 let _classSort = 'recent';
 let _classCache = [];   // [{id, data}] de l'última càrrega, per a la cerca i el resum
 
@@ -478,7 +492,7 @@ function renderClassCards() {
     Object.values(c.data.terms || {}).forEach(t => { totalActivities += (t.activities || []).length; });
 
     const card = document.createElement('div');
-    card.className = `class-card tone-${ART_TONE[vis.art] ?? (_classCache.indexOf(c) % 6)}`;
+    card.className = `class-card tone-${_toneOf(c)}`;
     card.dataset.id = c.id;
     card.innerHTML = `
       ${deleteMode ? '<input type="checkbox" class="delete-checkbox" style="position:absolute;top:12px;right:14px;width:20px;height:20px;z-index:3">' : ''}
