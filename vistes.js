@@ -173,7 +173,7 @@ function reportHTML(c, termId) {
     <div class="panel"><h3>⚠️ Alumnes en risc</h3><p class="muted">Mitjana inferior a 5 o dues o més activitats suspeses</p>
       ${a.risk.length ? `<ul class="people">${a.risk.sort((x, y) => x.avg - y.avg).map(r => `
         <li class="fx-link" data-fx-stu="${esc(r.id)}" data-fx-cls="${esc(c.id)}" role="button" tabindex="0"><span class="stu-avatar" style="--hue:${hue(r.nom)}">${esc(initials(r.nom))}</span><b>${esc(r.nom)}</b>
-        <small>${r.failed} susp. · ${r.missing} sense nota</small><span class="pill t-${toneOf(r.avg)}">${fmt(r.avg)}</span></li>`).join('')}</ul>` : '<p class="muted">Cap alumne en risc. 🎉</p>'}
+        <small>${r.failed} susp. · ${r.missing} sense nota</small><em class="rk-go">Veure evolució →</em><span class="pill t-${toneOf(r.avg)}">${fmt(r.avg)}</span></li>`).join('')}</ul>` : '<p class="muted">Cap alumne en risc. 🎉</p>'}
     </div>
     <div class="panel"><h3>🏆 Millors resultats</h3><p class="muted">Els 5 alumnes amb millor mitjana</p>
       ${a.top.length ? `<ul class="people">${a.top.map(r => `
@@ -514,7 +514,7 @@ async function renderRiskCard() {
         g.risk.map(r => `<div class="rk-row" role="button" tabindex="0" data-stu="${esc(r.id)}" data-cls="${esc(g.c.id)}">
           <span class="stu-avatar" style="--hue:${hue(r.nom)}" translate="no">${esc(initials(r.nom))}</span>
           <span class="rk-n" translate="no">${esc(r.nom)}</span>
-          <small>${r.failed} susp. · ${r.missing} sense nota</small>
+          <small>${r.failed} susp. · ${r.missing} sense nota</small><em class="rk-go">Veure evolució →</em>
           <span class="pill t-${toneOf(r.avg)}" translate="no">${fmt(r.avg)}</span></div>`).join('')).join('')}</div>`
       : `<div class="rk-head static"><span class="rk-ic">✅</span><span class="rk-t"><span>Cap alumne a vigilar</span></span></div>`;
   } catch (e) { console.warn('Targeta d\'alumnes a vigilar:', e); }
@@ -552,8 +552,10 @@ function fxActs(c, termId) {
 function fxClassAvg(c, a) { return avg((c.students || []).map(s => fxVal(c, s, a)).filter(v => v != null)); }
 
 function fxAnalyse(c, s, termId, subj) {
+  const actTerm = {};
+  Object.entries(c.terms || {}).forEach(([tid, t]) => (t.activities || []).forEach(a => { if (!actTerm[a]) actTerm[a] = tid; }));
   const acts = fxActs(c, termId).map(id => ({
-    id, nom: c.actNames?.[id] || id, v: fxVal(c, s, id), cls: fxClassAvg(c, id),
+    id, tid: actTerm[id] || '', nom: c.actNames?.[id] || id, v: fxVal(c, s, id), cls: fxClassAvg(c, id),
     n: (c.students || []).filter(x => fxVal(c, x, id) != null).length
   }));
   const done = acts.filter(a => a.v != null);
@@ -573,7 +575,8 @@ function fxAnalyse(c, s, termId, subj) {
     return { id, nom: t.name || t.nom || id, avg: avg(mine), cls: avg(cl), n: mine.length, total: as.length };
   });
   const tWith = terms.filter(t => t.avg != null);
-  if (subj && tWith.length >= 2) trend = tWith[tWith.length - 1].avg - tWith[tWith.length - 2].avg;
+  let trendSrc = trend != null ? 'series' : null;
+  if ((subj || trend == null) && tWith.length >= 2) { trend = tWith[tWith.length - 1].avg - tWith[tWith.length - 2].avg; trendSrc = 'terms'; }
   const alerts = [];
   const last3 = vals.slice(-3);
   if (!subj && last3.length === 3 && last3[0] > last3[1] && last3[1] > last3[2] && last3[0] - last3[2] >= 1)
@@ -602,7 +605,18 @@ function fxAnalyse(c, s, termId, subj) {
     }));
     matrix = [...byName.values()];
   }
-  return { acts, done, mean, classMean, failed, missing, trend, terms, alerts, status, matrix };
+  return { acts, done, mean, classMean, failed, missing, trend, trendSrc, terms, alerts, status, matrix };
+}
+
+// Posició aproximada (terç) segons la mitjana del període. Només es mostra si el professor ho activa.
+function fxRank(c, s, termId) {
+  const as = fxActs(c, termId);
+  const m = st => avg(as.map(a => fxVal(c, st, a)).filter(v => v != null));
+  const mine = m(s); if (mine == null) return null;
+  const all = (c.students || []).map(m).filter(v => v != null);
+  if (all.length < 6) return null;
+  const better = all.filter(v => v > mine).length / all.length;
+  return better < 1 / 3 ? 'terç superior' : better < 2 / 3 ? 'terç central' : 'terç inferior';
 }
 
 function fxChart(acts) {
@@ -614,15 +628,17 @@ function fxChart(acts) {
   const grid = [0, 2, 4, 6, 8, 10].map(v => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="#e8e4fa"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="#6b6f8d">${v}</text>`).join('');
   const rot = acts.length > 4;
   const labels = acts.map((a, i) => { const t = a.nom.length > 18 ? a.nom.slice(0, 17) + '…' : a.nom; return `<text translate="no" x="${x(i)}" y="${H - B + 16}" font-size="11" fill="#6b6f8d" text-anchor="${rot ? 'end' : 'middle'}" ${rot ? `transform="rotate(-35 ${x(i)} ${H - B + 16})"` : ''}>${esc(t)}</text>`; }).join('');
+  const vals = acts.length <= 8 ? acts.map((a, i) => a.v == null ? '' : `<text x="${x(i)}" y="${y(a.v) - 10}" text-anchor="middle" font-size="11" font-weight="700" fill="${a.v < PASS ? '#e11d48' : '#4f2fe0'}">${fmt(a.v)}</text>`).join('') : '';
   const pts = acts.map((a, i) => a.v == null ? '' : `<circle cx="${x(i)}" cy="${y(a.v)}" r="5" fill="${a.v < PASS ? '#e11d48' : '#4f2fe0'}"><title translate="no">${esc(a.nom)}: ${fmt(a.v)}${a.cls != null ? ' (classe ' + fmt(a.cls) + ')' : ''}</title></circle>`).join('');
   return `<svg class="fx-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Evolució de les notes de l'alumne comparada amb la mitjana de la classe">
     ${grid}<line x1="${L}" x2="${W - R}" y1="${y(PASS)}" y2="${y(PASS)}" stroke="#e11d48" stroke-dasharray="2 4" stroke-width="1.2"/>
     <path d="${path('cls')}" fill="none" stroke="#8d8aa8" stroke-width="2" stroke-dasharray="6 4"/>
-    <path d="${path('v')}" fill="none" stroke="#4f2fe0" stroke-width="2.5" stroke-linejoin="round"/>${pts}${labels}</svg>
+    <path d="${path('v')}" fill="none" stroke="#4f2fe0" stroke-width="2.5" stroke-linejoin="round"/>${pts}${vals}${labels}</svg>
     <div class="fx-legend"><span><i style="background:#4f2fe0"></i>Alumne</span><span><i class="dash"></i>Mitjana de la classe</span><span><i class="dot"></i>Aprovat (5)</span></div>`;
 }
 
-function fxBars(acts) {
+function fxBars(acts, terms) {
+  if (terms && Object.keys(terms).length > 1) acts = acts.map(a => ({ ...a, nom: a.nom + (terms[a.tid] ? ' · ' + String(terms[a.tid].name || terms[a.tid].nom || '').split(' ')[0] : '') }));
   if (!acts.length) return '<p class="muted">Encara no hi ha matèries.</p>';
   const W = 640, H = 240, L = 34, R = 12, T = 12, B = 56;
   const slot = (W - L - R) / acts.length, bw = Math.min(34, slot * .5);
@@ -650,7 +666,7 @@ async function renderFitxa() {
   const root = $('screen-alumne');
   if (!root) return;
   root.innerHTML = '<p class="muted" style="margin-top:1rem">Carregant…</p>';
-  const classes = await loadAll();
+  const classes = await loadAll(true);
   const c = classes.find(x => x.id === _fx.cls);
   const s = c?.students.find(x => x.id === _fx.stu);
   if (!c || !s) { root.innerHTML = '<div class="panel">No s\'ha trobat l\'alumne.</div>'; return; }
@@ -659,56 +675,77 @@ async function renderFitxa() {
   const a = fxAnalyse(c, s, termSel, subj);
   const [stLabel, stCls] = FX_STATUS[a.status];
   const termOpts = Object.entries(c.terms || {});
+  const tn = id => c.terms?.[id]?.name || c.terms?.[id]?.nom || id;
   const delta = a.mean != null && a.classMean != null ? a.mean - a.classMean : null;
   const sg = v => (v > 0 ? '+' : v < 0 ? '−' : '') + fmt(Math.abs(v));
+  let showPos = false; try { showPos = localStorage.getItem('avaluapp.fx.pos') === '1'; } catch {}
+  const pos = showPos ? fxRank(c, s, termSel) : null;
+  const last = a.done[a.done.length - 1], prev = a.done[a.done.length - 2];
+  const lastTxt = last ? `Última nota: <span translate="no">${esc(last.nom)}</span> ${fmt(last.v)}${prev ? ` (${sg(last.v - prev.v)} respecte de l'anterior)` : ''}` : '';
+  const trendSub = a.trendSrc === 'terms' ? 'darrer període → anterior' : a.trendSrc === 'series' ? 'primera meitat → segona meitat' : 'calen 3 notes o 2 períodes';
+
+  // ---- taula única de detall
+  let detail = '';
+  const multiTerm = Object.keys(c.terms || {}).length > 1;
+  const rowAct = x => `<tr><td class="l" translate="no">${esc(x.nom)}</td><td>${x.v == null ? '–' : `<span class="pill t-${toneOf(x.v)}">${fmt(x.v)}</span>`}</td><td>${fmt(x.cls)}</td><td>${x.v != null && x.cls != null ? sg(x.v - x.cls) : '–'}</td></tr>`;
+  if (subj && multiTerm && a.matrix.length) {
+    const ids = Object.keys(c.terms);
+    detail = `<p class="muted">Fletxa = canvi respecte del període anterior · gris = mitjana de la classe</p><div class="tbl-wrap"><table class="rep-table"><thead><tr><th class="l">Matèria</th>${ids.map(id => `<th translate="no">${esc(tn(id))}</th>`).join('')}</tr></thead><tbody>
+      ${a.matrix.map(r => { let pv = null; return `<tr><td class="l" translate="no">${esc(r.nom)}</td>${ids.map(id => { const x = r.per[id]; const v = x?.v ?? null; const ar = v != null && pv != null ? (v - pv >= 1 ? ' ↗' : pv - v >= 1 ? ' ↘' : '') : ''; if (v != null) pv = v; return `<td>${v == null ? '–' : `<span class="pill t-${toneOf(v)}">${fmt(v)}</span>${ar}`}${x?.cls != null ? `<small class="fx-cl"> ${fmt(x.cls)}</small>` : ''}</td>`; }).join('')}</tr>`; }).join('')}
+      <tr class="fx-sum"><td class="l"><b>Mitjana</b></td>${ids.map(id => { const t = a.terms.find(q => q.id === id); return `<td>${t?.avg == null ? '–' : `<span class="pill t-${toneOf(t.avg)}">${fmt(t.avg)}</span>`}${t?.cls != null ? `<small class="fx-cl"> ${fmt(t.cls)}</small>` : ''}</td>`; }).join('')}</tr></tbody></table></div>`;
+  } else if (!termSel && multiTerm && a.acts.length) {
+    detail = `<div class="tbl-wrap"><table class="rep-table"><thead><tr><th class="l">Activitat</th><th>Nota</th><th>Classe</th><th>Diferència</th></tr></thead><tbody>
+      ${Object.keys(c.terms).map(id => { const rows = a.acts.filter(x => x.tid === id); if (!rows.length) return ''; const t = a.terms.find(q => q.id === id);
+        return `<tr class="fx-grp"><td class="l" colspan="4" translate="no"><b>${esc(tn(id))}</b>${t?.avg != null ? ` · mitjana ${fmt(t.avg)}${t.cls != null ? ' (classe ' + fmt(t.cls) + ')' : ''}` : ''}</td></tr>` + rows.map(rowAct).join(''); }).join('')}</tbody></table></div>`;
+  } else if (a.acts.length) {
+    detail = `<div class="tbl-wrap"><table class="rep-table"><thead><tr><th class="l">${subj ? 'Matèria' : 'Activitat'}</th><th>Nota</th><th>Classe</th><th>Diferència</th></tr></thead><tbody>${a.acts.map(rowAct).join('')}</tbody></table></div>`;
+  } else detail = '<p class="muted">Aquest període encara no té activitats.</p>';
+
+  // ---- comentaris anteriors
+  const cm = [];
+  Object.entries(s.comentarisTrim?.[c.id] || {}).forEach(([tid, t]) => { if (t && String(t).trim()) cm.push([tn(tid), String(t).trim()]); });
+  const old = s.comentarios?.[c.id]; if (old && String(old).trim()) cm.push(['Comentari', String(old).trim()]);
+  const comments = cm.length ? `<div class="panel"><h3>Comentaris anteriors</h3>${cm.map(([n, t], i) => `<details class="fx-cm" ${i === cm.length - 1 && cm.length === 1 ? 'open' : ''}><summary translate="no">${esc(n)}</summary><p translate="no">${esc(t)}</p></details>`).join('')}</div>` : '';
+
+  const chartPanels = subj
+    ? `<div class="panel"><h3>Notes per matèria</h3><p class="muted">Nota de l'alumne a cada matèria i mitjana de la classe</p>${fxBars(a.acts, !termSel ? c.terms : null)}</div>
+       ${a.terms.filter(t => t.avg != null).length >= 2 ? `<div class="panel"><h3>Evolució per període</h3><p class="muted">Mitjana de totes les matèries a cada període</p>${fxChart(a.terms.filter(t => t.avg != null).map(t => ({ nom: t.nom, v: t.avg, cls: t.cls })))}</div>` : ''}`
+    : `<div class="panel"><h3>Evolució</h3><p class="muted">Nota a cada ${c.actComp && Object.values(c.actComp).some(Boolean) ? 'activitat (competencials passades a 0–10)' : 'activitat'}</p>${fxChart(a.acts)}</div>`;
+  const ACT = { down: 'comment', fail: 'comment', gap: 'comment', miss: 'grid' };
+  const alertsPanel = `<div class="panel"><h3>Què s'ha detectat</h3>
+      ${a.alerts.length ? `<ul class="fx-alerts">${a.alerts.map(x => `<li class="fx-a-${x.k}"><b>${FX_ICON[x.k]}</b><span><span translate="no">${esc(x.txt)}</span>${ACT[x.k] ? ` <button type="button" class="fx-a-btn" data-fxact="${ACT[x.k]}">${ACT[x.k] === 'grid' ? 'Obrir a la graella' : 'Crear comentari'}</button>` : ''}</span></li>`).join('')}</ul>` : `<p class="muted">${a.mean == null ? 'Encara no hi ha notes per analitzar.' : 'Res destacable en aquest període.'}</p>`}
+    </div>`;
+
   root.innerHTML = `
     <div class="fx-top"><button type="button" id="fxBack" class="fx-back">← Tornar</button></div>
     <div class="panel fx-head">
       <span class="stu-avatar fx-av" style="--hue:${hue(s.nom)}" translate="no">${esc(initials(s.nom))}</span>
-      <div class="fx-id"><h2 translate="no">${esc(s.nom || '?')}</h2><p class="muted" translate="no">${esc(c.nom || 'Sense nom')}</p></div>
+      <div class="fx-id"><h2 translate="no">${esc(s.nom || '?')}</h2><p class="muted" translate="no">${esc(c.nom || 'Sense nom')}</p>${lastTxt ? `<p class="fx-last">${lastTxt}</p>` : ''}</div>
       <span class="fx-chip fx-${stCls}">${stLabel}</span>
-      <label class="fx-mode muted"><input type="checkbox" id="fxSubj" ${subj ? 'checked' : ''}> Les columnes són matèries</label>
       <select id="fxTerm" class="pill-select"><option value="">Tots els períodes</option>${termOpts.map(([id, t]) => `<option value="${esc(id)}" ${id === termSel ? 'selected' : ''} translate="no">${esc(t.name || t.nom || id)}</option>`).join('')}</select>
+      <div class="fx-btns"><button type="button" id="fxComment" class="btn btn-primary">Crear comentari de tutoria</button><button type="button" id="fxGrid" class="btn">Obrir a la graella</button></div>
+      <div class="fx-opts"><label class="fx-mode muted"><input type="checkbox" id="fxSubj" ${subj ? 'checked' : ''}> Les columnes són matèries</label><label class="fx-mode muted"><input type="checkbox" id="fxPos" ${showPos ? 'checked' : ''}> Mostrar posició a la classe</label></div>
     </div>
     <div class="kpis">
-      ${kpi('Mitjana', fmt(a.mean), a.classMean != null ? `classe ${fmt(a.classMean)}${delta != null ? ' · ' + sg(delta) : ''}` : '', 'tone-' + toneOf(a.mean))}
-      ${kpi('Tendència', a.trend == null ? '–' : (a.trend >= 0.5 ? '↗ ' : a.trend <= -0.5 ? '↘ ' : '→ ') + sg(a.trend), subj ? 'darrer període → anterior' : 'primera meitat → segona meitat', a.trend != null && a.trend <= -1 ? 'tone-red' : a.trend != null && a.trend >= 1 ? 'tone-green' : '')}
+      ${kpi('Mitjana', fmt(a.mean), a.classMean != null ? `classe ${fmt(a.classMean)}${delta != null ? ' · ' + sg(delta) : ''}${pos ? ' · ' + pos : ''}` : '', 'tone-' + toneOf(a.mean))}
+      ${kpi('Tendència', a.trend == null ? '–' : (a.trend >= 0.5 ? '↗ ' : a.trend <= -0.5 ? '↘ ' : '→ ') + sg(a.trend), trendSub, a.trend != null && a.trend <= -1 ? 'tone-red' : a.trend != null && a.trend >= 1 ? 'tone-green' : '')}
       ${kpi('Suspeses', `${a.failed} <small style="font-size:1rem">de ${a.done.length}</small>`, `${a.acts.length - a.done.length} sense nota`, a.failed ? 'tone-red' : '')}
     </div>
-    ${subj
-      ? `<div class="panel"><h3>Notes per matèria</h3><p class="muted">Nota de l'alumne a cada matèria i mitjana de la classe</p>${fxBars(a.acts)}</div>
-         ${a.terms.filter(t => t.avg != null).length >= 2 ? `<div class="panel"><h3>Evolució per període</h3><p class="muted">Mitjana de totes les matèries a cada període</p>${fxChart(a.terms.filter(t => t.avg != null).map(t => ({ nom: t.nom, v: t.avg, cls: t.cls })))}</div>` : ''}`
-      : `<div class="panel"><h3>Evolució</h3><p class="muted">Nota a cada ${c.actComp && Object.values(c.actComp).some(Boolean) ? 'activitat (competencials passades a 0–10)' : 'activitat'}</p>${fxChart(a.acts)}</div>`}
-    <div class="panel"><h3>Què s'ha detectat</h3>
-      ${a.alerts.length ? `<ul class="fx-alerts">${a.alerts.map(x => `<li class="fx-a-${x.k}"><b>${FX_ICON[x.k]}</b><span translate="no">${esc(x.txt)}</span></li>`).join('')}</ul>` : `<p class="muted">${a.mean == null ? 'Encara no hi ha notes per analitzar.' : 'Res destacable en aquest període.'}</p>`}
-    </div>
-    ${a.terms.filter(t => t.n).length > 1 ? `<div class="panel"><h3>Per període</h3><div class="tbl-wrap"><table class="rep-table"><thead><tr><th class="l">Període</th><th>Alumne</th><th>Classe</th><th>Diferència</th></tr></thead><tbody>
-      ${a.terms.filter(t => t.n).map(t => `<tr><td class="l" translate="no">${esc(t.nom)}</td><td><span class="pill t-${toneOf(t.avg)}">${fmt(t.avg)}</span></td><td>${fmt(t.cls)}</td><td>${t.cls != null ? sg(t.avg - t.cls) : '–'}</td></tr>`).join('')}</tbody></table></div></div>` : ''}
-    ${subj && a.matrix.length && Object.keys(c.terms || {}).length > 1 ? `<div class="panel"><h3>Matèries per període</h3><p class="muted">Fletxa = canvi respecte del període anterior</p><div class="tbl-wrap"><table class="rep-table"><thead><tr><th class="l">Matèria</th>${Object.entries(c.terms).map(([id, t]) => `<th translate="no">${esc(t.name || t.nom || id)}</th>`).join('')}</tr></thead><tbody>
-      ${a.matrix.map(r => { let prev = null; return `<tr><td class="l" translate="no">${esc(r.nom)}</td>${Object.keys(c.terms).map(id => { const x = r.per[id]; const v = x?.v ?? null; const ar = v != null && prev != null ? (v - prev >= 1 ? ' ↗' : prev - v >= 1 ? ' ↘' : '') : ''; if (v != null) prev = v; return `<td>${v == null ? '–' : `<span class="pill t-${toneOf(v)}">${fmt(v)}</span>${ar}`}</td>`; }).join('')}</tr>`; }).join('')}</tbody></table></div></div>` : ''}
-    <div class="panel"><h3>Detall</h3>
-      ${a.acts.length ? `<div class="tbl-wrap"><table class="rep-table"><thead><tr><th class="l">Activitat / matèria</th><th>Nota</th><th>Classe</th><th>Diferència</th></tr></thead><tbody>
-      ${a.acts.map(x => `<tr><td class="l" translate="no">${esc(x.nom)}</td><td>${x.v == null ? '–' : `<span class="pill t-${toneOf(x.v)}">${fmt(x.v)}</span>`}</td><td>${fmt(x.cls)}</td><td>${x.v != null && x.cls != null ? sg(x.v - x.cls) : '–'}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">Aquest període encara no té activitats.</p>'}
-    </div>
-    <div class="fx-actions">
-      <button type="button" id="fxComment" class="btn btn-primary">Crear comentari de tutoria</button>
-      <button type="button" id="fxGrid" class="btn">Obrir a la graella</button>
-    </div>`;
+    <div class="fx-two"><div>${chartPanels}</div><div>${alertsPanel}${comments}</div></div>
+    <div class="panel"><h3>Detall</h3>${detail}</div>`;
   $('fxBack').addEventListener('click', () => {
     if (_fx.from === 'home') { $('navHome').click(); }
     else if (_fx.from === 'informes') { $('navReports').click(); }
     else if (_fx.from === 'grid') { setActiveNav($('navHome')); window.AvaluApp?.openClass?.(c.id, 'notes'); showOnly('screen-class'); }
     else $('navStudents').click();
   });
+  const openGrid = () => { setActiveNav($('navHome')); window.AvaluApp?.openClass?.(c.id, 'notes'); showOnly('screen-class'); };
+  const openComment = () => { if (window.openTutoriaModal) window.openTutoriaModal({ studentId: s.id, studentName: s.nom || '', classId: c.id }); };
   $('fxSubj').addEventListener('change', e => { try { localStorage.setItem('avaluapp.fx.mat.' + c.id, e.target.checked ? '1' : '0'); } catch {} renderFitxa(); });
+  $('fxPos').addEventListener('change', e => { try { localStorage.setItem('avaluapp.fx.pos', e.target.checked ? '1' : '0'); } catch {} renderFitxa(); });
   $('fxTerm').addEventListener('change', e => { _fx.term = e.target.value; renderFitxa(); });
-  $('fxComment').addEventListener('click', () => {
-    if (window.openTutoriaModal) window.openTutoriaModal({ studentId: s.id, studentName: s.nom || '', classId: c.id });
-  });
-  $('fxGrid').addEventListener('click', () => {
-    setActiveNav($('navHome')); showOnly('screen-class');
-    document.querySelector('.tab[data-tab="notes"]')?.click();
-    window.AvaluApp?.openClass?.(c.id, 'notes');
-  });
+  $('fxComment').addEventListener('click', openComment);
+  $('fxGrid').addEventListener('click', openGrid);
+  root.querySelectorAll('[data-fxact]').forEach(b => b.addEventListener('click', () => b.dataset.fxact === 'grid' ? openGrid() : openComment()));
 }
 window.AvaluFitxa = { open: openFitxa };
