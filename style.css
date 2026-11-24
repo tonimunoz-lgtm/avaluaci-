@@ -911,3 +911,9 @@ body #weightedInputs .w-pct input { width: 5.6rem !important; padding: .3rem .6r
 .rk-upd { display: flex; justify-content: flex-end; margin-bottom: .4rem; }
 .rk-refresh { border: 0; background: none; color: var(--c-primary); font-weight: 700; font-size: .8rem; cursor: pointer; padding: .2rem .5rem; border-radius: 999px; margin-left: auto; }
 .rk-refresh:hover { background: #f4f1ff; } .rk-refresh small { font-weight: 400; color: var(--c-muted); }
+
+.fresh-row { font-size: .8rem; margin: -.2rem 0 .8rem; display: flex; align-items: center; gap: .3rem; justify-content: flex-end; }
+.fx-top { display: flex; align-items: center; justify-content: space-between; }
+.fx-top .fresh-row { margin: 0; }
+.fresh-btn { border: 0; background: none; color: var(--c-primary); font-weight: 700; font-size: .8rem; cursor: pointer; padding: .2rem .5rem; border-radius: 999px; }
+.fresh-btn:hover { background: #f4f1ff; }

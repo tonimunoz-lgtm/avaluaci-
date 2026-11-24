@@ -19,7 +19,7 @@ let _cache = null; // { at, classes: [...] }
 
 // Carrega totes les classes del professor amb activitats i alumnes (cau 60 s)
 async function loadAll(force) {
-  if (!force && _cache && Date.now() - _cache.at < 60000) return _cache.classes;
+  if (!force && _cache && Date.now() - _cache.at < (_hooked ? CACHE_TTL : 60000)) return _cache.classes;
   const uid = firebase.auth().currentUser?.uid;
   if (!uid) return [];
   const prof = await db().collection('professors').doc(uid).get();
@@ -45,6 +45,34 @@ async function loadAll(force) {
   return classes;
 }
 const invalidate = () => { _cache = null; };
+const CACHE_TTL = 10 * 60000; // 10 min si podem garantir que qualsevol desat buida la memòria (veure hookWrites)
+let _hooked = false;
+// Qualsevol escriptura feta per aquest navegador (set/update/delete/add/batch) buida la memòria, abans i després de
+// completar-se, de manera que mai es mostren dades anteriors a un canvi propi. Si l'SDK no permet el ganxo, es torna
+// al comportament antic (memòria de 60 s i buidada en canviar de pantalla).
+function hookWrites() {
+  try {
+    const F = firebase.firestore;
+    const wrap = (proto, names) => names.forEach(n => {
+      const o = proto && proto[n];
+      if (typeof o !== 'function' || o.__av) return;
+      const w = function (...a) {
+        window.AvaluDirty?.();
+        const r = o.apply(this, a);
+        if (r && typeof r.then === 'function') r.then(() => window.AvaluDirty?.(), () => {});
+        return r;
+      };
+      w.__av = true; proto[n] = w;
+    });
+    wrap(F.DocumentReference?.prototype, ['set', 'update', 'delete']);
+    wrap(F.CollectionReference?.prototype, ['add']);
+    wrap(F.WriteBatch?.prototype, ['commit']);
+    _hooked = typeof F.DocumentReference === 'function' && typeof F.WriteBatch === 'function'
+      && !!F.DocumentReference.prototype.set.__av && !!F.WriteBatch.prototype.commit.__av;
+  } catch { _hooked = false; }
+}
+window.AvaluDirty = () => { _cache = null; if (typeof _riskData !== 'undefined') _riskData = null; };
+hookWrites();
 
 // Comentari d'un alumne en un grup d'avaluació (camp nou comentarisTrim; el camp antic
 // comentarios[classe] compta com a comentari del primer grup)
@@ -208,12 +236,26 @@ function showOnly(id) {
 $('navHome').addEventListener('click', () => {
   setActiveNav($('navHome'));
   ['screen-alumne', 'screen-alumnes', 'screen-informes', 'screen-historial', 'screen-config'].forEach(s => $(s).classList.add('hidden'));
-  invalidate();
+  if (!_hooked) invalidate();
 });
 $('navStudents').addEventListener('click', () => { setActiveNav($('navStudents')); showOnly('screen-alumnes'); renderAlumnes(); });
 $('navReports').addEventListener('click', () => { setActiveNav($('navReports')); showOnly('screen-informes'); renderInformes(); });
 $('navHistory').addEventListener('click', () => { setActiveNav($('navHistory')); showOnly('screen-historial'); window.Historial?.renderScreen($('screen-historial')); });
 $('navSettings').addEventListener('click', () => { setActiveNav($('navSettings')); showOnly('screen-config'); renderConfig(); });
+
+/* ------------------------------------------------------------ «Actualitza» (dades fresques a demanda) */
+const freshRow = () => {
+  const t = _cache ? new Date(_cache.at).toLocaleTimeString('ca', { hour: '2-digit', minute: '2-digit' }) : '';
+  return `<div class="fresh-row muted">${t ? `Dades de les ${t} · ` : ''}<button type="button" class="fresh-btn" title="Torna a llegir les dades actuals">↻ Actualitza</button></div>`;
+};
+document.addEventListener('click', e => {
+  if (!e.target.closest('.fresh-btn')) return;
+  window.AvaluDirty();
+  const vis = id => $(id) && !$(id).classList.contains('hidden');
+  if (vis('screen-alumne')) renderFitxa();
+  else if (vis('screen-informes')) renderInformes();
+  else if (vis('screen-alumnes')) renderAlumnes();
+});
 
 /* ------------------------------------------------------------ pantalla Alumnes */
 async function renderAlumnes() {
@@ -230,6 +272,7 @@ async function renderAlumnes() {
         <td class="l"><span class="stu-avatar" style="--hue:${hue(r.nom)}">${esc(initials(r.nom))}</span> <b>${esc(r.nom)}</b></td>
         <td class="l">${esc(r.classe)}</td><td><span class="pill t-${toneOf(r.avg)}">${fmt(r.avg)}</span></td>
         <td>${r.failed}</td><td>${r.missing}</td><td class="l muted">${esc(r.email) || '—'}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">Encara no hi ha alumnes.</td></tr>'}</tbody></table></div></div>`;
+  root.querySelector('.classes-head').insertAdjacentHTML('afterend', freshRow());
   $('allStuSearch').addEventListener('input', e => {
     const q = e.target.value.trim().toLowerCase();
     root.querySelectorAll('tbody tr[data-q]').forEach(tr => { tr.style.display = tr.dataset.q.includes(q) ? '' : 'none'; });
@@ -260,6 +303,7 @@ async function renderInformes() {
         <button id="repCsv" type="button"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>Exportar CSV</button>` : ''}
         <button id="repPrint" type="button"><svg viewBox="0 0 24 24"><path d="M7 9V3h10v6M7 17H4v-7h16v7h-3M7 14h10v7H7z"/></svg>Imprimir</button>
       </div></div>
+    ${freshRow()}
     <div id="repBody">${cur ? reportHTML(cur, termSel) : compareHTML(classes)}</div>`;
   $('repClass').addEventListener('change', e => { _repSel = { cls: e.target.value, term: null }; renderInformes(); });
   $('repTerm')?.addEventListener('change', e => { _repSel.term = e.target.value; renderInformes(); });
@@ -303,10 +347,10 @@ function switchTab(tab) {
 document.querySelector('.tabs').addEventListener('click', e => {
   const b = e.target.closest('.tab'); if (b) switchTab(b.dataset.tab);
 });
-window.addEventListener('class-opened', e => { _resTerm = null; invalidate(); switchTab(e.detail?.tab || 'notes'); });
+window.addEventListener('class-opened', e => { _resTerm = null; if (!_hooked) invalidate(); switchTab(e.detail?.tab || 'notes'); });
 // Quan es redibuixa la graella (nota, comentari…) refresquem la pestanya activa
 window.addEventListener('grid-rendered', () => {
-  invalidate(); fillActFilter();
+  if (!_hooked) invalidate(); fillActFilter();
   if (_tab !== 'notes') switchTab(_tab);
 });
 
@@ -473,7 +517,7 @@ autoTitle(document.body);
 let _riskAt = 0, _riskBusy = false;
 // Resultat de la targeta guardat en memòria: es reutilitza 10 minuts (o fins que es premi «Actualitza»)
 // per no tornar a llegir totes les classes cada cop que es torna a l'inici.
-let _riskData = null; const RISK_TTL = 10 * 60000;
+let _riskData = null; const riskTtl = () => (_hooked ? 10 * 60000 : 60000);
 const riskOpenKey = 'avaluapp.riskOpen';
 async function renderRiskCard() {
   const home = $('screen-classes');
@@ -483,7 +527,7 @@ async function renderRiskCard() {
   if (!on) { card?.remove(); return; }
   _riskBusy = true;
   try {
-    if (!_riskData || Date.now() - _riskData.at > RISK_TTL) {
+    if (!_riskData || Date.now() - _riskData.at > riskTtl()) {
       const classes = await loadAll();
       const groups = classes.map(c => {
         const a = analyse(c, currentTermOf(c));
@@ -732,7 +776,7 @@ async function renderFitxa() {
     </div>`;
 
   root.innerHTML = `
-    <div class="fx-top"><button type="button" id="fxBack" class="fx-back">← Tornar</button></div>
+    <div class="fx-top"><button type="button" id="fxBack" class="fx-back">← Tornar</button>${freshRow()}</div>
     <div class="panel fx-head">
       <span class="stu-avatar fx-av" style="--hue:${hue(s.nom)}" translate="no">${esc(initials(s.nom))}</span>
       <div class="fx-id"><h2 translate="no">${esc(s.nom || '?')}</h2><p class="muted" translate="no">${esc(c.nom || 'Sense nom')}</p>${lastTxt ? `<p class="fx-last">${lastTxt}</p>` : ''}</div>
