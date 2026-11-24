@@ -697,6 +697,7 @@ async function renderFitxa() {
   $('fxBack').addEventListener('click', () => {
     if (_fx.from === 'home') { $('navHome').click(); }
     else if (_fx.from === 'informes') { $('navReports').click(); }
+    else if (_fx.from === 'grid') { setActiveNav($('navHome')); window.AvaluApp?.openClass?.(c.id, 'notes'); showOnly('screen-class'); }
     else $('navStudents').click();
   });
   $('fxSubj').addEventListener('change', e => { try { localStorage.setItem('avaluapp.fx.mat.' + c.id, e.target.checked ? '1' : '0'); } catch {} renderFitxa(); });

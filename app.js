@@ -1050,12 +1050,16 @@ function buildStudentCell(tr, studentId, data) {
   td.querySelector('.stu-menu-btn').addEventListener('click', e => {
     e.stopPropagation();
     openStudentMenu(e.currentTarget, [
+      ['evo', 'Veure evolució'],
       ['edit', 'Editar nom'],
       ['email', tr.dataset.email ? 'Canviar email' : 'Introduir email'],
       ['send', 'Enviar notes'],
       ['delete', 'Eliminar', 'danger']
-    ], action => studentRowAction(action, studentId, tr));
+    ], action => action === 'evo' ? openEvo() : studentRowAction(action, studentId, tr));
   });
+
+  const openEvo = () => window.AvaluFitxa?.open(currentClassId, studentId, 'grid');
+  td.querySelectorAll('.stu-avatar, .stu-name').forEach(el => { el.style.cursor = 'pointer'; el.title = 'Veure evolució'; el.addEventListener('click', openEvo); });
 
   const handle = td.querySelector('.drag-handle');
   handle.addEventListener('dragstart', e => {
