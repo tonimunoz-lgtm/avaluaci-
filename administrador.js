@@ -46,7 +46,7 @@ async function loadUsers() {
          <button class="btn-admin-toggle px-2 py-1 bg-indigo-500 text-white rounded" data-id="${esc(doc.id)}">${data.isAdmin ? 'Treure admin' : 'Fer admin'}</button>
          <button class="btn-delete px-2 py-1 bg-red-500 text-white rounded" data-id="${esc(doc.id)}">Eliminar</button>`;
     tr.innerHTML = `
-      <td>${esc(data.nom || '-')}</td>
+      <td>${esc(data.nom || data.name || '-')}</td>
       <td>${esc(data.email || '-')}</td>
       <td data-ts="${data.createdAt ? data.createdAt.toMillis() : 0}">${data.createdAt ? data.createdAt.toDate().toLocaleString('ca-ES') : '-'}</td>
       <td><span class="badge ${data.isAdmin ? 'b-admin' : 'b-no'}">${data.isAdmin ? 'Sí' : 'No'}</span></td>

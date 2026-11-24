@@ -338,7 +338,15 @@ auth.onAuthStateChanged(user => {
 async function setupAfterAuth(user, profData) {
   showApp();
   const email = user.email || '';
-  const displayName = user.displayName || email.split('@')[0] || email;
+  // Si el compte de Google no té nom, es construeix a partir del correu: «mireia.morer@…» → «Mireia Morer»
+  const prettyName = e => String(e).split('@')[0].split(/[._\-\s]+/).filter(Boolean).map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
+  const displayName = user.displayName || prettyName(email) || email;
+  // Desa el nom al perfil (l'administració el mostra); abans només es desava el correu en alguns casos
+  try {
+    if (db && user.uid && profData && profData.nom !== displayName) {
+      db.collection('professors').doc(user.uid).update({ nom: displayName, name: displayName }).catch(() => {});
+    }
+  } catch {}
   usuariNom.textContent = displayName;
   const titleName = document.getElementById('usuariNomTitle');
   if (titleName) titleName.textContent = displayName.split(' ')[0];
