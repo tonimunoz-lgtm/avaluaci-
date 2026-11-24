@@ -533,6 +533,7 @@ setInterval(() => {
 // classe de tutoria) comparat amb la classe, taula per període i avisos calculats amb regles simples (sense IA).
 // Només llegeix (usa loadAll). Les activitats competencials (0–4) es porten a 0–10 només per comparar.
 let _fx = { cls: '', stu: '', term: null, from: 'alumnes' };
+let _fxForce = false; // només es força la recàrrega després d'haver obert el generador de comentaris
 // Classe de tutoria / seguiment: les columnes són matèries, no activitats en el temps. Per defecte es detecta pel nom
 // de la classe («tutor…») i l'usuari ho pot canviar (es recorda per classe, només en aquest navegador).
 function fxSubjectMode(c) {
@@ -666,7 +667,7 @@ async function renderFitxa() {
   const root = $('screen-alumne');
   if (!root) return;
   root.innerHTML = '<p class="muted" style="margin-top:1rem">Carregant…</p>';
-  const classes = await loadAll(true);
+  const classes = await loadAll(_fxForce); _fxForce = false; // reutilitza la memòria (60 s) per no gastar lectures
   const c = classes.find(x => x.id === _fx.cls);
   const s = c?.students.find(x => x.id === _fx.stu);
   if (!c || !s) { root.innerHTML = '<div class="panel">No s\'ha trobat l\'alumne.</div>'; return; }
@@ -741,7 +742,7 @@ async function renderFitxa() {
     else $('navStudents').click();
   });
   const openGrid = () => { setActiveNav($('navHome')); window.AvaluApp?.openClass?.(c.id, 'notes'); showOnly('screen-class'); };
-  const openComment = () => { if (window.openTutoriaModal) window.openTutoriaModal({ studentId: s.id, studentName: s.nom || '', classId: c.id }); };
+  const openComment = () => { _fxForce = true; if (window.openTutoriaModal) window.openTutoriaModal({ studentId: s.id, studentName: s.nom || '', classId: c.id }); };
   $('fxSubj').addEventListener('change', e => { try { localStorage.setItem('avaluapp.fx.mat.' + c.id, e.target.checked ? '1' : '0'); } catch {} renderFitxa(); });
   $('fxPos').addEventListener('change', e => { try { localStorage.setItem('avaluapp.fx.pos', e.target.checked ? '1' : '0'); } catch {} renderFitxa(); });
   $('fxTerm').addEventListener('change', e => { _fx.term = e.target.value; renderFitxa(); });
