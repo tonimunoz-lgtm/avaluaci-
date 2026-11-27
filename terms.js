@@ -287,6 +287,7 @@ export async function pasteGridStructure(termId) {
   const classUpdate = {};
   for (const c of clones) {
     const data = { ...c.data };
+    delete data.googleClassroomId;   // la còpia no és l'activitat de Classroom: evita dues activitats amb el mateix enllaç en sincronitzar
     if (data.formula) data.formula = remap(data.formula);
     await c.ref.set({
       ...data,
@@ -299,6 +300,10 @@ export async function pasteGridStructure(termId) {
       const copy = { ...calc };
       if (copy.formula) copy.formula = remap(copy.formula);
       if (copy.displayFormula) copy.displayFormula = remap(copy.displayFormula);
+      // Mitjana ponderada: els pesos van per id d'activitat; sense remapejar, la còpia seguiria depenent de les activitats originals
+      if (copy.weights && typeof copy.weights === 'object') {
+        copy.weights = Object.fromEntries(Object.entries(copy.weights).map(([k, v]) => [idMap[k] || k, v]));
+      }
       classUpdate[`calculatedActivities.${c.ref.id}`] = copy;
     }
   }
