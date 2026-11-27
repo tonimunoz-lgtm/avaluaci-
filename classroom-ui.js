@@ -487,6 +487,14 @@ function injectSyncButton() {
     } catch { b.classList.add('hidden'); }
   });
   b.addEventListener('click', () => { menu.classList.add('hidden'); startClassroomSync(); });
+
+  // Botó directe (només escriptori) al costat d'«Alumnes»: visible si la classe oberta s'ha importat de Classroom.
+  const d = document.getElementById('btnClassroomSync');
+  if (d) {
+    d.addEventListener('click', e => { e.stopPropagation(); startClassroomSync(); });
+    const upd = () => { const cd = window.AvaluApp?.getClassData?.(); d.classList.toggle('hidden', !(cd && cd.googleClassroomId)); };
+    setInterval(upd, 1000); window.addEventListener('class-opened', () => setTimeout(upd, 600));
+  }
 }
 document.addEventListener('DOMContentLoaded', injectSyncButton);
 

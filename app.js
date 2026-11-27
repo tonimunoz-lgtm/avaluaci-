@@ -927,23 +927,27 @@ function reorderStudents(fromIdx, toIdx){
 }
 
 /* ---------------- Ordenar alumnes (nom/cognom, A→Z / Z→A) ---------------- */
-// Separa "Nom Cognom1 Cognom2" o "Cognoms, Nom"
-function splitStudentName(full) {
+// Separa "Nom Cognom1 Cognom2" (per defecte), "Cognom1 Cognom2 Nom" (format «cognom-nom») o "Cognoms, Nom".
+// El format es tria per classe al menú d'ordenar, perquè segons d'on vinguin els alumnes (Classroom, Excel…) el nom
+// pot venir en un ordre o en l'altre i no es pot endevinar.
+function splitStudentName(full, order) {
   const t = String(full || '').trim();
   if (t.includes(',')) {
     const [cog, ...rest] = t.split(',');
     return { nom: rest.join(',').trim(), cognom: cog.trim() };
   }
   const parts = t.split(/\s+/);
+  if (order === 'cognom-nom') return { cognom: parts[0] || '', nom: parts.slice(1).join(' ') };
   return { nom: parts[0] || '', cognom: parts.slice(1).join(' ') };
 }
 
 async function sortStudents(field, dir) {
   try {
+    const order = _classData?.nameOrder || 'nom-cognom';
     const docs = await Promise.all(classStudents.map(id => db.collection('alumnes').doc(id).get()));
     const rows = docs.map(d => {
-      const n = splitStudentName(d.exists ? d.data().nom : '');
-      return { id: d.id, key: field === 'cognom' ? (n.cognom || n.nom) : n.nom, tie: n.nom + ' ' + n.cognom };
+      const n = splitStudentName(d.exists ? d.data().nom : '', order);
+      return { id: d.id, key: field === 'cognom' ? (n.cognom || n.nom) : (n.nom || n.cognom), tie: n.cognom + ' ' + n.nom };
     });
     const sign = dir === 'desc' ? -1 : 1;
     rows.sort((a, b) =>
@@ -962,16 +966,33 @@ async function sortStudents(field, dir) {
   const menu = document.createElement('div');
   menu.id = 'sortMenu';
   menu.className = 'app-dropdown hidden';
-  menu.innerHTML = [
-    ['nom', 'asc',  'Nom (A → Z)'],
-    ['nom', 'desc', 'Nom (Z → A)'],
-    ['cognom', 'asc',  'Cognom (A → Z)'],
-    ['cognom', 'desc', 'Cognom (Z → A)']
-  ].map(([f, d, l]) => `<button type="button" data-field="${f}" data-dir="${d}">${l}</button>`).join('');
+  const paint = () => {
+    const ord = _classData?.nameOrder || 'nom-cognom';
+    menu.innerHTML = [
+      ['nom', 'asc',  'Nom (A → Z)'],
+      ['nom', 'desc', 'Nom (Z → A)'],
+      ['cognom', 'asc',  'Cognom (A → Z)'],
+      ['cognom', 'desc', 'Cognom (Z → A)']
+    ].map(([f, d, l]) => `<button type="button" data-field="${f}" data-dir="${d}">${l}</button>`).join('') +
+    `<div class="sort-fmt"><small>Els noms de la classe estan escrits com…</small>
+      <button type="button" data-fmt="nom-cognom" class="${ord === 'nom-cognom' ? 'on' : ''}">${ord === 'nom-cognom' ? '✓ ' : ''}Nom Cognom (Anna Puig)</button>
+      <button type="button" data-fmt="cognom-nom" class="${ord === 'cognom-nom' ? 'on' : ''}">${ord === 'cognom-nom' ? '✓ ' : ''}Cognom Nom (Puig Anna)</button></div>`;
+  };
   btn.parentNode.style.position = btn.parentNode.style.position || 'relative';
   btn.insertAdjacentElement('afterend', menu);
-  btn.addEventListener('click', e => { e.stopPropagation(); menu.classList.toggle('hidden'); });
-  menu.addEventListener('click', e => {
+  btn.addEventListener('click', e => { e.stopPropagation(); paint(); menu.classList.toggle('hidden'); });
+  menu.addEventListener('click', async e => {
+    const f = e.target.closest('button[data-fmt]');
+    if (f) {
+      e.stopPropagation();
+      try {
+        await db.collection('classes').doc(currentClassId).update({ nameOrder: f.dataset.fmt });
+        if (_classData) _classData.nameOrder = f.dataset.fmt;
+        paint();
+        notify('Format guardat. Ara ordena per cognom amb aquest format.');
+      } catch (err) { notify('No s\'ha pogut guardar el format: ' + err.message, 'error'); }
+      return;
+    }
     const b = e.target.closest('button[data-field]');
     if (!b) return;
     menu.classList.add('hidden');
@@ -986,35 +1007,36 @@ async function sortStudents(field, dir) {
 btnAddActivity.addEventListener('click', ()=> openModal('modalAddActivity'));
 modalAddActivityBtn.addEventListener('click', createActivityModal);
 
+let _creatingAct = false;
 async function createActivityModal() {
-    const name = document.getElementById("modalActivityName").value.trim();
-    if (!name) return;
-
-    const ref = db.collection("activitats").doc();
-
-    await ref.set({
-        nom: name,
-        data: new Date().toISOString().split("T")[0],
-        calcType: "numeric",
-        formula: "",
-        ownerUid: professorUID
-    });
-
-    // 🔥 Aquí afegim l'activitat al terme actiu
-    if (window.Terms && Terms.addActivityToActiveTerm) {
-        await Terms.addActivityToActiveTerm(ref.id);
-    } else {
-        console.error("❌ Terms no està carregat. Revisa l'import a app.js");
-    }
-
+    const input = document.getElementById("modalActivityName");
+    const name = input.value.trim();
+    if (!name || _creatingAct) return;
+    _creatingAct = true;
+    // El modal es tanca de seguida: abans només es tancava en acabar tota la feina i, si alguna cosa fallava
+    // o trigava (connexió lenta), quedava obert tot i haver-se creat l'activitat.
     closeModal("modalAddActivity");
-    document.getElementById("modalActivityName").value = "";
-
-    // 🔥 NO posar loadClassData() si tens dubtes!
-    // Si vols recarregar:
-    //if (typeof loadClassData === "function") {
-     //   loadClassData();
-   // }
+    input.value = "";
+    try {
+        const ref = db.collection("activitats").doc();
+        await ref.set({
+            nom: name,
+            data: new Date().toISOString().split("T")[0],
+            calcType: "numeric",
+            formula: "",
+            ownerUid: professorUID || firebase.auth().currentUser?.uid || null
+        });
+        if (window.Terms && Terms.addActivityToActiveTerm) {
+            await Terms.addActivityToActiveTerm(ref.id);
+        } else {
+            console.error("❌ Terms no està carregat. Revisa l'import a app.js");
+        }
+    } catch (e) {
+        console.error('Error creant activitat:', e);
+        notify('Error creant l\'activitat: ' + (e.message || e), 'error');
+    } finally {
+        _creatingAct = false;
+    }
 }
 
 /* ================================================================
@@ -1105,6 +1127,9 @@ function openStudentMenu(anchor, items, onPick) {
     m.classList.add('hidden');
     onPick(b.dataset.act);
   };
+  // Tornar a clicar el mateix botó tanca el menú (abans el tornava a obrir)
+  if (!m.classList.contains('hidden') && m._anchor === anchor) { m.classList.add('hidden'); return; }
+  m._anchor = anchor;
   const z = parseFloat(getComputedStyle(document.documentElement).zoom) || 1; // mode compacte (portàtil)
   const r = anchor.getBoundingClientRect();
   m.classList.remove('hidden');
@@ -1211,7 +1236,20 @@ function applyStudentMode() {
 
 /* ---------------- Notes Grid amb menú activitats ---------------- */
 let _gridCalculated = {};
-async function renderNotesGrid() {
+// Si es demanen dos redibuixats alhora (p. ex. en crear una activitat o canviar de període), els dos netegaven la taula
+// abans d'acabar de llegir i després afegien cadascun la seva capçalera i les seves files: capçalera duplicada.
+// Ara només n'hi ha un en marxa; si en arriba un altre mentrestant, se'n fa un de nou quan acaba (amb dades fresques).
+let _gridRun = null, _gridAgain = false;
+function renderNotesGrid() {
+  if (_gridRun) { _gridAgain = true; return _gridRun; }
+  _gridRun = (async () => {
+    try { do { _gridAgain = false; await renderNotesGridNow(); } while (_gridAgain); }
+    catch (e) { console.error('Error redibuixant la graella:', e); }
+    finally { _gridRun = null; }
+  })();
+  return _gridRun;
+}
+async function renderNotesGridNow() {
   // Neteja taula
   notesThead.innerHTML = '';
   notesTbody.innerHTML = '';
@@ -1221,7 +1259,7 @@ async function renderNotesGrid() {
   // Capçalera alumne
   const headRow = document.createElement('tr');
   const thName = th('');
-  thName.innerHTML = `<div class="th-student"><span>Alumne</span><small id="studentsCount"></small><button type="button" id="stuHeadMenuBtn" class="opt-btn" aria-label="Opcions d'alumnes"><span class="lbl">Opcions</span><span class="ic-dots" aria-hidden="true">⋯</span></button></div>`;
+  thName.innerHTML = `<div class="th-student"><span>Alumne</span><small id="studentsCount"></small><button type="button" id="stuHeadMenuBtn" class="opt-btn" aria-label="Opcions d'alumnes"><span class="lbl">Opcions</span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg><span class="ic-dots" aria-hidden="true">⋯</span></button></div>`;
   thName.querySelector('#stuHeadMenuBtn').addEventListener('click', e => { e.stopPropagation(); openStudentHeadMenu(e.currentTarget); });
   headRow.appendChild(thName);
 

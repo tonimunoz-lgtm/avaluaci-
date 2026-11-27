@@ -917,3 +917,25 @@ body #weightedInputs .w-pct input { width: 5.6rem !important; padding: .3rem .6r
 .fx-top .fresh-row { margin: 0; }
 .fresh-btn { border: 0; background: none; color: var(--c-primary); font-weight: 700; font-size: .8rem; cursor: pointer; padding: .2rem .5rem; border-radius: 999px; }
 .fresh-btn:hover { background: #f4f1ff; }
+
+/* Fletxa als desplegables «Opcions» */
+.chev { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.opt-btn .chev { width: 12px; height: 12px; }
+@media (max-width: 860px) { .chev, .lbl-desk { display: none !important; } .desk-only { display: none !important; } }
+.sort-fmt { border-top: 1px solid var(--c-border); margin-top: .3rem; padding-top: .4rem; }
+.sort-fmt small { display: block; padding: .2rem .8rem; color: var(--c-muted); font-size: .72rem; }
+.sort-fmt button.on { font-weight: 800; color: var(--c-primary); }
+
+/* Escriptori: la graella té el seu propi scroll (horitzontal i vertical) amb capçalera i columna «Alumne» fixes */
+@media (min-width: 861px) {
+  #notesTable-wrapper { overflow: visible; }
+  #gridWrapper { overflow: auto; max-height: calc(100vh - 140px); min-height: 380px; position: relative; }
+  #notesTable thead th { position: sticky; top: 0; z-index: 4; }
+  #notesTable thead th:first-child, #notesTable tbody td:first-child, #notesTable tfoot th:first-child, #notesTable tfoot td:first-child {
+    position: sticky; left: 0; background: #fff; z-index: 3; box-shadow: 1px 0 0 #efecfb;
+  }
+  #notesTable thead th:first-child { z-index: 6; background: #f4f1ff; box-shadow: 1px 0 0 #fff; }
+  #notesTable tfoot td:first-child, #notesTable tfoot th:first-child { background: #f4f1ff; }
+  #notesTable tfoot td, #notesTable tfoot th { position: sticky; bottom: 0; z-index: 3; }
+  #notesTable tfoot td:first-child, #notesTable tfoot th:first-child { z-index: 5; }
+}

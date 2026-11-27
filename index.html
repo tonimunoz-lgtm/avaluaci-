@@ -239,9 +239,9 @@
               </div>
               <div class="toolbar sub-actions">
                 <select id="termsDropdown" aria-label="Grup d'avaluació"></select>
-                <button id="btnAddTerm" type="button" title="Nou període" aria-label="Nou període">＋</button>
+                <button id="btnAddTerm" type="button" title="Nou període" aria-label="Nou període">＋<span class="lbl-desk"> Nou període</span></button>
                 <div class="relative-wrap">
-                  <button id="termMenuBtn" type="button" title="Opcions del període" aria-label="Opcions"><span class="ic-dots" aria-hidden="true">⋯</span><span class="lbl">Opcions</span></button>
+                  <button id="termMenuBtn" type="button" title="Opcions del període" aria-label="Opcions"><span class="ic-dots" aria-hidden="true">⋯</span><span class="lbl">Opcions</span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
                   <div id="termMenu" class="menu app-dropdown hidden">
                     <button class="edit-term-btn">Editar graella</button>
                     <button class="delete-term-btn">Eliminar graella</button>
@@ -251,6 +251,7 @@
                     <button class="quick-entry-btn">Entrada ràpida</button>
                   </div>
                 </div>
+                <button id="btnClassroomSync" type="button" class="desk-only hidden" title="Actualitzar de Classroom" aria-label="Actualitzar de Classroom"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14-4.5L4 9M4 4v5h5M4 13a8 8 0 0 0 14 4.5L20 15M20 20v-5h-5"/></svg><span class="lbl">Actualitzar Classroom</span></button>
                 <button id="btnStudentsMenu" type="button" aria-label="Alumnes"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c.4-3.6 3.2-5.5 6.5-5.5s6.1 1.9 6.5 5.5z"/></svg><span class="lbl">Alumnes</span> <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
               </div>
             </div>

@@ -52,9 +52,11 @@ function patchActivityButton() {
   console.log('✅ Botón de actividad patcheado');
 }
 
+let _creatingActivity = false;
 async function handleActivityCreation(e) {
   e.preventDefault();
   e.stopPropagation();
+  if (_creatingActivity) return; // evita doble clic (dues activitats o dos diàlegs)
 
   const inputName = document.getElementById('modalActivityName');
   const name = inputName?.value.trim();
@@ -64,15 +66,23 @@ async function handleActivityCreation(e) {
     return;
   }
 
-  // Mostrar diálogo de tipo de evaluación
-  const evaluationType = await showEvaluationTypeDialog();
+  _creatingActivity = true;
+  try {
+    // Mostrar diálogo de tipo de evaluación
+    const evaluationType = await showEvaluationTypeDialog();
+    if (evaluationType === null) return; // Usuario canceló
 
-  if (evaluationType === null) {
-    return; // Usuario canceló
+    // El modal «Nova activitat» es tanca ARA, no quan acaben les escriptures: amb connexió lenta (o si alguna
+    // escriptura fallava) quedava obert tot i haver-se creat l'activitat.
+    if (inputName) inputName.value = '';
+    const modal = document.getElementById('modalAddActivity');
+    if (modal) { modal.classList.add('hidden'); modal.style.display = 'none'; }
+
+    // Crear la actividad
+    await createActivityWithType(name, evaluationType);
+  } finally {
+    _creatingActivity = false;
   }
-
-  // Crear la actividad
-  await createActivityWithType(name, evaluationType);
 }
 
 // ============================================================
