@@ -33,10 +33,11 @@ async function loadAll(force) {
       Promise.all(actIds.map(id => db().collection('activitats').doc(id).get())),
       Promise.all((c.alumnes || []).map(id => db().collection('alumnes').doc(id).get()))
     ]);
-    c.actNames = {}; c.actComp = {};
+    c.actNames = {}; c.actComp = {}; c.actVal = {};
     acts.forEach(a => {
       c.actNames[a.id] = a.exists ? (a.data().nom || 'Sense nom') : 'Desconeguda';
       const d = a.exists ? a.data() : {};
+      c.actVal[a.id] = d.evaluationType === 'validation';   // Lliurament: mai entra en notes, mitjanes ni informes
       c.actComp[a.id] = d.evaluationType === 'competency' || d.isCompetency === true;
     });
     c.students = studs.filter(d => d.exists).map(d => ({ id: d.id, ...d.data() }));
@@ -100,7 +101,7 @@ function currentTermOf(c) {
   let r = null; try { r = localStorage.getItem(`avaluapp.term.${c.id}`); } catch {}
   if (r && c.terms[r]) return r;
   const calc = c.calculatedActivities || {};
-  const hasGrades = id => (c.terms[id].activities || []).some(a => !calc[a]?.calculated && (c.students || []).some(s => num((s.notes || {})[a]) != null));
+  const hasGrades = id => (c.terms[id].activities || []).some(a => !calc[a]?.calculated && !c.actVal?.[a] && (c.students || []).some(s => num((s.notes || {})[a]) != null));
   return [...ids].reverse().find(hasGrades) || ids[ids.length - 1];
 }
 const termName = (c, id) => (c.terms?.[id]?.name || c.terms?.[id]?.nom || '');
@@ -112,7 +113,7 @@ function analyse(c, termId) {
   // activitats: no compten als informes ni a «Alumnes a vigilar» (comptarien les notes dues vegades).
   const calc = c.calculatedActivities || {};
   const actIds = (termId && terms[termId] ? (terms[termId].activities || [])
-    : [...new Set(Object.values(terms).flatMap(t => t.activities || []))]).filter(a => !calc[a]?.calculated);
+    : [...new Set(Object.values(terms).flatMap(t => t.activities || []))]).filter(a => !calc[a]?.calculated && !c.actVal?.[a]);
   const rows = (c.students || []).map(s => {
     const vals = actIds.map(a => num((s.notes || {})[a]));
     const done = vals.filter(v => v != null);
@@ -606,7 +607,7 @@ const fxCalc = c => c.calculatedActivities || {};
 function fxActs(c, termId) {
   const t = c.terms || {};
   const ids = termId && t[termId] ? (t[termId].activities || []) : Object.values(t).flatMap(x => x.activities || []);
-  return [...new Set(ids)].filter(a => !fxCalc(c)[a]?.calculated);
+  return [...new Set(ids)].filter(a => !fxCalc(c)[a]?.calculated && !c.actVal?.[a]);
 }
 function fxClassAvg(c, a) { return avg((c.students || []).map(s => fxVal(c, s, a)).filter(v => v != null)); }
 

@@ -117,6 +117,15 @@ function showEvaluationTypeDialog() {
               <div class="text-xs text-gray-600">NA, AS, AN, AE</div>
             </div>
           </label>
+
+          <!-- Opción Lliurament -->
+          <label class="flex items-center gap-3 p-4 border-2 border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 hover:border-gray-500 transition-all">
+            <input type="radio" name="evalType" value="validation" class="w-5 h-5 text-gray-600">
+            <div>
+              <div class="font-semibold text-gray-900">Lliurament</div>
+              <div class="text-xs text-gray-600">Només ✓ lliurat / ✗ no lliurat, sense nota (no entra en cap càlcul)</div>
+            </div>
+          </label>
         </div>
 
         <div class="flex gap-2 justify-end">

@@ -939,3 +939,15 @@ body #weightedInputs .w-pct input { width: 5.6rem !important; padding: .3rem .6r
   #notesTable tfoot td, #notesTable tfoot th { position: sticky; bottom: 0; z-index: 3; }
   #notesTable tfoot td:first-child, #notesTable tfoot th:first-child { z-index: 5; }
 }
+
+/* Activitat tipus «Lliurament» (✓ lliurat / ✗ no lliurat, sense nota) */
+.lliu-btn { width: 2.4rem; height: 2rem; border-radius: .5rem; border: 1px solid #d1d5db; background: #fff; font-size: 1.15rem; font-weight: 700; line-height: 1; cursor: pointer; color: #9ca3af; transition: background .12s, transform .08s; }
+.lliu-btn:hover { background: #f3f4f6; }
+.lliu-btn:active { transform: scale(.94); }
+.lliu-btn:focus-visible { outline: 2px solid #6366f1; outline-offset: 1px; }
+.lliu-btn[data-lliu="ok"] { background: #dcfce7; border-color: #22c55e; color: #15803d; }
+.lliu-btn[data-lliu="no"] { background: #fee2e2; border-color: #ef4444; color: #b91c1c; }
+.lliu-btn:disabled { opacity: .6; cursor: wait; }
+.dark .lliu-btn { background: #1f2937; border-color: #4b5563; }
+.dark .lliu-btn[data-lliu="ok"] { background: #14532d; color: #bbf7d0; }
+.dark .lliu-btn[data-lliu="no"] { background: #7f1d1d; color: #fecaca; }

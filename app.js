@@ -764,7 +764,7 @@ async function deleteActivityCascade(actId){
   for (let i = 0; i < alumnes.length; i += 400) {
     const b = db.batch();
     alumnes.slice(i, i + 400).forEach(sid => {
-      b.update(db.collection('alumnes').doc(sid), { [`notes.${actId}`]: firebase.firestore.FieldValue.delete() });
+      b.update(db.collection('alumnes').doc(sid), { [`notes.${actId}`]: firebase.firestore.FieldValue.delete(), [`lliuraments.${actId}`]: firebase.firestore.FieldValue.delete() });
     });
     await b.commit();
   }
@@ -1275,6 +1275,9 @@ async function renderNotesGridNow() {
   const classData = classDoc.data();
   const calculatedActs = classData.calculatedActivities || {};
 
+  _gridVal.clear();
+  actDocs.forEach(d => { if (d.exists && isValDoc(d.data())) _gridVal.add(d.id); });
+
   // Capçalera activitats amb icona refresh i candau
   actDocs.forEach(adoc => {
     const id = adoc.id;
@@ -1389,9 +1392,9 @@ await renderNotesGrid();
       <div class="menu hidden absolute right-0 mt-1 bg-white dark:bg-gray-800 border rounded shadow z-10">
         <button class="edit-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Editar</button>
         <button class="delete-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Eliminar</button>
-        <button class="calc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Càlcul</button>
+        ${_gridVal.has(id) ? '' : '<button class="calc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Càlcul</button>'}
         ${calculatedActs[id]?.calculated ? '<button class="recalc-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Recalcular fórmula</button>' : ''}
-        ${calculatedActs[id]?.calculated ? '' : `<button class="kind-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">${isCompDoc(adoc.exists ? adoc.data() : null) ? 'Convertir a numèrica' : 'Convertir a competencial'}</button>`}
+        ${_gridVal.has(id) ? '' : calculatedActs[id]?.calculated ? '' : `<button class="kind-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">${isCompDoc(adoc.exists ? adoc.data() : null) ? 'Convertir a numèrica' : 'Convertir a competencial'}</button>`}
         <button class="clear-btn px-3 py-1 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700">Netejar</button>
       </div>
     `;
@@ -1464,9 +1467,10 @@ await renderNotesGrid();
     menuDiv.querySelector('.recalc-btn')?.addEventListener('click', () => { menu.classList.add('hidden'); recalcColumn(); });
 
     menuDiv.querySelector('.clear-btn').addEventListener('click', async () => {
-      if (!await confirmDialog('Segur que vols esborrar totes les notes d’aquesta activitat?')) return;
+      if (!await confirmDialog(_gridVal.has(id) ? 'Segur que vols esborrar tots els lliuraments d’aquesta activitat?' : 'Segur que vols esborrar totes les notes d’aquesta activitat?')) return;
       try {
-        await Promise.all(classStudents.map(sid => saveNote(sid, id, '')));
+        if (_gridVal.has(id)) await Promise.all(classStudents.map(sid => saveLliurament(sid, id, '')));
+        else await Promise.all(classStudents.map(sid => saveNote(sid, id, '')));
         await db.collection('classes').doc(currentClassId).update({
           [`calculatedActivities.${id}`]: firebase.firestore.FieldValue.delete()
         });
@@ -1488,7 +1492,7 @@ menuDiv.querySelector('.delete-btn').addEventListener('click', () => {
   });
 });
 
-    menuDiv.querySelector('.calc-btn').addEventListener('click', () => openCalcModal(id));
+    menuDiv.querySelector('.calc-btn')?.addEventListener('click', () => openCalcModal(id));
 
   });
 
@@ -1524,6 +1528,13 @@ menuDiv.querySelector('.delete-btn').addEventListener('click', () => {
 
       if (calculatedActs[actId]?.calculated) {
         td.style.backgroundColor = "#dbeafe"; // capçalera blava i cel·la alguna cosa similar
+      }
+
+      if (_gridVal.has(actId)) {
+        td.className = 'border px-2 py-1 text-center lliu-td';
+        buildLliuramentCell(td, tr, studentId, actId, studentData);
+        tr.appendChild(td);
+        return;
       }
 
       const input = document.createElement('input');
@@ -1712,6 +1723,45 @@ function saveNote(studentId, activityId, value, dec = 10){
 }
 
 
+// Lliurament (✓ / ✗ / buit): camp separat de les notes perquè no entri mai en cap càlcul
+function saveLliurament(studentId, activityId, value) {
+  const upd = {};
+  upd[`lliuraments.${activityId}`] = (value === 'ok' || value === 'no') ? value : firebase.firestore.FieldValue.delete();
+  return db.collection('alumnes').doc(studentId).update(upd).catch(e => { showSaveError(e); throw e; });
+}
+const LLIU_NEXT = { '': 'ok', ok: 'no', no: '' };
+const LLIU_ICON = { ok: '✓', no: '✗', '': '' };
+function buildLliuramentCell(td, tr, studentId, actId, studentData) {
+  let cur = (studentData.lliuraments && studentData.lliuraments[actId]) || '';
+  if (cur !== 'ok' && cur !== 'no') cur = '';
+  const hid = document.createElement('input'); // manté els índexs de columna de les mitjanes; sempre buit
+  hid.type = 'hidden'; hid.className = 'lliu-input'; hid.value = '';
+  const btn = document.createElement('button');
+  btn.type = 'button'; btn.dataset.activityId = actId; btn.dataset.lliu = cur;
+  btn.className = 'lliu-btn';
+  const paint = () => {
+    btn.dataset.lliu = cur; btn.textContent = LLIU_ICON[cur];
+    btn.title = cur === 'ok' ? 'Lliurat' : cur === 'no' ? 'No lliurat' : 'Sense marcar (clic per canviar)';
+    btn.setAttribute('aria-label', btn.title);
+  };
+  paint();
+  btn.addEventListener('click', async () => {
+    const prev = cur; cur = LLIU_NEXT[cur]; paint(); btn.disabled = true;
+    try { await saveLliurament(studentId, actId, cur); }
+    catch (e) { cur = prev; paint(); notify('Error guardant el lliurament: ' + e.message); }
+    finally { btn.disabled = false; renderAverages(); }
+  });
+  btn.addEventListener('keydown', e => {
+    const dir = e.key === 'ArrowDown' || e.key === 'Enter' ? 1 : e.key === 'ArrowUp' ? -1 : 0;
+    if (!dir) return;
+    e.preventDefault();
+    const rows = Array.from(notesTbody.querySelectorAll('tr[data-student-id]'));
+    const i = rows.findIndex(r => r.dataset.studentId === tr.dataset.studentId);
+    rows[i + dir]?.querySelector(`.lliu-btn[data-activity-id="${actId}"]`)?.focus();
+  });
+  td.appendChild(hid); td.appendChild(btn);
+}
+
 function applyCellColor(inputEl){
   const v = Number(inputEl.value);
   inputEl.classList.remove('cell-red','cell-yellow','cell-lgreen','cell-green');
@@ -1747,6 +1797,7 @@ function renderAverages(){
   }
 
   for(let i=0;i<actCount;i++){
+    if (_gridVal.has(classActivities[i])) { const tdv = document.createElement('td'); tdv.className = 'border px-2 py-1 text-center'; trAvg.appendChild(tdv); continue; }
     const inputs = Array.from(notesTbody.querySelectorAll('tr')).map(r => r.querySelectorAll('input')[i]).filter(Boolean);
     const ignoreBlank = !!window.AvaluConfig?.get().ignorarBuits;
     const vals = inputs.filter(inp => !ignoreBlank || String(inp.value).trim() !== '').map(inp => Number(inp.value)).filter(v=> !isNaN(v));
@@ -1767,6 +1818,16 @@ function renderAverages(){
   for (let i = 0; i < actCount; i++) {
     const aid = classActivities[i];
     let done = 0, total = 0;
+    if (_gridVal.has(aid)) {
+      bodyRows.forEach(r => { const b = r.querySelector(`.lliu-btn[data-activity-id="${aid}"]`); if (!b) return; total++; if (b.dataset.lliu === 'ok') done++; });
+      const tdl = document.createElement('td');
+      tdl.className = 'border px-2 py-1 text-center prog-cell' + (total && done === total ? ' prog-full' : '');
+      tdl.setAttribute('translate', 'no');
+      tdl.title = 'Lliurats / alumnes';
+      tdl.textContent = total ? `✓ ${done}/${total}` : '';
+      trProg.appendChild(tdl);
+      continue;
+    }
     bodyRows.forEach(r => {
       const inp = r.querySelector(`input.table-input[data-activity-id="${aid}"]`);
       if (!inp) return;
@@ -1830,6 +1891,8 @@ let _activityNameMap = {}; // 🔥 mapa id -> nom per al camp visual de fórmule
 // Una activitat competencial només es pot calcular amb la mitjana ponderada d'altres activitats competencials
 // (i el resultat és competencial). Les numèriques i les competencials no es barregen.
 const _actKind = new Map(); // id d'activitat -> true si és competencial
+const isValDoc = d => !!d && d.evaluationType === 'validation';
+const _gridVal = new Set(); // ids d'activitats de tipus Lliurament a la graella actual
 const isCompDoc = d => !!d && (d.evaluationType === 'competency' || d.isCompetency === true);
 let _calcTargetComp = false;
 async function loadKinds(ids) {
@@ -1893,7 +1956,7 @@ async function buildWeighted() {
   const ids = [...classActivities].filter(id => id !== currentCalcActivityId);
   const docs = await Promise.all(ids.map(id => db.collection('activitats').doc(id).get()));
   const prefill = _wPrefill; _wPrefill = null;
-  _wRows = docs.filter(d => d.exists).map(d => { _actKind.set(d.id, isCompDoc(d.data())); return { id: d.id, name: d.data().nom || '?', on: false, w: 0, comp: isCompDoc(d.data()) }; });
+  _wRows = docs.filter(d => d.exists && !isValDoc(d.data())).map(d => { _actKind.set(d.id, isCompDoc(d.data())); return { id: d.id, name: d.data().nom || '?', on: false, w: 0, comp: isCompDoc(d.data()) }; });
   if (prefill) _wRows.forEach(r => { if (prefill[r.id] != null) { r.on = true; r.w = Number(prefill[r.id]); } });
   renderWeighted();
 }
@@ -2294,7 +2357,7 @@ modalApplyCalcBtn.addEventListener('click', async () => {
       case 'rounding':
         if (!formulaField.value.trim()) throw new Error('Selecciona activitat i 0,5 o 1');
 
-        const activityDocs = await Promise.all(classActivities.map(aid => db.collection('activitats').doc(aid).get()));
+        const activityDocs = (await Promise.all(classActivities.map(aid => db.collection('activitats').doc(aid).get()))).filter(d => !d.exists || !isValDoc(d.data()));
         const selectedActivityDoc = activityDocs.find(doc => doc.exists && formulaField.value.startsWith(doc.data().nom));
         if (!selectedActivityDoc) throw new Error('Activitat no trobada');
 
@@ -2578,7 +2641,7 @@ function buildActivityButtons(){
   } else {
     activitiesToShow.forEach(aid => {
       db.collection('activitats').doc(aid).get().then(doc => {
-        if (!doc.exists) return;
+        if (!doc.exists || isValDoc(doc.data())) return;
         const name = doc.data().nom;
         const btn = document.createElement('button');
         btn.type='button';
@@ -2686,7 +2749,7 @@ function buildRoundingActivityButtons(){
   } else {
     activitiesToShow.forEach(aid => {
       db.collection('activitats').doc(aid).get().then(doc => {
-        if (!doc.exists) return;
+        if (!doc.exists || isValDoc(doc.data())) return;
         const name = doc.data().nom;
         const btn = document.createElement('button');
         btn.type='button';
@@ -3033,6 +3096,11 @@ async function exportExcel(){
 
       actDocs.forEach(adoc => {
         const aid = adoc.id;
+        if (adoc.exists && isValDoc(adoc.data())) { // Lliurament: ✓/✗, mai a la mitjana
+          const l = (sdoc.exists ? (sdoc.data().lliuraments || {})[aid] : '');
+          row.push(l === 'ok' ? '✓' : l === 'no' ? '✗' : '');
+          return;
+        }
         const val = (notes[aid] !== undefined) ? Number(notes[aid]) : '';
         row.push(val);
         if(val !== '') { sum += val; count++; }
@@ -3074,13 +3142,18 @@ async function formatStudentNotesForEmail(studentId) {
   let lines = [];
 
   for (const actId of classActivities) {
-    let actName = actId;
+    let actName = actId, isVal = false;
 
     try {
       const aDoc = await db.collection('activitats').doc(actId).get();
-      if (aDoc.exists) actName = aDoc.data().nom || actId;
+      if (aDoc.exists) { actName = aDoc.data().nom || actId; isVal = isValDoc(aDoc.data()); }
     } catch {}
 
+    if (isVal) {
+      const l = (data.lliuraments || {})[actId];
+      if (l === 'ok' || l === 'no') lines.push(`${actName}: ${l === 'ok' ? 'Lliurat' : 'No lliurat'}`);
+      continue;
+    }
     const val = notes[actId] ?? '';
     lines.push(`${actName}: ${val}`);
   }

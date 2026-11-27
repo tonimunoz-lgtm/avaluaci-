@@ -10,6 +10,7 @@ let currentDB = null;
 let step = 'courses';          // 'courses' | 'works'
 let worksByCourse = {};        // courseId → [activitats de Classroom]
 let pickedWorks = {};          // courseId → Set(ids triats)
+let valWorks = {};             // courseId → Set(ids marcats com a Lliurament)
 let compWorks = {};            // courseId → Set(ids marcats com a competencials)
 
 console.log('✅ classroom-ui.js cargado');
@@ -218,7 +219,7 @@ async function loadClassroomCourses() {
   coursesList.classList.add('hidden');
   errorState.classList.add('hidden');
   selectedCourses = [];
-  worksByCourse = {}; pickedWorks = {}; compWorks = {};
+  worksByCourse = {}; pickedWorks = {}; compWorks = {}; valWorks = {};
   setStep('courses');
   document.getElementById('btnImportSelectedCourse').disabled = true;
 
@@ -303,6 +304,7 @@ async function loadWorksStep() {
         worksByCourse[c.id] = await getClassroomCoursework(c.id);
         pickedWorks[c.id] = new Set(worksByCourse[c.id].map(w => w.id));   // per defecte, totes marcades
         compWorks[c.id] = new Set();
+        valWorks[c.id] = new Set(worksByCourse[c.id].filter(w => w.noGrade).map(w => w.id));   // sense punts → Lliurament per defecte
       }
     }
   } catch (err) {
@@ -325,6 +327,7 @@ function renderWorks(box) {
     const works = worksByCourse[course.id] || [];
     const picked = pickedWorks[course.id];
     const comp = compWorks[course.id] || (compWorks[course.id] = new Set());
+    const val = valWorks[course.id] || (valWorks[course.id] = new Set());
     const sec = document.createElement('div');
     sec.className = 'mb-4 border rounded';
     const count = () => `${picked.size} de ${works.length} activitats`;
@@ -346,15 +349,20 @@ function renderWorks(box) {
       lab.className = 'flex items-center gap-3 px-3 py-2 hover:bg-indigo-50 cursor-pointer';
       lab.innerHTML = `<input type="checkbox" class="cw-pick w-4 h-4" ${picked.has(w.id) ? 'checked' : ''}>
         <span class="flex-1 text-sm text-gray-900" translate="no">${escapeHtml(w.title || '(sense títol)')}</span>
-        <span class="text-xs text-gray-500">${due ? escapeHtml(due) + ' · ' : ''}${escapeHtml(String(w.maxPoints))} pts</span>
-        <span class="cw-compwrap flex items-center gap-1 text-xs text-gray-700 border-l pl-3" title="Avaluar amb NA/AS/AN/AE (0–4)"><input type="checkbox" class="cw-comp-pick w-4 h-4" ${comp.has(w.id) ? 'checked' : ''}>Competencial</span>`;
+        <span class="text-xs text-gray-500">${due ? escapeHtml(due) + ' · ' : ''}${w.noGrade ? 'sense nota' : escapeHtml(String(w.maxPoints)) + ' pts'}</span>
+        <span class="cw-compwrap flex items-center gap-1 text-xs text-gray-700 border-l pl-3" title="Avaluar amb NA/AS/AN/AE (0–4)"><input type="checkbox" class="cw-comp-pick w-4 h-4" ${comp.has(w.id) ? 'checked' : ''}>Competencial</span>
+        <span class="cw-valwrap flex items-center gap-1 text-xs text-gray-700 border-l pl-3" title="Només ✓ lliurat / ✗ no lliurat, sense nota"><input type="checkbox" class="cw-val-pick w-4 h-4" ${val.has(w.id) ? 'checked' : ''}>Lliurament</span>`;
       lab.querySelector('.cw-pick').addEventListener('change', e => {
         e.target.checked ? picked.add(w.id) : picked.delete(w.id); refresh();
       });
       const cc = lab.querySelector('.cw-comp-pick');
       cc.addEventListener('click', e => e.stopPropagation());
-      cc.addEventListener('change', e => { e.target.checked ? comp.add(w.id) : comp.delete(w.id); });
+      const vc = lab.querySelector('.cw-val-pick');
+      cc.addEventListener('change', e => { e.target.checked ? comp.add(w.id) : comp.delete(w.id); if (e.target.checked) { val.delete(w.id); vc.checked = false; } });
+      vc.addEventListener('click', e => e.stopPropagation());
+      vc.addEventListener('change', e => { e.target.checked ? val.add(w.id) : val.delete(w.id); if (e.target.checked) { comp.delete(w.id); cc.checked = false; } });
       lab.querySelector('.cw-compwrap').addEventListener('click', e => e.stopPropagation());
+      lab.querySelector('.cw-valwrap').addEventListener('click', e => e.stopPropagation());
       rows.appendChild(lab);
     });
     const setAll = on => { works.forEach(w => on ? picked.add(w.id) : picked.delete(w.id)); rows.querySelectorAll('.cw-pick').forEach(i => i.checked = on); refresh(); };
@@ -433,7 +441,7 @@ function setupImportListener() {
         console.log('📚 Importando curso:', course.name);
         updateProgressModal(progressModal, course.name, i + 1, totalCourses, progress);
         
-        await importClassroomCourse(course, currentDB, currentProfessorUID, { workIds: [...(pickedWorks[course.id] || [])], compIds: [...(compWorks[course.id] || [])] });
+        await importClassroomCourse(course, currentDB, currentProfessorUID, { workIds: [...(pickedWorks[course.id] || [])], compIds: [...(compWorks[course.id] || [])], valIds: [...(valWorks[course.id] || [])] });
       }
 
       console.log('✅ Cursos importats correctament');
@@ -543,7 +551,8 @@ function renderSyncPlan(plan) {
     ${nW ? `<div class="border rounded-lg divide-y mb-4" id="syncWorks">
       ${plan.newWorks.map(w => `<div class="flex items-center gap-3 px-3 py-2 text-sm" data-id="${escapeHtml(w.id)}">
         <label class="flex items-center gap-2 flex-1"><input type="checkbox" class="sw-pick w-4 h-4" checked><span translate="no">${escapeHtml(w.title || '(sense títol)')}</span></label>
-        <label class="flex items-center gap-1 text-xs border-l pl-3"><input type="checkbox" class="sw-comp w-4 h-4">Competencial</label></div>`).join('')}
+        <label class="flex items-center gap-1 text-xs border-l pl-3"><input type="checkbox" class="sw-comp w-4 h-4">Competencial</label>
+        <label class="flex items-center gap-1 text-xs border-l pl-3"><input type="checkbox" class="sw-val w-4 h-4" ${w.noGrade ? 'checked' : ''}>Lliurament</label></div>`).join('')}
     </div>` : ''}
     <p class="text-xs text-gray-500 mb-4">No se sobreescriu cap nota existent ni s'esborra res.</p>`}
     <div class="flex gap-2 justify-end">
@@ -559,7 +568,7 @@ function renderSyncPlan(plan) {
     try {
       const newWorks = [...document.querySelectorAll('#syncWorks [data-id]')]
         .filter(r => r.querySelector('.sw-pick').checked)
-        .map(r => ({ id: r.dataset.id, comp: r.querySelector('.sw-comp').checked }));
+        .map(r => ({ id: r.dataset.id, comp: r.querySelector('.sw-comp').checked, val: r.querySelector('.sw-val').checked }));
       const r = await applyClassroomSync(plan, currentDB, currentProfessorUID, { newWorks, termId: window.AvaluApp?.getActiveTermId?.() });
       closeSync();
       notify(`✅ Actualitzat: ${r.newStudents} alumnes nous, ${r.notes} notes, ${r.newActivities} activitats noves`);
