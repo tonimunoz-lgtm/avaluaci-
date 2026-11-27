@@ -520,7 +520,7 @@ let _riskAt = 0, _riskBusy = false;
 // per no tornar a llegir totes les classes cada cop que es torna a l'inici.
 let _riskData = null; const riskTtl = () => (_hooked ? 10 * 60000 : 60000);
 const riskOpenKey = 'avaluapp.riskOpen';
-async function renderRiskCard() {
+async function renderRiskCard(keepOpen = false) {
   const home = $('screen-classes');
   if (!home || home.classList.contains('hidden') || _riskBusy) return;
   const on = window.AvaluConfig?.get().avisRisc !== false;
@@ -549,17 +549,17 @@ async function renderRiskCard() {
       card = document.createElement('div'); card.id = 'riskCard';
       home.insertBefore(card, home.querySelector('.classes-head'));
       card.addEventListener('click', e => {
-        if (e.target.closest('.rk-refresh')) { _riskData = null; _cache = null; renderRiskCard(); return; }
+        if (e.target.closest('.rk-refresh')) { _riskData = null; _cache = null; renderRiskCard(true); return; }
         if (e.target.closest('.rk-head')) {
           const open = !card.classList.contains('open'); card.classList.toggle('open', open);
-          try { localStorage.setItem(riskOpenKey, open ? '1' : '0'); } catch {}
           return;
         }
         const r = e.target.closest('[data-stu]');
         if (r) openFitxa(r.dataset.cls, r.dataset.stu, 'home');
       });
     }
-    let open = false; try { open = localStorage.getItem(riskOpenKey) === '1'; } catch {}
+    // Només es manté obert en prémer «Actualitza»; en tornar a Inici sempre apareix plegat
+    const open = keepOpen && card.classList.contains('open');
     card.className = 'risk-card' + (total ? ' warn' : ' ok') + (open ? ' open' : '');
     card.innerHTML = total ? `
       <button type="button" class="rk-head" aria-expanded="${open}">
@@ -581,9 +581,13 @@ async function renderRiskCard() {
 window.addEventListener('avalu-config', () => { _riskAt = 0; _riskData = null; renderRiskCard(); });
 // En canviar de compte no s'ha de reutilitzar res de l'usuari anterior
 firebase.auth().onAuthStateChanged(() => { _riskData = null; _cache = null; });
+let _homeWasVisible = false;
 setInterval(() => {
   if (!firebase.auth().currentUser) return;
   const home = $('screen-classes');
+  const vis = !!home && !home.classList.contains('hidden');
+  if (vis && !_homeWasVisible) { const c = $('riskCard'); if (c) { c.classList.remove('open'); c.querySelector('.rk-head')?.setAttribute('aria-expanded', 'false'); } }  // en tornar a Inici, plegat
+  _homeWasVisible = vis;
   if (home && !home.classList.contains('hidden') && Date.now() - _riskAt > 60000) renderRiskCard();
 }, 2500);
 
